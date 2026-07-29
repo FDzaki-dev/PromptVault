@@ -3,6 +3,7 @@ package com.fdzaki.promptvault.scanner
 import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import com.fdzaki.promptvault.data.LogRepository
 import com.fdzaki.promptvault.data.RuleRepository
 import kotlinx.coroutines.flow.first
 
@@ -15,9 +16,12 @@ class SortWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
 
     override suspend fun doWork(): Result {
         return try {
-            val repo = RuleRepository(applicationContext)
-            val rules = repo.rules.first()
-            DownloadsSorter().scanAndSort(rules)
+            val ruleRepo = RuleRepository(applicationContext)
+            val rules = ruleRepo.rules.first()
+            val result = DownloadsSorter().scanAndSort(rules)
+            if (result is ScanResult.Success) {
+                LogRepository(applicationContext).append(result.movedEntries)
+            }
             Result.success()
         } catch (e: Exception) {
             Result.retry()

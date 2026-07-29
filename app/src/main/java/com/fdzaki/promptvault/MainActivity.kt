@@ -9,25 +9,31 @@ import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.*
 import androidx.lifecycle.lifecycleScope
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import com.fdzaki.promptvault.data.LogRepository
+import com.fdzaki.promptvault.data.OnboardingRepository
 import com.fdzaki.promptvault.data.RuleRepository
 import com.fdzaki.promptvault.data.SortLogEntry
 import com.fdzaki.promptvault.data.SortRule
 import com.fdzaki.promptvault.scanner.DownloadsSorter
+import com.fdzaki.promptvault.scanner.ScanResult
 import com.fdzaki.promptvault.scanner.SortWorker
+import com.fdzaki.promptvault.ui.OnboardingScreen
 import com.fdzaki.promptvault.ui.VaultScreen
 import com.fdzaki.promptvault.ui.theme.PromptVaultTheme
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 
 class MainActivity : ComponentActivity() {
 
-    private lateinit var repository: RuleRepository
+    private lateinit var ruleRepository: RuleRepository
+    private lateinit var logRepository: LogRepository
+    private lateinit var onboardingRepository: OnboardingRepository
     private val sorter = DownloadsSorter()
 
     private val manageStorageLauncher = registerForActivityResult(
@@ -38,38 +44,75 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        repository = RuleRepository(applicationContext)
+        ruleRepository = RuleRepository(applicationContext)
+        logRepository = LogRepository(applicationContext)
+        onboardingRepository = OnboardingRepository(applicationContext)
         hasPermissionState.value = hasStoragePermission()
 
         setContent {
             var rules by remember { mutableStateOf(listOf<SortRule>()) }
             var logs by remember { mutableStateOf(listOf<SortLogEntry>()) }
+            var onboardingCompleted by remember { mutableStateOf<Boolean?>(null) }
+            val snackbarHostState = remember { SnackbarHostState() }
 
             LaunchedEffect(Unit) {
-                repository.rules.collect { rules = it }
+                launch { ruleRepository.rules.collect { rules = it } }
+                launch { logRepository.logs.collect { logs = it } }
+                launch { onboardingRepository.isCompleted.collect { onboardingCompleted = it } }
             }
 
             PromptVaultTheme {
-                VaultScreen(
-                    rules = rules,
-                    logs = logs,
-                    hasStoragePermission = hasPermissionState.value,
-                    onRequestPermission = { requestStoragePermission() },
-                    onScanNow = {
-                        lifecycleScope.launch {
-                            val result = sorter.scanAndSort(rules)
-                            logs = logs + result
-                        }
-                    },
-                    onAddRule = { pattern, folder ->
-                        lifecycleScope.launch {
-                            repository.saveRule(SortRule(pattern = pattern, folderName = folder))
-                        }
-                    },
-                    onDeleteRule = { pattern ->
-                        lifecycleScope.launch { repository.deleteRule(pattern) }
+                when (onboardingCompleted) {
+                    null -> {
+                        // still loading the flag from DataStore; render nothing to avoid a flash
                     }
-                )
+                    false -> {
+                        OnboardingScreen(
+                            onFinish = {
+                                lifecycleScope.launch { onboardingRepository.markCompleted() }
+                            }
+                        )
+                    }
+                    true -> {
+                        VaultScreen(
+                            rules = rules,
+                            logs = logs,
+                            hasStoragePermission = hasPermissionState.value,
+                            snackbarHostState = snackbarHostState,
+                            onRequestPermission = { requestStoragePermission() },
+                            onScanNow = {
+                                lifecycleScope.launch {
+                                    when (val result = sorter.scanAndSort(rules)) {
+                                        is ScanResult.Success -> {
+                                            logRepository.append(result.movedEntries)
+                                            snackbarHostState.showSnackbar(
+                                                "${result.movedEntries.size} file berhasil dirapikan."
+                                            )
+                                        }
+                                        ScanResult.NoMatchingFiles -> {
+                                            snackbarHostState.showSnackbar(
+                                                "Tidak ada file baru yang cocok dengan aturanmu."
+                                            )
+                                        }
+                                        ScanResult.DownloadsDirUnavailable -> {
+                                            snackbarHostState.showSnackbar(
+                                                "Folder Downloads tidak bisa diakses. Cek izin penyimpanan."
+                                            )
+                                        }
+                                    }
+                                }
+                            },
+                            onAddRule = { pattern, folder ->
+                                lifecycleScope.launch {
+                                    ruleRepository.saveRule(SortRule(pattern = pattern, folderName = folder))
+                                }
+                            },
+                            onDeleteRule = { pattern ->
+                                lifecycleScope.launch { ruleRepository.deleteRule(pattern) }
+                            }
+                        )
+                    }
+                }
             }
         }
 

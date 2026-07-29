@@ -8,6 +8,13 @@ import java.io.FileInputStream
 import java.io.IOException
 import java.util.regex.Pattern
 
+/** Explicit outcome of a scan so the UI can give real feedback instead of silent no-ops. */
+sealed class ScanResult {
+    data class Success(val movedEntries: List<SortLogEntry>) : ScanResult()
+    object DownloadsDirUnavailable : ScanResult()
+    object NoMatchingFiles : ScanResult()
+}
+
 /**
  * Scans the public Downloads directory for .zip/.txt files whose name matches
  * a user-defined glob pattern (e.g. "AudioPlayer*") and moves them into a
@@ -20,9 +27,11 @@ class DownloadsSorter {
 
     private val supportedExtensions = setOf("zip", "txt")
 
-    fun scanAndSort(rules: List<SortRule>): List<SortLogEntry> {
+    fun scanAndSort(rules: List<SortRule>): ScanResult {
         val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-        if (!downloadsDir.exists() || !downloadsDir.isDirectory) return emptyList()
+        if (!downloadsDir.exists() || !downloadsDir.isDirectory) {
+            return ScanResult.DownloadsDirUnavailable
+        }
 
         val vaultRoot = File(downloadsDir, "PromptVault").apply { mkdirs() }
         val logs = mutableListOf<SortLogEntry>()
@@ -51,7 +60,7 @@ class DownloadsSorter {
                 )
             }
         }
-        return logs
+        return if (logs.isEmpty()) ScanResult.NoMatchingFiles else ScanResult.Success(logs)
     }
 
     /** Avoids overwriting an existing file by appending "(1)", "(2)", etc. */

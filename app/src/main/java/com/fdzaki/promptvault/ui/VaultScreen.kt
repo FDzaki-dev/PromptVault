@@ -21,17 +21,20 @@ fun VaultScreen(
     rules: List<SortRule>,
     logs: List<SortLogEntry>,
     hasStoragePermission: Boolean,
+    snackbarHostState: SnackbarHostState,
     onRequestPermission: () -> Unit,
     onScanNow: () -> Unit,
     onAddRule: (pattern: String, folder: String) -> Unit,
     onDeleteRule: (pattern: String) -> Unit
 ) {
     var showAddDialog by remember { mutableStateOf(false) }
+    var ruleToDelete by remember { mutableStateOf<SortRule?>(null) }
 
     Scaffold(
         topBar = {
             TopAppBar(title = { Text("PromptVault") })
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
             FloatingActionButton(onClick = { showAddDialog = true }) {
                 Icon(Icons.Default.Add, contentDescription = "Add rule")
@@ -65,7 +68,7 @@ fun VaultScreen(
 
             LazyColumn(modifier = Modifier.weight(1f)) {
                 items(rules, key = { it.pattern }) { rule ->
-                    RuleRow(rule = rule, onDelete = { onDeleteRule(rule.pattern) })
+                    RuleRow(rule = rule, onDelete = { ruleToDelete = rule })
                 }
                 if (logs.isNotEmpty()) {
                     item {
@@ -87,6 +90,28 @@ fun VaultScreen(
             onConfirm = { pattern, folder ->
                 onAddRule(pattern, folder)
                 showAddDialog = false
+            }
+        )
+    }
+
+    ruleToDelete?.let { rule ->
+        AlertDialog(
+            onDismissRequest = { ruleToDelete = null },
+            title = { Text("Hapus Aturan Ini?") },
+            text = {
+                Text(
+                    "Aturan \"${rule.pattern}\" akan dihapus. File yang sudah pernah dipindahkan " +
+                        "tidak akan dikembalikan, tapi file baru yang cocok tidak akan tersortir lagi."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    onDeleteRule(rule.pattern)
+                    ruleToDelete = null
+                }) { Text("Hapus", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { ruleToDelete = null }) { Text("Batal") }
             }
         )
     }
