@@ -4,6 +4,8 @@ import android.os.Environment
 import com.fdzaki.promptvault.data.SortLogEntry
 import com.fdzaki.promptvault.data.SortRule
 import java.io.File
+import java.io.FileInputStream
+import java.io.IOException
 import java.util.regex.Pattern
 
 /**
@@ -67,6 +69,22 @@ class DownloadsSorter {
             counter++
         }
         return candidate
+    }
+
+    /**
+     * Opens [zipFile] as a stream (no disk extraction), pulls the first .log/.txt entry,
+     * and wraps it in the injection-resistant Universal Log Parsing system prompt.
+     * Returns null if the file isn't a valid ZIP or contains no log/text entry.
+     */
+    fun buildLogPromptFromZip(zipFile: File): String? {
+        if (!zipFile.exists() || !zipFile.isFile) return null
+        val extracted = try {
+            FileInputStream(zipFile).use { ZipLogExtractor.extractFirstLog(it) }
+        } catch (e: IOException) {
+            null
+        } ?: return null
+
+        return LogPromptBuilder.build(extracted)
     }
 
     /** Converts a simple glob (supports '*' and '?') into a compiled, case-insensitive regex. */
