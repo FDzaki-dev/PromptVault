@@ -5,8 +5,8 @@
 .DS_Store
 /build
 /captures
-.externalNativeBuild
+.externalNativeBuildTake
 .cxx
 local.properties
 release.keystore
-*.jks
+/app/build

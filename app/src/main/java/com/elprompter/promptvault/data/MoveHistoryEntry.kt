@@ -1,0 +1,18 @@
+package com.elprompter.promptvault.data
+
+import kotlinx.serialization.Serializable
+
+/**
+ * Merekam satu pemindahan file agar bisa di-UNDO (TODO #1).
+ * originalParentUri & destUri disimpan sebagai String URI (SAF / MediaStore).
+ */
+@Serializable
+data class MoveHistoryEntry(
+    val id: String,
+    val timestampMillis: Long,
+    val fileName: String,
+    val originalParentUri: String,
+    val destUri: String,
+    val ruleFolderName: String,
+    val undone: Boolean = false
+)

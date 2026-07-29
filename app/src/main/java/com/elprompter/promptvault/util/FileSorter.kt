@@ -1,0 +1,168 @@
+package com.elprompter.promptvault.util
+
+import android.content.Context
+import android.os.Environment
+import com.elprompter.promptvault.data.ActivityLogRepository
+import com.elprompter.promptvault.data.LogLevel
+import com.elprompter.promptvault.data.MoveHistoryEntry
+import com.elprompter.promptvault.data.MoveHistoryRepository
+import com.elprompter.promptvault.data.Rule
+import com.elprompter.promptvault.data.RuleRepository
+import java.io.File
+import java.util.UUID
+
+data class ScanResult(
+    val filesMoved: Int,
+    val filesSkippedNoMatch: Int,
+    val foldersUnreadable: Boolean,
+    val overlapWarnings: List<String>
+)
+
+/**
+ * Logika inti: scan folder Downloads, cocokkan tiap file terhadap rule aktif,
+ * pindahkan ke Downloads/PromptVault/<folderName>/, dan catat riwayat untuk undo.
+ */
+class FileSorter(
+    private val context: Context,
+    private val ruleRepository: RuleRepository,
+    private val activityLogRepository: ActivityLogRepository,
+    private val moveHistoryRepository: MoveHistoryRepository
+) {
+
+    private val downloadsDir: File
+        get() = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+
+    private val vaultRootDir: File
+        get() = File(downloadsDir, "PromptVault")
+
+    suspend fun scanAndSort(): ScanResult {
+        val rules = ruleRepository.getRules().filter { it.enabled }
+
+        if (!downloadsDir.exists() || !downloadsDir.canRead()) {
+            activityLogRepository.add(LogLevel.ERROR, "Folder Downloads tidak terbaca. Cek izin penyimpanan.")
+            return ScanResult(0, 0, foldersUnreadable = true, overlapWarnings = emptyList())
+        }
+
+        if (rules.isEmpty()) {
+            activityLogRepository.add(LogLevel.INFO, "Scan dijalankan, tapi belum ada rule aktif.")
+            return ScanResult(0, 0, foldersUnreadable = false, overlapWarnings = emptyList())
+        }
+
+        val candidateFiles = downloadsDir.listFiles { f ->
+            f.isFile && (f.extension.equals("zip", true) || f.extension.equals("txt", true)) &&
+                !f.absolutePath.startsWith(vaultRootDir.absolutePath)
+        } ?: emptyArray()
+
+        if (candidateFiles.isEmpty()) {
+            activityLogRepository.add(LogLevel.INFO, "Scan selesai: tidak ada file ZIP/TXT baru yang cocok.")
+            return ScanResult(0, 0, foldersUnreadable = false, overlapWarnings = emptyList())
+        }
+
+        var moved = 0
+        var skipped = 0
+        val overlapWarnings = mutableListOf<String>()
+
+        for (file in candidateFiles) {
+            val matches = RuleOverlapChecker.matchingRules(file.name, rules)
+            if (matches.isEmpty()) {
+                skipped++
+                continue
+            }
+            if (matches.size > 1) {
+                val msg = "\"${file.name}\" cocok dengan ${matches.size} rule (${matches.joinToString { it.folderName }}). " +
+                    "Dipindahkan memakai rule pertama: \"${matches.first().folderName}\"."
+                overlapWarnings.add(msg)
+                activityLogRepository.add(LogLevel.WARNING, msg)
+            }
+            val rule = matches.first()
+            val moveSuccess = moveFile(file, rule)
+            if (moveSuccess) moved++ else skipped++
+        }
+
+        activityLogRepository.add(
+            LogLevel.SUCCESS,
+            "Scan selesai: $moved file dipindahkan, $skipped dilewati."
+        )
+
+        return ScanResult(moved, skipped, foldersUnreadable = false, overlapWarnings = overlapWarnings)
+    }
+
+    private suspend fun moveFile(file: File, rule: Rule): Boolean {
+        return try {
+            val destDir = File(vaultRootDir, rule.folderName)
+            if (!destDir.exists()) destDir.mkdirs()
+
+            var destFile = File(destDir, file.name)
+            var counter = 1
+            while (destFile.exists()) {
+                destFile = File(destDir, "${file.nameWithoutExtension}_$counter.${file.extension}")
+                counter++
+            }
+
+            val originalParent = file.parentFile?.absolutePath ?: downloadsDir.absolutePath
+            val success = file.renameTo(destFile) || copyThenDelete(file, destFile)
+
+            if (success) {
+                moveHistoryRepository.record(
+                    MoveHistoryEntry(
+                        id = UUID.randomUUID().toString(),
+                        timestampMillis = System.currentTimeMillis(),
+                        fileName = destFile.name,
+                        originalParentUri = originalParent,
+                        destUri = destFile.absolutePath,
+                        ruleFolderName = rule.folderName
+                    )
+                )
+                activityLogRepository.add(LogLevel.SUCCESS, "\"${file.name}\" -> PromptVault/${rule.folderName}/")
+            } else {
+                activityLogRepository.add(LogLevel.ERROR, "Gagal memindahkan \"${file.name}\".")
+            }
+            success
+        } catch (e: Exception) {
+            activityLogRepository.add(LogLevel.ERROR, "Error memindahkan \"${file.name}\": ${e.message}")
+            false
+        }
+    }
+
+    private fun copyThenDelete(src: File, dest: File): Boolean {
+        return try {
+            src.copyTo(dest, overwrite = false)
+            src.delete()
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    /** TODO #1: UNDO satu entri riwayat pemindahan. */
+    suspend fun undo(entry: MoveHistoryEntry): Boolean {
+        return try {
+            val current = File(entry.destUri)
+            if (!current.exists()) {
+                activityLogRepository.add(LogLevel.ERROR, "Undo gagal: \"${entry.fileName}\" sudah tidak ada di tujuan.")
+                return false
+            }
+            val originalDir = File(entry.originalParentUri)
+            if (!originalDir.exists()) originalDir.mkdirs()
+
+            var restoreTarget = File(originalDir, entry.fileName)
+            var counter = 1
+            while (restoreTarget.exists()) {
+                restoreTarget = File(originalDir, "${current.nameWithoutExtension}_restored_$counter.${current.extension}")
+                counter++
+            }
+
+            val success = current.renameTo(restoreTarget) || copyThenDelete(current, restoreTarget)
+            if (success) {
+                moveHistoryRepository.markUndone(entry.id)
+                activityLogRepository.add(LogLevel.SUCCESS, "Undo berhasil: \"${entry.fileName}\" dikembalikan ke Downloads.")
+            } else {
+                activityLogRepository.add(LogLevel.ERROR, "Undo gagal untuk \"${entry.fileName}\".")
+            }
+            success
+        } catch (e: Exception) {
+            activityLogRepository.add(LogLevel.ERROR, "Error saat undo \"${entry.fileName}\": ${e.message}")
+            false
+        }
+    }
+}

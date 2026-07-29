@@ -1,0 +1,85 @@
+package com.elprompter.promptvault.data
+
+import android.content.Context
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+
+/**
+ * Hasil pengecekan sebelum menyimpan rule baru/edit.
+ */
+sealed class SaveRuleCheck {
+    object Ok : SaveRuleCheck()
+    data class DuplicatePattern(val existing: Rule) : SaveRuleCheck()      // TODO #9
+    data class OverlapsWithOthers(val overlapping: List<Rule>) : SaveRuleCheck() // TODO #3
+}
+
+class RuleRepository(private val context: Context) {
+
+    private val key = stringPreferencesKey("rules_json")
+    private val json = Json { ignoreUnknownKeys = true; prettyPrint = true }
+
+    val rulesFlow: Flow<List<Rule>> = context.promptVaultDataStore.data.map { prefs ->
+        val raw = prefs[key] ?: "[]"
+        runCatching { json.decodeFromString<List<Rule>>(raw) }.getOrDefault(emptyList())
+    }
+
+    suspend fun getRules(): List<Rule> = rulesFlow.first()
+
+    /** Cek duplikat pattern & overlap sebelum benar-benar menyimpan (dipakai UI utk konfirmasi). */
+    suspend fun checkBeforeSave(candidate: Rule): SaveRuleCheck {
+        val rules = getRules().filter { it.id != candidate.id }
+        val duplicate = rules.firstOrNull { it.pattern.equals(candidate.pattern, ignoreCase = true) }
+        if (duplicate != null) return SaveRuleCheck.DuplicatePattern(duplicate)
+
+        val overlaps = com.elprompter.promptvault.util.RuleOverlapChecker.findOverlaps(candidate, rules)
+        if (overlaps.isNotEmpty()) return SaveRuleCheck.OverlapsWithOthers(overlaps)
+
+        return SaveRuleCheck.Ok
+    }
+
+    suspend fun upsertRule(rule: Rule) {
+        val current = getRules().toMutableList()
+        val idx = current.indexOfFirst { it.id == rule.id }
+        if (idx >= 0) current[idx] = rule else current.add(rule)
+        persist(current)
+    }
+
+    suspend fun deleteRule(ruleId: String) {
+        val current = getRules().filterNot { it.id == ruleId }
+        persist(current)
+    }
+
+    suspend fun findAllOverlaps(): Map<Rule, List<Rule>> {
+        val rules = getRules()
+        val result = mutableMapOf<Rule, List<Rule>>()
+        for (r in rules) {
+            val overlaps = com.elprompter.promptvault.util.RuleOverlapChecker.findOverlaps(r, rules.filter { it.id != r.id })
+            if (overlaps.isNotEmpty()) result[r] = overlaps
+        }
+        return result
+    }
+
+    private suspend fun persist(rules: List<Rule>) {
+        context.promptVaultDataStore.edit { prefs ->
+            prefs[key] = json.encodeToString(rules)
+        }
+    }
+
+    /** Ekspor semua rule sebagai teks JSON (TODO #7 - backup/export). */
+    suspend fun exportAsJson(): String = json.encodeToString(getRules())
+
+    /** Impor rule dari teks JSON hasil export. Menggabungkan (merge) berdasarkan id. */
+    suspend fun importFromJson(jsonText: String): Int {
+        val imported = runCatching { json.decodeFromString<List<Rule>>(jsonText) }.getOrDefault(emptyList())
+        if (imported.isEmpty()) return 0
+        val current = getRules().associateBy { it.id }.toMutableMap()
+        imported.forEach { current[it.id] = it }
+        persist(current.values.toList())
+        return imported.size
+    }
+}
