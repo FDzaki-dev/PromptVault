@@ -11,16 +11,31 @@ import com.elprompter.promptvault.data.RuleRepository
 import java.io.File
 import java.util.UUID
 
+data class SkippedFileInfo(
+    val fileName: String,
+    val reason: String
+)
+
 data class ScanResult(
     val filesMoved: Int,
     val filesSkippedNoMatch: Int,
     val foldersUnreadable: Boolean,
-    val overlapWarnings: List<String>
+    val overlapWarnings: List<String>,
+    val skippedDetails: List<SkippedFileInfo> = emptyList()
+)
+
+/** Hasil uji-coba pattern terhadap isi Downloads saat ini, dipakai di layar Tambah/Edit Rule. */
+data class PatternPreviewResult(
+    val totalCandidateFiles: Int,
+    val matchedFileNames: List<String>
 )
 
 /**
  * Logika inti: scan folder Downloads, cocokkan tiap file terhadap rule aktif,
  * pindahkan ke Downloads/PromptVault/<folderName>/, dan catat riwayat untuk undo.
+ *
+ * Prinsip "expert-level file organizer": setiap file yang TIDAK dipindahkan harus
+ * bisa dijelaskan alasannya secara spesifik ke user, bukan cuma angka "dilewati".
  */
 class FileSorter(
     private val context: Context,
@@ -35,6 +50,13 @@ class FileSorter(
     private val vaultRootDir: File
         get() = File(downloadsDir, "PromptVault")
 
+    private fun listCandidateFiles(): Array<File> {
+        return downloadsDir.listFiles { f ->
+            f.isFile && (f.extension.equals("zip", true) || f.extension.equals("txt", true)) &&
+                !f.absolutePath.startsWith(vaultRootDir.absolutePath)
+        } ?: emptyArray()
+    }
+
     suspend fun scanAndSort(): ScanResult {
         val rules = ruleRepository.getRules().filter { it.enabled }
 
@@ -48,10 +70,7 @@ class FileSorter(
             return ScanResult(0, 0, foldersUnreadable = false, overlapWarnings = emptyList())
         }
 
-        val candidateFiles = downloadsDir.listFiles { f ->
-            f.isFile && (f.extension.equals("zip", true) || f.extension.equals("txt", true)) &&
-                !f.absolutePath.startsWith(vaultRootDir.absolutePath)
-        } ?: emptyArray()
+        val candidateFiles = listCandidateFiles()
 
         if (candidateFiles.isEmpty()) {
             activityLogRepository.add(LogLevel.INFO, "Scan selesai: tidak ada file ZIP/TXT baru yang cocok.")
@@ -61,11 +80,21 @@ class FileSorter(
         var moved = 0
         var skipped = 0
         val overlapWarnings = mutableListOf<String>()
+        val skippedDetails = mutableListOf<SkippedFileInfo>()
 
         for (file in candidateFiles) {
             val matches = RuleOverlapChecker.matchingRules(file.name, rules)
             if (matches.isEmpty()) {
                 skipped++
+                // Alasan spesifik: tunjukkan pattern rule aktif yang ada supaya user
+                // bisa langsung bandingkan dengan nama file aslinya.
+                val activePatterns = rules.joinToString(", ") { "\"${it.pattern}\"" }
+                skippedDetails.add(
+                    SkippedFileInfo(
+                        fileName = file.name,
+                        reason = "Tidak cocok pattern rule manapun (rule aktif: $activePatterns)"
+                    )
+                )
                 continue
             }
             if (matches.size > 1) {
@@ -76,15 +105,42 @@ class FileSorter(
             }
             val rule = matches.first()
             val moveSuccess = moveFile(file, rule)
-            if (moveSuccess) moved++ else skipped++
+            if (moveSuccess) {
+                moved++
+            } else {
+                skipped++
+                skippedDetails.add(SkippedFileInfo(file.name, "Gagal dipindahkan (lihat Log untuk detail error)"))
+            }
         }
 
-        activityLogRepository.add(
-            LogLevel.SUCCESS,
+        val summary = if (skipped > 0) {
+            "Scan selesai: $moved file dipindahkan, $skipped dilewati. Buka \"Detail File Dilewati\" untuk lihat nama filenya."
+        } else {
             "Scan selesai: $moved file dipindahkan, $skipped dilewati."
-        )
+        }
+        activityLogRepository.add(LogLevel.SUCCESS, summary)
 
-        return ScanResult(moved, skipped, foldersUnreadable = false, overlapWarnings = overlapWarnings)
+        return ScanResult(moved, skipped, foldersUnreadable = false, overlapWarnings = overlapWarnings, skippedDetails = skippedDetails)
+    }
+
+    /**
+     * Uji satu pattern (belum tentu tersimpan sebagai rule) terhadap isi Downloads
+     * saat ini. Dipakai di layar Tambah/Edit Rule supaya user bisa lihat langsung
+     * pattern-nya bakal "kena" file yang mana SEBELUM menyimpan rule.
+     */
+    fun previewPatternMatches(pattern: String): PatternPreviewResult {
+        if (pattern.isBlank() || !downloadsDir.exists() || !downloadsDir.canRead()) {
+            return PatternPreviewResult(0, emptyList())
+        }
+        val candidates = listCandidateFiles()
+        val matched = candidates.filter { GlobMatcher.matches(it.name, pattern) }.map { it.name }
+        return PatternPreviewResult(candidates.size, matched)
+    }
+
+    /** Daftar nama file ZIP/TXT asli di Downloads, dipakai layar Diagnostik agar user tahu format nama file sebenarnya. */
+    fun listDownloadsCandidateFileNames(limit: Int = 100): List<String> {
+        if (!downloadsDir.exists() || !downloadsDir.canRead()) return emptyList()
+        return listCandidateFiles().map { it.name }.sorted().take(limit)
     }
 
     private suspend fun moveFile(file: File, rule: Rule): Boolean {

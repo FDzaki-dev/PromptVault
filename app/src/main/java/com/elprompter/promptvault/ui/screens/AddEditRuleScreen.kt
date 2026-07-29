@@ -4,12 +4,19 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -20,6 +27,8 @@ import androidx.compose.ui.unit.dp
 import com.elprompter.promptvault.data.Rule
 import com.elprompter.promptvault.data.SaveRuleCheck
 import com.elprompter.promptvault.ui.components.ConfirmDialog
+import com.elprompter.promptvault.util.PatternPreviewResult
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.UUID
 
@@ -27,6 +36,7 @@ import java.util.UUID
 fun AddEditRuleScreen(
     existingRule: Rule?,
     onCheckBeforeSave: suspend (Rule) -> SaveRuleCheck,
+    onPreviewPattern: (String) -> PatternPreviewResult,
     onSave: (Rule) -> Unit,
     onCancel: () -> Unit
 ) {
@@ -34,12 +44,26 @@ fun AddEditRuleScreen(
     var pattern by remember { mutableStateOf(existingRule?.pattern ?: "") }
     var pendingCheck by remember { mutableStateOf<SaveRuleCheck?>(null) }
     var pendingRule by remember { mutableStateOf<Rule?>(null) }
+    var preview by remember { mutableStateOf<PatternPreviewResult?>(null) }
 
     val scope = rememberCoroutineScope()
+
+    // Uji pattern secara live ke isi Downloads saat ini (debounce 400ms biar tidak
+    // scan folder di tiap ketikan huruf). Ini yang menjawab keluhan "gak jelas kenapa
+    // dilewati" -- user langsung lihat cocok/tidaknya SEBELUM menyimpan rule.
+    LaunchedEffect(pattern) {
+        if (pattern.isBlank()) {
+            preview = null
+        } else {
+            delay(400)
+            preview = onPreviewPattern(pattern.trim())
+        }
+    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
@@ -61,6 +85,32 @@ fun AddEditRuleScreen(
             "Gunakan * untuk banyak karakter dan ? untuk satu karakter. Contoh: *.txt, laporan_*.zip",
             style = MaterialTheme.typography.bodySmall
         )
+
+        // Live preview: bukti langsung pattern ini akan kena file yang mana di Downloads.
+        preview?.let { p ->
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text(
+                        "${p.matchedFileNames.size} dari ${p.totalCandidateFiles} file ZIP/TXT di Downloads cocok pattern ini",
+                        style = MaterialTheme.typography.titleSmall
+                    )
+                    if (p.matchedFileNames.isEmpty() && p.totalCandidateFiles > 0) {
+                        Text(
+                            "Tidak ada yang cocok. Cek lagi ejaan/format pattern-nya, atau buka Diagnostik untuk lihat nama file asli di Downloads.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                    LazyColumn(modifier = Modifier.heightIn(max = 180.dp)) {
+                        items(p.matchedFileNames.take(10)) { name ->
+                            Text("• $name", style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                    if (p.matchedFileNames.size > 10) {
+                        Text("+ ${p.matchedFileNames.size - 10} file lainnya", style = MaterialTheme.typography.labelSmall)
+                    }
+                }
+            }
+        }
 
         Button(
             onClick = {

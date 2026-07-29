@@ -12,6 +12,8 @@ import com.elprompter.promptvault.data.RuleRepository
 import com.elprompter.promptvault.data.SaveRuleCheck
 import com.elprompter.promptvault.data.SettingsRepository
 import com.elprompter.promptvault.util.FileSorter
+import com.elprompter.promptvault.util.PatternPreviewResult
+import com.elprompter.promptvault.util.SkippedFileInfo
 import com.elprompter.promptvault.worker.WorkScheduler
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -60,6 +62,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _lastScanSummary = MutableStateFlow<String?>(null)
     val lastScanSummary: StateFlow<String?> = _lastScanSummary.asStateFlow()
 
+    /** Detail file yang dilewati pada scan TERAKHIR, lengkap dengan alasannya. */
+    private val _lastSkippedFiles = MutableStateFlow<List<SkippedFileInfo>>(emptyList())
+    val lastSkippedFiles: StateFlow<List<SkippedFileInfo>> = _lastSkippedFiles.asStateFlow()
+
     fun runManualScan() {
         viewModelScope.launch {
             _isScanning.value = true
@@ -69,6 +75,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 result.filesMoved == 0 && result.filesSkippedNoMatch == 0 -> "Tidak ada file cocok yang ditemukan."
                 else -> "${result.filesMoved} file dipindahkan, ${result.filesSkippedNoMatch} dilewati."
             }
+            _lastSkippedFiles.value = result.skippedDetails
             _isScanning.value = false
         }
     }
@@ -104,4 +111,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     suspend fun findAllOverlaps() = ruleRepository.findAllOverlaps()
+
+    /** Uji pattern langsung terhadap isi Downloads saat ini (belum tersimpan sebagai rule). */
+    fun previewPattern(pattern: String): PatternPreviewResult = fileSorter.previewPatternMatches(pattern)
+
+    /** Nama file ZIP/TXT asli di Downloads, untuk layar Diagnostik. */
+    fun listDownloadsFileNames(): List<String> = fileSorter.listDownloadsCandidateFileNames()
 }

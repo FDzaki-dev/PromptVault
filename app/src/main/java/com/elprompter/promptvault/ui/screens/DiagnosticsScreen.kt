@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -32,7 +34,7 @@ import java.util.Locale
  * (status WorkManager & jadwal berikutnya) tanpa perlu adb/dev tools.
  */
 @Composable
-fun DiagnosticsScreen() {
+fun DiagnosticsScreen(downloadsFileNames: List<String>) {
     val context = LocalContext.current
     var statusText by remember { mutableStateOf("Memuat status WorkManager…") }
 
@@ -43,6 +45,7 @@ fun DiagnosticsScreen() {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -52,6 +55,27 @@ fun DiagnosticsScreen() {
                 "benar-benar terjadwal, termasuk setelah restart perangkat.",
             style = MaterialTheme.typography.bodyMedium
         )
+
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text("Nama File Asli di Downloads", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "Bandingkan langsung dengan pattern rule kamu. Kalau tidak persis sama " +
+                        "(termasuk spasi/underscore/ekstensi), rule tidak akan cocok.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                if (downloadsFileNames.isEmpty()) {
+                    Text("Tidak ada file ZIP/TXT di Downloads saat ini.", style = MaterialTheme.typography.bodySmall)
+                } else {
+                    downloadsFileNames.take(20).forEach { name ->
+                        Text("• $name", style = MaterialTheme.typography.bodySmall)
+                    }
+                    if (downloadsFileNames.size > 20) {
+                        Text("+ ${downloadsFileNames.size - 20} file lainnya", style = MaterialTheme.typography.labelSmall)
+                    }
+                }
+            }
+        }
 
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {

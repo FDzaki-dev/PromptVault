@@ -9,4 +9,5 @@ object Routes {
     const val ACTIVITY_LOG = "activity_log"
     const val SETTINGS = "settings"
     const val DIAGNOSTICS = "diagnostics"
+    const val SKIPPED_FILES = "skipped_files"
 }

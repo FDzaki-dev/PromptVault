@@ -46,6 +46,7 @@ import com.elprompter.promptvault.ui.screens.HomeScreen
 import com.elprompter.promptvault.ui.screens.OnboardingScreen
 import com.elprompter.promptvault.ui.screens.RuleListScreen
 import com.elprompter.promptvault.ui.screens.SettingsScreen
+import com.elprompter.promptvault.ui.screens.SkippedFilesScreen
 import com.elprompter.promptvault.ui.theme.PromptVaultTheme
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -115,17 +116,20 @@ private fun PromptVaultRoot(viewModel: MainViewModel) {
             val interval by viewModel.intervalMinutes.collectAsStateWithLifecycle()
             val isScanning by viewModel.isScanning.collectAsStateWithLifecycle()
             val summary by viewModel.lastScanSummary.collectAsStateWithLifecycle()
+            val skipped by viewModel.lastSkippedFiles.collectAsStateWithLifecycle()
 
             HomeScreen(
                 ruleCount = rules.count { it.enabled },
                 intervalMinutes = interval,
                 isScanning = isScanning,
                 lastScanSummary = summary,
+                hasSkippedFiles = skipped.isNotEmpty(),
                 onScanNow = { viewModel.runManualScan() },
                 onOpenRules = { navController.navigate(Routes.RULES) },
                 onOpenLog = { navController.navigate(Routes.ACTIVITY_LOG) },
                 onOpenSettings = { navController.navigate(Routes.SETTINGS) },
-                onOpenDiagnostics = { navController.navigate(Routes.DIAGNOSTICS) }
+                onOpenDiagnostics = { navController.navigate(Routes.DIAGNOSTICS) },
+                onOpenSkippedFiles = { navController.navigate(Routes.SKIPPED_FILES) }
             )
         }
         composable(Routes.RULES) {
@@ -153,6 +157,7 @@ private fun PromptVaultRoot(viewModel: MainViewModel) {
             AddEditRuleScreen(
                 existingRule = existing,
                 onCheckBeforeSave = { rule -> viewModel.checkBeforeSave(rule) },
+                onPreviewPattern = { pattern -> viewModel.previewPattern(pattern) },
                 onSave = { rule ->
                     viewModel.saveRule(rule)
                     navController.popBackStack()
@@ -179,7 +184,13 @@ private fun PromptVaultRoot(viewModel: MainViewModel) {
             )
         }
         composable(Routes.DIAGNOSTICS) {
-            DiagnosticsScreen()
+            var fileNames by remember { mutableStateOf<List<String>>(emptyList()) }
+            LaunchedEffect(Unit) { fileNames = viewModel.listDownloadsFileNames() }
+            DiagnosticsScreen(downloadsFileNames = fileNames)
+        }
+        composable(Routes.SKIPPED_FILES) {
+            val skipped by viewModel.lastSkippedFiles.collectAsStateWithLifecycle()
+            SkippedFilesScreen(skipped = skipped)
         }
     }
 }

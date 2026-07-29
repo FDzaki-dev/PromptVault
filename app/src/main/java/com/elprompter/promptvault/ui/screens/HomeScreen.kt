@@ -11,6 +11,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -21,11 +22,13 @@ fun HomeScreen(
     intervalMinutes: Int,
     isScanning: Boolean,
     lastScanSummary: String?,
+    hasSkippedFiles: Boolean,
     onScanNow: () -> Unit,
     onOpenRules: () -> Unit,
     onOpenLog: () -> Unit,
     onOpenSettings: () -> Unit,
-    onOpenDiagnostics: () -> Unit
+    onOpenDiagnostics: () -> Unit,
+    onOpenSkippedFiles: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -42,6 +45,11 @@ fun HomeScreen(
                 Text("Auto-scan setiap $intervalMinutes menit")
                 if (lastScanSummary != null) {
                     Text(lastScanSummary, style = MaterialTheme.typography.bodySmall)
+                }
+                if (hasSkippedFiles) {
+                    TextButton(onClick = onOpenSkippedFiles, modifier = Modifier.fillMaxWidth()) {
+                        Text("Lihat detail file yang dilewati →")
+                    }
                 }
             }
         }
