@@ -14,8 +14,8 @@ android {
         applicationId = "com.fdzaki.promptvault"
         minSdk = 26
         targetSdk = 34
-        versionCode = 4
-        versionName = "1.2.0"
+        versionCode = 6
+        versionName = "1.2.2"
     }
 
     signingConfigs {
@@ -76,6 +76,7 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.animation:animation")
     implementation("androidx.compose.material:material-icons-core")
+    implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.datastore:datastore-preferences:1.1.1")
     implementation("androidx.work:work-runtime-ktx:2.9.1")
 
