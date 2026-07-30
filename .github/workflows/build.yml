@@ -21,6 +21,12 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
+      - name: Read app version
+        id: version
+        run: |
+          VERSION=$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
       - name: Run unit tests
         run: gradle testDebugUnitTest testReleaseUnitTest --stacktrace
 
@@ -35,16 +41,18 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: gradle assembleRelease --stacktrace
 
+      # Nama file APK & nama artifact GitHub SELALU mengikuti versionName di
+      # app/build.gradle.kts secara otomatis -- tidak ada angka manual, tidak
+      # ada commit hash/run id ditempel ke nama file.
       - name: Rename APK with version name
         run: |
-          VERSION=$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts)
           mkdir -p out
-          cp app/build/outputs/apk/release/app-release.apk out/PromptVault-v${VERSION}.apk
+          cp app/build/outputs/apk/release/app-release.apk "out/PromptVault-v${{ steps.version.outputs.version }}.apk"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: PromptVault-release-apk
+          name: PromptVault-v${{ steps.version.outputs.version }}
           path: out/*.apk
 
       - name: Clean up keystore

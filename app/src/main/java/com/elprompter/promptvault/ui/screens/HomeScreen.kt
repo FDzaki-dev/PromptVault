@@ -2,20 +2,25 @@ package com.elprompter.promptvault.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.elprompter.promptvault.ui.components.VaultCard
 import com.elprompter.promptvault.ui.theme.InkFaint
@@ -57,7 +62,8 @@ fun HomeScreen(
                 }
                 if (hasSkippedFiles) {
                     TextButton(onClick = onOpenSkippedFiles, modifier = Modifier.fillMaxWidth()) {
-                        Text("Lihat detail file yang dilewati →", color = Stamp)
+                        Icon(Icons.Filled.ErrorOutline, contentDescription = null, tint = Stamp, modifier = Modifier.size(16.dp))
+                        Text(" Lihat detail file yang dilewati", color = Stamp, style = MaterialTheme.typography.bodyMedium)
                     }
                 }
             }
@@ -101,6 +107,12 @@ private fun ManifestNavButton(label: String, onClick: () -> Unit) {
         colors = ButtonDefaults.outlinedButtonColors(contentColor = Pine),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Text("→  $label", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Start)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(Icons.Filled.ChevronRight, contentDescription = null, modifier = Modifier.size(18.dp))
+            Text(label, modifier = Modifier.padding(start = 4.dp))
+        }
     }
 }
