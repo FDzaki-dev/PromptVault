@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
+import com.elprompter.promptvault.ui.components.VaultCard
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -61,7 +61,7 @@ fun SettingsScreen(
             }
         }
 
-        Card(modifier = Modifier.fillMaxWidth()) {
+        VaultCard(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Backup / Export Rule", style = MaterialTheme.typography.titleMedium)
                 Text(
@@ -87,7 +87,7 @@ fun SettingsScreen(
             }
         }
 
-        Card(modifier = Modifier.fillMaxWidth()) {
+        VaultCard(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Import Rule", style = MaterialTheme.typography.titleMedium)
                 OutlinedTextField(

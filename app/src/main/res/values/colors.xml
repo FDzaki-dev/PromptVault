@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="pv_primary">#5B4EE5</color>
-    <color name="pv_primary_dark">#3E32B0</color>
-    <color name="pv_background">#F7F6FB</color>
-    <color name="pv_surface">#FFFFFF</color>
-    <color name="pv_error">#D63A3A</color>
+    <color name="pv_kraft">#EADFC5</color>
+    <color name="pv_card_paper">#F7F1E2</color>
+    <color name="pv_ink">#26302A</color>
+    <color name="pv_pine">#34523C</color>
+    <color name="pv_stamp">#B1432E</color>
+    <color name="pv_amber">#C6862F</color>
 </resources>

@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Card
+import com.elprompter.promptvault.ui.components.VaultCard
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -37,7 +37,7 @@ fun SkippedFilesScreen(skipped: List<SkippedFileInfo>) {
         } else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(top = 12.dp)) {
                 items(skipped, key = { it.fileName + it.reason }) { info ->
-                    Card(modifier = Modifier.fillMaxWidth()) {
+                    VaultCard(modifier = Modifier.fillMaxWidth()) {
                         Column(modifier = Modifier.padding(10.dp)) {
                             Text(info.fileName, style = MaterialTheme.typography.bodyMedium)
                             Text(

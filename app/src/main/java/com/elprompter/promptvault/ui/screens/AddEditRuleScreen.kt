@@ -11,7 +11,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
+import com.elprompter.promptvault.ui.components.VaultCard
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -88,7 +88,7 @@ fun AddEditRuleScreen(
 
         // Live preview: bukti langsung pattern ini akan kena file yang mana di Downloads.
         preview?.let { p ->
-            Card(modifier = Modifier.fillMaxWidth()) {
+            VaultCard(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Text(
                         "${p.matchedFileNames.size} dari ${p.totalCandidateFiles} file ZIP/TXT di Downloads cocok pattern ini",

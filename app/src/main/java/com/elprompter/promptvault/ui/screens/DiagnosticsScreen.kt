@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Card
+import com.elprompter.promptvault.ui.components.VaultCard
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -56,7 +56,7 @@ fun DiagnosticsScreen(downloadsFileNames: List<String>) {
             style = MaterialTheme.typography.bodyMedium
         )
 
-        Card(modifier = Modifier.fillMaxWidth()) {
+        VaultCard(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text("Nama File Asli di Downloads", style = MaterialTheme.typography.titleMedium)
                 Text(
@@ -77,14 +77,14 @@ fun DiagnosticsScreen(downloadsFileNames: List<String>) {
             }
         }
 
-        Card(modifier = Modifier.fillMaxWidth()) {
+        VaultCard(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text("Status Auto-Sort Worker", style = MaterialTheme.typography.titleMedium)
                 Text(statusText, style = MaterialTheme.typography.bodyMedium)
             }
         }
 
-        Card(modifier = Modifier.fillMaxWidth()) {
+        VaultCard(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text("Cara verifikasi manual", style = MaterialTheme.typography.titleMedium)
                 Text("1. Buat rule, taruh file ZIP/TXT contoh di Downloads.")
