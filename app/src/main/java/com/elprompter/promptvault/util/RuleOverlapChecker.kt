@@ -14,5 +14,13 @@ object RuleOverlapChecker {
 
     /** Untuk satu nama file nyata, kembalikan semua rule aktif yang cocok (dipakai saat scan). */
     fun matchingRules(fileName: String, rules: List<Rule>): List<Rule> =
-        rules.filter { it.enabled && GlobMatcher.matches(fileName, it.pattern) }
+        rules.filter { rule ->
+            rule.enabled &&
+                GlobMatcher.matches(fileName, rule.pattern) &&
+                !isExcluded(fileName, rule)
+        }
+
+    /** True kalau file dikecualikan secara eksplisit oleh excludePattern rule ini. */
+    fun isExcluded(fileName: String, rule: Rule): Boolean =
+        rule.excludePattern.isNotBlank() && GlobMatcher.matches(fileName, rule.excludePattern)
 }

@@ -54,6 +54,34 @@ class RuleRepository(private val context: Context) {
         persist(current)
     }
 
+    /**
+     * Urutan list di storage INI YANG MENENTUKAN prioritas rule saat file cocok
+     * lebih dari satu rule (rule dengan index lebih kecil menang). Sebelumnya
+     * urutan ini "tersembunyi" (cuma urutan penyimpanan apa adanya) -- sekarang
+     * user bisa mengatur naik/turun secara eksplisit lewat dua fungsi ini.
+     */
+    suspend fun moveRuleUp(ruleId: String) {
+        val current = getRules().toMutableList()
+        val idx = current.indexOfFirst { it.id == ruleId }
+        if (idx > 0) {
+            val tmp = current[idx - 1]
+            current[idx - 1] = current[idx]
+            current[idx] = tmp
+            persist(current)
+        }
+    }
+
+    suspend fun moveRuleDown(ruleId: String) {
+        val current = getRules().toMutableList()
+        val idx = current.indexOfFirst { it.id == ruleId }
+        if (idx in 0 until current.lastIndex) {
+            val tmp = current[idx + 1]
+            current[idx + 1] = current[idx]
+            current[idx] = tmp
+            persist(current)
+        }
+    }
+
     suspend fun findAllOverlaps(): Map<Rule, List<Rule>> {
         val rules = getRules()
         val result = mutableMapOf<Rule, List<Rule>>()

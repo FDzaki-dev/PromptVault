@@ -7,5 +7,6 @@ data class Rule(
     val id: String,
     val folderName: String,
     val pattern: String,       // glob pattern, mis: "invoice_*.zip" atau "*.txt"
+    val excludePattern: String = "", // opsional; kosong = tidak ada pengecualian
     val enabled: Boolean = true
 )

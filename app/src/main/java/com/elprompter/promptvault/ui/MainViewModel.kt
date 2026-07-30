@@ -90,6 +90,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch { ruleRepository.deleteRule(ruleId) }
     }
 
+    fun moveRuleUp(ruleId: String) {
+        viewModelScope.launch { ruleRepository.moveRuleUp(ruleId) }
+    }
+
+    fun moveRuleDown(ruleId: String) {
+        viewModelScope.launch { ruleRepository.moveRuleDown(ruleId) }
+    }
+
     fun setIntervalMinutes(minutes: Int) {
         viewModelScope.launch {
             settingsRepository.setIntervalMinutes(minutes)
@@ -112,8 +120,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     suspend fun findAllOverlaps() = ruleRepository.findAllOverlaps()
 
-    /** Uji pattern langsung terhadap isi Downloads saat ini (belum tersimpan sebagai rule). */
-    fun previewPattern(pattern: String): PatternPreviewResult = fileSorter.previewPatternMatches(pattern)
+    /** Uji pattern include+exclude langsung terhadap isi Downloads saat ini (belum tersimpan sebagai rule). */
+    fun previewPattern(pattern: String, excludePattern: String = ""): PatternPreviewResult =
+        fileSorter.previewPatternMatches(pattern, excludePattern)
 
     /** Nama file ZIP/TXT asli di Downloads, untuk layar Diagnostik. */
     fun listDownloadsFileNames(): List<String> = fileSorter.listDownloadsCandidateFileNames()

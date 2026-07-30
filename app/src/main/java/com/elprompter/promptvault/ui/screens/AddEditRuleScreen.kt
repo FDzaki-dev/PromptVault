@@ -41,12 +41,13 @@ import java.util.UUID
 fun AddEditRuleScreen(
     existingRule: Rule?,
     onCheckBeforeSave: suspend (Rule) -> SaveRuleCheck,
-    onPreviewPattern: (String) -> PatternPreviewResult,
+    onPreviewPattern: (String, String) -> PatternPreviewResult,
     onSave: (Rule) -> Unit,
     onCancel: () -> Unit
 ) {
     var folderName by remember { mutableStateOf(existingRule?.folderName ?: "") }
     var pattern by remember { mutableStateOf(existingRule?.pattern ?: "") }
+    var excludePattern by remember { mutableStateOf(existingRule?.excludePattern ?: "") }
     var pendingCheck by remember { mutableStateOf<SaveRuleCheck?>(null) }
     var pendingRule by remember { mutableStateOf<Rule?>(null) }
     var preview by remember { mutableStateOf<PatternPreviewResult?>(null) }
@@ -56,12 +57,12 @@ fun AddEditRuleScreen(
     // Uji pattern secara live ke isi Downloads saat ini (debounce 400ms biar tidak
     // scan folder di tiap ketikan huruf). Ini yang menjawab keluhan "gak jelas kenapa
     // dilewati" -- user langsung lihat cocok/tidaknya SEBELUM menyimpan rule.
-    LaunchedEffect(pattern) {
+    LaunchedEffect(pattern, excludePattern) {
         if (pattern.isBlank()) {
             preview = null
         } else {
             delay(400)
-            preview = onPreviewPattern(pattern.trim())
+            preview = onPreviewPattern(pattern.trim(), excludePattern.trim())
         }
     }
 
@@ -92,6 +93,18 @@ fun AddEditRuleScreen(
             )
             Text(
                 "Gunakan * untuk banyak karakter dan ? untuk satu karakter. Contoh: *.txt, laporan_*.zip",
+                style = MaterialTheme.typography.bodySmall
+            )
+
+            OutlinedTextField(
+                value = excludePattern,
+                onValueChange = { excludePattern = it },
+                label = { Text("Kecualikan pattern ini (opsional)") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Text(
+                "File yang cocok pattern utama TAPI juga cocok pattern kecuali ini tidak akan dipindahkan. " +
+                    "Contoh: pattern *.zip, kecualikan backup_*.zip.",
                 style = MaterialTheme.typography.bodySmall
             )
 
@@ -126,7 +139,8 @@ fun AddEditRuleScreen(
                     val rule = Rule(
                         id = existingRule?.id ?: UUID.randomUUID().toString(),
                         folderName = folderName.trim(),
-                        pattern = pattern.trim()
+                        pattern = pattern.trim(),
+                        excludePattern = excludePattern.trim()
                     )
                     scope.launch {
                         val check = onCheckBeforeSave(rule)

@@ -31,11 +31,14 @@ data class PatternPreviewResult(
 )
 
 /**
- * Logika inti: scan folder Downloads, cocokkan tiap file terhadap rule aktif,
- * pindahkan ke Downloads/PromptVault/<folderName>/, dan catat riwayat untuk undo.
+ * Logika inti: scan folder Downloads, cocokkan tiap file terhadap rule aktif
+ * (berurutan sesuai PRIORITAS -- rule dengan index lebih kecil menang kalau
+ * file cocok lebih dari satu rule), pindahkan ke Downloads/PromptVault/<folderName>/,
+ * dan catat riwayat untuk undo.
  *
  * Prinsip "expert-level file organizer": setiap file yang TIDAK dipindahkan harus
  * bisa dijelaskan alasannya secara spesifik ke user, bukan cuma angka "dilewati".
+ * Termasuk file yang sengaja DITUNDA karena kemungkinan masih ditulis/didownload.
  */
 class FileSorter(
     private val context: Context,
@@ -55,6 +58,18 @@ class FileSorter(
             f.isFile && (f.extension.equals("zip", true) || f.extension.equals("txt", true)) &&
                 !f.absolutePath.startsWith(vaultRootDir.absolutePath)
         } ?: emptyArray()
+    }
+
+    /**
+     * File yang baru diubah/ditulis dalam beberapa detik terakhir DITUNDA dulu,
+     * bukan dipindahkan langsung. Ini mencegah race condition klasik: file ZIP/TXT
+     * yang masih dalam proses download/ditulis ikut terpindah setengah jadi dan
+     * jadi korup. File akan otomatis dicoba lagi di scan berikutnya begitu sudah
+     * "diam" (tidak berubah) lebih dari STABILITY_WINDOW_MS.
+     */
+    private fun isLikelyStillWriting(file: File): Boolean {
+        val age = System.currentTimeMillis() - file.lastModified()
+        return age in 0 until STABILITY_WINDOW_MS
     }
 
     suspend fun scanAndSort(): ScanResult {
@@ -83,23 +98,37 @@ class FileSorter(
         val skippedDetails = mutableListOf<SkippedFileInfo>()
 
         for (file in candidateFiles) {
-            val matches = RuleOverlapChecker.matchingRules(file.name, rules)
-            if (matches.isEmpty()) {
+            if (isLikelyStillWriting(file)) {
                 skipped++
-                // Alasan spesifik: tunjukkan pattern rule aktif yang ada supaya user
-                // bisa langsung bandingkan dengan nama file aslinya.
-                val activePatterns = rules.joinToString(", ") { "\"${it.pattern}\"" }
                 skippedDetails.add(
                     SkippedFileInfo(
                         fileName = file.name,
-                        reason = "Tidak cocok pattern rule manapun (rule aktif: $activePatterns)"
+                        reason = "Ditunda: file baru saja berubah, kemungkinan masih ditulis/didownload. Akan dicoba lagi scan berikutnya."
                     )
                 )
                 continue
             }
+
+            // Rule diurutkan berdasarkan PRIORITAS (urutan di layar Kelola Rule).
+            // Rule pertama yang cocok DAN tidak dikecualikan yang menang.
+            val matches = RuleOverlapChecker.matchingRules(file.name, rules)
+            if (matches.isEmpty()) {
+                skipped++
+                val excludedBy = rules.firstOrNull {
+                    GlobMatcher.matches(file.name, it.pattern) && RuleOverlapChecker.isExcluded(file.name, it)
+                }
+                val reason = if (excludedBy != null) {
+                    "Cocok pattern \"${excludedBy.pattern}\" tapi dikecualikan oleh excludePattern \"${excludedBy.excludePattern}\" di rule \"${excludedBy.folderName}\""
+                } else {
+                    val activePatterns = rules.joinToString(", ") { "\"${it.pattern}\"" }
+                    "Tidak cocok pattern rule manapun (rule aktif: $activePatterns)"
+                }
+                skippedDetails.add(SkippedFileInfo(file.name, reason))
+                continue
+            }
             if (matches.size > 1) {
                 val msg = "\"${file.name}\" cocok dengan ${matches.size} rule (${matches.joinToString { it.folderName }}). " +
-                    "Dipindahkan memakai rule pertama: \"${matches.first().folderName}\"."
+                    "Dipindahkan memakai rule prioritas tertinggi: \"${matches.first().folderName}\"."
                 overlapWarnings.add(msg)
                 activityLogRepository.add(LogLevel.WARNING, msg)
             }
@@ -124,16 +153,19 @@ class FileSorter(
     }
 
     /**
-     * Uji satu pattern (belum tentu tersimpan sebagai rule) terhadap isi Downloads
-     * saat ini. Dipakai di layar Tambah/Edit Rule supaya user bisa lihat langsung
-     * pattern-nya bakal "kena" file yang mana SEBELUM menyimpan rule.
+     * Uji pattern include + exclude (belum tentu tersimpan sebagai rule) terhadap
+     * isi Downloads saat ini. Dipakai di layar Tambah/Edit Rule supaya user lihat
+     * langsung dampak pattern-nya SEBELUM menyimpan rule.
      */
-    fun previewPatternMatches(pattern: String): PatternPreviewResult {
+    fun previewPatternMatches(pattern: String, excludePattern: String = ""): PatternPreviewResult {
         if (pattern.isBlank() || !downloadsDir.exists() || !downloadsDir.canRead()) {
             return PatternPreviewResult(0, emptyList())
         }
         val candidates = listCandidateFiles()
-        val matched = candidates.filter { GlobMatcher.matches(it.name, pattern) }.map { it.name }
+        val matched = candidates
+            .filter { GlobMatcher.matches(it.name, pattern) }
+            .filterNot { excludePattern.isNotBlank() && GlobMatcher.matches(it.name, excludePattern) }
+            .map { it.name }
         return PatternPreviewResult(candidates.size, matched)
     }
 
@@ -220,5 +252,10 @@ class FileSorter(
             activityLogRepository.add(LogLevel.ERROR, "Error saat undo \"${entry.fileName}\": ${e.message}")
             false
         }
+    }
+
+    companion object {
+        /** Jeda aman sebelum file dianggap "selesai ditulis" dan boleh dipindah. */
+        private const val STABILITY_WINDOW_MS = 5_000L
     }
 }

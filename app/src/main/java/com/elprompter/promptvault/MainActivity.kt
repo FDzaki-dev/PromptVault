@@ -171,6 +171,8 @@ private fun PromptVaultRoot(viewModel: MainViewModel) {
                 rules = rules,
                 overlappingRuleIds = overlapIds,
                 onToggleEnabled = { rule, enabled -> viewModel.saveRule(rule.copy(enabled = enabled)) },
+                onMoveUp = { rule -> viewModel.moveRuleUp(rule.id) },
+                onMoveDown = { rule -> viewModel.moveRuleDown(rule.id) },
                 onEditRule = { rule -> navController.navigate(Routes.addEditRule(rule.id)) },
                 onDeleteRule = { rule -> viewModel.deleteRule(rule.id) },
                 onAddRule = { navController.navigate(Routes.addEditRule(null)) },
@@ -187,7 +189,7 @@ private fun PromptVaultRoot(viewModel: MainViewModel) {
             AddEditRuleScreen(
                 existingRule = existing,
                 onCheckBeforeSave = { rule -> viewModel.checkBeforeSave(rule) },
-                onPreviewPattern = { pattern -> viewModel.previewPattern(pattern) },
+                onPreviewPattern = { pattern, excludePattern -> viewModel.previewPattern(pattern, excludePattern) },
                 onSave = { rule ->
                     viewModel.saveRule(rule)
                     navController.popBackStack()

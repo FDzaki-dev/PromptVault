@@ -39,12 +39,13 @@ fun RuleListScreen(
     rules: List<Rule>,
     overlappingRuleIds: Set<String>,
     onToggleEnabled: (Rule, Boolean) -> Unit,
+    onMoveUp: (Rule) -> Unit,
+    onMoveDown: (Rule) -> Unit,
     onEditRule: (Rule) -> Unit,
     onDeleteRule: (Rule) -> Unit,
     onAddRule: () -> Unit,
     onBack: () -> Unit
 ) {
-    // TODO #8: pencarian/filter rule
     var query by remember { mutableStateOf("") }
     var pendingDelete by remember { mutableStateOf<Rule?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
@@ -56,6 +57,8 @@ fun RuleListScreen(
             it.folderName.contains(query, ignoreCase = true) || it.pattern.contains(query, ignoreCase = true)
         }
     }
+    // Reorder prioritas cuma bermakna kalau daftar tidak lagi difilter pencarian.
+    val reorderEnabled = query.isBlank()
 
     Scaffold(
         topBar = { VaultTopBar(title = "Kelola Rule", onBack = onBack) },
@@ -74,11 +77,15 @@ fun RuleListScreen(
             .fillMaxSize()
             .padding(padding)
             .padding(16.dp)) {
+            Text(
+                "Urutan di bawah = prioritas. Kalau satu file cocok lebih dari satu rule, rule paling atas yang menang.",
+                style = MaterialTheme.typography.bodySmall
+            )
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },
                 label = { Text("Cari rule (nama folder / pattern)") },
-                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
             )
 
             if (filtered.isEmpty()) {
@@ -90,10 +97,16 @@ fun RuleListScreen(
             } else {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     items(filtered, key = { it.id }) { rule ->
+                        val globalIndex = rules.indexOfFirst { it.id == rule.id }
                         RuleCard(
                             rule = rule,
+                            priority = globalIndex + 1,
                             hasOverlapWarning = overlappingRuleIds.contains(rule.id),
+                            canMoveUp = reorderEnabled && globalIndex > 0,
+                            canMoveDown = reorderEnabled && globalIndex < rules.lastIndex,
                             onToggleEnabled = { onToggleEnabled(rule, it) },
+                            onMoveUp = { onMoveUp(rule) },
+                            onMoveDown = { onMoveDown(rule) },
                             onEdit = { onEditRule(rule) },
                             onDelete = { pendingDelete = rule }
                         )
