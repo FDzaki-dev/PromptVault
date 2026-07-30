@@ -14,8 +14,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -29,7 +27,7 @@ import androidx.compose.ui.unit.dp
 import com.elprompter.promptvault.data.ActivityLogEntry
 import com.elprompter.promptvault.data.LogLevel
 import com.elprompter.promptvault.data.MoveHistoryEntry
-import com.elprompter.promptvault.ui.components.ConfirmDialog
+import com.elprompter.promptvault.ui.components.VaultActionSheet
 import com.elprompter.promptvault.ui.components.SortedStamp
 import com.elprompter.promptvault.ui.components.VaultTopBar
 import com.elprompter.promptvault.ui.theme.Pine
@@ -61,10 +59,11 @@ fun ActivityLogScreen(
         }
     ) { padding ->
     Column(modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
-        TabRow(selectedTabIndex = tab) {
-            Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Log") })
-            Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("Undo Pemindahan") })
-        }
+        com.elprompter.promptvault.ui.components.SegmentedControl(
+            options = listOf("Log", "Undo Pemindahan"),
+            selectedIndex = tab,
+            onSelect = { tab = it }
+        )
 
         if (tab == 0) {
             if (logEntries.isEmpty()) {
@@ -121,7 +120,7 @@ fun ActivityLogScreen(
     }
 
     pendingUndo?.let { entry ->
-        ConfirmDialog(
+        VaultActionSheet(
             title = "Undo pemindahan?",
             message = "\"${entry.fileName}\" akan dikembalikan ke folder Downloads asal.",
             confirmLabel = "Undo",

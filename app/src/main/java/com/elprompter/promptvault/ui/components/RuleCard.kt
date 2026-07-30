@@ -18,6 +18,8 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.elprompter.promptvault.data.Rule
@@ -38,6 +40,7 @@ fun RuleCard(
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val haptics = LocalHapticFeedback.current
     VaultCard(modifier = Modifier
         .fillMaxWidth()
         .padding(vertical = 4.dp)) {
@@ -75,7 +78,10 @@ fun RuleCard(
             }
             Switch(
                 checked = rule.enabled,
-                onCheckedChange = onToggleEnabled,
+                onCheckedChange = {
+                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onToggleEnabled(it)
+                },
                 colors = SwitchDefaults.colors(checkedTrackColor = Pine)
             )
             IconButton(onClick = onEdit) { Icon(Icons.Filled.Edit, contentDescription = "Edit") }

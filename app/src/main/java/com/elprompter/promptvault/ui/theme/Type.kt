@@ -7,72 +7,72 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
 /**
- * Judul & label pakai monospace -- bukan pilihan sembarangan, ini nyambung ke
- * kebiasaan kerja kamu di Termux. Body text tetap sans-serif sistem biar
- * tetap nyaman dibaca panjang (rule pattern, log, dsb).
+ * Gaya "Apple large title": judul besar-tebal-rapat (tight letter spacing negatif
+ * seperti SF Pro Display), body tetap sans reguler biar nyaman dibaca panjang.
+ * Monospace disisakan HANYA untuk elemen ala kode (pattern rule, nama file) --
+ * bukan lagi dipakai di semua judul, karena Apple-style itu bersih & minimal.
  */
-private val Mono = FontFamily.Monospace
 private val Sans = FontFamily.Default
+val CodeFont = FontFamily.Monospace
 
 val PromptVaultTypography = Typography(
-    headlineMedium = TextStyle(
-        fontFamily = Mono,
+    headlineMedium = TextStyle( // "large title" a la iOS nav bar besar
+        fontFamily = Sans,
         fontWeight = FontWeight.Bold,
-        fontSize = 26.sp,
-        letterSpacing = 0.5.sp
+        fontSize = 30.sp,
+        letterSpacing = (-0.4).sp
     ),
     headlineSmall = TextStyle(
-        fontFamily = Mono,
+        fontFamily = Sans,
         fontWeight = FontWeight.Bold,
-        fontSize = 21.sp,
-        letterSpacing = 0.4.sp
+        fontSize = 22.sp,
+        letterSpacing = (-0.3).sp
     ),
     titleMedium = TextStyle(
-        fontFamily = Mono,
+        fontFamily = Sans,
         fontWeight = FontWeight.SemiBold,
-        fontSize = 16.sp,
-        letterSpacing = 0.3.sp
+        fontSize = 17.sp,
+        letterSpacing = (-0.1).sp
     ),
     titleSmall = TextStyle(
-        fontFamily = Mono,
+        fontFamily = Sans,
         fontWeight = FontWeight.SemiBold,
-        fontSize = 14.sp,
-        letterSpacing = 0.3.sp
+        fontSize = 15.sp
     ),
     labelLarge = TextStyle(
-        fontFamily = Mono,
+        fontFamily = Sans,
         fontWeight = FontWeight.Medium,
         fontSize = 13.sp,
-        letterSpacing = 0.8.sp
+        letterSpacing = 0.3.sp
     ),
     labelMedium = TextStyle(
-        fontFamily = Mono,
+        fontFamily = Sans,
         fontWeight = FontWeight.Medium,
         fontSize = 12.sp,
         letterSpacing = 0.6.sp
     ),
     labelSmall = TextStyle(
-        fontFamily = Mono,
+        fontFamily = Sans,
         fontWeight = FontWeight.Normal,
         fontSize = 11.sp,
-        letterSpacing = 0.5.sp
+        letterSpacing = 0.3.sp
     ),
     bodyLarge = TextStyle(
         fontFamily = Sans,
         fontWeight = FontWeight.Normal,
-        fontSize = 16.sp,
+        fontSize = 17.sp,
         lineHeight = 22.sp
     ),
     bodyMedium = TextStyle(
         fontFamily = Sans,
         fontWeight = FontWeight.Normal,
-        fontSize = 14.sp,
+        fontSize = 15.sp,
         lineHeight = 20.sp
     ),
     bodySmall = TextStyle(
         fontFamily = Sans,
         fontWeight = FontWeight.Normal,
-        fontSize = 12.sp,
+        fontSize = 13.sp,
         lineHeight = 17.sp
     )
 )

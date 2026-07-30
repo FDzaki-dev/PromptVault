@@ -27,7 +27,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.elprompter.promptvault.data.Rule
-import com.elprompter.promptvault.ui.components.ConfirmDialog
+import com.elprompter.promptvault.ui.components.VaultActionSheet
 import com.elprompter.promptvault.ui.components.RuleCard
 import com.elprompter.promptvault.ui.components.VaultTopBar
 import com.elprompter.promptvault.ui.theme.Pine
@@ -117,10 +117,11 @@ fun RuleListScreen(
     }
 
     pendingDelete?.let { rule ->
-        ConfirmDialog(
+        VaultActionSheet(
             title = "Hapus rule?",
             message = "Rule \"${rule.folderName}\" (${rule.pattern}) akan dihapus. Tindakan ini tidak bisa dibatalkan.",
             confirmLabel = "Hapus",
+            isDestructive = true,
             onConfirm = {
                 onDeleteRule(rule)
                 pendingDelete = null

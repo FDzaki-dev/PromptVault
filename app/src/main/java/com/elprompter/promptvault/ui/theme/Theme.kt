@@ -37,5 +37,5 @@ private val DarkColors = darkColorScheme(
 @Composable
 fun PromptVaultTheme(darkTheme: Boolean = false, content: @Composable () -> Unit) {
     val colors = if (darkTheme) DarkColors else LightColors
-    MaterialTheme(colorScheme = colors, typography = PromptVaultTypography, content = content)
+    MaterialTheme(colorScheme = colors, typography = PromptVaultTypography, shapes = PromptVaultShapes, content = content)
 }

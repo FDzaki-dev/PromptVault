@@ -27,7 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.elprompter.promptvault.data.Rule
 import com.elprompter.promptvault.data.SaveRuleCheck
-import com.elprompter.promptvault.ui.components.ConfirmDialog
+import com.elprompter.promptvault.ui.components.VaultActionSheet
 import com.elprompter.promptvault.ui.components.VaultCard
 import com.elprompter.promptvault.ui.components.VaultTopBar
 import com.elprompter.promptvault.ui.theme.Stamp
@@ -172,7 +172,7 @@ fun AddEditRuleScreen(
                     "File yang cocok di keduanya akan memakai rule yang lebih dulu terdaftar. Tetap simpan?"
             SaveRuleCheck.Ok -> ""
         }
-        ConfirmDialog(
+        VaultActionSheet(
             title = "Perlu konfirmasi",
             message = message,
             confirmLabel = "Tetap Simpan",
