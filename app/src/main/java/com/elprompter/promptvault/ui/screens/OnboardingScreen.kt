@@ -1,28 +1,51 @@
 package com.elprompter.promptvault.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Archive
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import com.elprompter.promptvault.ui.theme.CardPaper
+import com.elprompter.promptvault.ui.theme.HairlineInk
+import com.elprompter.promptvault.ui.theme.InkFaint
+import com.elprompter.promptvault.ui.theme.Pine
+import com.elprompter.promptvault.ui.theme.Stamp
 
-private data class OnboardingStep(val title: String, val body: String)
+private data class OnboardingStep(val icon: ImageVector, val title: String, val body: String)
 
 private val steps = listOf(
-    OnboardingStep("Selamat datang di PromptVault", "App ini merapikan otomatis file ZIP & TXT di folder Downloads kamu."),
-    OnboardingStep("Buat rule", "Rule menentukan pattern nama file (mis. *.txt) dan folder tujuan di dalam Downloads/PromptVault/."),
-    OnboardingStep("Izin penyimpanan", "PromptVault perlu izin akses semua file agar bisa memindahkan file di Downloads."),
-    OnboardingStep("Auto-sort berjalan sendiri", "Setelah rule dibuat, app akan memindai secara berkala sesuai interval yang kamu atur.")
+    OnboardingStep(Icons.Filled.Archive, "Selamat datang di PromptVault", "App ini merapikan otomatis file ZIP & TXT di folder Downloads kamu."),
+    OnboardingStep(Icons.Filled.Folder, "Buat rule", "Rule menentukan pattern nama file (mis. *.txt) dan folder tujuan di dalam Downloads/PromptVault/."),
+    OnboardingStep(Icons.Filled.Lock, "Izin penyimpanan", "PromptVault perlu izin akses semua file agar bisa memindahkan file di Downloads."),
+    OnboardingStep(Icons.Filled.Schedule, "Auto-sort berjalan sendiri", "Setelah rule dibuat, app akan memindai secara berkala sesuai interval yang kamu atur.")
 )
 
 @Composable
@@ -34,20 +57,57 @@ fun OnboardingScreen(onFinished: () -> Unit) {
         modifier = Modifier
             .fillMaxSize()
             .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.SpaceBetween
     ) {
-        Text("Langkah ${index + 1} dari ${steps.size}", style = MaterialTheme.typography.labelLarge)
-        Text(step.title, style = MaterialTheme.typography.headlineSmall)
-        Text(step.body, style = MaterialTheme.typography.bodyLarge)
+        Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
+            ProgressDots(total = steps.size, current = index)
 
-        Button(
-            onClick = { if (index < steps.lastIndex) index++ else onFinished() },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(if (index < steps.lastIndex) "Lanjut" else "Mulai")
+            Box(
+                modifier = Modifier
+                    .size(72.dp)
+                    .background(Pine, RoundedCornerShape(16.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(step.icon, contentDescription = null, tint = CardPaper, modifier = Modifier.size(36.dp))
+            }
+
+            Text("Langkah ${index + 1} dari ${steps.size}", style = MaterialTheme.typography.labelLarge, color = InkFaint)
+            Text(step.title, style = MaterialTheme.typography.headlineSmall)
+            Text(step.body, style = MaterialTheme.typography.bodyLarge)
         }
-        if (index > 0) {
-            Button(onClick = { index-- }, modifier = Modifier.fillMaxWidth()) { Text("Kembali") }
+
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Button(
+                onClick = { if (index < steps.lastIndex) index++ else onFinished() },
+                colors = ButtonDefaults.buttonColors(containerColor = Stamp, contentColor = CardPaper),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(if (index < steps.lastIndex) "Lanjut" else "Mulai")
+            }
+            if (index > 0) {
+                OutlinedButton(
+                    onClick = { index-- },
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Pine),
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Kembali") }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProgressDots(total: Int, current: Int) {
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        repeat(total) { i ->
+            Box(
+                modifier = Modifier
+                    .height(4.dp)
+                    .width(if (i == current) 24.dp else 12.dp)
+                    .background(
+                        if (i == current) Pine else HairlineInk,
+                        RoundedCornerShape(2.dp)
+                    )
+            )
         }
     }
 }

@@ -36,9 +36,11 @@ fun HomeScreen(
     onOpenDiagnostics: () -> Unit,
     onOpenSkippedFiles: () -> Unit
 ) {
+    androidx.compose.material3.Scaffold { padding ->
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .padding(padding)
             .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
@@ -78,6 +80,7 @@ fun HomeScreen(
         ManifestNavButton("Riwayat Aktivitas & Undo", onOpenLog)
         ManifestNavButton("Pengaturan", onOpenSettings)
         ManifestNavButton("Diagnostik", onOpenDiagnostics)
+    }
     }
 }
 

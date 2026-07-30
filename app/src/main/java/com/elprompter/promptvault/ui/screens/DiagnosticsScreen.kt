@@ -34,7 +34,7 @@ import java.util.Locale
  * (status WorkManager & jadwal berikutnya) tanpa perlu adb/dev tools.
  */
 @Composable
-fun DiagnosticsScreen(downloadsFileNames: List<String>) {
+fun DiagnosticsScreen(downloadsFileNames: List<String>, onBack: () -> Unit) {
     val context = LocalContext.current
     var statusText by remember { mutableStateOf("Memuat status WorkManager…") }
 
@@ -42,14 +42,17 @@ fun DiagnosticsScreen(downloadsFileNames: List<String>) {
         statusText = readWorkStatus(context)
     }
 
+    androidx.compose.material3.Scaffold(
+        topBar = { com.elprompter.promptvault.ui.components.VaultTopBar(title = "Diagnostik", onBack = onBack) }
+    ) { padding ->
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .padding(padding)
             .verticalScroll(rememberScrollState())
             .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text("Diagnostik", style = MaterialTheme.typography.headlineSmall)
         Text(
             "Gunakan halaman ini untuk memverifikasi sendiri di HP bahwa auto-sort " +
                 "benar-benar terjadwal, termasuk setelah restart perangkat.",
@@ -94,6 +97,7 @@ fun DiagnosticsScreen(downloadsFileNames: List<String>) {
                 Text("5. Jika status di atas tetap \"ENQUEUED\"/\"RUNNING\" setelah restart, auto-sort survive reboot.")
             }
         }
+    }
     }
 }
 

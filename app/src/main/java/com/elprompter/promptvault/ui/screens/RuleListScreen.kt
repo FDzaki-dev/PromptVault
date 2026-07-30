@@ -12,6 +12,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -19,12 +22,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.elprompter.promptvault.data.Rule
 import com.elprompter.promptvault.ui.components.ConfirmDialog
 import com.elprompter.promptvault.ui.components.RuleCard
+import com.elprompter.promptvault.ui.components.VaultTopBar
+import com.elprompter.promptvault.ui.theme.Pine
+import com.elprompter.promptvault.ui.theme.CardPaper
+import kotlinx.coroutines.launch
 
 @Composable
 fun RuleListScreen(
@@ -33,11 +41,14 @@ fun RuleListScreen(
     onToggleEnabled: (Rule, Boolean) -> Unit,
     onEditRule: (Rule) -> Unit,
     onDeleteRule: (Rule) -> Unit,
-    onAddRule: () -> Unit
+    onAddRule: () -> Unit,
+    onBack: () -> Unit
 ) {
     // TODO #8: pencarian/filter rule
     var query by remember { mutableStateOf("") }
     var pendingDelete by remember { mutableStateOf<Rule?>(null) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     val filtered = remember(rules, query) {
         if (query.isBlank()) rules
@@ -47,20 +58,27 @@ fun RuleListScreen(
     }
 
     Scaffold(
+        topBar = { VaultTopBar(title = "Kelola Rule", onBack = onBack) },
+        snackbarHost = {
+            SnackbarHost(snackbarHostState) { data ->
+                Snackbar(snackbarData = data, containerColor = Pine, contentColor = CardPaper)
+            }
+        },
         floatingActionButton = {
-            FloatingActionButton(onClick = onAddRule) { Icon(Icons.Filled.Add, contentDescription = "Tambah rule") }
+            FloatingActionButton(onClick = onAddRule, containerColor = Pine, contentColor = CardPaper) {
+                Icon(Icons.Filled.Add, contentDescription = "Tambah rule")
+            }
         }
     ) { padding ->
         Column(modifier = Modifier
             .fillMaxSize()
             .padding(padding)
             .padding(16.dp)) {
-            Text("Daftar Rule", style = MaterialTheme.typography.headlineSmall)
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },
                 label = { Text("Cari rule (nama folder / pattern)") },
-                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
+                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
             )
 
             if (filtered.isEmpty()) {
@@ -93,6 +111,7 @@ fun RuleListScreen(
             onConfirm = {
                 onDeleteRule(rule)
                 pendingDelete = null
+                scope.launch { snackbarHostState.showSnackbar("Rule \"${rule.folderName}\" dihapus") }
             },
             onDismiss = { pendingDelete = null }
         )

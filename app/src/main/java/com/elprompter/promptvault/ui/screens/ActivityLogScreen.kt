@@ -10,6 +10,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import com.elprompter.promptvault.ui.components.VaultCard
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
@@ -18,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -26,6 +31,10 @@ import com.elprompter.promptvault.data.LogLevel
 import com.elprompter.promptvault.data.MoveHistoryEntry
 import com.elprompter.promptvault.ui.components.ConfirmDialog
 import com.elprompter.promptvault.ui.components.SortedStamp
+import com.elprompter.promptvault.ui.components.VaultTopBar
+import com.elprompter.promptvault.ui.theme.Pine
+import com.elprompter.promptvault.ui.theme.CardPaper
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -34,15 +43,24 @@ import java.util.Locale
 fun ActivityLogScreen(
     logEntries: List<ActivityLogEntry>,
     undoableHistory: List<MoveHistoryEntry>,
-    onUndo: (MoveHistoryEntry) -> Unit
+    onUndo: (MoveHistoryEntry) -> Unit,
+    onBack: () -> Unit
 ) {
     var tab by remember { mutableStateOf(0) }
     var pendingUndo by remember { mutableStateOf<MoveHistoryEntry?>(null) }
     val formatter = remember { SimpleDateFormat("dd MMM HH:mm", Locale("id", "ID")) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Text("Riwayat Aktivitas", style = MaterialTheme.typography.headlineSmall)
-
+    Scaffold(
+        topBar = { VaultTopBar(title = "Riwayat Aktivitas", onBack = onBack) },
+        snackbarHost = {
+            SnackbarHost(snackbarHostState) { data ->
+                Snackbar(snackbarData = data, containerColor = Pine, contentColor = CardPaper)
+            }
+        }
+    ) { padding ->
+    Column(modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
         TabRow(selectedTabIndex = tab) {
             Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Log") })
             Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("Undo Pemindahan") })
@@ -100,6 +118,7 @@ fun ActivityLogScreen(
             }
         }
     }
+    }
 
     pendingUndo?.let { entry ->
         ConfirmDialog(
@@ -109,6 +128,7 @@ fun ActivityLogScreen(
             onConfirm = {
                 onUndo(entry)
                 pendingUndo = null
+                scope.launch { snackbarHostState.showSnackbar("\"${entry.fileName}\" dikembalikan ke Downloads") }
             },
             onDismiss = { pendingUndo = null }
         )

@@ -11,9 +11,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import com.elprompter.promptvault.ui.components.VaultCard
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -27,6 +28,10 @@ import androidx.compose.ui.unit.dp
 import com.elprompter.promptvault.data.Rule
 import com.elprompter.promptvault.data.SaveRuleCheck
 import com.elprompter.promptvault.ui.components.ConfirmDialog
+import com.elprompter.promptvault.ui.components.VaultCard
+import com.elprompter.promptvault.ui.components.VaultTopBar
+import com.elprompter.promptvault.ui.theme.Stamp
+import com.elprompter.promptvault.ui.theme.CardPaper
 import com.elprompter.promptvault.util.PatternPreviewResult
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -60,80 +65,84 @@ fun AddEditRuleScreen(
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Text(if (existingRule == null) "Tambah Rule" else "Edit Rule", style = MaterialTheme.typography.headlineSmall)
+    Scaffold(
+        topBar = {
+            VaultTopBar(title = if (existingRule == null) "Tambah Rule" else "Edit Rule", onBack = onCancel)
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .verticalScroll(rememberScrollState())
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            OutlinedTextField(
+                value = folderName,
+                onValueChange = { folderName = it },
+                label = { Text("Nama folder tujuan") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            OutlinedTextField(
+                value = pattern,
+                onValueChange = { pattern = it },
+                label = { Text("Pattern (mis. invoice_*.zip)") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Text(
+                "Gunakan * untuk banyak karakter dan ? untuk satu karakter. Contoh: *.txt, laporan_*.zip",
+                style = MaterialTheme.typography.bodySmall
+            )
 
-        OutlinedTextField(
-            value = folderName,
-            onValueChange = { folderName = it },
-            label = { Text("Nama folder tujuan") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        OutlinedTextField(
-            value = pattern,
-            onValueChange = { pattern = it },
-            label = { Text("Pattern (mis. invoice_*.zip)") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        Text(
-            "Gunakan * untuk banyak karakter dan ? untuk satu karakter. Contoh: *.txt, laporan_*.zip",
-            style = MaterialTheme.typography.bodySmall
-        )
-
-        // Live preview: bukti langsung pattern ini akan kena file yang mana di Downloads.
-        preview?.let { p ->
-            VaultCard(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Text(
-                        "${p.matchedFileNames.size} dari ${p.totalCandidateFiles} file ZIP/TXT di Downloads cocok pattern ini",
-                        style = MaterialTheme.typography.titleSmall
-                    )
-                    if (p.matchedFileNames.isEmpty() && p.totalCandidateFiles > 0) {
+            // Live preview: bukti langsung pattern ini akan kena file yang mana di Downloads.
+            preview?.let { p ->
+                VaultCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(12.dp)) {
                         Text(
-                            "Tidak ada yang cocok. Cek lagi ejaan/format pattern-nya, atau buka Diagnostik untuk lihat nama file asli di Downloads.",
-                            style = MaterialTheme.typography.bodySmall
+                            "${p.matchedFileNames.size} dari ${p.totalCandidateFiles} file ZIP/TXT di Downloads cocok pattern ini",
+                            style = MaterialTheme.typography.titleSmall
                         )
-                    }
-                    LazyColumn(modifier = Modifier.heightIn(max = 180.dp)) {
-                        items(p.matchedFileNames.take(10)) { name ->
-                            Text("• $name", style = MaterialTheme.typography.bodySmall)
+                        if (p.matchedFileNames.isEmpty() && p.totalCandidateFiles > 0) {
+                            Text(
+                                "Tidak ada yang cocok. Cek lagi ejaan/format pattern-nya, atau buka Diagnostik untuk lihat nama file asli di Downloads.",
+                                style = MaterialTheme.typography.bodySmall
+                            )
                         }
-                    }
-                    if (p.matchedFileNames.size > 10) {
-                        Text("+ ${p.matchedFileNames.size - 10} file lainnya", style = MaterialTheme.typography.labelSmall)
+                        LazyColumn(modifier = Modifier.heightIn(max = 180.dp)) {
+                            items(p.matchedFileNames.take(10)) { name ->
+                                Text("• $name", style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                        if (p.matchedFileNames.size > 10) {
+                            Text("+ ${p.matchedFileNames.size - 10} file lainnya", style = MaterialTheme.typography.labelSmall)
+                        }
                     }
                 }
             }
-        }
 
-        Button(
-            onClick = {
-                val rule = Rule(
-                    id = existingRule?.id ?: UUID.randomUUID().toString(),
-                    folderName = folderName.trim(),
-                    pattern = pattern.trim()
-                )
-                scope.launch {
-                    val check = onCheckBeforeSave(rule)
-                    if (check is SaveRuleCheck.Ok) {
-                        onSave(rule)
-                    } else {
-                        pendingCheck = check
-                        pendingRule = rule
+            Button(
+                onClick = {
+                    val rule = Rule(
+                        id = existingRule?.id ?: UUID.randomUUID().toString(),
+                        folderName = folderName.trim(),
+                        pattern = pattern.trim()
+                    )
+                    scope.launch {
+                        val check = onCheckBeforeSave(rule)
+                        if (check is SaveRuleCheck.Ok) {
+                            onSave(rule)
+                        } else {
+                            pendingCheck = check
+                            pendingRule = rule
+                        }
                     }
-                }
-            },
-            enabled = folderName.isNotBlank() && pattern.isNotBlank(),
-            modifier = Modifier.fillMaxWidth()
-        ) { Text("Simpan") }
-
-        Button(onClick = onCancel, modifier = Modifier.fillMaxWidth()) { Text("Batal") }
+                },
+                enabled = folderName.isNotBlank() && pattern.isNotBlank(),
+                colors = ButtonDefaults.buttonColors(containerColor = Stamp, contentColor = CardPaper),
+                modifier = Modifier.fillMaxWidth()
+            ) { Text("Simpan") }
+        }
     }
 
     val check = pendingCheck

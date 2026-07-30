@@ -21,9 +21,11 @@ import com.elprompter.promptvault.util.SkippedFileInfo
  * bukan cuma angka ringkasan.
  */
 @Composable
-fun SkippedFilesScreen(skipped: List<SkippedFileInfo>) {
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Text("Detail File Dilewati", style = MaterialTheme.typography.headlineSmall)
+fun SkippedFilesScreen(skipped: List<SkippedFileInfo>, onBack: () -> Unit) {
+    androidx.compose.material3.Scaffold(
+        topBar = { com.elprompter.promptvault.ui.components.VaultTopBar(title = "Detail File Dilewati", onBack = onBack) }
+    ) { padding ->
+    Column(modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
         Text(
             "Data dari scan terakhir. Jalankan \"Scan Sekarang\" lagi untuk memperbarui daftar ini.",
             style = MaterialTheme.typography.bodySmall
@@ -50,5 +52,6 @@ fun SkippedFilesScreen(skipped: List<SkippedFileInfo>) {
                 }
             }
         }
+    }
     }
 }
