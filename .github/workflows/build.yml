@@ -27,6 +27,13 @@ jobs:
           VERSION=$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts)
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
+      # Fail cepat & murah: cek kompilasi Kotlin dulu SEBELUM assembleRelease
+      # (yang butuh keystore, signing, packaging -- jauh lebih lambat & lebih
+      # boros resource). Kalau ada error sintaks/tipe, ketahuan di sini dalam
+      # hitungan puluhan detik, bukan menunggu build penuh selesai/gagal.
+      - name: Compile check (fail fast)
+        run: gradle compileDebugKotlin --stacktrace
+
       - name: Run unit tests
         run: gradle testDebugUnitTest testReleaseUnitTest --stacktrace
 
@@ -54,6 +61,19 @@ jobs:
         with:
           name: PromptVault-v${{ steps.version.outputs.version }}
           path: out/*.apk
+
+      # Kalau ada langkah manapun di atas gagal, log build lengkap otomatis
+      # jadi artifact yang bisa diunduh dari tab Actions -- tidak perlu lagi
+      # copy-paste manual atau screenshot log satu-satu.
+      - name: Upload build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-failure-log-v${{ steps.version.outputs.version }}
+          path: |
+            **/build/reports/**
+            **/build/outputs/logs/**
+          if-no-files-found: ignore
 
       - name: Clean up keystore
         if: always()

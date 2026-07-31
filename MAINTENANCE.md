@@ -1,0 +1,60 @@
+# Catatan Perawatan (untuk Claude di sesi berikutnya)
+
+Project ini dibangun lewat prompt-driven development: 72Faki tidak menulis
+kode manual, semua lewat Claude yang mem-package ZIP. Karena tidak ada
+Android SDK/Gradle di lingkungan kerja Claude (sandbox tanpa akses jaringan),
+**kompilasi asli TIDAK BISA diverifikasi secara lokal oleh Claude** -- error
+baru ketahuan setelah push ke GitHub Actions. Makanya disiplin di bawah ini
+penting, bukan opsional.
+
+## WAJIB sebelum kirim ZIP apapun
+
+Jalankan audit statis ini (lewat bash_tool) sebelum mem-package ZIP:
+
+```bash
+# 1. Keseimbangan kurung di semua file .kt
+find . -name "*.kt" | xargs -I{} sh -c 'python3 -c "
+content = open(\"{}\").read()
+b = content.count(\"{\") - content.count(\"}\")
+p = content.count(\"(\") - content.count(\")\")
+if b != 0 or p != 0: print(\"MISMATCH {}\", b, p)
+"'
+
+# 2. Import weight/align/matchParentSize yang salah (harus TIDAK ADA hasil)
+grep -rn "^import androidx.compose.foundation.layout.weight$\|^import androidx.compose.foundation.layout.align$\|^import androidx.compose.foundation.layout.matchParentSize$" app/src/main/java/
+
+# 3. 'var x by ...' harus punya getValue+setValue; 'val x by ...' cukup getValue
+#    (cek manual tiap file yang pakai delegate 'by')
+grep -rl "by remember\|by mutableStateOf\|collectAsState\|by .*Flow" app/src/main/java/com/elprompter/promptvault/
+
+# 4. Import duplikat per file (harus TIDAK ADA hasil)
+for f in $(find app/src -name "*.kt"); do
+  dups=$(grep "^import " "$f" | sort | uniq -d)
+  [ -n "$dups" ] && echo "DUP $f: $dups"
+done
+
+# 5. LazyColumn di dalam Column yang verticalScroll HARUS punya heightIn(max=...)
+#    (kalau tidak, crash runtime "infinite height" di HP, bukan error compile)
+```
+
+Daftar ini akan bertambah setiap kali ada bug baru yang ketahuan dari log CI --
+lihat riwayat commit `MAINTENANCE.md` untuk histori penambahan.
+
+## Struktur proyek
+
+- `app/src/main/java/.../data/` -- model + repository (DataStore-backed)
+- `app/src/main/java/.../util/` -- logika murni (glob matcher, file sorter, dll),
+  ini bagian yang PALING gampang di-unit-test (lihat `app/src/test/`)
+- `app/src/main/java/.../worker/` -- WorkManager auto-scan + boot receiver
+- `app/src/main/java/.../ui/` -- Compose screens, komponen, tema
+- `.github/workflows/build.yml` -- CI: compile-check dulu (cepat), baru test,
+  baru assembleRelease (lambat). Kalau gagal, log otomatis jadi artifact.
+
+## Versi & commit
+
+`versionName`/`versionCode` di `app/build.gradle.kts` adalah SATU-SATUNYA
+sumber kebenaran untuk versi. Nama ZIP yang dikirim ke user dan nama artifact
+APK di CI SELALU diekstrak otomatis dari situ (`grep -oP 'versionName = "\K[^"]+'`),
+tidak pernah diketik manual, tidak pernah ditempeli commit hash acak.
+
+Lihat `CHANGELOG.md` untuk riwayat lengkap tiap versi.
