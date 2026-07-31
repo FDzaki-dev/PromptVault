@@ -43,6 +43,18 @@ done
 #    ikut ganti terang/gelap. Cek dengan:
 grep -rn "= Pine\b\|= Stamp\b\|= Kraft\b\|= CardPaper\b\|= Ink\b\|= InkFaint\b\|= HairlineInk\b\|= Amber\b" app/src/main/java/com/elprompter/promptvault/ui/ app/src/main/java/com/elprompter/promptvault/MainActivity.kt
 # (hasil kosong = aman; kalau ada, itu di luar Theme.kt = bug)
+
+# 7. Fungsi lokal (dideklarasikan DI DALAM body composable lain, biasanya
+#    dipakai buat helper kecil semacam warna/style) yang manggil fungsi
+#    @Composable (mis. FilterChipDefaults.filterChipColors, ButtonDefaults.*,
+#    MaterialTheme.*) HARUS ditandai @Composable juga. Kalau lupa: error
+#    "Functions which invoke @Composable functions must be marked with the
+#    @Composable annotation". Ini PERNAH kejadian nyata (SettingsScreen.kt,
+#    fungsi lokal chipColors()). Cek manual: cari "fun " yang diindentasi di
+#    dalam file ui/screens & ui/components, pastikan yang manggil
+#    FilterChipDefaults/ButtonDefaults/MaterialTheme/dll selalu punya
+#    @Composable di baris sebelumnya:
+grep -rn "^    fun \|^        fun " app/src/main/java/com/elprompter/promptvault/ui/
 ```
 
 ## Soal versi Gradle di CI (penting, pernah bikin build gagal tanpa pesan jelas)

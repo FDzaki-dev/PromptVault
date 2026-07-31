@@ -53,6 +53,7 @@ fun SettingsScreen(
     val scope = rememberCoroutineScope()
     val colors = MaterialTheme.colorScheme
 
+    @Composable
     fun chipColors(dangerAccent: Boolean = false) = FilterChipDefaults.filterChipColors(
         selectedContainerColor = if (dangerAccent) colors.error else colors.primary,
         selectedLabelColor = if (dangerAccent) colors.onError else colors.onPrimary

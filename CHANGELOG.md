@@ -3,6 +3,19 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.1.3 -- Fix compile error SettingsScreen (bukti CI logging-nya sekarang jalan)
+- **Ini pembuktian nyata perbaikan CI di v2.1.1/v2.1.2 berhasil**: kali ini
+  log kegagalan yang ter-upload berisi error compile ASLI dan jelas:
+  `e: SettingsScreen.kt:56:9 Functions which invoke @Composable functions
+  must be marked with the @Composable annotation`
+- Root cause: fungsi lokal `chipColors()` di dalam `SettingsScreen` manggil
+  `FilterChipDefaults.filterChipColors(...)` (fungsi `@Composable`) tapi
+  `chipColors()`-nya sendiri lupa ditandai `@Composable`. Sudah diperbaiki.
+- Diaudit ulang seluruh proyek untuk pola yang sama (fungsi lokal manggil
+  API `@Composable` tanpa anotasi) -- cuma satu kejadian, sudah bersih.
+  Ditambahkan ke `MAINTENANCE.md` poin 7 sebagai pola bug baru yang dicek
+  otomatis ke depannya.
+
 ## v2.1.2 -- Fix CI (pipefail masking + diagnostik APK hilang)
 - **Root cause "cp: cannot stat app-release.apk"**: step `assembleRelease`
   di v2.1.1 pakai `... 2>&1 | tee file.log` TANPA `set -o pipefail`. Di bash,
