@@ -11,6 +11,19 @@ object GlobMatcher {
         return regex.matches(fileName)
     }
 
+    /**
+     * Satu field pattern boleh berisi BEBERAPA pattern dipisah koma, mis.
+     * "invoice_*.zip, receipt_*.txt". File dianggap cocok kalau cocok SALAH
+     * SATU dari pattern-pattern itu (OR, bukan AND).
+     */
+    fun matchesAny(fileName: String, patternsCsv: String): Boolean {
+        if (patternsCsv.isBlank()) return false
+        return splitPatterns(patternsCsv).any { matches(fileName, it) }
+    }
+
+    fun splitPatterns(patternsCsv: String): List<String> =
+        patternsCsv.split(",").map { it.trim() }.filter { it.isNotBlank() }
+
     fun globToRegex(pattern: String): Regex {
         val sb = StringBuilder("(?i)")
         for (c in pattern) {

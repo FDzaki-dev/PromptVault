@@ -6,6 +6,7 @@ import androidx.work.WorkerParameters
 import com.elprompter.promptvault.data.ActivityLogRepository
 import com.elprompter.promptvault.data.MoveHistoryRepository
 import com.elprompter.promptvault.data.RuleRepository
+import com.elprompter.promptvault.data.SettingsRepository
 import com.elprompter.promptvault.util.FileSorter
 
 class AutoSortWorker(appContext: Context, params: WorkerParameters) : CoroutineWorker(appContext, params) {
@@ -16,7 +17,8 @@ class AutoSortWorker(appContext: Context, params: WorkerParameters) : CoroutineW
                 context = applicationContext,
                 ruleRepository = RuleRepository(applicationContext),
                 activityLogRepository = ActivityLogRepository(applicationContext),
-                moveHistoryRepository = MoveHistoryRepository(applicationContext)
+                moveHistoryRepository = MoveHistoryRepository(applicationContext),
+                settingsRepository = SettingsRepository(applicationContext)
             )
             sorter.scanAndSort()
             Result.success()

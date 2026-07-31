@@ -209,9 +209,12 @@ private fun PromptVaultRoot(viewModel: MainViewModel) {
         }
         composable(Routes.SETTINGS) {
             val interval by viewModel.intervalMinutes.collectAsStateWithLifecycle()
+            val conflictStrategy by viewModel.conflictStrategy.collectAsStateWithLifecycle()
             SettingsScreen(
                 currentIntervalMinutes = interval,
                 onIntervalSelected = { viewModel.setIntervalMinutes(it) },
+                currentConflictStrategy = conflictStrategy,
+                onConflictStrategySelected = { viewModel.setConflictStrategy(it) },
                 onExportRequested = { viewModel.exportRulesJson() },
                 onImportRequested = { text, cb -> viewModel.importRulesJson(text, cb) },
                 onBack = { navController.popBackStack() }

@@ -3,11 +3,13 @@ package com.elprompter.promptvault.util
 import android.content.Context
 import android.os.Environment
 import com.elprompter.promptvault.data.ActivityLogRepository
+import com.elprompter.promptvault.data.ConflictStrategy
 import com.elprompter.promptvault.data.LogLevel
 import com.elprompter.promptvault.data.MoveHistoryEntry
 import com.elprompter.promptvault.data.MoveHistoryRepository
 import com.elprompter.promptvault.data.Rule
 import com.elprompter.promptvault.data.RuleRepository
+import com.elprompter.promptvault.data.SettingsRepository
 import java.io.File
 import java.util.UUID
 
@@ -32,19 +34,18 @@ data class PatternPreviewResult(
 
 /**
  * Logika inti: scan folder Downloads, cocokkan tiap file terhadap rule aktif
- * (berurutan sesuai PRIORITAS -- rule dengan index lebih kecil menang kalau
- * file cocok lebih dari satu rule), pindahkan ke Downloads/PromptVault/<folderName>/,
- * dan catat riwayat untuk undo.
+ * (berurutan sesuai PRIORITAS, mendukung multi-pattern & filter ukuran),
+ * pindahkan ke Downloads/PromptVault/<folderName>/, dan catat riwayat untuk undo.
  *
  * Prinsip "expert-level file organizer": setiap file yang TIDAK dipindahkan harus
  * bisa dijelaskan alasannya secara spesifik ke user, bukan cuma angka "dilewati".
- * Termasuk file yang sengaja DITUNDA karena kemungkinan masih ditulis/didownload.
  */
 class FileSorter(
     private val context: Context,
     private val ruleRepository: RuleRepository,
     private val activityLogRepository: ActivityLogRepository,
-    private val moveHistoryRepository: MoveHistoryRepository
+    private val moveHistoryRepository: MoveHistoryRepository,
+    private val settingsRepository: SettingsRepository
 ) {
 
     private val downloadsDir: File
@@ -60,20 +61,16 @@ class FileSorter(
         } ?: emptyArray()
     }
 
-    /**
-     * File yang baru diubah/ditulis dalam beberapa detik terakhir DITUNDA dulu,
-     * bukan dipindahkan langsung. Ini mencegah race condition klasik: file ZIP/TXT
-     * yang masih dalam proses download/ditulis ikut terpindah setengah jadi dan
-     * jadi korup. File akan otomatis dicoba lagi di scan berikutnya begitu sudah
-     * "diam" (tidak berubah) lebih dari STABILITY_WINDOW_MS.
-     */
     private fun isLikelyStillWriting(file: File): Boolean {
         val age = System.currentTimeMillis() - file.lastModified()
         return age in 0 until STABILITY_WINDOW_MS
     }
 
+    private fun File.sizeKb(): Long = length() / 1024
+
     suspend fun scanAndSort(): ScanResult {
         val rules = ruleRepository.getRules().filter { it.enabled }
+        val conflictStrategy = settingsRepository.getConflictStrategy()
 
         if (!downloadsDir.exists() || !downloadsDir.canRead()) {
             activityLogRepository.add(LogLevel.ERROR, "Folder Downloads tidak terbaca. Cek izin penyimpanan.")
@@ -109,21 +106,11 @@ class FileSorter(
                 continue
             }
 
-            // Rule diurutkan berdasarkan PRIORITAS (urutan di layar Kelola Rule).
-            // Rule pertama yang cocok DAN tidak dikecualikan yang menang.
-            val matches = RuleOverlapChecker.matchingRules(file.name, rules)
+            val sizeKb = file.sizeKb()
+            val matches = RuleOverlapChecker.matchingRules(file.name, sizeKb, rules)
             if (matches.isEmpty()) {
                 skipped++
-                val excludedBy = rules.firstOrNull {
-                    GlobMatcher.matches(file.name, it.pattern) && RuleOverlapChecker.isExcluded(file.name, it)
-                }
-                val reason = if (excludedBy != null) {
-                    "Cocok pattern \"${excludedBy.pattern}\" tapi dikecualikan oleh excludePattern \"${excludedBy.excludePattern}\" di rule \"${excludedBy.folderName}\""
-                } else {
-                    val activePatterns = rules.joinToString(", ") { "\"${it.pattern}\"" }
-                    "Tidak cocok pattern rule manapun (rule aktif: $activePatterns)"
-                }
-                skippedDetails.add(SkippedFileInfo(file.name, reason))
+                skippedDetails.add(SkippedFileInfo(file.name, explainNoMatch(file, sizeKb, rules)))
                 continue
             }
             if (matches.size > 1) {
@@ -133,12 +120,17 @@ class FileSorter(
                 activityLogRepository.add(LogLevel.WARNING, msg)
             }
             val rule = matches.first()
-            val moveSuccess = moveFile(file, rule)
-            if (moveSuccess) {
-                moved++
-            } else {
-                skipped++
-                skippedDetails.add(SkippedFileInfo(file.name, "Gagal dipindahkan (lihat Log untuk detail error)"))
+            val moveOutcome = moveFile(file, rule, conflictStrategy)
+            when (moveOutcome) {
+                MoveOutcome.MOVED -> moved++
+                MoveOutcome.SKIPPED_CONFLICT -> {
+                    skipped++
+                    skippedDetails.add(SkippedFileInfo(file.name, "Sudah ada file dengan nama sama di PromptVault/${rule.folderName}/ (strategi konflik: Lewati)"))
+                }
+                MoveOutcome.FAILED -> {
+                    skipped++
+                    skippedDetails.add(SkippedFileInfo(file.name, "Gagal dipindahkan (lihat Log untuk detail error)"))
+                }
             }
         }
 
@@ -152,10 +144,31 @@ class FileSorter(
         return ScanResult(moved, skipped, foldersUnreadable = false, overlapWarnings = overlapWarnings, skippedDetails = skippedDetails)
     }
 
+    private fun explainNoMatch(file: File, sizeKb: Long, rules: List<Rule>): String {
+        val excludedBy = rules.firstOrNull {
+            GlobMatcher.matchesAny(file.name, it.pattern) && RuleOverlapChecker.isExcluded(file.name, it)
+        }
+        if (excludedBy != null) {
+            return "Cocok pattern \"${excludedBy.pattern}\" tapi dikecualikan oleh excludePattern \"${excludedBy.excludePattern}\" di rule \"${excludedBy.folderName}\""
+        }
+        val sizeMismatch = rules.firstOrNull {
+            GlobMatcher.matchesAny(file.name, it.pattern) && !RuleOverlapChecker.matchesSizeConstraint(sizeKb, it)
+        }
+        if (sizeMismatch != null) {
+            val range = listOfNotNull(
+                sizeMismatch.minSizeKb?.let { "min ${it}KB" },
+                sizeMismatch.maxSizeKb?.let { "maks ${it}KB" }
+            ).joinToString(", ")
+            return "Cocok pattern rule \"${sizeMismatch.folderName}\" tapi ukuran file (${sizeKb}KB) di luar batas rule ($range)"
+        }
+        val activePatterns = rules.joinToString(", ") { "\"${it.pattern}\"" }
+        return "Tidak cocok pattern rule manapun (rule aktif: $activePatterns)"
+    }
+
     /**
-     * Uji pattern include + exclude (belum tentu tersimpan sebagai rule) terhadap
+     * Uji pattern include+exclude (belum tentu tersimpan sebagai rule) terhadap
      * isi Downloads saat ini. Dipakai di layar Tambah/Edit Rule supaya user lihat
-     * langsung dampak pattern-nya SEBELUM menyimpan rule.
+     * langsung dampak pattern-nya SEBELUM menyimpan rule. Mendukung multi-pattern CSV.
      */
     fun previewPatternMatches(pattern: String, excludePattern: String = ""): PatternPreviewResult {
         if (pattern.isBlank() || !downloadsDir.exists() || !downloadsDir.canRead()) {
@@ -163,8 +176,8 @@ class FileSorter(
         }
         val candidates = listCandidateFiles()
         val matched = candidates
-            .filter { GlobMatcher.matches(it.name, pattern) }
-            .filterNot { excludePattern.isNotBlank() && GlobMatcher.matches(it.name, excludePattern) }
+            .filter { GlobMatcher.matchesAny(it.name, pattern) }
+            .filterNot { excludePattern.isNotBlank() && GlobMatcher.matchesAny(it.name, excludePattern) }
             .map { it.name }
         return PatternPreviewResult(candidates.size, matched)
     }
@@ -175,16 +188,26 @@ class FileSorter(
         return listCandidateFiles().map { it.name }.sorted().take(limit)
     }
 
-    private suspend fun moveFile(file: File, rule: Rule): Boolean {
+    private enum class MoveOutcome { MOVED, SKIPPED_CONFLICT, FAILED }
+
+    private suspend fun moveFile(file: File, rule: Rule, conflictStrategy: ConflictStrategy): MoveOutcome {
         return try {
             val destDir = File(vaultRootDir, rule.folderName)
             if (!destDir.exists()) destDir.mkdirs()
 
             var destFile = File(destDir, file.name)
-            var counter = 1
-            while (destFile.exists()) {
-                destFile = File(destDir, "${file.nameWithoutExtension}_$counter.${file.extension}")
-                counter++
+            if (destFile.exists()) {
+                when (conflictStrategy) {
+                    ConflictStrategy.SKIP -> return MoveOutcome.SKIPPED_CONFLICT
+                    ConflictStrategy.OVERWRITE -> destFile.delete()
+                    ConflictStrategy.RENAME -> {
+                        var counter = 1
+                        while (destFile.exists()) {
+                            destFile = File(destDir, "${file.nameWithoutExtension}_$counter.${file.extension}")
+                            counter++
+                        }
+                    }
+                }
             }
 
             val originalParent = file.parentFile?.absolutePath ?: downloadsDir.absolutePath
@@ -202,13 +225,14 @@ class FileSorter(
                     )
                 )
                 activityLogRepository.add(LogLevel.SUCCESS, "\"${file.name}\" -> PromptVault/${rule.folderName}/")
+                MoveOutcome.MOVED
             } else {
                 activityLogRepository.add(LogLevel.ERROR, "Gagal memindahkan \"${file.name}\".")
+                MoveOutcome.FAILED
             }
-            success
         } catch (e: Exception) {
             activityLogRepository.add(LogLevel.ERROR, "Error memindahkan \"${file.name}\": ${e.message}")
-            false
+            MoveOutcome.FAILED
         }
     }
 

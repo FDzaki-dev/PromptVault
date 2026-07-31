@@ -16,6 +16,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.Row
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -48,6 +51,8 @@ fun AddEditRuleScreen(
     var folderName by remember { mutableStateOf(existingRule?.folderName ?: "") }
     var pattern by remember { mutableStateOf(existingRule?.pattern ?: "") }
     var excludePattern by remember { mutableStateOf(existingRule?.excludePattern ?: "") }
+    var minSizeKbText by remember { mutableStateOf(existingRule?.minSizeKb?.toString() ?: "") }
+    var maxSizeKbText by remember { mutableStateOf(existingRule?.maxSizeKb?.toString() ?: "") }
     var pendingCheck by remember { mutableStateOf<SaveRuleCheck?>(null) }
     var pendingRule by remember { mutableStateOf<Rule?>(null) }
     var preview by remember { mutableStateOf<PatternPreviewResult?>(null) }
@@ -108,6 +113,29 @@ fun AddEditRuleScreen(
                 style = MaterialTheme.typography.bodySmall
             )
 
+            Text("Filter Ukuran File (opsional)", style = MaterialTheme.typography.titleSmall)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = minSizeKbText,
+                    onValueChange = { minSizeKbText = it.filter { c -> c.isDigit() } },
+                    label = { Text("Min (KB)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.weight(1f)
+                )
+                OutlinedTextField(
+                    value = maxSizeKbText,
+                    onValueChange = { maxSizeKbText = it.filter { c -> c.isDigit() } },
+                    label = { Text("Maks (KB)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.weight(1f)
+                )
+            }
+            Text(
+                "Kosongkan kalau tidak perlu batasan ukuran. Contoh pakai: hindari file kosong (min 1 KB) " +
+                    "atau hindari file raksasa yang bikin auto-scan lama (maks 50000 KB).",
+                style = MaterialTheme.typography.bodySmall
+            )
+
             // Live preview: bukti langsung pattern ini akan kena file yang mana di Downloads.
             preview?.let { p ->
                 VaultCard(modifier = Modifier.fillMaxWidth()) {
@@ -140,7 +168,9 @@ fun AddEditRuleScreen(
                         id = existingRule?.id ?: UUID.randomUUID().toString(),
                         folderName = folderName.trim(),
                         pattern = pattern.trim(),
-                        excludePattern = excludePattern.trim()
+                        excludePattern = excludePattern.trim(),
+                        minSizeKb = minSizeKbText.toLongOrNull(),
+                        maxSizeKb = maxSizeKbText.toLongOrNull()
                     )
                     scope.launch {
                         val check = onCheckBeforeSave(rule)

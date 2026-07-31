@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.elprompter.promptvault.data.ActivityLogEntry
 import com.elprompter.promptvault.data.ActivityLogRepository
+import com.elprompter.promptvault.data.ConflictStrategy
 import com.elprompter.promptvault.data.MoveHistoryEntry
 import com.elprompter.promptvault.data.MoveHistoryRepository
 import com.elprompter.promptvault.data.Rule
@@ -26,7 +27,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val activityLogRepository = ActivityLogRepository(application)
     private val moveHistoryRepository = MoveHistoryRepository(application)
     private val settingsRepository = SettingsRepository(application)
-    private val fileSorter = FileSorter(application, ruleRepository, activityLogRepository, moveHistoryRepository)
+    private val fileSorter = FileSorter(application, ruleRepository, activityLogRepository, moveHistoryRepository, settingsRepository)
 
     val rules: StateFlow<List<Rule>> = ruleRepository.rulesFlow
         .let { flow ->
@@ -52,6 +53,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val intervalMinutes: StateFlow<Int> = settingsRepository.intervalMinutesFlow
         .let { flow ->
             val state = MutableStateFlow(SettingsRepository.DEFAULT_INTERVAL_MINUTES)
+            viewModelScope.launch { flow.collect { state.value = it } }
+            state.asStateFlow()
+        }
+
+    val conflictStrategy: StateFlow<ConflictStrategy> = settingsRepository.conflictStrategyFlow
+        .let { flow ->
+            val state = MutableStateFlow(SettingsRepository.DEFAULT_CONFLICT_STRATEGY)
             viewModelScope.launch { flow.collect { state.value = it } }
             state.asStateFlow()
         }
@@ -103,6 +111,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             settingsRepository.setIntervalMinutes(minutes)
             WorkScheduler.schedule(getApplication(), minutes)
         }
+    }
+
+    fun setConflictStrategy(strategy: ConflictStrategy) {
+        viewModelScope.launch { settingsRepository.setConflictStrategy(strategy) }
     }
 
     fun undoMove(entry: MoveHistoryEntry) {

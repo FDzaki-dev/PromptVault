@@ -10,17 +10,31 @@ import com.elprompter.promptvault.data.Rule
 object RuleOverlapChecker {
 
     fun findOverlaps(candidate: Rule, others: List<Rule>): List<Rule> =
-        others.filter { it.enabled && GlobMatcher.patternsCanOverlap(candidate.pattern, it.pattern) }
+        others.filter { it.enabled && patternListsCanOverlap(candidate.pattern, it.pattern) }
+
+    private fun patternListsCanOverlap(csvA: String, csvB: String): Boolean {
+        val a = GlobMatcher.splitPatterns(csvA)
+        val b = GlobMatcher.splitPatterns(csvB)
+        return a.any { pa -> b.any { pb -> GlobMatcher.patternsCanOverlap(pa, pb) } }
+    }
 
     /** Untuk satu nama file nyata, kembalikan semua rule aktif yang cocok (dipakai saat scan). */
-    fun matchingRules(fileName: String, rules: List<Rule>): List<Rule> =
+    fun matchingRules(fileName: String, fileSizeKb: Long, rules: List<Rule>): List<Rule> =
         rules.filter { rule ->
             rule.enabled &&
-                GlobMatcher.matches(fileName, rule.pattern) &&
-                !isExcluded(fileName, rule)
+                GlobMatcher.matchesAny(fileName, rule.pattern) &&
+                !isExcluded(fileName, rule) &&
+                matchesSizeConstraint(fileSizeKb, rule)
         }
 
-    /** True kalau file dikecualikan secara eksplisit oleh excludePattern rule ini. */
+    /** True kalau file dikecualikan secara eksplisit oleh excludePattern rule ini (boleh multi-pattern). */
     fun isExcluded(fileName: String, rule: Rule): Boolean =
-        rule.excludePattern.isNotBlank() && GlobMatcher.matches(fileName, rule.excludePattern)
+        rule.excludePattern.isNotBlank() && GlobMatcher.matchesAny(fileName, rule.excludePattern)
+
+    /** True kalau ukuran file berada dalam batas min/max rule (null = tidak ada batas). */
+    fun matchesSizeConstraint(fileSizeKb: Long, rule: Rule): Boolean {
+        val minOk = rule.minSizeKb?.let { fileSizeKb >= it } ?: true
+        val maxOk = rule.maxSizeKb?.let { fileSizeKb <= it } ?: true
+        return minOk && maxOk
+    }
 }

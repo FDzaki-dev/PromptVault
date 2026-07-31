@@ -33,14 +33,14 @@ class RuleOverlapCheckerTest {
             rule("2", "Invoice", "invoice_*.zip"),
             rule("3", "Txt", "*.txt")
         )
-        val matches = RuleOverlapChecker.matchingRules("invoice_july.zip", rules)
+        val matches = RuleOverlapChecker.matchingRules("invoice_july.zip", 100, rules)
         assertEquals(2, matches.size)
     }
 
     @Test
     fun `matchingRules returns empty list when nothing matches`() {
         val rules = listOf(rule("1", "Txt", "*.txt"))
-        val matches = RuleOverlapChecker.matchingRules("invoice_july.zip", rules)
+        val matches = RuleOverlapChecker.matchingRules("invoice_july.zip", 100, rules)
         assertTrue(matches.isEmpty())
     }
 }

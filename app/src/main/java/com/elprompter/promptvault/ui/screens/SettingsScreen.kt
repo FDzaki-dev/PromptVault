@@ -26,6 +26,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.elprompter.promptvault.data.ConflictStrategy
 import com.elprompter.promptvault.data.SettingsRepository
 import com.elprompter.promptvault.ui.components.VaultCard
 import com.elprompter.promptvault.ui.components.VaultTopBar
@@ -38,6 +39,8 @@ import kotlinx.coroutines.launch
 fun SettingsScreen(
     currentIntervalMinutes: Int,
     onIntervalSelected: (Int) -> Unit,
+    currentConflictStrategy: ConflictStrategy,
+    onConflictStrategySelected: (ConflictStrategy) -> Unit,
     onExportRequested: suspend () -> String,
     onImportRequested: (String, (Int) -> Unit) -> Unit,
     onBack: () -> Unit
@@ -76,6 +79,37 @@ fun SettingsScreen(
                         )
                     )
                 }
+            }
+
+            Text("Kalau Nama File Sudah Ada di Tujuan", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "Apa yang dilakukan PromptVault kalau file dengan nama yang sama sudah ada di folder tujuan.",
+                style = MaterialTheme.typography.bodySmall
+            )
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                val labels = mapOf(
+                    ConflictStrategy.RENAME to "Ganti nama otomatis",
+                    ConflictStrategy.SKIP to "Lewati",
+                    ConflictStrategy.OVERWRITE to "Timpa"
+                )
+                labels.forEach { (strategy, label) ->
+                    FilterChip(
+                        selected = strategy == currentConflictStrategy,
+                        onClick = { onConflictStrategySelected(strategy) },
+                        label = { Text(label) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = if (strategy == ConflictStrategy.OVERWRITE) com.elprompter.promptvault.ui.theme.Stamp else Pine,
+                            selectedLabelColor = CardPaper
+                        )
+                    )
+                }
+            }
+            if (currentConflictStrategy == ConflictStrategy.OVERWRITE) {
+                Text(
+                    "Perhatian: file lama di tujuan akan tertimpa permanen dan tidak bisa di-undo.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = com.elprompter.promptvault.ui.theme.Stamp
+                )
             }
 
             VaultCard(modifier = Modifier.fillMaxWidth()) {

@@ -13,14 +13,14 @@ class ExcludePatternTest {
     @Test
     fun `file matching exclude pattern is not returned by matchingRules`() {
         val rules = listOf(rule("1", "Semua Zip", "*.zip", exclude = "backup_*.zip"))
-        val matches = RuleOverlapChecker.matchingRules("backup_2026.zip", rules)
+        val matches = RuleOverlapChecker.matchingRules("backup_2026.zip", 100, rules)
         assertTrue(matches.isEmpty())
     }
 
     @Test
     fun `file not matching exclude pattern is still returned`() {
         val rules = listOf(rule("1", "Semua Zip", "*.zip", exclude = "backup_*.zip"))
-        val matches = RuleOverlapChecker.matchingRules("report_2026.zip", rules)
+        val matches = RuleOverlapChecker.matchingRules("report_2026.zip", 100, rules)
         assertEquals(1, matches.size)
     }
 
