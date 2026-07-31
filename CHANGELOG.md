@@ -3,6 +3,19 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.1.4 -- Konsolidasi Maintainability (final pass)
+- **`scripts/preflight_check.sh`** -- semua 7 audit statis yang sebelumnya
+  cuma tertulis sebagai command manual di `MAINTENANCE.md` sekarang jadi
+  SATU script executable (`bash scripts/preflight_check.sh`). Konsisten,
+  tidak perlu direkonstruksi ulang tiap sesi, exit code jelas (0=aman, 1=ada
+  masalah)
+- **Panduan onboarding sesi baru** di `MAINTENANCE.md` & `README.md`: cara
+  tercepat Claude di sesi manapun dapat konteks penuh project ini adalah
+  `web_fetch` langsung `CHANGELOG.md`/`MAINTENANCE.md` dari repo publik
+  GitHub, TANPA perlu minta user upload ZIP ulang -- hemat waktu & token
+- `README.md` dirombak jadi pintu masuk yang jelas: link repo, daftar
+  dokumen, instruksi eksplisit "lanjutkan sesi baru"
+
 ## v2.1.3 -- Fix compile error SettingsScreen (bukti CI logging-nya sekarang jalan)
 - **Ini pembuktian nyata perbaikan CI di v2.1.1/v2.1.2 berhasil**: kali ini
   log kegagalan yang ter-upload berisi error compile ASLI dan jelas:
