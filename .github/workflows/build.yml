@@ -27,15 +27,25 @@ jobs:
           VERSION=$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts)
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
-      # Fail cepat & murah: cek kompilasi Kotlin dulu SEBELUM assembleRelease
-      # (yang butuh keystore, signing, packaging -- jauh lebih lambat & lebih
-      # boros resource). Kalau ada error sintaks/tipe, ketahuan di sini dalam
-      # hitungan puluhan detik, bukan menunggu build penuh selesai/gagal.
+      # PENTING: runner GitHub Actions kadang sudah menyediakan Gradle versi
+      # sangat baru (pernah ketemu 9.6.1) yang TIDAK KOMPATIBEL dengan AGP
+      # 8.5.2 yang dipakai project ini (AGP 8.5.x resmi didukung sampai
+      # sekitar Gradle 8.7-8.9). Ini pernah jadi penyebab build gagal tanpa
+      # pesan error yang jelas ke user. Solusinya: generate Gradle Wrapper
+      # dengan versi yang DIKUNCI secara eksplisit, dan semua langkah
+      # setelah ini pakai ./gradlew (bukan "gradle" polos dari runner).
+      - name: Generate pinned Gradle Wrapper (8.9)
+        run: gradle wrapper --gradle-version 8.9 --distribution-type bin
+
+      # Fail cepat & murah: cek kompilasi Kotlin dulu SEBELUM assembleRelease.
+      # Output digabung ke file log via tee, supaya kalau gagal, isi errornya
+      # (baris "e: file:///...") betulan ke-capture -- bukan cuma laporan
+      # deprecation warning yang tidak menjelaskan apa-apa.
       - name: Compile check (fail fast)
-        run: gradle compileDebugKotlin --stacktrace
+        run: ./gradlew compileDebugKotlin --stacktrace 2>&1 | tee compile-check.log
 
       - name: Run unit tests
-        run: gradle testDebugUnitTest testReleaseUnitTest --stacktrace
+        run: ./gradlew testDebugUnitTest testReleaseUnitTest --stacktrace 2>&1 | tee unit-tests.log
 
       - name: Decode keystore
         run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > $GITHUB_WORKSPACE/release.keystore
@@ -46,7 +56,7 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: gradle assembleRelease --stacktrace
+        run: ./gradlew assembleRelease --stacktrace 2>&1 | tee assemble-release.log
 
       # Nama file APK & nama artifact GitHub SELALU mengikuti versionName di
       # app/build.gradle.kts secara otomatis -- tidak ada angka manual, tidak
@@ -62,17 +72,20 @@ jobs:
           name: PromptVault-v${{ steps.version.outputs.version }}
           path: out/*.apk
 
-      # Kalau ada langkah manapun di atas gagal, log build lengkap otomatis
-      # jadi artifact yang bisa diunduh dari tab Actions -- tidak perlu lagi
-      # copy-paste manual atau screenshot log satu-satu.
+      # Kalau ada langkah manapun di atas gagal, log KONSOL ASLI (bukan cuma
+      # laporan deprecation) otomatis jadi artifact yang bisa diunduh dari
+      # tab Actions. Baris yang diawali "e: file:///..." di compile-check.log
+      # adalah bagian paling penting -- itu lokasi persis error-nya.
       - name: Upload build log on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: build-failure-log-v${{ steps.version.outputs.version }}
           path: |
+            compile-check.log
+            unit-tests.log
+            assemble-release.log
             **/build/reports/**
-            **/build/outputs/logs/**
           if-no-files-found: ignore
 
       - name: Clean up keystore

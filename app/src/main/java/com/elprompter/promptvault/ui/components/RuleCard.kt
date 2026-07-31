@@ -23,9 +23,6 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.elprompter.promptvault.data.Rule
-import com.elprompter.promptvault.ui.theme.Amber
-import com.elprompter.promptvault.ui.theme.InkFaint
-import com.elprompter.promptvault.ui.theme.Pine
 
 @Composable
 fun RuleCard(
@@ -41,37 +38,38 @@ fun RuleCard(
     onDelete: () -> Unit
 ) {
     val haptics = LocalHapticFeedback.current
+    val colors = MaterialTheme.colorScheme
     VaultCard(modifier = Modifier
         .fillMaxWidth()
         .padding(vertical = 4.dp)) {
         Row(modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 4.dp, bottom = 10.dp)) {
             Column {
                 IconButton(onClick = onMoveUp, enabled = canMoveUp, modifier = Modifier.size(28.dp)) {
-                    Icon(Icons.Filled.KeyboardArrowUp, contentDescription = "Naikkan prioritas", tint = if (canMoveUp) Pine else InkFaint)
+                    Icon(Icons.Filled.KeyboardArrowUp, contentDescription = "Naikkan prioritas", tint = if (canMoveUp) colors.primary else colors.onSurfaceVariant)
                 }
                 IconButton(onClick = onMoveDown, enabled = canMoveDown, modifier = Modifier.size(28.dp)) {
-                    Icon(Icons.Filled.KeyboardArrowDown, contentDescription = "Turunkan prioritas", tint = if (canMoveDown) Pine else InkFaint)
+                    Icon(Icons.Filled.KeyboardArrowDown, contentDescription = "Turunkan prioritas", tint = if (canMoveDown) colors.primary else colors.onSurfaceVariant)
                 }
             }
             Column(modifier = Modifier.weight(1f).padding(start = 4.dp)) {
-                Text("PRIORITAS #$priority", style = MaterialTheme.typography.labelSmall, color = InkFaint)
-                Text(rule.folderName.uppercase(), style = MaterialTheme.typography.titleMedium)
+                Text("PRIORITAS #$priority", style = MaterialTheme.typography.labelSmall, color = colors.onSurfaceVariant)
+                Text(rule.folderName.uppercase(), style = MaterialTheme.typography.titleMedium, color = colors.onSurface)
                 Text(
                     rule.pattern,
                     style = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
-                    color = InkFaint
+                    color = colors.onSurfaceVariant
                 )
                 if (rule.excludePattern.isNotBlank()) {
                     Text(
                         "kecuali: ${rule.excludePattern}",
                         style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
-                        color = InkFaint
+                        color = colors.onSurfaceVariant
                     )
                 }
                 if (hasOverlapWarning) {
                     Text(
                         "⚠ tumpang tindih dengan rule lain",
-                        color = Amber,
+                        color = colors.tertiary,
                         style = MaterialTheme.typography.labelSmall
                     )
                 }
@@ -82,10 +80,10 @@ fun RuleCard(
                     haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                     onToggleEnabled(it)
                 },
-                colors = SwitchDefaults.colors(checkedTrackColor = Pine)
+                colors = SwitchDefaults.colors(checkedTrackColor = colors.primary)
             )
-            IconButton(onClick = onEdit) { Icon(Icons.Filled.Edit, contentDescription = "Edit") }
-            IconButton(onClick = onDelete) { Icon(Icons.Filled.Delete, contentDescription = "Hapus") }
+            IconButton(onClick = onEdit) { Icon(Icons.Filled.Edit, contentDescription = "Edit", tint = colors.onSurfaceVariant) }
+            IconButton(onClick = onDelete) { Icon(Icons.Filled.Delete, contentDescription = "Hapus", tint = colors.onSurfaceVariant) }
         }
     }
 }

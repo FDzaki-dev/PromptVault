@@ -30,8 +30,6 @@ import com.elprompter.promptvault.data.MoveHistoryEntry
 import com.elprompter.promptvault.ui.components.VaultActionSheet
 import com.elprompter.promptvault.ui.components.SortedStamp
 import com.elprompter.promptvault.ui.components.VaultTopBar
-import com.elprompter.promptvault.ui.theme.Pine
-import com.elprompter.promptvault.ui.theme.CardPaper
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -49,12 +47,13 @@ fun ActivityLogScreen(
     val formatter = remember { SimpleDateFormat("dd MMM HH:mm", Locale("id", "ID")) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val colors = MaterialTheme.colorScheme
 
     Scaffold(
         topBar = { VaultTopBar(title = "Riwayat Aktivitas", onBack = onBack) },
         snackbarHost = {
             SnackbarHost(snackbarHostState) { data ->
-                Snackbar(snackbarData = data, containerColor = Pine, contentColor = CardPaper)
+                Snackbar(snackbarData = data, containerColor = colors.primary, contentColor = colors.onPrimary)
             }
         }
     ) { padding ->
@@ -71,11 +70,11 @@ fun ActivityLogScreen(
             } else {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(top = 8.dp)) {
                     items(logEntries, key = { it.id }) { entry ->
-                        val color = when (entry.level) {
-                            LogLevel.SUCCESS -> MaterialTheme.colorScheme.primary
-                            LogLevel.WARNING -> com.elprompter.promptvault.ui.theme.Amber
-                            LogLevel.ERROR -> MaterialTheme.colorScheme.error
-                            LogLevel.INFO -> MaterialTheme.colorScheme.onSurfaceVariant
+                        val entryColor = when (entry.level) {
+                            LogLevel.SUCCESS -> colors.primary
+                            LogLevel.WARNING -> colors.tertiary
+                            LogLevel.ERROR -> colors.error
+                            LogLevel.INFO -> colors.onSurfaceVariant
                         }
                         VaultCard(modifier = Modifier.fillMaxWidth()) {
                             Row(
@@ -84,7 +83,7 @@ fun ActivityLogScreen(
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(formatter.format(Date(entry.timestampMillis)), style = MaterialTheme.typography.labelSmall)
-                                    Text(entry.message, color = color, style = MaterialTheme.typography.bodyMedium)
+                                    Text(entry.message, color = entryColor, style = MaterialTheme.typography.bodyMedium)
                                 }
                                 if (entry.level == LogLevel.SUCCESS && entry.message.contains("->")) {
                                     SortedStamp()

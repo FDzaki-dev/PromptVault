@@ -2,7 +2,6 @@ package com.elprompter.promptvault.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -23,17 +22,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import com.elprompter.promptvault.ui.theme.CardPaper
-import com.elprompter.promptvault.ui.theme.HairlineInk
-import com.elprompter.promptvault.ui.theme.InkFaint
-import com.elprompter.promptvault.ui.theme.Pine
 
 /**
  * Satu baris menu ala grouped list iOS Settings: ikon berwarna di kotak
  * membulat, label, chevron di kanan. Dipakai berkelompok di dalam GroupedList.
+ * tint = null berarti pakai warna primary tema secara otomatis (theme-aware);
+ * boleh dioverride eksplisit (mis. Amber/tertiary) lewat MaterialTheme.colorScheme.
  */
 @Composable
-fun GroupedListRow(icon: ImageVector, label: String, tint: Color = Pine, onClick: () -> Unit) {
+fun GroupedListRow(icon: ImageVector, label: String, tint: Color? = null, onClick: () -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    val resolvedTint = tint ?: colors.primary
     val interactionSource = remember { MutableInteractionSource() }
     Row(
         modifier = Modifier
@@ -45,17 +44,18 @@ fun GroupedListRow(icon: ImageVector, label: String, tint: Color = Pine, onClick
         Box(
             modifier = Modifier
                 .size(30.dp)
-                .background(tint, RoundedCornerShape(8.dp)),
+                .background(resolvedTint, RoundedCornerShape(8.dp)),
             contentAlignment = Alignment.Center
         ) {
-            Icon(icon, contentDescription = null, tint = CardPaper, modifier = Modifier.size(18.dp))
+            Icon(icon, contentDescription = null, tint = colors.onPrimary, modifier = Modifier.size(18.dp))
         }
         Text(
             label,
             style = MaterialTheme.typography.bodyLarge,
+            color = colors.onSurface,
             modifier = Modifier.weight(1f).padding(start = 12.dp)
         )
-        Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = InkFaint, modifier = Modifier.size(20.dp))
+        Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = colors.onSurfaceVariant, modifier = Modifier.size(20.dp))
     }
 }
 
@@ -67,7 +67,11 @@ fun GroupedList(rows: List<@Composable () -> Unit>) {
             rows.forEachIndexed { index, row ->
                 row()
                 if (index != rows.lastIndex) {
-                    HorizontalDivider(color = HairlineInk, thickness = 1.dp, modifier = Modifier.padding(start = 58.dp))
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outline,
+                        thickness = 1.dp,
+                        modifier = Modifier.padding(start = 58.dp)
+                    )
                 }
             }
         }

@@ -4,7 +4,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
 
 private val LightColors = lightColorScheme(
     primary = Pine,
@@ -12,6 +11,7 @@ private val LightColors = lightColorScheme(
     secondary = Stamp,
     onSecondary = CardPaper,
     tertiary = Amber,
+    onTertiary = CardPaper,
     background = Kraft,
     onBackground = Ink,
     surface = CardPaper,
@@ -23,15 +23,29 @@ private val LightColors = lightColorScheme(
     outline = HairlineInk
 )
 
+/**
+ * Skema gelap "ultra premium": tiga lapisan permukaan (background < surface <
+ * surfaceVariant sebagai "raised") supaya kartu/sheet terasa mengambang, bukan
+ * menyatu jadi hitam polos. Semua aksen dicerahkan (PineGlow/StampGlow/AmberGlow)
+ * biar tetap hidup & kontras di atas dasar nyaris-hitam, alih-alih warna terang
+ * yang justru pudar/kusam kalau ditaruh apa adanya di dark mode.
+ */
 private val DarkColors = darkColorScheme(
-    primary = PineLight,
-    onPrimary = Color(0xFF10160F),
-    secondary = Stamp,
-    background = Color(0xFF171D19),
-    onBackground = Kraft,
-    surface = Color(0xFF1E251F),
-    onSurface = Kraft,
-    error = Rust
+    primary = PineGlow,
+    onPrimary = ObsidianBase,
+    secondary = StampGlow,
+    onSecondary = ObsidianBase,
+    tertiary = AmberGlow,
+    onTertiary = ObsidianBase,
+    background = ObsidianBase,
+    onBackground = IvoryText,
+    surface = ObsidianSurface,
+    onSurface = IvoryText,
+    surfaceVariant = ObsidianSurfaceRaised,
+    onSurfaceVariant = IvoryTextFaint,
+    error = RustGlow,
+    onError = ObsidianBase,
+    outline = HairlineIvory
 )
 
 @Composable

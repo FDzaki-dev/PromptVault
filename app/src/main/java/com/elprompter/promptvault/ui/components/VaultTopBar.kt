@@ -11,14 +11,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import com.elprompter.promptvault.ui.theme.Ink
-import com.elprompter.promptvault.ui.theme.Kraft
-import com.elprompter.promptvault.ui.theme.Pine
 
 /**
  * Top bar konsisten dipakai di semua layar selain Home, supaya user selalu
  * punya jalan balik yang JELAS (bukan cuma mengandalkan gesture back sistem)
  * dan tahu lagi di layar mana -- standar dasar navigasi Android.
+ * Semua warna diambil dari MaterialTheme.colorScheme, otomatis ikut terang/gelap.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,16 +30,16 @@ fun VaultTopBar(
         navigationIcon = {
             if (onBack != null) {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.Filled.ArrowBack, contentDescription = "Kembali", tint = Pine)
+                    Icon(Icons.Filled.ArrowBack, contentDescription = "Kembali", tint = MaterialTheme.colorScheme.primary)
                 }
             }
         },
         actions = actions,
         colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = Kraft,
-            titleContentColor = Ink,
-            navigationIconContentColor = Pine,
-            actionIconContentColor = Pine
+            containerColor = MaterialTheme.colorScheme.background,
+            titleContentColor = MaterialTheme.colorScheme.onBackground,
+            navigationIconContentColor = MaterialTheme.colorScheme.primary,
+            actionIconContentColor = MaterialTheme.colorScheme.primary
         )
     )
 }

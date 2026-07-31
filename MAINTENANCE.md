@@ -35,7 +35,35 @@ done
 
 # 5. LazyColumn di dalam Column yang verticalScroll HARUS punya heightIn(max=...)
 #    (kalau tidak, crash runtime "infinite height" di HP, bukan error compile)
+
+# 6. Sejak app punya dark mode (v2.1.0): JANGAN referensi warna literal
+#    (Pine/Stamp/Kraft/CardPaper/Ink/InkFaint/HairlineInk/Amber) langsung di
+#    layar/komponen manapun KECUALI di ui/theme/Theme.kt sendiri. Semua warna
+#    di layar/komponen HARUS lewat MaterialTheme.colorScheme.* supaya otomatis
+#    ikut ganti terang/gelap. Cek dengan:
+grep -rn "= Pine\b\|= Stamp\b\|= Kraft\b\|= CardPaper\b\|= Ink\b\|= InkFaint\b\|= HairlineInk\b\|= Amber\b" app/src/main/java/com/elprompter/promptvault/ui/ app/src/main/java/com/elprompter/promptvault/MainActivity.kt
+# (hasil kosong = aman; kalau ada, itu di luar Theme.kt = bug)
 ```
+
+## Soal versi Gradle di CI (penting, pernah bikin build gagal tanpa pesan jelas)
+
+Runner GitHub Actions kadang sudah menyediakan Gradle versi sangat baru
+(pernah ketemu 9.6.1) yang TIDAK KOMPATIBEL dengan AGP 8.5.2 yang dipakai
+project ini. Kalau versi Gradle tidak dikunci, build bisa gagal dengan log
+yang isinya cuma laporan deprecation warning yang tidak menjelaskan apa-apa
+-- error compile aslinya bahkan bisa tidak ke-capture kalau workflow tidak
+menyimpan output konsol asli.
+
+Sejak v2.1.1, workflow CI sudah:
+1. Generate Gradle Wrapper terkunci ke versi 8.9 (`gradle wrapper --gradle-version 8.9`)
+   di awal job, lalu semua langkah berikutnya pakai `./gradlew` (bukan `gradle` polos).
+2. Redirect output tiap langkah penting (`compileDebugKotlin`, test, `assembleRelease`)
+   ke file log via `tee`, supaya kalau gagal, isi errornya (baris `e: file:///...`)
+   betulan ke-capture di artifact `build-failure-log-vX.X.X`, bukan cuma laporan
+   deprecation warning generik.
+
+Kalau ke depan mau upgrade AGP/Gradle, pastikan cek tabel kompatibilitas resmi:
+https://developer.android.com/build/releases/gradle-plugin#compatibility
 
 Daftar ini akan bertambah setiap kali ada bug baru yang ketahuan dari log CI --
 lihat riwayat commit `MAINTENANCE.md` untuk histori penambahan.

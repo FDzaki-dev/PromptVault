@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Archive
@@ -33,11 +32,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import com.elprompter.promptvault.ui.theme.CardPaper
-import com.elprompter.promptvault.ui.theme.HairlineInk
-import com.elprompter.promptvault.ui.theme.InkFaint
-import com.elprompter.promptvault.ui.theme.Pine
-import com.elprompter.promptvault.ui.theme.Stamp
 
 private data class OnboardingStep(val icon: ImageVector, val title: String, val body: String)
 
@@ -52,6 +46,7 @@ private val steps = listOf(
 fun OnboardingScreen(onFinished: () -> Unit) {
     var index by remember { mutableStateOf(0) }
     val step = steps[index]
+    val colors = MaterialTheme.colorScheme
 
     Column(
         modifier = Modifier
@@ -65,21 +60,21 @@ fun OnboardingScreen(onFinished: () -> Unit) {
             Box(
                 modifier = Modifier
                     .size(72.dp)
-                    .background(Pine, RoundedCornerShape(16.dp)),
+                    .background(colors.primary, RoundedCornerShape(16.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(step.icon, contentDescription = null, tint = CardPaper, modifier = Modifier.size(36.dp))
+                Icon(step.icon, contentDescription = null, tint = colors.onPrimary, modifier = Modifier.size(36.dp))
             }
 
-            Text("Langkah ${index + 1} dari ${steps.size}", style = MaterialTheme.typography.labelLarge, color = InkFaint)
-            Text(step.title, style = MaterialTheme.typography.headlineSmall)
-            Text(step.body, style = MaterialTheme.typography.bodyLarge)
+            Text("Langkah ${index + 1} dari ${steps.size}", style = MaterialTheme.typography.labelLarge, color = colors.onSurfaceVariant)
+            Text(step.title, style = MaterialTheme.typography.headlineSmall, color = colors.onBackground)
+            Text(step.body, style = MaterialTheme.typography.bodyLarge, color = colors.onBackground)
         }
 
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Button(
                 onClick = { if (index < steps.lastIndex) index++ else onFinished() },
-                colors = ButtonDefaults.buttonColors(containerColor = Stamp, contentColor = CardPaper),
+                colors = ButtonDefaults.buttonColors(containerColor = colors.secondary, contentColor = colors.onSecondary),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(if (index < steps.lastIndex) "Lanjut" else "Mulai")
@@ -87,7 +82,7 @@ fun OnboardingScreen(onFinished: () -> Unit) {
             if (index > 0) {
                 OutlinedButton(
                     onClick = { index-- },
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Pine),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primary),
                     modifier = Modifier.fillMaxWidth()
                 ) { Text("Kembali") }
             }
@@ -97,6 +92,7 @@ fun OnboardingScreen(onFinished: () -> Unit) {
 
 @Composable
 private fun ProgressDots(total: Int, current: Int) {
+    val colors = MaterialTheme.colorScheme
     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         repeat(total) { i ->
             Box(
@@ -104,7 +100,7 @@ private fun ProgressDots(total: Int, current: Int) {
                     .height(4.dp)
                     .width(if (i == current) 24.dp else 12.dp)
                     .background(
-                        if (i == current) Pine else HairlineInk,
+                        if (i == current) colors.primary else colors.outline,
                         RoundedCornerShape(2.dp)
                     )
             )

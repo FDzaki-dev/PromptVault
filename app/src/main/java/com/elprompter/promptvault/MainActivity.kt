@@ -12,6 +12,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -50,6 +51,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.elprompter.promptvault.data.ThemeMode
 import com.elprompter.promptvault.data.promptVaultDataStore
 import com.elprompter.promptvault.ui.MainViewModel
 import com.elprompter.promptvault.ui.Routes
@@ -61,10 +63,8 @@ import com.elprompter.promptvault.ui.screens.OnboardingScreen
 import com.elprompter.promptvault.ui.screens.RuleListScreen
 import com.elprompter.promptvault.ui.screens.SettingsScreen
 import com.elprompter.promptvault.ui.screens.SkippedFilesScreen
-import com.elprompter.promptvault.ui.theme.CardPaper
-import com.elprompter.promptvault.ui.theme.Ink
 import com.elprompter.promptvault.ui.theme.Kraft
-import com.elprompter.promptvault.ui.theme.Pine
+import com.elprompter.promptvault.ui.theme.ObsidianBase
 import com.elprompter.promptvault.ui.theme.PromptVaultTheme
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -81,15 +81,26 @@ class MainActivity : ComponentActivity() {
         installSplashScreen()
         super.onCreate(savedInstanceState)
 
-        // Edge-to-edge dengan status bar & nav bar mengikuti warna kraft,
-        // supaya chrome sistem tidak terasa "nempel" tapi menyatu dengan tema.
+        // Edge-to-edge dengan status bar & nav bar otomatis ikut terang/gelap
+        // sistem (SystemBarStyle.auto). Kalau user override manual "Selalu
+        // Gelap"/"Selalu Terang" di Pengaturan, area konten tetap benar lewat
+        // PromptVaultTheme -- cuma chrome status bar yang mungkin tidak 100%
+        // sinkron di kasus override manual itu (batasan kecil yang wajar).
         enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.light(Kraft.toArgb(), Ink.toArgb()),
-            navigationBarStyle = SystemBarStyle.light(Kraft.toArgb(), Ink.toArgb())
+            statusBarStyle = SystemBarStyle.auto(Kraft.toArgb(), ObsidianBase.toArgb()),
+            navigationBarStyle = SystemBarStyle.auto(Kraft.toArgb(), ObsidianBase.toArgb())
         )
 
         setContent {
-            PromptVaultTheme {
+            val viewModelForTheme = viewModel
+            val themeMode by viewModelForTheme.themeMode.collectAsStateWithLifecycle()
+            val systemDark = isSystemInDarkTheme()
+            val effectiveDark = when (themeMode) {
+                ThemeMode.SYSTEM -> systemDark
+                ThemeMode.LIGHT -> false
+                ThemeMode.DARK -> true
+            }
+            PromptVaultTheme(darkTheme = effectiveDark) {
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     PromptVaultRoot(viewModel)
                 }
@@ -210,11 +221,14 @@ private fun PromptVaultRoot(viewModel: MainViewModel) {
         composable(Routes.SETTINGS) {
             val interval by viewModel.intervalMinutes.collectAsStateWithLifecycle()
             val conflictStrategy by viewModel.conflictStrategy.collectAsStateWithLifecycle()
+            val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
             SettingsScreen(
                 currentIntervalMinutes = interval,
                 onIntervalSelected = { viewModel.setIntervalMinutes(it) },
                 currentConflictStrategy = conflictStrategy,
                 onConflictStrategySelected = { viewModel.setConflictStrategy(it) },
+                currentThemeMode = themeMode,
+                onThemeModeSelected = { viewModel.setThemeMode(it) },
                 onExportRequested = { viewModel.exportRulesJson() },
                 onImportRequested = { text, cb -> viewModel.importRulesJson(text, cb) },
                 onBack = { navController.popBackStack() }
@@ -234,6 +248,7 @@ private fun PromptVaultRoot(viewModel: MainViewModel) {
 
 @Composable
 private fun PermissionGate(onOpenSettings: () -> Unit, onRecheck: () -> Unit) {
+    val colors = MaterialTheme.colorScheme
     Scaffold { padding ->
         Column(
             modifier = Modifier
@@ -245,25 +260,26 @@ private fun PermissionGate(onOpenSettings: () -> Unit, onRecheck: () -> Unit) {
             Box(
                 modifier = Modifier
                     .size(64.dp)
-                    .background(Pine, RoundedCornerShape(14.dp)),
+                    .background(colors.primary, RoundedCornerShape(14.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Filled.FolderOpen, contentDescription = null, tint = CardPaper, modifier = Modifier.size(32.dp))
+                Icon(Icons.Filled.FolderOpen, contentDescription = null, tint = colors.onPrimary, modifier = Modifier.size(32.dp))
             }
-            Text("Izin Diperlukan", style = MaterialTheme.typography.headlineSmall)
+            Text("Izin Diperlukan", style = MaterialTheme.typography.headlineSmall, color = colors.onBackground)
             Text(
                 "PromptVault butuh akses ke semua file supaya bisa memindahkan ZIP & TXT " +
                     "di Downloads ke folder yang kamu tentukan. Tanpa izin ini, app tidak bisa bekerja.",
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium,
+                color = colors.onBackground
             )
             Button(
                 onClick = onOpenSettings,
-                colors = ButtonDefaults.buttonColors(containerColor = com.elprompter.promptvault.ui.theme.Stamp, contentColor = CardPaper),
+                colors = ButtonDefaults.buttonColors(containerColor = colors.secondary, contentColor = colors.onSecondary),
                 modifier = Modifier.fillMaxWidth()
             ) { Text("Buka Pengaturan Izin") }
             OutlinedButton(
                 onClick = onRecheck,
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = Pine),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primary),
                 modifier = Modifier.fillMaxWidth()
             ) { Text("Sudah diizinkan, cek ulang") }
         }

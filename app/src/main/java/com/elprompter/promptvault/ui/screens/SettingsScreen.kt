@@ -29,10 +29,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.elprompter.promptvault.data.ConflictStrategy
 import com.elprompter.promptvault.data.SettingsRepository
+import com.elprompter.promptvault.data.ThemeMode
 import com.elprompter.promptvault.ui.components.VaultCard
 import com.elprompter.promptvault.ui.components.VaultTopBar
-import com.elprompter.promptvault.ui.theme.Pine
-import com.elprompter.promptvault.ui.theme.CardPaper
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
@@ -42,6 +41,8 @@ fun SettingsScreen(
     onIntervalSelected: (Int) -> Unit,
     currentConflictStrategy: ConflictStrategy,
     onConflictStrategySelected: (ConflictStrategy) -> Unit,
+    currentThemeMode: ThemeMode,
+    onThemeModeSelected: (ThemeMode) -> Unit,
     onExportRequested: suspend () -> String,
     onImportRequested: (String, (Int) -> Unit) -> Unit,
     onBack: () -> Unit
@@ -50,6 +51,12 @@ fun SettingsScreen(
     var importText by remember { mutableStateOf("") }
     var importResult by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+    val colors = MaterialTheme.colorScheme
+
+    fun chipColors(dangerAccent: Boolean = false) = FilterChipDefaults.filterChipColors(
+        selectedContainerColor = if (dangerAccent) colors.error else colors.primary,
+        selectedLabelColor = if (dangerAccent) colors.onError else colors.onPrimary
+    )
 
     Scaffold(
         topBar = { VaultTopBar(title = "Pengaturan", onBack = onBack) }
@@ -62,6 +69,27 @@ fun SettingsScreen(
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            Text("Tampilan", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "Pilih terang, gelap, atau ikuti pengaturan sistem Android kamu.",
+                style = MaterialTheme.typography.bodySmall
+            )
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                val themeLabels = mapOf(
+                    ThemeMode.SYSTEM to "Ikuti Sistem",
+                    ThemeMode.LIGHT to "Terang",
+                    ThemeMode.DARK to "Gelap"
+                )
+                themeLabels.forEach { (mode, label) ->
+                    FilterChip(
+                        selected = mode == currentThemeMode,
+                        onClick = { onThemeModeSelected(mode) },
+                        label = { Text(label) },
+                        colors = chipColors()
+                    )
+                }
+            }
+
             Text("Interval Auto-Scan", style = MaterialTheme.typography.titleMedium)
             Text(
                 "Seberapa sering PromptVault memindai Downloads di latar belakang. " +
@@ -74,10 +102,7 @@ fun SettingsScreen(
                         selected = minutes == currentIntervalMinutes,
                         onClick = { onIntervalSelected(minutes) },
                         label = { Text(if (minutes < 60) "$minutes menit" else "${minutes / 60} jam") },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = Pine,
-                            selectedLabelColor = CardPaper
-                        )
+                        colors = chipColors()
                     )
                 }
             }
@@ -88,20 +113,17 @@ fun SettingsScreen(
                 style = MaterialTheme.typography.bodySmall
             )
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                val labels = mapOf(
+                val conflictLabels = mapOf(
                     ConflictStrategy.RENAME to "Ganti nama otomatis",
                     ConflictStrategy.SKIP to "Lewati",
                     ConflictStrategy.OVERWRITE to "Timpa"
                 )
-                labels.forEach { (strategy, label) ->
+                conflictLabels.forEach { (strategy, label) ->
                     FilterChip(
                         selected = strategy == currentConflictStrategy,
                         onClick = { onConflictStrategySelected(strategy) },
                         label = { Text(label) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = if (strategy == ConflictStrategy.OVERWRITE) com.elprompter.promptvault.ui.theme.Stamp else Pine,
-                            selectedLabelColor = CardPaper
-                        )
+                        colors = chipColors(dangerAccent = strategy == ConflictStrategy.OVERWRITE)
                     )
                 }
             }
@@ -109,7 +131,7 @@ fun SettingsScreen(
                 Text(
                     "Perhatian: file lama di tujuan akan tertimpa permanen dan tidak bisa di-undo.",
                     style = MaterialTheme.typography.bodySmall,
-                    color = com.elprompter.promptvault.ui.theme.Stamp
+                    color = colors.error
                 )
             }
 
@@ -120,7 +142,10 @@ fun SettingsScreen(
                         "Simpan semua rule kamu sebagai teks, biar bisa dipulihkan lagi kalau app di-uninstall.",
                         style = MaterialTheme.typography.bodySmall
                     )
-                    OutlinedButton(onClick = { scope.launch { exportedText = onExportRequested() } }) {
+                    OutlinedButton(
+                        onClick = { scope.launch { exportedText = onExportRequested() } },
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primary)
+                    ) {
                         Text("Tampilkan JSON Export")
                     }
 
@@ -157,7 +182,7 @@ fun SettingsScreen(
                             }
                         },
                         enabled = importText.isNotBlank(),
-                        colors = ButtonDefaults.buttonColors(containerColor = Pine, contentColor = CardPaper)
+                        colors = ButtonDefaults.buttonColors(containerColor = colors.primary, contentColor = colors.onPrimary)
                     ) { Text("Import") }
                     importResult?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
                 }

@@ -17,15 +17,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
-import com.elprompter.promptvault.ui.theme.CardPaper
-import com.elprompter.promptvault.ui.theme.Kraft
-import com.elprompter.promptvault.ui.theme.Pine
-import com.elprompter.promptvault.ui.theme.Stamp
 
 /**
  * Pengganti AlertDialog kotak di tengah layar -- muncul dari bawah seperti
  * action sheet iOS. Untuk konfirmasi aksi (hapus, undo, dsb) yang butuh
  * perhatian penuh tapi tetap terasa ringan, bukan modal yang "mengunci" layar.
+ * containerColor pakai surfaceVariant (lapisan "terangkat") supaya sheet
+ * terasa mengambang di atas layar, terutama kontras jelas di dark mode.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,10 +38,11 @@ fun VaultActionSheet(
 ) {
     val sheetState = rememberModalBottomSheetState()
     val haptics = LocalHapticFeedback.current
+    val colors = MaterialTheme.colorScheme
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = Kraft
+        containerColor = colors.surfaceVariant
     ) {
         Column(
             modifier = Modifier
@@ -52,8 +51,8 @@ fun VaultActionSheet(
                 .padding(bottom = 28.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(title, style = MaterialTheme.typography.titleMedium)
-            Text(message, style = MaterialTheme.typography.bodyMedium)
+            Text(title, style = MaterialTheme.typography.titleMedium, color = colors.onSurface)
+            Text(message, style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
 
             Button(
                 onClick = {
@@ -61,15 +60,15 @@ fun VaultActionSheet(
                     onConfirm()
                 },
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isDestructive) Stamp else Pine,
-                    contentColor = CardPaper
+                    containerColor = if (isDestructive) colors.error else colors.primary,
+                    contentColor = if (isDestructive) colors.onError else colors.onPrimary
                 ),
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
             ) { Text(confirmLabel) }
 
             OutlinedButton(
                 onClick = onDismiss,
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = Pine),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primary),
                 modifier = Modifier.fillMaxWidth()
             ) { Text(dismissLabel) }
         }

@@ -3,6 +3,30 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.1.1 -- Fix CI (Gradle version mismatch + logging yang gak kepakai)
+- **Root cause build v2.1.0 gagal**: runner GitHub Actions memakai Gradle
+  9.6.1 (sangat baru), tidak kompatibel dengan AGP 8.5.2 yang dipakai project
+  ini (resmi cuma didukung sampai ~Gradle 8.9). CI sekarang generate Gradle
+  Wrapper terkunci ke versi 8.9 di awal job, semua langkah pakai `./gradlew`
+- **Fix logging CI yang ternyata gak kepakai**: perbaikan "auto-upload log
+  kegagalan" di v2.0.1 ternyata cuma menangkap laporan deprecation warning,
+  BUKAN error compile asli (yang dicetak ke konsol/stdout, bukan ke file
+  report). Sekarang output tiap langkah penting di-redirect ke file log lewat
+  `tee` dan itu yang di-upload -- baris `e: file:///...` (lokasi error
+  sesungguhnya) sekarang benar-benar ke-capture
+
+## v2.1.0 -- Dark Mode Ultra Premium
+- Skema gelap didesain dari nol (bukan invert warna terang): 3 lapisan
+  permukaan (background hampir hitam OLED, surface, surfaceVariant "raised"),
+  aksen dicerahkan (PineGlow/StampGlow/AmberGlow) biar tetap hidup di gelap
+- Pengaturan tema baru: Ikuti Sistem / Terang / Gelap (tersimpan permanen)
+- **Refactor besar**: HAMPIR SEMUA komponen & layar sebelumnya hardcode warna
+  literal terang langsung (bukan lewat `MaterialTheme.colorScheme`), yang
+  berarti dark mode tidak akan berfungsi kalau tidak dibenahi. Semua sudah
+  diganti ke referensi theme-aware -- lihat `MAINTENANCE.md` poin 6 untuk cara
+  cek pola ini ke depannya
+- Status bar & nav bar edge-to-edge otomatis ikut terang/gelap sistem
+
 ## v2.0.1 -- Maintainability Pass
 - CI dipecah: compile-check cepat dulu (fail fast, hitungan detik) sebelum
   proses assembleRelease yang lambat (signing, packaging)

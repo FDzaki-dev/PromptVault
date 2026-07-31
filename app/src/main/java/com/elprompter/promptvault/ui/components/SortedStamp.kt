@@ -11,7 +11,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.unit.dp
-import com.elprompter.promptvault.ui.theme.Stamp
 
 /**
  * Satu-satunya "kejutan" visual di app ini: badge stempel untuk entri log
@@ -20,15 +19,16 @@ import com.elprompter.promptvault.ui.theme.Stamp
  */
 @Composable
 fun SortedStamp(text: String = "SORTED") {
+    val accent = MaterialTheme.colorScheme.secondary
     Box(
         modifier = Modifier
             .rotate(-6f)
-            .border(BorderStroke(1.5.dp, Stamp), RoundedCornerShape(4.dp))
+            .border(BorderStroke(1.5.dp, accent), RoundedCornerShape(4.dp))
             .padding(horizontal = 8.dp, vertical = 2.dp)
     ) {
         Text(
             text,
-            color = Stamp,
+            color = accent,
             style = MaterialTheme.typography.labelSmall
         )
     }

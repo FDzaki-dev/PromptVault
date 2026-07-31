@@ -30,8 +30,6 @@ import com.elprompter.promptvault.data.Rule
 import com.elprompter.promptvault.ui.components.VaultActionSheet
 import com.elprompter.promptvault.ui.components.RuleCard
 import com.elprompter.promptvault.ui.components.VaultTopBar
-import com.elprompter.promptvault.ui.theme.Pine
-import com.elprompter.promptvault.ui.theme.CardPaper
 import kotlinx.coroutines.launch
 
 @Composable
@@ -50,6 +48,7 @@ fun RuleListScreen(
     var pendingDelete by remember { mutableStateOf<Rule?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val colors = MaterialTheme.colorScheme
 
     val filtered = remember(rules, query) {
         if (query.isBlank()) rules
@@ -64,11 +63,11 @@ fun RuleListScreen(
         topBar = { VaultTopBar(title = "Kelola Rule", onBack = onBack) },
         snackbarHost = {
             SnackbarHost(snackbarHostState) { data ->
-                Snackbar(snackbarData = data, containerColor = Pine, contentColor = CardPaper)
+                Snackbar(snackbarData = data, containerColor = colors.primary, contentColor = colors.onPrimary)
             }
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = onAddRule, containerColor = Pine, contentColor = CardPaper) {
+            FloatingActionButton(onClick = onAddRule, containerColor = colors.primary, contentColor = colors.onPrimary) {
                 Icon(Icons.Filled.Add, contentDescription = "Tambah rule")
             }
         }

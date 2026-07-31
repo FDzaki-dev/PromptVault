@@ -17,26 +17,25 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.elprompter.promptvault.ui.theme.CardPaper
-import com.elprompter.promptvault.ui.theme.Kraft
-import com.elprompter.promptvault.ui.theme.Pine
 
 /**
  * Segmented control ala iOS (pil berisi, bukan garis bawah Material) --
  * lebih jelas mana yang aktif, dan terasa lebih "sentuh" di layar sempit.
+ * Semua warna theme-aware supaya kontrasnya tetap benar di dark mode.
  */
 @Composable
 fun SegmentedControl(options: List<String>, selectedIndex: Int, onSelect: (Int) -> Unit) {
+    val colors = MaterialTheme.colorScheme
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Kraft, RoundedCornerShape(12.dp))
+            .background(colors.surfaceVariant, RoundedCornerShape(12.dp))
             .padding(3.dp)
     ) {
         options.forEachIndexed { index, label ->
             val selected = index == selectedIndex
-            val bg by animateColorAsState(if (selected) Pine else Kraft, label = "segmentBg")
-            val fg = if (selected) CardPaper else Pine
+            val bg by animateColorAsState(if (selected) colors.primary else colors.surfaceVariant, label = "segmentBg")
+            val fg = if (selected) colors.onPrimary else colors.primary
             Box(
                 modifier = Modifier
                     .weight(1f)

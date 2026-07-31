@@ -15,19 +15,26 @@ enum class ConflictStrategy {
     OVERWRITE   // timpa file yang ada di tujuan (destruktif, tidak bisa di-undo file lamanya)
 }
 
+/** Preferensi tampilan terang/gelap. SYSTEM = ikuti pengaturan Android. */
+enum class ThemeMode {
+    SYSTEM, LIGHT, DARK
+}
+
 /**
- * Menyimpan interval auto-scan (TODO #2, sebelumnya hardcoded 15 menit) dan
- * strategi konflik nama file saat tujuan sudah terisi.
+ * Menyimpan interval auto-scan, strategi konflik nama file, dan preferensi
+ * tema terang/gelap.
  */
 class SettingsRepository(private val context: Context) {
 
     private val intervalKey = intPreferencesKey("auto_scan_interval_minutes")
     private val conflictKey = stringPreferencesKey("conflict_strategy")
+    private val themeModeKey = stringPreferencesKey("theme_mode")
 
     companion object {
         const val DEFAULT_INTERVAL_MINUTES = 15
         val ALLOWED_INTERVALS = listOf(15, 30, 60, 120, 240)
         val DEFAULT_CONFLICT_STRATEGY = ConflictStrategy.RENAME
+        val DEFAULT_THEME_MODE = ThemeMode.SYSTEM
     }
 
     val intervalMinutesFlow: Flow<Int> = context.promptVaultDataStore.data.map { prefs ->
@@ -49,5 +56,13 @@ class SettingsRepository(private val context: Context) {
 
     suspend fun setConflictStrategy(strategy: ConflictStrategy) {
         context.promptVaultDataStore.edit { prefs -> prefs[conflictKey] = strategy.name }
+    }
+
+    val themeModeFlow: Flow<ThemeMode> = context.promptVaultDataStore.data.map { prefs ->
+        runCatching { ThemeMode.valueOf(prefs[themeModeKey] ?: "") }.getOrDefault(DEFAULT_THEME_MODE)
+    }
+
+    suspend fun setThemeMode(mode: ThemeMode) {
+        context.promptVaultDataStore.edit { prefs -> prefs[themeModeKey] = mode.name }
     }
 }

@@ -12,6 +12,7 @@ import com.elprompter.promptvault.data.Rule
 import com.elprompter.promptvault.data.RuleRepository
 import com.elprompter.promptvault.data.SaveRuleCheck
 import com.elprompter.promptvault.data.SettingsRepository
+import com.elprompter.promptvault.data.ThemeMode
 import com.elprompter.promptvault.util.FileSorter
 import com.elprompter.promptvault.util.PatternPreviewResult
 import com.elprompter.promptvault.util.SkippedFileInfo
@@ -60,6 +61,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val conflictStrategy: StateFlow<ConflictStrategy> = settingsRepository.conflictStrategyFlow
         .let { flow ->
             val state = MutableStateFlow(SettingsRepository.DEFAULT_CONFLICT_STRATEGY)
+            viewModelScope.launch { flow.collect { state.value = it } }
+            state.asStateFlow()
+        }
+
+    val themeMode: StateFlow<ThemeMode> = settingsRepository.themeModeFlow
+        .let { flow ->
+            val state = MutableStateFlow(SettingsRepository.DEFAULT_THEME_MODE)
             viewModelScope.launch { flow.collect { state.value = it } }
             state.asStateFlow()
         }
@@ -115,6 +123,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setConflictStrategy(strategy: ConflictStrategy) {
         viewModelScope.launch { settingsRepository.setConflictStrategy(strategy) }
+    }
+
+    fun setThemeMode(mode: ThemeMode) {
+        viewModelScope.launch { settingsRepository.setThemeMode(mode) }
     }
 
     fun undoMove(entry: MoveHistoryEntry) {

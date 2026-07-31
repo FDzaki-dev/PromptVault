@@ -33,8 +33,6 @@ import com.elprompter.promptvault.data.SaveRuleCheck
 import com.elprompter.promptvault.ui.components.VaultActionSheet
 import com.elprompter.promptvault.ui.components.VaultCard
 import com.elprompter.promptvault.ui.components.VaultTopBar
-import com.elprompter.promptvault.ui.theme.Stamp
-import com.elprompter.promptvault.ui.theme.CardPaper
 import com.elprompter.promptvault.util.PatternPreviewResult
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -183,7 +181,7 @@ fun AddEditRuleScreen(
                     }
                 },
                 enabled = folderName.isNotBlank() && pattern.isNotBlank(),
-                colors = ButtonDefaults.buttonColors(containerColor = Stamp, contentColor = CardPaper),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary, contentColor = MaterialTheme.colorScheme.onSecondary),
                 modifier = Modifier.fillMaxWidth()
             ) { Text("Simpan") }
         }
