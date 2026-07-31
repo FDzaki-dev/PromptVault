@@ -1,4 +1,4 @@
-# PromptVault v2.1.1
+# PromptVault v2.1.2
 
 App Android offline untuk merapikan otomatis file ZIP & TXT di folder Downloads
 berdasarkan rule pattern yang kamu buat sendiri.

@@ -3,6 +3,23 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.1.2 -- Fix CI (pipefail masking + diagnostik APK hilang)
+- **Root cause "cp: cannot stat app-release.apk"**: step `assembleRelease`
+  di v2.1.1 pakai `... 2>&1 | tee file.log` TANPA `set -o pipefail`. Di bash,
+  exit code sebuah pipeline ikut command TERAKHIR (`tee`, yang selalu
+  sukses), bukan `gradlew`. Akibatnya kalau gradlew gagal, GitHub Actions
+  tetap menganggap step itu SUKSES dan lanjut ke step berikutnya (rename
+  APK), yang jelas gagal karena APK-nya memang tidak pernah dihasilkan
+- Semua step yang pakai `| tee` sekarang diawali `set -euo pipefail`
+- `Decode keystore` sekarang memverifikasi keystore benar-benar valid
+  (non-kosong + bisa dibuka `keytool -list`) SEBELUM lanjut build, dengan
+  pesan error jelas kalau secret salah/kosong
+- Step diagnostik baru yang SELALU jalan: `ls -la` isi folder output APK,
+  supaya kalau nama file ternyata beda dugaan (mis. `app-release-unsigned.apk`
+  karena signing tidak terpasang), langsung ketahuan dari log
+- Pencarian APK sekarang dinamis (`find ... -name "*.apk"`), bukan hardcode
+  nama file, dan otomatis warning kalau APK yang ketemu tidak bertanda tangan
+
 ## v2.1.1 -- Fix CI (Gradle version mismatch + logging yang gak kepakai)
 - **Root cause build v2.1.0 gagal**: runner GitHub Actions memakai Gradle
   9.6.1 (sangat baru), tidak kompatibel dengan AGP 8.5.2 yang dipakai project

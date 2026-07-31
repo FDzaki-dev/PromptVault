@@ -8,6 +8,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -24,31 +27,49 @@ jobs:
       - name: Read app version
         id: version
         run: |
+          set -euo pipefail
           VERSION=$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts)
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       # PENTING: runner GitHub Actions kadang sudah menyediakan Gradle versi
       # sangat baru (pernah ketemu 9.6.1) yang TIDAK KOMPATIBEL dengan AGP
-      # 8.5.2 yang dipakai project ini (AGP 8.5.x resmi didukung sampai
-      # sekitar Gradle 8.7-8.9). Ini pernah jadi penyebab build gagal tanpa
-      # pesan error yang jelas ke user. Solusinya: generate Gradle Wrapper
-      # dengan versi yang DIKUNCI secara eksplisit, dan semua langkah
-      # setelah ini pakai ./gradlew (bukan "gradle" polos dari runner).
+      # 8.5.2 yang dipakai project ini. Kunci ke versi yang teruji cocok.
       - name: Generate pinned Gradle Wrapper (8.9)
         run: gradle wrapper --gradle-version 8.9 --distribution-type bin
 
-      # Fail cepat & murah: cek kompilasi Kotlin dulu SEBELUM assembleRelease.
-      # Output digabung ke file log via tee, supaya kalau gagal, isi errornya
-      # (baris "e: file:///...") betulan ke-capture -- bukan cuma laporan
-      # deprecation warning yang tidak menjelaskan apa-apa.
+      # set -euo pipefail WAJIB di setiap step yang pakai "| tee": tanpa ini,
+      # exit code pipeline ikut "tee" (yang selalu sukses), bukan ikut
+      # gradlew -- akibatnya step gagal bisa dianggap SUKSES oleh Actions dan
+      # workflow lanjut ke step berikutnya seolah semua baik-baik saja. Ini
+      # PERSIS penyebab kegagalan "cp: cannot stat app-release.apk" yang
+      # pernah kejadian: assembleRelease sebenarnya gagal duluan, tapi
+      # step-nya dianggap sukses karena exit code ke-mask oleh tee.
       - name: Compile check (fail fast)
-        run: ./gradlew compileDebugKotlin --stacktrace 2>&1 | tee compile-check.log
+        run: |
+          set -euo pipefail
+          ./gradlew compileDebugKotlin --stacktrace 2>&1 | tee compile-check.log
 
       - name: Run unit tests
-        run: ./gradlew testDebugUnitTest testReleaseUnitTest --stacktrace 2>&1 | tee unit-tests.log
+        run: |
+          set -euo pipefail
+          ./gradlew testDebugUnitTest testReleaseUnitTest --stacktrace 2>&1 | tee unit-tests.log
 
       - name: Decode keystore
-        run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > $GITHUB_WORKSPACE/release.keystore
+        run: |
+          set -euo pipefail
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > "$GITHUB_WORKSPACE/release.keystore"
+          # Verifikasi keystore benar-benar valid & tidak kosong -- kalau secret
+          # kosong/salah, deteksi di sini dengan pesan jelas, bukan gagal
+          # samar-samar belakangan di tengah proses signing.
+          if [ ! -s "$GITHUB_WORKSPACE/release.keystore" ]; then
+            echo "::error::release.keystore kosong/gagal didekode. Cek secret ANDROID_KEYSTORE_BASE64 di GitHub."
+            exit 1
+          fi
+          keytool -list -keystore "$GITHUB_WORKSPACE/release.keystore" -storepass "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" > /dev/null || {
+            echo "::error::release.keystore tidak valid atau ANDROID_KEYSTORE_PASSWORD salah."
+            exit 1
+          }
+          echo "Keystore valid."
 
       - name: Build release APK
         env:
@@ -56,15 +77,36 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: ./gradlew assembleRelease --stacktrace 2>&1 | tee assemble-release.log
+        run: |
+          set -euo pipefail
+          ./gradlew assembleRelease --stacktrace 2>&1 | tee assemble-release.log
 
-      # Nama file APK & nama artifact GitHub SELALU mengikuti versionName di
-      # app/build.gradle.kts secara otomatis -- tidak ada angka manual, tidak
-      # ada commit hash/run id ditempel ke nama file.
+      # Diagnostik SELALU jalan (bukan cuma pas gagal) supaya kalau nama file
+      # output ternyata beda dugaan (mis. "app-release-unsigned.apk" karena
+      # signing tidak terpasang), langsung kelihatan di log -- bukan berhenti
+      # di error cp yang tidak jelas asal-usulnya.
+      - name: List release output (diagnostic)
+        if: always()
+        run: |
+          echo "Isi app/build/outputs/apk/release/:"
+          ls -la app/build/outputs/apk/release/ 2>&1 || echo "(folder tidak ada -- assembleRelease kemungkinan gagal sebelum menghasilkan APK apapun)"
+
+      # Cari APK yang benar-benar dihasilkan secara dinamis (bukan hardcode
+      # nama file), supaya baik APK signed ("app-release.apk") maupun kasus
+      # tak terduga tetap ketemu & tidak diam-diam gagal di sini.
       - name: Rename APK with version name
         run: |
+          set -euo pipefail
           mkdir -p out
-          cp app/build/outputs/apk/release/app-release.apk "out/PromptVault-v${{ steps.version.outputs.version }}.apk"
+          APK_PATH=$(find app/build/outputs/apk/release -name "*.apk" | head -1)
+          if [ -z "$APK_PATH" ]; then
+            echo "::error::Tidak ada file .apk ditemukan di app/build/outputs/apk/release/. Lihat log 'assemble-release.log' dan step diagnostik di atas."
+            exit 1
+          fi
+          if [[ "$APK_PATH" == *"unsigned"* ]]; then
+            echo "::warning::APK yang ditemukan TIDAK BERTANDA TANGAN ($APK_PATH) -- signingConfig kemungkinan tidak terpasang. Cek GitHub Secrets ANDROID_KEYSTORE_*."
+          fi
+          cp "$APK_PATH" "out/PromptVault-v${{ steps.version.outputs.version }}.apk"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
@@ -72,10 +114,6 @@ jobs:
           name: PromptVault-v${{ steps.version.outputs.version }}
           path: out/*.apk
 
-      # Kalau ada langkah manapun di atas gagal, log KONSOL ASLI (bukan cuma
-      # laporan deprecation) otomatis jadi artifact yang bisa diunduh dari
-      # tab Actions. Baris yang diawali "e: file:///..." di compile-check.log
-      # adalah bagian paling penting -- itu lokasi persis error-nya.
       - name: Upload build log on failure
         if: failure()
         uses: actions/upload-artifact@v4
@@ -90,4 +128,4 @@ jobs:
 
       - name: Clean up keystore
         if: always()
-        run: rm -f $GITHUB_WORKSPACE/release.keystore
+        run: rm -f "$GITHUB_WORKSPACE/release.keystore"

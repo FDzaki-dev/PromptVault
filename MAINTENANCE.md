@@ -65,6 +65,18 @@ Sejak v2.1.1, workflow CI sudah:
 Kalau ke depan mau upgrade AGP/Gradle, pastikan cek tabel kompatibilitas resmi:
 https://developer.android.com/build/releases/gradle-plugin#compatibility
 
+## PENTING: `| tee` di CI WAJIB didahului `set -o pipefail`
+
+Kalau step `run:` di workflow pakai pola `perintah 2>&1 | tee file.log`, TANPA
+`set -euo pipefail` di awal, bash akan melaporkan exit code dari `tee` (yang
+nyaris selalu 0/sukses), BUKAN dari perintah sebelumnya. Ini bikin step yang
+sebenarnya GAGAL dianggap SUKSES oleh GitHub Actions, dan workflow lanjut ke
+step berikutnya seolah tidak terjadi apa-apa -- baru gagal ambigu di step lain
+yang bergantung pada output step sebelumnya (pernah kejadian: `assembleRelease`
+gagal diam-diam, baru ketahuan pas step rename APK bilang file tidak ada).
+Setiap kali menambah step baru yang pakai `| tee`, SELALU pastikan
+`set -euo pipefail` ada di baris pertama block `run: |` itu.
+
 Daftar ini akan bertambah setiap kali ada bug baru yang ketahuan dari log CI --
 lihat riwayat commit `MAINTENANCE.md` untuk histori penambahan.
 
