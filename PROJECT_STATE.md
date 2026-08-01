@@ -4,7 +4,17 @@
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
 ## Versi/batch terakhir yang selesai
-- **versionCode 27 / versionName 2.3.3** -- rilis terakhir yang dikirim ke user.
+- **versionCode 28 / versionName 2.3.4** -- rilis terakhir yang dikirim ke user.
+- **2026-08-01, lanjutan sesi audit:** setelah v2.3.3 (fix race condition),
+  user minta lanjut audit modul lain (UI screens, worker lifecycle). Semua
+  layar (`AddEditRuleScreen`, `RuleListScreen`, `ActivityLogScreen`,
+  `SettingsScreen`, `DiagnosticsScreen`, `SkippedFilesScreen`,
+  `OnboardingScreen`) dan semua komponen di `ui/components/` diperiksa.
+  Ditemukan & diperbaiki 1 bug: dialog "Timpa rule tersebut?" pada
+  DuplicatePattern tidak benar-benar menghapus rule lama (lihat CHANGELOG
+  v2.3.4 untuk detail). Tidak ada bug lain ditemukan di modul-modul ini.
+  Worker lifecycle (`AutoSortWorker`, `WorkScheduler`, `BootCompletedReceiver`)
+  sudah diperiksa sebelumnya di sesi race-condition, tetap aman.
 - **2026-08-01, sesi audit "pematangan fitur":** user secara eksplisit minta
   STOP menambah batch/fitur baru, fokus audit & bersihkan kecacatan logika di
   fitur yang sudah ada. Hasil audit menyeluruh kode inti menemukan 2 hal:

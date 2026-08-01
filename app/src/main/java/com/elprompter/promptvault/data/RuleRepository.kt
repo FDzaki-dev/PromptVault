@@ -49,6 +49,26 @@ class RuleRepository(private val context: Context) {
         persist(current)
     }
 
+    /**
+     * Batch [duplicate-fix]: dipakai saat user menekan "Tetap Simpan" pada
+     * dialog konfirmasi DUPLICATE PATTERN. Sebelumnya alur ini cuma memanggil
+     * [upsertRule] biasa dengan id BARU (untuk rule baru) -- padahal dialognya
+     * bilang "Timpa rule tersebut?". Hasilnya: rule lama TIDAK terhapus, malah
+     * jadi 2 rule dengan pattern identik. [removeRuleId] adalah id rule LAMA
+     * yang harus hilang supaya "Timpa" benar-benar berarti timpa satu rule,
+     * bukan tambah rule baru di sebelah yang lama.
+     * Dilakukan dalam SATU baca-ubah-simpan (bukan panggil deleteRule() lalu
+     * upsertRule() terpisah) supaya tidak ada celah race antara dua operasi
+     * DataStore yang independen.
+     */
+    suspend fun upsertRule(rule: Rule, removeRuleId: String?) {
+        val current = getRules().toMutableList()
+        if (removeRuleId != null) current.removeAll { it.id == removeRuleId }
+        val idx = current.indexOfFirst { it.id == rule.id }
+        if (idx >= 0) current[idx] = rule else current.add(rule)
+        persist(current)
+    }
+
     suspend fun deleteRule(ruleId: String) {
         val current = getRules().filterNot { it.id == ruleId }
         persist(current)

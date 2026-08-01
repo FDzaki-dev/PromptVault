@@ -43,7 +43,7 @@ fun AddEditRuleScreen(
     existingRule: Rule?,
     onCheckBeforeSave: suspend (Rule) -> SaveRuleCheck,
     onPreviewPattern: (String, String) -> PatternPreviewResult,
-    onSave: (Rule) -> Unit,
+    onSave: (Rule, removeDuplicateRuleId: String?) -> Unit,
     onCancel: () -> Unit
 ) {
     var folderName by remember { mutableStateOf(existingRule?.folderName ?: "") }
@@ -173,7 +173,7 @@ fun AddEditRuleScreen(
                     scope.launch {
                         val check = onCheckBeforeSave(rule)
                         if (check is SaveRuleCheck.Ok) {
-                            onSave(rule)
+                            onSave(rule, null)
                         } else {
                             pendingCheck = check
                             pendingRule = rule
@@ -205,7 +205,13 @@ fun AddEditRuleScreen(
             message = message,
             confirmLabel = "Tetap Simpan",
             onConfirm = {
-                onSave(rule)
+                // Batch [duplicate-fix]: untuk DuplicatePattern, "Tetap Simpan" harus
+                // benar-benar menimpa (hapus rule lama, id-nya beda dari rule baru).
+                // Untuk OverlapsWithOthers, kedua rule memang dimaksud tetap
+                // hidup berdampingan (prioritas urutan yang menentukan pemenang),
+                // jadi tidak ada yang dihapus.
+                val removeId = (check as? SaveRuleCheck.DuplicatePattern)?.existing?.id
+                onSave(rule, removeId)
                 pendingCheck = null
                 pendingRule = null
             },

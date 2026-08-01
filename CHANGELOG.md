@@ -3,6 +3,26 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.3.4 -- Pembersihan logika: "Timpa rule?" sekarang benar-benar menimpa
+Lanjutan batch pematangan fitur, hasil audit menyeluruh layar UI & komponen
+(`AddEditRuleScreen`, `RuleListScreen`, `ActivityLogScreen`, `SettingsScreen`,
+`DiagnosticsScreen`, `SkippedFilesScreen`, `OnboardingScreen`, semua
+komponen di `ui/components/`). Satu bug korektnes nyata ditemukan & diperbaiki:
+
+- **Dialog konfirmasi "Pattern sudah dipakai rule X. Timpa rule tersebut?"
+  sebelumnya TIDAK benar-benar menimpa apa pun.** Rule baru disimpan dengan
+  id acak baru, rule lama yang duplikat tetap ada -- hasilnya dua rule
+  dengan pattern identik hidup berdampingan, padahal user sudah bilang
+  "iya, timpa". `RuleRepository` sekarang punya `upsertRule(rule, removeRuleId)`
+  yang menghapus rule lama DAN menyimpan rule baru dalam satu operasi
+  baca-ubah-simpan atomik (bukan dua panggilan terpisah yang berisiko race
+  di DataStore). `AddEditRuleScreen` hanya mengirim `removeRuleId` untuk
+  kasus DuplicatePattern -- kasus OverlapsWithOthers TETAP menyimpan
+  keduanya berdampingan (memang begitu desainnya: urutan prioritas yang
+  menentukan pemenang, bukan salah satu dihapus).
+- Semua layar/komponen UI lain diperiksa satu per satu -- tidak ditemukan
+  kecacatan logika lain. Tidak ada perubahan visual, tidak ada fitur baru.
+
 ## v2.3.3 -- Pembersihan logika: race condition scan manual vs auto-scan
 Batch pematangan fitur (bukan fitur baru), hasil audit menyeluruh kode inti
 atas permintaan user "fokus pematangan fitur & bersihkan kecacatan logika

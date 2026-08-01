@@ -98,8 +98,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     suspend fun checkBeforeSave(rule: Rule): SaveRuleCheck = ruleRepository.checkBeforeSave(rule)
 
-    fun saveRule(rule: Rule) {
-        viewModelScope.launch { ruleRepository.upsertRule(rule) }
+    fun saveRule(rule: Rule, removeDuplicateRuleId: String? = null) {
+        viewModelScope.launch { ruleRepository.upsertRule(rule, removeDuplicateRuleId) }
     }
 
     fun deleteRule(ruleId: String) {

@@ -201,8 +201,8 @@ private fun PromptVaultRoot(viewModel: MainViewModel) {
                 existingRule = existing,
                 onCheckBeforeSave = { rule -> viewModel.checkBeforeSave(rule) },
                 onPreviewPattern = { pattern, excludePattern -> viewModel.previewPattern(pattern, excludePattern) },
-                onSave = { rule ->
-                    viewModel.saveRule(rule)
+                onSave = { rule, removeDuplicateRuleId ->
+                    viewModel.saveRule(rule, removeDuplicateRuleId)
                     navController.popBackStack()
                 },
                 onCancel = { navController.popBackStack() }
