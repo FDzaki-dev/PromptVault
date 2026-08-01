@@ -13,7 +13,8 @@ Repo ini **publik** di `https://github.com/FDzaki-dev/PromptVault`. Kalau
 sesi baru dimulai dan user bilang "lanjutkan project PromptVault", cara
 PALING HEMAT WAKTU & TOKEN untuk dapat konteks penuh:
 
-1. `web_fetch` langsung 3 file ini (tidak perlu minta user upload ZIP dulu):
+1. `web_fetch` langsung 4 file ini (tidak perlu minta user upload ZIP dulu):
+   - `https://raw.githubusercontent.com/FDzaki-dev/PromptVault/main/PROJECT_STATE.md` (paling penting -- keputusan arsitektur & riwayat insiden)
    - `https://raw.githubusercontent.com/FDzaki-dev/PromptVault/main/README.md`
    - `https://raw.githubusercontent.com/FDzaki-dev/PromptVault/main/CHANGELOG.md`
    - `https://raw.githubusercontent.com/FDzaki-dev/PromptVault/main/MAINTENANCE.md` (file ini sendiri, versi terbaru)

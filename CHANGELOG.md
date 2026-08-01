@@ -3,6 +3,19 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.3.2 -- Persiapan lanjut sesi lain: PROJECT_STATE.md & FILE_MANIFEST.txt
+Tidak ada perubahan kode/perilaku app. Murni dokumentasi supaya sesi Claude
+berikutnya bisa lanjut tanpa kehilangan konteks.
+
+- **`PROJECT_STATE.md` (baru)** -- versi/batch terakhir, status tiap bagian
+  roadmap backend (mana yang selesai vs sengaja dijeda + trigger kapan
+  lanjut), struktur package, keputusan arsitektur utama, dan riwayat insiden
+  kronologis lengkap (termasuk insiden regresi v2.3.0→v2.3.1 kemarin, ditulis
+  detail supaya tidak terulang).
+- **`FILE_MANIFEST.txt` (baru)** -- snapshot daftar file yang ditrack.
+- `README.md` & `MAINTENANCE.md` diperbarui untuk merujuk 2 file baru ini di
+  alur onboarding sesi baru.
+
 ## v2.3.1 -- FIX REGRESI: layar Home terpotong/ketumpuk setelah redesign v2.3.0
 ⚠️ Peringatan: v2.3.0 memasukkan 2 bug yang membuat tombol "Scan Sekarang" dan
 menu di bawahnya hilang dari layar (dilaporkan lewat screenshot). Keduanya

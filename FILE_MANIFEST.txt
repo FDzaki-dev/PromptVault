@@ -1,0 +1,67 @@
+# FILE_MANIFEST.txt -- PromptVault
+# Auto-generated snapshot of tracked files. Diperbarui tiap rilis ZIP.
+# Terakhir diperbarui: v2.3.1 (2026-08-01)
+# Cara regenerate manual di Termux: cd ~/projects/PromptVault && git ls-files | sort > FILE_MANIFEST.txt
+
+.github/workflows/build.yml
+.gitignore
+CHANGELOG.md
+FILE_MANIFEST.txt
+MAINTENANCE.md
+PROJECT_STATE.md
+README.md
+TROUBLESHOOTING.md
+app/build.gradle.kts
+app/proguard-rules.pro
+app/release.keystore
+app/src/main/AndroidManifest.xml
+app/src/main/java/com/elprompter/promptvault/MainActivity.kt
+app/src/main/java/com/elprompter/promptvault/PromptVaultApp.kt
+app/src/main/java/com/elprompter/promptvault/data/ActivityLogEntry.kt
+app/src/main/java/com/elprompter/promptvault/data/ActivityLogRepository.kt
+app/src/main/java/com/elprompter/promptvault/data/ConflictStrategy.kt
+app/src/main/java/com/elprompter/promptvault/data/DataStoreProvider.kt
+app/src/main/java/com/elprompter/promptvault/data/LogLevel.kt
+app/src/main/java/com/elprompter/promptvault/data/MoveHistoryEntry.kt
+app/src/main/java/com/elprompter/promptvault/data/MoveHistoryRepository.kt
+app/src/main/java/com/elprompter/promptvault/data/Rule.kt
+app/src/main/java/com/elprompter/promptvault/data/RuleRepository.kt
+app/src/main/java/com/elprompter/promptvault/data/SettingsRepository.kt
+app/src/main/java/com/elprompter/promptvault/data/db/ActivityLogDao.kt
+app/src/main/java/com/elprompter/promptvault/data/db/ActivityLogEntity.kt
+app/src/main/java/com/elprompter/promptvault/data/db/AppDatabase.kt
+app/src/main/java/com/elprompter/promptvault/data/db/Converters.kt
+app/src/main/java/com/elprompter/promptvault/data/db/MoveHistoryDao.kt
+app/src/main/java/com/elprompter/promptvault/data/db/MoveHistoryEntity.kt
+app/src/main/java/com/elprompter/promptvault/ui/MainViewModel.kt
+app/src/main/java/com/elprompter/promptvault/ui/Navigation.kt
+app/src/main/java/com/elprompter/promptvault/ui/components/GroupedListRow.kt
+app/src/main/java/com/elprompter/promptvault/ui/components/PressScale.kt
+app/src/main/java/com/elprompter/promptvault/ui/components/RuleCard.kt
+app/src/main/java/com/elprompter/promptvault/ui/components/SegmentedControl.kt
+app/src/main/java/com/elprompter/promptvault/ui/components/VaultCard.kt
+app/src/main/java/com/elprompter/promptvault/ui/components/VaultTopBar.kt
+app/src/main/java/com/elprompter/promptvault/ui/screens/DiagnosticsScreen.kt
+app/src/main/java/com/elprompter/promptvault/ui/screens/HomeScreen.kt
+app/src/main/java/com/elprompter/promptvault/ui/screens/ActivityLogScreen.kt
+app/src/main/java/com/elprompter/promptvault/ui/screens/RuleListScreen.kt
+app/src/main/java/com/elprompter/promptvault/ui/screens/SettingsScreen.kt
+app/src/main/java/com/elprompter/promptvault/ui/screens/SkippedFilesScreen.kt
+app/src/main/java/com/elprompter/promptvault/ui/theme/Color.kt
+app/src/main/java/com/elprompter/promptvault/ui/theme/Shapes.kt
+app/src/main/java/com/elprompter/promptvault/ui/theme/Theme.kt
+app/src/main/java/com/elprompter/promptvault/ui/theme/Type.kt
+app/src/main/java/com/elprompter/promptvault/util/FileSorter.kt
+app/src/main/java/com/elprompter/promptvault/worker/AutoSortWorker.kt
+app/src/main/java/com/elprompter/promptvault/worker/BootCompletedReceiver.kt
+app/src/main/java/com/elprompter/promptvault/worker/WorkScheduler.kt
+app/src/main/res/...  (mipmap/xml/values -- lihat struktur lengkap di ZIP)
+build.gradle.kts
+gradle.properties
+gradle/wrapper/gradle-wrapper.properties
+scripts/preflight_check.sh
+settings.gradle.kts
+
+# Catatan: daftar res/ (mipmap, xml, values) disederhanakan satu baris di atas
+# karena isinya boilerplate Android standar (ikon adaptif, string, tema XML).
+# Kalau butuh detail persis, jalankan ulang `git ls-files` di Termux.
