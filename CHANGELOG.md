@@ -3,6 +3,35 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.3.5 -- Pembersihan logika: worker lifecycle (AutoSortWorker + boot receiver)
+Lanjutan batch pematangan fitur, audit mendalam ke `AutoSortWorker`,
+`WorkScheduler`, `BootCompletedReceiver`, `PromptVaultApp`. Dua bug
+korektnes nyata ditemukan & diperbaiki:
+
+- **`AutoSortWorker.doWork()` sebelumnya menelan SEMUA exception diam-diam
+  dan selalu `Result.retry()` tanpa batas.** Kalau penyebabnya permanen
+  (mis. izin `MANAGE_EXTERNAL_STORAGE` dicabut user dari Setelan Android),
+  worker retry setiap periode SELAMANYA tanpa pernah berhasil -- boros
+  baterai, dan user tidak pernah tahu kenapa karena nol baris masuk Log
+  Aktivitas. Sekarang: kegagalan level-worker selalu dicatat ke Log
+  Aktivitas dulu, dan `SecurityException` (khas izin dicabut) dianggap
+  permanen -> `Result.failure()` (tidak retry sia-sia). Error lain (mis.
+  I/O sementara) tetap `Result.retry()` seperti semula.
+- **`WorkScheduler.rescheduleFromSavedSettings()` yang dipanggil dari
+  `BootCompletedReceiver` berisiko tidak selesai sebelum proses app
+  dimatikan Android.** Fungsi lama membuka coroutine sendiri secara
+  fire-and-forget; `onReceive()` kembali seketika, dan khususnya saat boot
+  (proses baru dibuat cuma untuk broadcast ini) Android boleh mematikan
+  proses SEBELUM coroutine sempat baca DataStore + enqueue WorkManager --
+  auto-sort bisa gagal terjadwal ulang setelah reboot di sebagian
+  device/timing, padahal "survive reboot" adalah fitur inti yang
+  dijanjikan. Fix: fungsi sekarang `suspend fun` biasa; `BootCompletedReceiver`
+  memakai `goAsync()` supaya proses ditahan hidup sampai reschedule
+  benar-benar selesai. `PromptVaultApp.onCreate()` tidak butuh `goAsync()`
+  (proses app sudah pasti hidup di titik itu), tetap fire-and-forget lewat
+  coroutine scope miliknya sendiri.
+- Tidak ada perubahan UI/visual, tidak ada fitur baru.
+
 ## v2.3.4 -- Pembersihan logika: "Timpa rule?" sekarang benar-benar menimpa
 Lanjutan batch pematangan fitur, hasil audit menyeluruh layar UI & komponen
 (`AddEditRuleScreen`, `RuleListScreen`, `ActivityLogScreen`, `SettingsScreen`,

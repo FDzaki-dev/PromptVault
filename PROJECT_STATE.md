@@ -4,7 +4,19 @@
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
 ## Versi/batch terakhir yang selesai
-- **versionCode 28 / versionName 2.3.4** -- rilis terakhir yang dikirim ke user.
+- **versionCode 29 / versionName 2.3.5** -- rilis terakhir yang dikirim ke user.
+- **2026-08-01, audit worker lifecycle:** ditemukan & diperbaiki 2 bug:
+  (1) `AutoSortWorker.doWork()` menelan exception diam-diam + retry tanpa
+  batas bahkan untuk error permanen (izin dicabut) -> sekarang selalu log
+  ke Activity Log + `Result.failure()` khusus untuk `SecurityException`.
+  (2) `BootCompletedReceiver` berisiko proses dimatikan Android sebelum
+  reschedule WorkManager selesai (tidak pakai `goAsync()`) -> auto-sort
+  bisa gagal aktif lagi setelah reboot. Sudah diperbaiki, lihat CHANGELOG
+  v2.3.5 untuk detail lengkap. Dengan ini, audit "pematangan fitur &
+  bersihkan kecacatan logika" mencakup: file-move core (`FileSorter`,
+  race condition v2.3.3), semua layar UI + komponen (v2.3.4), dan worker
+  lifecycle (v2.3.5). Belum diaudit mendalam: `data/db/` (Room
+  DAO/Converters/migrations) dan `ui/theme/`.
 - **2026-08-01, lanjutan sesi audit:** setelah v2.3.3 (fix race condition),
   user minta lanjut audit modul lain (UI screens, worker lifecycle). Semua
   layar (`AddEditRuleScreen`, `RuleListScreen`, `ActivityLogScreen`,

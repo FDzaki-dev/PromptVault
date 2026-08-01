@@ -1,6 +1,6 @@
 # FILE_MANIFEST.txt -- PromptVault
 # Auto-generated snapshot of tracked files. Diperbarui tiap rilis ZIP.
-# Terakhir diperbarui: v2.3.4 (2026-08-01)
+# Terakhir diperbarui: v2.3.5 (2026-08-01)
 # Cara regenerate manual di Termux: cd ~/projects/PromptVault && git ls-files | sort > FILE_MANIFEST.txt
 
 .github/workflows/build.yml
