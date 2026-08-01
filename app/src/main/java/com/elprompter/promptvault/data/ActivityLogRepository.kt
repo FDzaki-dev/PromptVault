@@ -1,41 +1,55 @@
 package com.elprompter.promptvault.data
 
 import android.content.Context
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.stringPreferencesKey
+import com.elprompter.promptvault.data.db.ActivityLogEntity
+import com.elprompter.promptvault.data.db.AppDatabase
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 import java.util.UUID
 
 /**
- * Riwayat aktivitas PERMANEN (tersimpan lewat DataStore, tidak hilang saat app ditutup).
- * Dibatasi MAX_ENTRIES agar tidak tumbuh tanpa batas.
+ * Riwayat aktivitas PERMANEN.
+ *
+ * Sejak v2.2.0: backend disimpan di Room SQLite (sebelumnya JSON blob di
+ * DataStore). Alasannya murni performa -- decode JSON ratusan/ribuan baris
+ * setiap kali ada 1 entri baru jadi lambat & boros memori. API publik class
+ * ini (logFlow, add, clear) TIDAK berubah sama sekali, jadi tidak ada
+ * pemanggil (MainViewModel, FileSorter, AutoSortWorker) yang perlu disentuh.
+ *
+ * Catatan migrasi: riwayat log lama yang tersimpan di DataStore TIDAK
+ * dipindahkan otomatis ke Room (disepakati tidak urgent, data ini bukan data
+ * kritis pengguna). Log akan mulai kosong kembali setelah update ke versi ini.
  */
-class ActivityLogRepository(private val context: Context) {
+class ActivityLogRepository(context: Context) {
 
-    private val key = stringPreferencesKey("activity_log_json")
-    private val json = Json { ignoreUnknownKeys = true }
+    private val dao = AppDatabase.getInstance(context).activityLogDao()
 
     companion object {
         private const val MAX_ENTRIES = 500
     }
 
-    val logFlow: Flow<List<ActivityLogEntry>> = context.promptVaultDataStore.data.map { prefs ->
-        val raw = prefs[key] ?: "[]"
-        runCatching { json.decodeFromString<List<ActivityLogEntry>>(raw) }.getOrDefault(emptyList())
-    }
+    val logFlow: Flow<List<ActivityLogEntry>> = dao.observeAll().map { rows -> rows.map { it.toDomain() } }
 
     suspend fun add(level: LogLevel, message: String) {
-        val current = logFlow.first().toMutableList()
-        current.add(0, ActivityLogEntry(UUID.randomUUID().toString(), System.currentTimeMillis(), level, message))
-        val trimmed = current.take(MAX_ENTRIES)
-        context.promptVaultDataStore.edit { prefs -> prefs[key] = json.encodeToString(trimmed) }
+        dao.insert(
+            ActivityLogEntity(
+                id = UUID.randomUUID().toString(),
+                timestampMillis = System.currentTimeMillis(),
+                level = level,
+                message = message
+            )
+        )
+        dao.trimToMax(MAX_ENTRIES)
     }
 
     suspend fun clear() {
-        context.promptVaultDataStore.edit { prefs -> prefs[key] = "[]" }
+        dao.clearAll()
     }
 }
+
+private fun ActivityLogEntity.toDomain() = ActivityLogEntry(
+    id = id,
+    timestampMillis = timestampMillis,
+    level = level,
+    message = message
+)

@@ -3,6 +3,48 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.2.1 -- Batch 2: File Writing Stability & Temp-File Filter (§4)
+- **`isLikelyStillWriting()` sekarang "Dual Stability Guard"**: sebelumnya
+  cuma cek `lastModified()`. Sekarang tambah 2 sinyal lagi -- ukuran file
+  diverifikasi tidak berubah dalam jeda 1 detik, lalu dicoba `FileChannel
+  .tryLock()` untuk deteksi apakah masih dikunci proses lain (downloader/
+  browser yang belum selesai flush ke disk). Kalau salah satu gagal, file
+  ditunda ke scan berikutnya -- bukan dipaksa pindah dalam kondisi berisiko.
+- **Filter file sementara/partial-download**: file berakhiran `.crdownload`,
+  `.tmp`, `.part`, `.download`, `.downloading` sekarang TIDAK PERNAH masuk
+  daftar kandidat sama sekali (bukan cuma "ditunda"), dicek dari nama
+  lengkap file (bukan cuma ekstensi Kotlin) supaya pola akhiran ganda
+  seperti `prompt.zip.crdownload` ikut tertangkap.
+- Tidak ada perubahan pada `MoveOutcome`, `ScanResult`, atau API publik
+  `FileSorter` lain -- `MainViewModel` tidak perlu disentuh.
+
+## v2.2.0 -- Batch 1: Migrasi ActivityLog & MoveHistory ke Room SQLite
+Batch pertama dari roadmap backend spec (SAF, MediaStore sync, Room, file
+stability, coroutine lifecycle, CI/CD). Batch ini KHUSUS §3 (Room DB), sisanya
+menyusul di batch terpisah (anti "rombak total" sekali jalan).
+
+- **`ActivityLogRepository` & `MoveHistoryRepository`** kini disimpan di Room
+  SQLite (tabel `activity_log` & `move_history`), bukan lagi JSON blob di
+  DataStore. Alasan: decode ulang JSON ratusan/ribuan baris tiap ada 1 entri
+  baru jadi lambat & boros memori seiring riwayat menumpuk.
+- **`SettingsRepository` & `RuleRepository` TETAP di DataStore** -- keduanya
+  kecil (key-value ringan), tidak ada alasan dipindah. Sesuai batas scope
+  yang disepakati.
+- **API publik kedua repository TIDAK BERUBAH** (`logFlow`, `add`, `clear`,
+  `historyFlow`, `record`, `markUndone`, `getUndoableEntries`) -- artinya
+  `MainViewModel`, `FileSorter`, dan `AutoSortWorker` tidak perlu disentuh
+  sama sekali. Nol risiko regresi di layer UI/business logic.
+- Penambahan `androidx.room` (runtime + ktx + compiler via KSP) dan plugin
+  `com.google.devtools.ksp` di `build.gradle.kts` (root & `app/`).
+- **Trim otomatis** tetap dipertahankan: log dipangkas ke 500 baris terbaru,
+  riwayat undo ke 200 baris terbaru -- sekarang lewat query SQL `DELETE ...
+  NOT IN (...)`, bukan `.take()` di memori.
+- **Data lama di DataStore TIDAK dimigrasikan** ke Room (disepakati: bukan
+  data kritis, tidak urgent). Konsekuensinya: setelah update ke versi ini,
+  tab "Log" dan "Undo Pemindahan" akan kosong lagi untuk sekali ini saja.
+  File yang SUDAH dipindah sebelumnya tetap aman di lokasi barunya --
+  hanya riwayatnya di tab Undo yang tidak lagi tampil.
+
 ## v2.1.4 -- Konsolidasi Maintainability (final pass)
 - **`scripts/preflight_check.sh`** -- semua 7 audit statis yang sebelumnya
   cuma tertulis sebagai command manual di `MAINTENANCE.md` sekarang jadi

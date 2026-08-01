@@ -10,7 +10,9 @@ import com.elprompter.promptvault.data.MoveHistoryRepository
 import com.elprompter.promptvault.data.Rule
 import com.elprompter.promptvault.data.RuleRepository
 import com.elprompter.promptvault.data.SettingsRepository
+import kotlinx.coroutines.delay
 import java.io.File
+import java.io.RandomAccessFile
 import java.util.UUID
 
 data class SkippedFileInfo(
@@ -57,13 +59,63 @@ class FileSorter(
     private fun listCandidateFiles(): Array<File> {
         return downloadsDir.listFiles { f ->
             f.isFile && (f.extension.equals("zip", true) || f.extension.equals("txt", true)) &&
+                !isTempOrPartialFile(f) &&
                 !f.absolutePath.startsWith(vaultRootDir.absolutePath)
         } ?: emptyArray()
     }
 
-    private fun isLikelyStillWriting(file: File): Boolean {
+    /**
+     * File sementara dari browser/downloader (belum selesai diunduh) tidak boleh
+     * pernah masuk sebagai kandidat sama sekali -- bukan cuma "ditunda" seperti
+     * [isLikelyStillWriting], tapi memang belum jadi file ZIP/TXT yang valid.
+     * Daftar ini sengaja dicek terhadap NAMA LENGKAP (bukan cuma `.extension`
+     * Kotlin) karena marker sering muncul sebagai akhiran ganda, mis.
+     * "prompt.zip.crdownload".
+     */
+    private fun isTempOrPartialFile(file: File): Boolean {
+        val lowerName = file.name.lowercase()
+        return TEMP_FILE_MARKERS.any { lowerName.endsWith(it) }
+    }
+
+    /**
+     * Dual Stability Guard: sebuah file dianggap "masih ditulis" kalau salah
+     * satu dari dua sinyal ini terpenuhi --
+     *  1. Umurnya lebih baru dari [STABILITY_WINDOW_MS] (sinyal cepat, tanpa I/O).
+     *  2. Ukurannya masih berubah dalam jeda singkat, ATAU file tersebut masih
+     *     terkunci proses lain (mis. downloader belum selesai flush ke disk).
+     * Guard #2 baru dijalankan kalau guard #1 lolos, supaya scan tetap murah
+     * untuk mayoritas file yang memang sudah lama diam di Downloads.
+     */
+    private suspend fun isLikelyStillWriting(file: File): Boolean {
         val age = System.currentTimeMillis() - file.lastModified()
-        return age in 0 until STABILITY_WINDOW_MS
+        if (age in 0 until STABILITY_WINDOW_MS) return true
+
+        val sizeBefore = runCatching { file.length() }.getOrDefault(-1L)
+        if (sizeBefore < 0) return true // tidak terbaca -> aman diasumsikan belum siap
+
+        delay(SIZE_CHECK_DELAY_MS)
+
+        val sizeAfter = runCatching { file.length() }.getOrDefault(-1L)
+        if (sizeAfter < 0 || sizeAfter != sizeBefore) return true
+
+        return try {
+            RandomAccessFile(file, "rw").use { raf ->
+                raf.channel.use { channel ->
+                    val lock = channel.tryLock()
+                    if (lock == null) {
+                        true // sedang dikunci proses lain
+                    } else {
+                        lock.release()
+                        false
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            // Tidak bisa membuka mode tulis (permission/OS lock) -> anggap belum
+            // aman dipindah sekarang, coba lagi di scan berikutnya daripada
+            // memaksa pindah file yang berisiko korup/setengah jadi.
+            true
+        }
     }
 
     private fun File.sizeKb(): Long = length() / 1024
@@ -281,5 +333,13 @@ class FileSorter(
     companion object {
         /** Jeda aman sebelum file dianggap "selesai ditulis" dan boleh dipindah. */
         private const val STABILITY_WINDOW_MS = 5_000L
+
+        /** Jeda pengecekan ukuran file untuk Dual Stability Guard (§4). */
+        private const val SIZE_CHECK_DELAY_MS = 1_000L
+
+        /** Akhiran nama file dari browser/downloader yang menandakan unduhan belum selesai. */
+        private val TEMP_FILE_MARKERS = listOf(
+            ".crdownload", ".tmp", ".part", ".download", ".downloading"
+        )
     }
 }
