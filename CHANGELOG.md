@@ -3,6 +3,22 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.3.6 -- Catatan penutup: audit "pematangan fitur" selesai total
+Tidak ada perubahan kode fungsional. Rilis ini murni menutup batch audit
+yang diminta user ("stop nambah fitur, fokus bersihkan kecacatan logika")
+dengan mencatat hasil akhir di `PROJECT_STATE.md`:
+
+- Dua modul terakhir yang belum diperiksa (`data/db/` -- Room DAO/Entity/
+  Converters/AppDatabase/Repository, dan `ui/theme/` -- Color/Shapes/Theme/
+  Type, termasuk verifikasi wiring toggle Terang/Gelap/Ikuti Sistem) sudah
+  diaudit. **Tidak ada bug ditemukan** di keduanya.
+- Dengan ini SELURUH source code app sudah diperiksa modul per modul sejak
+  v2.3.3: file-move core, semua layar UI + komponen, worker lifecycle,
+  database, theme. Total 3 bug nyata ditemukan & diperbaiki di sepanjang
+  batch ini -- lihat entri v2.3.3, v2.3.4, v2.3.5 di bawah untuk detail.
+- Catatan di `PROJECT_STATE.md` diperbarui supaya sesi Claude berikutnya
+  tidak perlu mengulang audit dari nol.
+
 ## v2.3.5 -- Pembersihan logika: worker lifecycle (AutoSortWorker + boot receiver)
 Lanjutan batch pematangan fitur, audit mendalam ke `AutoSortWorker`,
 `WorkScheduler`, `BootCompletedReceiver`, `PromptVaultApp`. Dua bug

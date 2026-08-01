@@ -4,7 +4,21 @@
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
 ## Versi/batch terakhir yang selesai
-- **versionCode 29 / versionName 2.3.5** -- rilis terakhir yang dikirim ke user.
+- **versionCode 30 / versionName 2.3.6** -- rilis terakhir yang dikirim ke user.
+- **2026-08-01, PENUTUP audit "pematangan fitur":** `data/db/` (Room DAO,
+  Entity, Converters, AppDatabase, kedua Repository) dan `ui/theme/`
+  (Color, Shapes, Theme, Type) sudah diperiksa -- termasuk verifikasi
+  eksplisit bahwa toggle Terang/Gelap/Ikuti Sistem di Settings benar-benar
+  tersambung ke Compose theme (`MainActivity` menghitung `effectiveDark`
+  dari `themeMode` + `isSystemInDarkTheme()` dengan benar). **Tidak ada bug
+  ditemukan di kedua modul ini.**
+  **AUDIT SELESAI TOTAL** -- seluruh source code app sudah diperiksa
+  modul per modul: file-move core, semua layar UI + komponen, worker
+  lifecycle, database, theme. Total 3 bug nyata ditemukan & diperbaiki
+  sepanjang batch ini (v2.3.3, v2.3.4, v2.3.5) -- lihat CHANGELOG.md untuk
+  detail masing-masing. Sesi berikutnya TIDAK PERLU mengulang audit ini
+  dari nol; kalau mau lanjut lagi, fokus ke perubahan/fitur yang terjadi
+  SETELAH v2.3.6, bukan re-scan modul yang sudah tercatat bersih di sini.
 - **2026-08-01, audit worker lifecycle:** ditemukan & diperbaiki 2 bug:
   (1) `AutoSortWorker.doWork()` menelan exception diam-diam + retry tanpa
   batas bahkan untuk error permanen (izin dicabut) -> sekarang selalu log
