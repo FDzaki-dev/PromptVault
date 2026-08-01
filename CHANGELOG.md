@@ -3,6 +3,35 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.3.0 -- Redesign Visual: variasi aksen & kedalaman (murni visual, nol perubahan logika)
+Respons atas feedback "desain terlalu monoton, bikin mata cepat lelah". SEMUA
+perubahan di bawah murni tampilan -- tidak ada file logika/data/worker yang
+disentuh.
+
+- **4 warna aksen dipakai bergantian** di menu Home (sebelumnya nyaris semua
+  hijau): Kelola Rule = hijau (Pine/PineGlow), Riwayat = amber, Pengaturan =
+  aksen BARU "Slate" (biru batu tenang), Diagnostik = merah (error/Rust).
+- **Peran warna Material3 yang sebelumnya kosong** (`primaryContainer`,
+  `secondaryContainer`, `tertiaryContainer`, `errorContainer`, `outlineVariant`,
+  `inverseSurface`, dst.) sekarang diisi eksplisit dari palet brand sendiri --
+  sebelumnya diam-diam jatuh ke default ungu Material bawaan kalau ada
+  komponen yang memakainya.
+- **Kartu (`VaultCard`)** kini gradient vertikal sangat halus (bukan warna
+  solid rata) supaya terasa berlapis/"bernapas", dipakai otomatis di semua
+  layar yang pakai VaultCard (Home, Log, Rule, dst.) karena ini komponen
+  bersama.
+- **Chip ikon di menu list** kini gradient + bayangan lembut senada warna
+  aksennya (bukan kotak warna flat), memberi sedikit kedalaman tanpa
+  berlebihan.
+- **Latar Home** diberi wash gradient tipis di bagian atas.
+- **Tombol "Scan Sekarang"** sekarang gradient hangat (Stamp -> Amber),
+  jadi titik fokus visual yang lebih jelas dibanding sebelumnya (blok
+  oranye datar).
+- Kartu ringkasan ("Rule aktif" / "Auto-scan") ditambah ikon kecil
+  berwarna di depan tiap baris untuk penanda visual yang lebih cepat dibaca.
+- Tidak ada perubahan pada `MainViewModel`, `FileSorter`, Room, WorkManager,
+  atau CI -- murni file di `ui/theme` dan `ui/components`/`ui/screens/HomeScreen.kt`.
+
 ## v2.2.1 -- Batch 2: File Writing Stability & Temp-File Filter (§4)
 - **`isLikelyStillWriting()` sekarang "Dual Stability Guard"**: sebelumnya
   cuma cek `lastModified()`. Sekarang tambah 2 sinyal lagi -- ukuran file

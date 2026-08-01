@@ -19,6 +19,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
@@ -44,7 +46,11 @@ fun GroupedListRow(icon: ImageVector, label: String, tint: Color? = null, onClic
         Box(
             modifier = Modifier
                 .size(30.dp)
-                .background(resolvedTint, RoundedCornerShape(8.dp)),
+                .shadow(elevation = 4.dp, shape = RoundedCornerShape(9.dp), ambientColor = resolvedTint, spotColor = resolvedTint)
+                .background(
+                    Brush.linearGradient(colors = listOf(resolvedTint, resolvedTint.copy(alpha = 0.82f))),
+                    RoundedCornerShape(9.dp)
+                ),
             contentAlignment = Alignment.Center
         ) {
             Icon(icon, contentDescription = null, tint = colors.onPrimary, modifier = Modifier.size(18.dp))
