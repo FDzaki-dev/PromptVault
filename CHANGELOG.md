@@ -3,6 +3,28 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.3.3 -- Pembersihan logika: race condition scan manual vs auto-scan
+Batch pematangan fitur (bukan fitur baru), hasil audit menyeluruh kode inti
+atas permintaan user "fokus pematangan fitur & bersihkan kecacatan logika
+sampai ke akar". Satu bug korektnes nyata ditemukan & diperbaiki:
+
+- **`FileSorter.scanAndSort()` sekarang diserialisasi lewat `Mutex` bersama**
+  (companion object, dibagi lintas semua instance `FileSorter` dalam proses
+  yang sama). Sebelumnya, scan manual (tombol "Scan Sekarang" di
+  `MainViewModel`) dan auto-scan latar belakang (`AutoSortWorker` via
+  WorkManager) masing-masing membuat instance `FileSorter` sendiri tanpa
+  koordinasi apa pun. Kalau keduanya kebetulan jalan bersamaan, dua proses
+  bisa mencoba memindahkan file Downloads yang sama di saat yang sama --
+  proses yang kalah race pada `File.renameTo()` tercatat sebagai "Gagal
+  dipindahkan" di Log Aktivitas, padahal file itu sebenarnya sudah aman
+  dipindahkan oleh proses yang menang. Sekarang panggilan kedua otomatis
+  menunggu giliran (bukan gagal), lalu scan ulang dengan kondisi folder yang
+  sudah terbaru.
+- Tidak ada perubahan UI/visual, tidak ada fitur baru. `undo()` sengaja TIDAK
+  ikut dikunci mutex yang sama di batch ini (di luar scope race condition
+  yang dilaporkan) -- kalau ke depan ada gejala konflik undo-vs-scan
+  berbarengan, itu trigger untuk batch terpisah.
+
 ## v2.3.2 -- Persiapan lanjut sesi lain: PROJECT_STATE.md & FILE_MANIFEST.txt
 Tidak ada perubahan kode/perilaku app. Murni dokumentasi supaya sesi Claude
 berikutnya bisa lanjut tanpa kehilangan konteks.

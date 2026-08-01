@@ -11,6 +11,8 @@ import com.elprompter.promptvault.data.Rule
 import com.elprompter.promptvault.data.RuleRepository
 import com.elprompter.promptvault.data.SettingsRepository
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.io.File
 import java.io.RandomAccessFile
 import java.util.UUID
@@ -120,7 +122,24 @@ class FileSorter(
 
     private fun File.sizeKb(): Long = length() / 1024
 
-    suspend fun scanAndSort(): ScanResult {
+    /**
+     * Batch [race-fix]: scan manual (dari MainViewModel) dan auto-scan latar
+     * belakang (AutoSortWorker) sebelumnya bisa berjalan BERSAMAAN karena
+     * masing-masing membuat instance FileSorter sendiri tanpa koordinasi apa
+     * pun. Akibatnya dua proses bisa mencoba memindahkan file Downloads yang
+     * SAMA di saat yang sama -- proses kedua kehilangan race pada
+     * `File.renameTo()` dan tercatat sebagai "Gagal dipindahkan" di Log,
+     * padahal file itu sebenarnya sudah aman dipindahkan oleh proses pertama.
+     * Fix: [scanMutex] ada di companion object (dibagi lintas SEMUA instance
+     * FileSorter dalam proses yang sama, bukan per-instance), jadi manual
+     * scan dan auto-scan otomatis mengantre, tidak pernah menyentuh Downloads
+     * berbarengan. Kalau ada panggilan kedua datang saat yang pertama masih
+     * jalan, ia menunggu giliran lalu scan ulang dengan kondisi folder yang
+     * sudah terbaru (bukan gagal/error).
+     */
+    suspend fun scanAndSort(): ScanResult = scanMutex.withLock { scanAndSortLocked() }
+
+    private suspend fun scanAndSortLocked(): ScanResult {
         val rules = ruleRepository.getRules().filter { it.enabled }
         val conflictStrategy = settingsRepository.getConflictStrategy()
 
@@ -331,6 +350,14 @@ class FileSorter(
     }
 
     companion object {
+        /**
+         * Dibagi lintas SEMUA instance FileSorter dalam proses yang sama --
+         * lihat penjelasan di [scanAndSort]. Sengaja di companion object
+         * (bukan property instance) karena MainViewModel dan AutoSortWorker
+         * masing-masing membuat instance FileSorter baru sendiri-sendiri.
+         */
+        private val scanMutex = Mutex()
+
         /** Jeda aman sebelum file dianggap "selesai ditulis" dan boleh dipindah. */
         private const val STABILITY_WINDOW_MS = 5_000L
 

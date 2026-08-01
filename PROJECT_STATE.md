@@ -4,7 +4,26 @@
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
 ## Versi/batch terakhir yang selesai
-- **versionCode 25 / versionName 2.3.1** -- rilis terakhir yang dikirim ke user.
+- **versionCode 27 / versionName 2.3.3** -- rilis terakhir yang dikirim ke user.
+- **2026-08-01, sesi audit "pematangan fitur":** user secara eksplisit minta
+  STOP menambah batch/fitur baru, fokus audit & bersihkan kecacatan logika di
+  fitur yang sudah ada. Hasil audit menyeluruh kode inti menemukan 2 hal:
+  1. **[SUDAH DIPERBAIKI, v2.3.3]** Race condition: scan manual vs
+     `AutoSortWorker` bisa jalan bersamaan (tidak ada koordinasi antar
+     instance `FileSorter`), berisiko file Downloads yang sama dipindah dua
+     proses sekaligus -> proses kedua tercatat error padahal file aman.
+     Fix: `Mutex` bersama di companion object `FileSorter`, lihat entri
+     CHANGELOG v2.3.3 untuk detail lengkap.
+  2. **[BELUM DIPERBAIKI, DITUNDA atas keputusan user]** Celah izin
+     penyimpanan di Android 8-10 (API 26-29): `hasManageStoragePermission()`
+     di `MainActivity.kt` hardcode `true` untuk semua device di bawah
+     Android 11, padahal `minSdk = 26`. Di rentang API 26-29 app TIDAK
+     PERNAH benar-benar meminta izin runtime `READ/WRITE_EXTERNAL_STORAGE`
+     -- layar "Izin Diperlukan" langsung dilewati, operasi pindah file akan
+     gagal diam-diam di device lawas. Device utama user (Infinix Android
+     15/16) tidak kena, makanya ditunda. **Trigger untuk lanjut**: kalau ada
+     laporan app gagal total di device Android <11, atau user memutuskan mau
+     benar-benar dukung minSdk 26 secara serius.
 - Roadmap backend (spec "PROMPTVAULT - BACKEND & CI/CD EXECUTABLE SPECIFICATION")
   dipecah jadi batch. Status per bagian:
   - §3 Room DB Migration -- **SELESAI** (Batch 1, v2.2.0)
