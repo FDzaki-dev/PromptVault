@@ -3,6 +3,26 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.3.1 -- FIX REGRESI: layar Home terpotong/ketumpuk setelah redesign v2.3.0
+⚠️ Peringatan: v2.3.0 memasukkan 2 bug yang membuat tombol "Scan Sekarang" dan
+menu di bawahnya hilang dari layar (dilaporkan lewat screenshot). Keduanya
+sudah diperbaiki, tanpa mengubah desain visual yang sudah disepakati:
+
+1. **`VaultCard` (bug utama)** -- implementasi gradient di v2.3.0 salah pakai
+   `Modifier.fillMaxSize()` di dalam Box pembungkus. Karena Surface aslinya
+   wrap-content, ini membuat kartu "Rule aktif / Auto-scan" merebut SISA
+   SELURUH tinggi layar, mendorong tombol Scan & menu ke luar area yang
+   terlihat. Diperbaiki: gradient sekarang digambar langsung via
+   `Modifier.background(brush, shape)` pada Surface itu sendiri, tanpa Box
+   tambahan -- kartu kembali mengikuti ukuran kontennya seperti semula.
+2. **`AndroidManifest.xml` -- `MainActivity` tidak punya `launchMode`.**
+   Tanpa ini, membuka app dari launcher saat instance lama masih berjalan di
+   background (umum terjadi di XOS) berisiko membuat instance Activity BARU
+   menumpuk di atas yang lama dalam task yang sama, menyebabkan layar terlihat
+   "dobel" dengan konten terpotong. Ditambahkan `android:launchMode="singleTask"`
+   supaya app selalu memakai satu instance Activity yang sama.
+- Tidak ada perubahan desain/warna dari v2.3.0 -- ini murni perbaikan bug.
+
 ## v2.3.0 -- Redesign Visual: variasi aksen & kedalaman (murni visual, nol perubahan logika)
 Respons atas feedback "desain terlalu monoton, bikin mata cepat lelah". SEMUA
 perubahan di bawah murni tampilan -- tidak ada file logika/data/worker yang
