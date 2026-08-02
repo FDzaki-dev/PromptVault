@@ -2,13 +2,13 @@ package com.elprompter.promptvault.ui.screens
 
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.animateItemPlacement
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -21,7 +21,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Rule as RuleIcon
+import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.runtime.Composable
 import com.elprompter.promptvault.ui.components.EmptyState
@@ -38,6 +38,7 @@ import com.elprompter.promptvault.ui.components.RuleCard
 import com.elprompter.promptvault.ui.components.VaultTopBar
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun RuleListScreen(
     rules: List<Rule>,
@@ -97,7 +98,7 @@ fun RuleListScreen(
                 if (isEmpty) {
                     if (rules.isEmpty()) {
                         EmptyState(
-                            icon = RuleIcon,
+                            icon = Icons.Filled.PlaylistAdd,
                             title = "Belum ada rule",
                             message = "Tekan tombol + di kanan bawah untuk membuat rule pertamamu.",
                             accentColor = colors.primary,

@@ -4,7 +4,8 @@
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
 ## Versi/batch terakhir yang selesai
-- **versionCode 31 / versionName 2.3.7** -- rilis terakhir yang dikirim ke user.
+- **versionCode 32 / versionName 2.3.8** -- rilis terakhir yang dikirim ke user.
+  v2.3.7 GAGAL BUILD (lihat insiden kronologis di bawah); v2.3.8 adalah fix-nya.
 - **2026-08-02, finishing batch (izin legacy + UI polish):** user konfirmasi
   fix Home v2.3.1 sudah normal, lalu minta lanjut ke tahap "finishing":
   audit menyeluruh + robustness + polish UI. Audit/robustness sudah matang
@@ -145,6 +146,47 @@ worker/          -- AutoSortWorker (WorkManager), BootCompletedReceiver,
    task yang sama saat dibuka ulang dari launcher (umum di custom ROM XOS).
 
 ## Riwayat insiden kronologis (JANGAN DIHAPUS, tambah entri baru di ATAS)
+
+### [2026-08-02] v2.3.7 GAGAL BUILD di CI -- animateItemPlacement salah pakai + alias ikon salah
+- **Gejala**: user upload `build-failure-log-v2_3_7.zip` (log Gradle CI).
+  `:app:compileDebugKotlin FAILED` dengan 4 error nyata di 3 file:
+  `RuleListScreen.kt`, `ActivityLogScreen.kt`, `SkippedFilesScreen.kt`.
+- **Root cause #1 (di ketiga file)**: `import
+  androidx.compose.foundation.lazy.animateItemPlacement` SALAH TOTAL --
+  `animateItemPlacement()` bukan top-level function, melainkan member
+  extension dari `LazyItemScope` (otomatis tersedia tanpa import di dalam
+  lambda `items { }`). Error compiler: "Unresolved reference:
+  animateItemPlacement" persis di baris import.
+- **Root cause #2 (di ketiga file, sekali root cause #1 dianggap "fixed"
+  secara naif)**: fungsi ini ber-anotasi `@ExperimentalFoundationApi`.
+  Tanpa `@OptIn` eksplisit di fungsi Composable pemanggil, Kotlin
+  menjadikannya compile ERROR (bukan cuma warning) -- ini pola umum utk
+  API yang perlu opt-in di Kotlin, BUKAN soal `allWarningsAsErrors` di
+  Gradle config (project ini tidak mengaktifkan itu).
+- **Root cause #3 (khusus `RuleListScreen.kt`)**: alias `import
+  androidx.compose.material.icons.filled.Rule as RuleIcon` (dibuat sesi
+  sebelumnya untuk mengatasi tabrakan nama dengan `data.Rule`) dipanggil
+  sebagai `RuleIcon` polos -- SALAH, karena `Icons.Filled.Rule` adalah
+  *extension property* dengan receiver `Icons.Filled`; alias tetap wajib
+  dipanggil sebagai `Icons.Filled.RuleIcon`. Error: "receiver type
+  mismatch".
+- **Pelajaran penting**: sesi Claude yang membuat v2.3.7 TIDAK punya akses
+  jaringan Gradle di sandbox-nya, jadi tidak bisa benar-benar
+  mengompilasi kode sebelum dikirim -- sudah diberi disclaimer eksplisit
+  di CHANGELOG v2.3.7, dan risikonya benar terjadi. **Kalau menambah API
+  Compose yang jarang dipakai (terutama yang berbau "experimental" atau
+  alias import untuk mengatasi tabrakan nama), ekstra hati-hati / pilih
+  pendekatan paling sederhana yang tidak butuh alias sama sekali kalau
+  bisa** -- lihat fix di bawah.
+- **Fix (v2.3.8)**: hapus import salah di ketiga file, tambah
+  `@OptIn(ExperimentalFoundationApi::class)` di fungsi Composable
+  masing-masing (`RuleListScreen`, `ActivityLogScreen`,
+  `SkippedFilesScreen`). Untuk ikon `RuleListScreen`, daripada
+  memperbaiki alias yang sudah 2x salah, langsung diganti ke
+  `Icons.Filled.PlaylistAdd` (ikon lain yang tidak collide dengan
+  `data.Rule`, tidak perlu alias sama sekali).
+- **Status**: fix sudah dikirim (v2.3.8), BELUM ada konfirmasi build CI
+  sukses dari user di sesi ini.
 
 ### [2026-08-02] Batch finishing: fix izin legacy (ditunda -> dibenerin) + UI polish pertama
 - User konfirmasi: layar Home di v2.3.1 sudah normal (regresi #1 di bawah

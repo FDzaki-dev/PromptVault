@@ -7,8 +7,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.animateItemPlacement
 import androidx.compose.foundation.lazy.items
 import com.elprompter.promptvault.ui.components.VaultCard
 import androidx.compose.material.icons.Icons
@@ -26,6 +26,7 @@ import com.elprompter.promptvault.util.SkippedFileInfo
  * SETIAP nama file yang dilewati pada scan terakhir beserta alasannya secara eksplisit,
  * bukan cuma angka ringkasan.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SkippedFilesScreen(skipped: List<SkippedFileInfo>, onBack: () -> Unit) {
     val colors = MaterialTheme.colorScheme

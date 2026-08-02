@@ -3,6 +3,35 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.3.8 -- Fix build gagal dari v2.3.7 (animateItemPlacement + alias ikon salah)
+⚠️ **v2.3.7 GAGAL BUILD di CI.** User upload log build gagal, dua bug nyata
+ditemukan -- keduanya murni kesalahan Claude sendiri karena tidak ada akses
+Gradle/jaringan di sandbox untuk verifikasi kompilasi asli sebelum v2.3.7
+dikirim (sudah diperingatkan di catatan v2.3.7, dan benar terjadi).
+
+- **`Modifier.animateItemPlacement()` di 3 file (`RuleListScreen`,
+  `ActivityLogScreen`, `SkippedFilesScreen`) gagal kompilasi total:**
+  1. Import `androidx.compose.foundation.lazy.animateItemPlacement` yang
+     dipakai kemarin SALAH -- fungsi ini bukan top-level function yang bisa
+     di-import, melainkan member extension dari `LazyItemScope` (otomatis
+     tersedia di dalam lambda `items { }`, tanpa perlu import sama sekali).
+     Error: "Unresolved reference: animateItemPlacement" di baris import.
+  2. Fungsi ini juga ber-anotasi `@ExperimentalFoundationApi` -- tanpa
+     opt-in eksplisit, Kotlin menolaknya sebagai ERROR (bukan cuma
+     warning). Fix: hapus import yang salah, tambah
+     `@OptIn(ExperimentalFoundationApi::class)` di ketiga fungsi Composable
+     yang memakainya.
+- **Alias ikon `Rule` di `RuleListScreen` (fix tabrakan nama versi
+  sebelumnya) ternyata salah juga:** `Icons.Filled.Rule` adalah *extension
+  property*, jadi alias `import ... as RuleIcon` tetap butuh receiver-nya
+  (`Icons.Filled.RuleIcon`), bukan `RuleIcon` polos -- ini yang bikin error
+  "receiver type mismatch". Daripada bergantung ke alias yang gampang salah
+  lagi ke depan, ikon empty-state di `RuleListScreen` diganti total ke
+  `Icons.Filled.PlaylistAdd` (tidak collide dengan `data.Rule`, tidak perlu
+  alias sama sekali).
+- Tidak ada perubahan fitur/UI baru di rilis ini -- murni perbaikan supaya
+  v2.3.7 (fix izin legacy + empty state + animasi) benar-benar bisa di-build.
+
 ## v2.3.7 -- Finishing batch: fix izin legacy (Android 8-10) + UI polish pertama
 User konfirmasi regresi Home v2.3.1 sudah normal, lalu minta lanjut tahap
 "finishing": audit menyeluruh + robustness + polish UI, digabung satu ZIP.
