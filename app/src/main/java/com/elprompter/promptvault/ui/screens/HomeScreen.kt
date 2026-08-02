@@ -70,8 +70,8 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 20.dp)
-                .padding(top = 12.dp, bottom = 20.dp),
+                .padding(horizontal = 16.dp)
+                .padding(top = 12.dp, bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text("PromptVault", style = MaterialTheme.typography.headlineMedium, color = colors.onBackground)

@@ -67,7 +67,7 @@ fun SettingsScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(20.dp),
+                .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text("Tampilan", style = MaterialTheme.typography.titleMedium)

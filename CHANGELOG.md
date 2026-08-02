@@ -3,6 +3,30 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.3.9 -- Konsistensi visual: padding seragam + animasi Onboarding
+Lanjutan batch finishing (bagian "konsistensi visual" yang tadinya belum
+disentuh). User konfirmasi CI v2.3.8 sukses build, lalu diaudit ulang sisi
+konsistensi visual -- ditemukan 2 hal nyata:
+
+- **Padding luar layar tidak konsisten**: separuh layar pakai `16.dp`,
+  separuh `20.dp` untuk konteks yang sama (padding utama konten di bawah
+  TopBar). Distandarkan ke **16dp** di semua layar (`HomeScreen`,
+  `AddEditRuleScreen`, `DiagnosticsScreen`, `SettingsScreen` yang tadinya
+  20dp/20dp horizontal, disamakan dengan `RuleListScreen`,
+  `ActivityLogScreen`, `SkippedFilesScreen` yang sudah 16dp) -- 16dp dipilih
+  karena itu keyline margin standar Material Design untuk layar ponsel
+  (bukan tablet), pas untuk target device (Infinix Android 15/16).
+  `OnboardingScreen` sengaja TETAP 24dp (konteks beda -- full-bleed flow
+  sekali jalan, bukan layar dengan TopBar seperti yang lain).
+- **`OnboardingScreen` belum ikut dapat animasi transisi state** padahal
+  semua layar lain sekarang punya `Crossfade` -- step 1->2->3->4 tadinya
+  potong instan. Ditambah `Crossfade` (220ms) yang membungkus ikon + judul
+  + body tiap step, konsisten dengan pola yang sudah dipakai di 4 layar
+  lain sejak v2.3.7.
+
+Tidak ada perubahan logika/fitur. Murni kosmetik, resiko rendah (tidak
+menyentuh modul yang sudah diaudit logic sebelumnya).
+
 ## v2.3.8 -- Fix build gagal dari v2.3.7 (animateItemPlacement + alias ikon salah)
 ⚠️ **v2.3.7 GAGAL BUILD di CI.** User upload log build gagal, dua bug nyata
 ditemukan -- keduanya murni kesalahan Claude sendiri karena tidak ada akses

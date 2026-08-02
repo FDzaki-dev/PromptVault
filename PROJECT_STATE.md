@@ -4,8 +4,9 @@
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
 ## Versi/batch terakhir yang selesai
-- **versionCode 32 / versionName 2.3.8** -- rilis terakhir yang dikirim ke user.
-  v2.3.7 GAGAL BUILD (lihat insiden kronologis di bawah); v2.3.8 adalah fix-nya.
+- **versionCode 33 / versionName 2.3.9** -- rilis terakhir yang dikirim ke
+  user. Padding luar layar distandarkan ke 16dp di seluruh app + Onboarding
+  dapat animasi Crossfade antar step. Lihat CHANGELOG v2.3.9.
 - **2026-08-02, finishing batch (izin legacy + UI polish):** user konfirmasi
   fix Home v2.3.1 sudah normal, lalu minta lanjut ke tahap "finishing":
   audit menyeluruh + robustness + polish UI. Audit/robustness sudah matang
@@ -185,8 +186,8 @@ worker/          -- AutoSortWorker (WorkManager), BootCompletedReceiver,
   memperbaiki alias yang sudah 2x salah, langsung diganti ke
   `Icons.Filled.PlaylistAdd` (ikon lain yang tidak collide dengan
   `data.Rule`, tidak perlu alias sama sekali).
-- **Status**: fix sudah dikirim (v2.3.8), BELUM ada konfirmasi build CI
-  sukses dari user di sesi ini.
+- **Status**: fix sudah dikirim (v2.3.8) DAN user konfirmasi build CI
+  sukses. Insiden ditutup.
 
 ### [2026-08-02] Batch finishing: fix izin legacy (ditunda -> dibenerin) + UI polish pertama
 - User konfirmasi: layar Home di v2.3.1 sudah normal (regresi #1 di bawah

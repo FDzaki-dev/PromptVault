@@ -1,5 +1,7 @@
 package com.elprompter.promptvault.ui.screens
 
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -45,7 +47,6 @@ private val steps = listOf(
 @Composable
 fun OnboardingScreen(onFinished: () -> Unit) {
     var index by remember { mutableStateOf(0) }
-    val step = steps[index]
     val colors = MaterialTheme.colorScheme
 
     Column(
@@ -57,18 +58,23 @@ fun OnboardingScreen(onFinished: () -> Unit) {
         Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
             ProgressDots(total = steps.size, current = index)
 
-            Box(
-                modifier = Modifier
-                    .size(72.dp)
-                    .background(colors.primary, RoundedCornerShape(16.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(step.icon, contentDescription = null, tint = colors.onPrimary, modifier = Modifier.size(36.dp))
-            }
+            Crossfade(targetState = index, label = "onboardingStep", animationSpec = tween(220)) { stepIndex ->
+                val currentStep = steps[stepIndex]
+                Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
+                    Box(
+                        modifier = Modifier
+                            .size(72.dp)
+                            .background(colors.primary, RoundedCornerShape(16.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(currentStep.icon, contentDescription = null, tint = colors.onPrimary, modifier = Modifier.size(36.dp))
+                    }
 
-            Text("Langkah ${index + 1} dari ${steps.size}", style = MaterialTheme.typography.labelLarge, color = colors.onSurfaceVariant)
-            Text(step.title, style = MaterialTheme.typography.headlineSmall, color = colors.onBackground)
-            Text(step.body, style = MaterialTheme.typography.bodyLarge, color = colors.onBackground)
+                    Text("Langkah ${stepIndex + 1} dari ${steps.size}", style = MaterialTheme.typography.labelLarge, color = colors.onSurfaceVariant)
+                    Text(currentStep.title, style = MaterialTheme.typography.headlineSmall, color = colors.onBackground)
+                    Text(currentStep.body, style = MaterialTheme.typography.bodyLarge, color = colors.onBackground)
+                }
+            }
         }
 
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
