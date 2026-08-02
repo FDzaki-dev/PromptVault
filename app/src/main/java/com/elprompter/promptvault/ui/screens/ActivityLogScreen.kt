@@ -1,5 +1,7 @@
 package com.elprompter.promptvault.ui.screens
 
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -7,8 +9,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.animateItemPlacement
 import androidx.compose.foundation.lazy.items
 import com.elprompter.promptvault.ui.components.VaultCard
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Undo
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
@@ -27,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import com.elprompter.promptvault.data.ActivityLogEntry
 import com.elprompter.promptvault.data.LogLevel
 import com.elprompter.promptvault.data.MoveHistoryEntry
+import com.elprompter.promptvault.ui.components.EmptyState
 import com.elprompter.promptvault.ui.components.VaultActionSheet
 import com.elprompter.promptvault.ui.components.SortedStamp
 import com.elprompter.promptvault.ui.components.VaultTopBar
@@ -65,28 +72,36 @@ fun ActivityLogScreen(
         )
 
         if (tab == 0) {
-            if (logEntries.isEmpty()) {
-                Text("Belum ada aktivitas.", modifier = Modifier.padding(top = 12.dp))
-            } else {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(top = 8.dp)) {
-                    items(logEntries, key = { it.id }) { entry ->
-                        val entryColor = when (entry.level) {
-                            LogLevel.SUCCESS -> colors.primary
-                            LogLevel.WARNING -> colors.tertiary
-                            LogLevel.ERROR -> colors.error
-                            LogLevel.INFO -> colors.onSurfaceVariant
-                        }
-                        VaultCard(modifier = Modifier.fillMaxWidth()) {
-                            Row(
-                                modifier = Modifier.padding(10.dp),
-                                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(formatter.format(Date(entry.timestampMillis)), style = MaterialTheme.typography.labelSmall)
-                                    Text(entry.message, color = entryColor, style = MaterialTheme.typography.bodyMedium)
-                                }
-                                if (entry.level == LogLevel.SUCCESS && entry.message.contains("->")) {
-                                    SortedStamp()
+            Crossfade(targetState = logEntries.isEmpty(), label = "activityLogEmptyState", animationSpec = tween(220)) { isEmpty ->
+                if (isEmpty) {
+                    EmptyState(
+                        icon = Icons.Filled.History,
+                        title = "Belum ada aktivitas",
+                        message = "Riwayat pemindahan file akan muncul di sini setelah scan pertama berjalan.",
+                        accentColor = colors.tertiary,
+                        accentContainerColor = colors.tertiaryContainer
+                    )
+                } else {
+                    LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(top = 8.dp)) {
+                        items(logEntries, key = { it.id }) { entry ->
+                            val entryColor = when (entry.level) {
+                                LogLevel.SUCCESS -> colors.primary
+                                LogLevel.WARNING -> colors.tertiary
+                                LogLevel.ERROR -> colors.error
+                                LogLevel.INFO -> colors.onSurfaceVariant
+                            }
+                            VaultCard(modifier = Modifier.fillMaxWidth().animateItemPlacement()) {
+                                Row(
+                                    modifier = Modifier.padding(10.dp),
+                                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(formatter.format(Date(entry.timestampMillis)), style = MaterialTheme.typography.labelSmall)
+                                        Text(entry.message, color = entryColor, style = MaterialTheme.typography.bodyMedium)
+                                    }
+                                    if (entry.level == LogLevel.SUCCESS && entry.message.contains("->")) {
+                                        SortedStamp()
+                                    }
                                 }
                             }
                         }
@@ -96,19 +111,27 @@ fun ActivityLogScreen(
         } else {
             // TODO #1: fitur UNDO — file yang salah pindah kini bisa dikembalikan dari dalam app.
             val undoable = undoableHistory.filter { !it.undone }
-            if (undoable.isEmpty()) {
-                Text("Tidak ada pemindahan yang bisa di-undo.", modifier = Modifier.padding(top = 12.dp))
-            } else {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(top = 8.dp)) {
-                    items(undoable, key = { it.id }) { entry ->
-                        VaultCard(modifier = Modifier.fillMaxWidth()) {
-                            Row(modifier = Modifier.padding(10.dp)) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(entry.fileName, style = MaterialTheme.typography.bodyMedium)
-                                    Text("Ke: PromptVault/${entry.ruleFolderName}/", style = MaterialTheme.typography.labelSmall)
-                                    Text(formatter.format(Date(entry.timestampMillis)), style = MaterialTheme.typography.labelSmall)
+            Crossfade(targetState = undoable.isEmpty(), label = "undoHistoryEmptyState", animationSpec = tween(220)) { isEmpty ->
+                if (isEmpty) {
+                    EmptyState(
+                        icon = Icons.Filled.Undo,
+                        title = "Tidak ada yang bisa di-undo",
+                        message = "Pemindahan file yang bisa dibatalkan akan muncul di sini setelah scan memindahkan sesuatu.",
+                        accentColor = colors.tertiary,
+                        accentContainerColor = colors.tertiaryContainer
+                    )
+                } else {
+                    LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(top = 8.dp)) {
+                        items(undoable, key = { it.id }) { entry ->
+                            VaultCard(modifier = Modifier.fillMaxWidth().animateItemPlacement()) {
+                                Row(modifier = Modifier.padding(10.dp)) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(entry.fileName, style = MaterialTheme.typography.bodyMedium)
+                                        Text("Ke: PromptVault/${entry.ruleFolderName}/", style = MaterialTheme.typography.labelSmall)
+                                        Text(formatter.format(Date(entry.timestampMillis)), style = MaterialTheme.typography.labelSmall)
+                                    }
+                                    TextButton(onClick = { pendingUndo = entry }) { Text("Undo") }
                                 }
-                                TextButton(onClick = { pendingUndo = entry }) { Text("Undo") }
                             }
                         }
                     }

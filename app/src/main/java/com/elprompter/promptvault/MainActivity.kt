@@ -1,6 +1,9 @@
 package com.elprompter.promptvault
 
+import android.Manifest
+import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -10,7 +13,13 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -32,8 +41,10 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,10 +52,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -75,6 +90,16 @@ class MainActivity : ComponentActivity() {
 
     private val viewModel: MainViewModel by viewModels()
 
+    // Hasil izin (granted/denied) tidak dipakai langsung -- state permission
+    // sebenarnya selalu dibaca ulang lewat hasManageStoragePermission() lewat
+    // trigger ini, supaya satu sumber kebenaran (menghindari state ganda yang
+    // bisa tidak sinkron).
+    private var legacyPermissionRecheckTrigger by mutableIntStateOf(0)
+
+    private val legacyStoragePermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { _ -> legacyPermissionRecheckTrigger++ }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         // Splash brand-in (Pine) sebelum konten Compose siap -- kesan pertama
         // yang konsisten, bukan layar putih kosong khas app "belum jadi".
@@ -102,7 +127,18 @@ class MainActivity : ComponentActivity() {
             }
             PromptVaultTheme(darkTheme = effectiveDark) {
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    PromptVaultRoot(viewModel)
+                    PromptVaultRoot(
+                        viewModel = viewModel,
+                        legacyPermissionRecheckTrigger = legacyPermissionRecheckTrigger,
+                        onRequestLegacyStoragePermission = {
+                            legacyStoragePermissionLauncher.launch(
+                                arrayOf(
+                                    Manifest.permission.READ_EXTERNAL_STORAGE,
+                                    Manifest.permission.WRITE_EXTERNAL_STORAGE
+                                )
+                            )
+                        }
+                    )
                 }
             }
         }
@@ -110,7 +146,11 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun PromptVaultRoot(viewModel: MainViewModel) {
+private fun PromptVaultRoot(
+    viewModel: MainViewModel,
+    legacyPermissionRecheckTrigger: Int,
+    onRequestLegacyStoragePermission: () -> Unit
+) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val navController = rememberNavController()
     val scope = rememberCoroutineScope()
@@ -121,21 +161,50 @@ private fun PromptVaultRoot(viewModel: MainViewModel) {
         onboardingDone = prefs[onboardingDoneKey] ?: false
     }
 
-    var hasStoragePermission by remember { mutableStateOf(hasManageStoragePermission()) }
+    var hasStoragePermission by remember { mutableStateOf(hasManageStoragePermission(context)) }
+
+    // Recheck otomatis: (1) tiap kali user kembali dari dialog izin sistem
+    // (API 26-29) lewat legacyPermissionRecheckTrigger, dan (2) tiap kali
+    // Activity resume (mis. user balik dari layar "Izin Akses Semua File" di
+    // Setelan Android untuk API 30+) -- supaya user tidak harus tekan tombol
+    // "cek ulang" manual tiap kali, tapi tombolnya tetap ada sebagai fallback.
+    LaunchedEffect(legacyPermissionRecheckTrigger) {
+        hasStoragePermission = hasManageStoragePermission(context)
+    }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                hasStoragePermission = hasManageStoragePermission(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     if (onboardingDone == null) return // jeda singkat sebelum splash native selesai, hindari flicker
 
     if (!hasStoragePermission) {
         PermissionGate(
-            onOpenSettings = {
-                val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, Uri.parse("package:${context.packageName}"))
+            onPrimaryAction = {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    val intent = Intent(
+                        Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+                        Uri.parse("package:${context.packageName}")
+                    )
+                    context.startActivity(intent)
                 } else {
-                    Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}"))
+                    // API 26-29: minta dialog izin runtime langsung (lebih cepat
+                    // & jelas daripada melempar user ke halaman Setelan umum).
+                    onRequestLegacyStoragePermission()
                 }
+            },
+            onOpenAppSettings = {
+                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}"))
                 context.startActivity(intent)
             },
-            onRecheck = { hasStoragePermission = hasManageStoragePermission() }
+            onRecheck = { hasStoragePermission = hasManageStoragePermission(context) },
+            showAppSettingsFallback = Build.VERSION.SDK_INT < Build.VERSION_CODES.R
         )
         return
     }
@@ -150,7 +219,19 @@ private fun PromptVaultRoot(viewModel: MainViewModel) {
         return
     }
 
-    NavHost(navController = navController, startDestination = Routes.HOME) {
+    NavHost(
+        navController = navController,
+        startDestination = Routes.HOME,
+        // Transisi halus antar layar (geser + fade tipis, 220ms) -- sebelumnya
+        // navigasi antar layar langsung potong instan tanpa transisi sama
+        // sekali, terasa kaku dibanding sisa app yang sudah banyak animasi
+        // kecil (press-scale, segmented control). Arah geser mengikuti
+        // konvensi umum: masuk dari kanan, keluar (pop/back) ke kanan.
+        enterTransition = { fadeIn(tween(220)) + slideInHorizontally(tween(220)) { it / 10 } },
+        exitTransition = { fadeOut(tween(180)) },
+        popEnterTransition = { fadeIn(tween(220)) },
+        popExitTransition = { fadeOut(tween(180)) + slideOutHorizontally(tween(180)) { it / 10 } }
+    ) {
         composable(Routes.HOME) {
             val rules by viewModel.rules.collectAsStateWithLifecycle()
             val interval by viewModel.intervalMinutes.collectAsStateWithLifecycle()
@@ -247,7 +328,12 @@ private fun PromptVaultRoot(viewModel: MainViewModel) {
 }
 
 @Composable
-private fun PermissionGate(onOpenSettings: () -> Unit, onRecheck: () -> Unit) {
+private fun PermissionGate(
+    onPrimaryAction: () -> Unit,
+    onOpenAppSettings: () -> Unit,
+    onRecheck: () -> Unit,
+    showAppSettingsFallback: Boolean
+) {
     val colors = MaterialTheme.colorScheme
     Scaffold { padding ->
         Column(
@@ -273,7 +359,7 @@ private fun PermissionGate(onOpenSettings: () -> Unit, onRecheck: () -> Unit) {
                 color = colors.onBackground
             )
             Button(
-                onClick = onOpenSettings,
+                onClick = onPrimaryAction,
                 colors = ButtonDefaults.buttonColors(containerColor = colors.secondary, contentColor = colors.onSecondary),
                 modifier = Modifier.fillMaxWidth()
             ) { Text("Buka Pengaturan Izin") }
@@ -282,14 +368,46 @@ private fun PermissionGate(onOpenSettings: () -> Unit, onRecheck: () -> Unit) {
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primary),
                 modifier = Modifier.fillMaxWidth()
             ) { Text("Sudah diizinkan, cek ulang") }
+            // Fallback khusus API 26-29: kalau user pernah menolak dialog izin
+            // dan Android tidak akan menampilkannya lagi otomatis (permanently
+            // denied), satu-satunya jalan adalah pengaturan aplikasi manual.
+            if (showAppSettingsFallback) {
+                OutlinedButton(
+                    onClick = onOpenAppSettings,
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.onSurfaceVariant),
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Izin ditolak permanen? Buka Pengaturan Aplikasi") }
+            }
         }
     }
 }
 
-private fun hasManageStoragePermission(): Boolean {
+/**
+ * SDK 30+ (R): dicek lewat MANAGE_EXTERNAL_STORAGE ("All files access").
+ * SDK 26-29: TIDAK ADA all-files-access -- app harus benar-benar pakai izin
+ * runtime READ/WRITE_EXTERNAL_STORAGE biasa. Sebelum v2.3.7 fungsi ini
+ * hardcode `true` untuk seluruh rentang SDK 26-29, jadi layar "Izin
+ * Diperlukan" tidak pernah muncul dan operasi file gagal diam-diam di device
+ * lawas yang belum pernah memberi izin. Lihat PROJECT_STATE.md.
+ */
+private fun hasManageStoragePermission(context: Context): Boolean {
     return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
         Environment.isExternalStorageManager()
     } else {
-        true
+        val readGranted = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.READ_EXTERNAL_STORAGE
+        ) == PackageManager.PERMISSION_GRANTED
+        val writeGranted = if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
+            // WRITE_EXTERNAL_STORAGE dideklarasikan maxSdkVersion=28 di manifest
+            // (tidak relevan lagi di atas itu); READ saja cukup untuk API 29.
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE
+            ) == PackageManager.PERMISSION_GRANTED
+        } else {
+            true
+        }
+        readGranted && writeGranted
     }
 }

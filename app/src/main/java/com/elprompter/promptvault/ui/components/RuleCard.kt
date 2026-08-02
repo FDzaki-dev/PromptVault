@@ -35,11 +35,12 @@ fun RuleCard(
     onMoveUp: () -> Unit,
     onMoveDown: () -> Unit,
     onEdit: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val haptics = LocalHapticFeedback.current
     val colors = MaterialTheme.colorScheme
-    VaultCard(modifier = Modifier
+    VaultCard(modifier = modifier
         .fillMaxWidth()
         .padding(vertical = 4.dp)) {
         Row(modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 4.dp, bottom = 10.dp)) {

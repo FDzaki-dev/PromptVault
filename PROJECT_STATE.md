@@ -4,7 +4,19 @@
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
 ## Versi/batch terakhir yang selesai
-- **versionCode 30 / versionName 2.3.6** -- rilis terakhir yang dikirim ke user.
+- **versionCode 31 / versionName 2.3.7** -- rilis terakhir yang dikirim ke user.
+- **2026-08-02, finishing batch (izin legacy + UI polish):** user konfirmasi
+  fix Home v2.3.1 sudah normal, lalu minta lanjut ke tahap "finishing":
+  audit menyeluruh + robustness + polish UI. Audit/robustness sudah matang
+  dari batch sebelumnya (lihat entri di bawah); satu-satunya item robustness
+  yang masih tersisa (celah izin Android 8-10) SEKARANG DIPERBAIKI atas
+  keputusan eksplisit user -- lihat CHANGELOG v2.3.7 untuk detail teknis.
+  Sekaligus batch UI polish pertama: empty state (ikon + layout konsisten)
+  di 4 layar (Kelola Rule, Riwayat Aktivitas, Undo Pemindahan, File
+  Dilewati) lewat komponen baru `EmptyState`, animasi `Crossfade` untuk
+  transisi kosong<->berisi, `animateItemPlacement()` di semua LazyColumn
+  list, dan transisi fade+slide antar layar di `NavHost` (sebelumnya potong
+  instan tanpa animasi sama sekali).
 - **2026-08-01, PENUTUP audit "pematangan fitur":** `data/db/` (Room DAO,
   Entity, Converters, AppDatabase, kedua Repository) dan `ui/theme/`
   (Color, Shapes, Theme, Type) sudah diperiksa -- termasuk verifikasi
@@ -50,16 +62,21 @@
      proses sekaligus -> proses kedua tercatat error padahal file aman.
      Fix: `Mutex` bersama di companion object `FileSorter`, lihat entri
      CHANGELOG v2.3.3 untuk detail lengkap.
-  2. **[BELUM DIPERBAIKI, DITUNDA atas keputusan user]** Celah izin
+  2. **[DITUNDA atas keputusan user, LALU DIPERBAIKI di v2.3.7]** Celah izin
      penyimpanan di Android 8-10 (API 26-29): `hasManageStoragePermission()`
      di `MainActivity.kt` hardcode `true` untuk semua device di bawah
      Android 11, padahal `minSdk = 26`. Di rentang API 26-29 app TIDAK
      PERNAH benar-benar meminta izin runtime `READ/WRITE_EXTERNAL_STORAGE`
      -- layar "Izin Diperlukan" langsung dilewati, operasi pindah file akan
      gagal diam-diam di device lawas. Device utama user (Infinix Android
-     15/16) tidak kena, makanya ditunda. **Trigger untuk lanjut**: kalau ada
-     laporan app gagal total di device Android <11, atau user memutuskan mau
-     benar-benar dukung minSdk 26 secara serius.
+     15/16) tidak kena, makanya awalnya ditunda. Saat masuk tahap
+     "finishing" (2026-08-02), user minta sekalian dibenerin -- fix di
+     v2.3.7: `hasManageStoragePermission()` sekarang benar-benar cek
+     `ContextCompat.checkSelfPermission()` untuk API 26-29, ditambah alur
+     `ActivityResultContracts.RequestMultiplePermissions()` untuk minta
+     izin runtime langsung (bukan cuma lempar ke halaman Setelan umum), plus
+     fallback tombol buka Pengaturan Aplikasi kalau izin ditolak permanen.
+     Lihat CHANGELOG v2.3.7 untuk detail lengkap.
 - Roadmap backend (spec "PROMPTVAULT - BACKEND & CI/CD EXECUTABLE SPECIFICATION")
   dipecah jadi batch. Status per bagian:
   - §3 Room DB Migration -- **SELESAI** (Batch 1, v2.2.0)
@@ -128,6 +145,52 @@ worker/          -- AutoSortWorker (WorkManager), BootCompletedReceiver,
    task yang sama saat dibuka ulang dari launcher (umum di custom ROM XOS).
 
 ## Riwayat insiden kronologis (JANGAN DIHAPUS, tambah entri baru di ATAS)
+
+### [2026-08-02] Batch finishing: fix izin legacy (ditunda -> dibenerin) + UI polish pertama
+- User konfirmasi: layar Home di v2.3.1 sudah normal (regresi #1 di bawah
+  benar-benar selesai, bukan cuma diklaim fix).
+- User minta lanjut ke tahap "finishing": audit menyeluruh + robustness +
+  polish UI/UX, digabung jadi satu ZIP.
+- Karena audit/robustness sebagian besar sudah selesai di batch-batch
+  sebelumnya (lihat bagian "Versi/batch terakhir" di atas), fokus utama
+  finishing ini adalah: (1) menuntaskan 1 item robustness yang tadinya
+  sengaja ditunda -- celah izin Android 8-10 -- karena user memilih "sekalian
+  benerin sekarang" saat ditanya, dan (2) UI polish yang memang belum pernah
+  disentuh sama sekali di project ini (empty state & animasi).
+- **Perubahan izin (`MainActivity.kt`)**: `hasManageStoragePermission()`
+  sekarang menerima `Context` dan benar-benar cek `ContextCompat.
+  checkSelfPermission()` untuk API 26-29 (sebelumnya hardcode `true`).
+  Ditambah `ActivityResultLauncher` (`RequestMultiplePermissions`) supaya
+  user API 26-29 langsung dapat dialog izin sistem, bukan cuma dilempar ke
+  halaman Setelan umum. `PermissionGate` dapat tombol fallback "buka
+  Pengaturan Aplikasi" khusus untuk kasus izin ditolak permanen. Ditambah
+  auto-recheck izin lewat `DisposableEffect` + `Lifecycle.Event.ON_RESUME`,
+  supaya user tidak wajib pencet tombol "cek ulang" manual tiap balik dari
+  Setelan (tombol manual tetap ada sebagai fallback).
+- **UI polish (empty state)**: komponen baru `ui/components/EmptyState.kt`
+  (ikon bulat bertema warna aksen layar + judul + pesan), menggantikan
+  `Text()` polos yang sebelumnya dipakai berbeda-beda gaya di 4 layar:
+  `RuleListScreen`, `ActivityLogScreen` (2 tab: Log & Undo), dan
+  `SkippedFilesScreen`. Warna aksen ikut identitas 4-warna tiap layar dari
+  Home (primary/hijau untuk Kelola Rule, tertiary/amber untuk Riwayat,
+  secondary/stamp untuk File Dilewati).
+- **UI polish (animasi)**: `Crossfade` untuk transisi kosong<->berisi konten
+  di keempat layar tsb, `Modifier.animateItemPlacement()` di semua item
+  `LazyColumn` (perlu tambah parameter `modifier` ke `RuleCard` yang
+  sebelumnya tidak punya -- lihat catatan arsitektur di bawah), dan
+  transisi fade+slide (`enterTransition`/`exitTransition`/dst.) di
+  `NavHost` untuk perpindahan antar layar (sebelumnya potong instan tanpa
+  animasi sama sekali).
+- **Catatan arsitektur baru**: `RuleCard` (di `ui/components/RuleCard.kt`)
+  sekarang punya parameter `modifier: Modifier = Modifier` mengikuti
+  konvensi Compose standar (diteruskan ke `VaultCard` internal). Kalau
+  nambah komponen list-item baru ke depannya, SELALU sediakan parameter
+  `modifier` sejak awal supaya bisa dipasangi `animateItemPlacement()` atau
+  modifier lain dari pemanggil tanpa perlu ubah signature belakangan.
+- **Belum diverifikasi nyata di device** (build lokal tanpa akses jaringan
+  Gradle di sesi Claude ini) -- hanya lolos `preflight_check.sh` + review
+  manual menyeluruh tiap file yang diubah. Minta user konfirmasi build APK
+  CI sukses & tampilan di HP sesuai sebelum dianggap selesai total.
 
 ### [2026-08-01] Regresi layar Home terpotong/ketumpuk setelah redesign v2.3.0
 - **Gejala**: user screenshot Home screen -- judul "PromptVault" + subtitle +

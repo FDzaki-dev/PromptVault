@@ -3,6 +3,69 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.3.7 -- Finishing batch: fix izin legacy (Android 8-10) + UI polish pertama
+User konfirmasi regresi Home v2.3.1 sudah normal, lalu minta lanjut tahap
+"finishing": audit menyeluruh + robustness + polish UI, digabung satu ZIP.
+
+**Robustness -- izin runtime Android 8-10 (API 26-29), sebelumnya sengaja
+ditunda, sekarang dibenerin atas pilihan user:**
+- `hasManageStoragePermission()` di `MainActivity.kt` sebelumnya hardcode
+  `true` untuk seluruh rentang SDK di bawah 30, padahal `minSdk = 26`.
+  Sekarang benar-benar mengecek `ContextCompat.checkSelfPermission()` untuk
+  `READ_EXTERNAL_STORAGE` (dan `WRITE_EXTERNAL_STORAGE` khusus API <= 28,
+  sesuai `maxSdkVersion` di manifest).
+- Ditambah `ActivityResultLauncher` (`RequestMultiplePermissions`) di
+  `MainActivity` supaya device API 26-29 langsung dapat dialog izin sistem
+  saat menekan "Buka Pengaturan Izin", bukan cuma dilempar ke halaman
+  Setelan Aplikasi umum seperti sebelumnya.
+- `PermissionGate` dapat tombol fallback tambahan "Izin ditolak permanen?
+  Buka Pengaturan Aplikasi" (hanya tampil di API < 30) untuk kasus user
+  sudah pernah menolak dialog izin dan Android tidak akan menampilkannya
+  otomatis lagi.
+- Ditambah auto-recheck status izin lewat `DisposableEffect` +
+  `Lifecycle.Event.ON_RESUME`, supaya begitu user balik dari Setelan
+  (baik alur API 30+ maupun API 26-29), status langsung ke-refresh tanpa
+  wajib pencet tombol "cek ulang" manual (tombolnya tetap ada sebagai
+  fallback).
+
+**UI polish -- empty state konsisten:**
+- Komponen baru `ui/components/EmptyState.kt`: ikon bulat bertema warna
+  aksen + judul + pesan, menggantikan `Text()` polos yang sebelumnya gaya
+  beda-beda di tiap layar (padding top tidak konsisten, tanpa ikon).
+- Dipasang di `RuleListScreen` (accent hijau/primary, 2 varian pesan: rule
+  kosong total vs hasil pencarian kosong), `ActivityLogScreen` tab Log &
+  tab Undo (accent amber/tertiary), `SkippedFilesScreen` (accent
+  stamp/secondary).
+
+**UI polish -- animasi:**
+- `Crossfade` (220ms) untuk transisi kosong<->berisi konten di keempat
+  layar di atas, supaya tidak lagi potong instan saat state berubah.
+- `Modifier.animateItemPlacement()` di semua `LazyColumn` (daftar rule,
+  log aktivitas, riwayat undo, file dilewati) supaya item yang
+  bertambah/berkurang/pindah posisi (mis. reorder prioritas rule)
+  beranimasi halus, bukan lompat tiba-tiba.
+- Transisi fade+slide (`enterTransition`/`exitTransition`/
+  `popEnterTransition`/`popExitTransition`, ~200ms) di `NavHost` untuk
+  semua perpindahan layar -- sebelumnya navigasi antar layar potong instan
+  tanpa animasi sama sekali, kontras dengan bagian lain app yang sudah
+  banyak animasi kecil (press-scale, segmented control).
+
+**Perubahan arsitektur kecil:**
+- `RuleCard` (`ui/components/RuleCard.kt`) sekarang menerima parameter
+  `modifier: Modifier = Modifier` (diteruskan ke `VaultCard` internal).
+  Sebelumnya tidak ada -- wajib ditambah supaya `RuleListScreen` bisa
+  memasang `animateItemPlacement()` langsung ke card yang sebenarnya,
+  bukan ke wrapper kosong. Konvensi ini sekarang jadi standar untuk
+  komponen list-item baru ke depannya (lihat catatan di
+  `PROJECT_STATE.md`).
+
+**Catatan verifikasi:** perubahan sudah lolos `preflight_check.sh` +
+review manual menyeluruh (cross-check semua call-site yang terdampak
+perubahan signature `RuleCard`/`PromptVaultRoot`/`hasManageStoragePermission`).
+Belum di-build & dijalankan nyata di device pada sesi ini (tidak ada akses
+jaringan Gradle di sandbox Claude) -- mohon konfirmasi hasil build CI +
+tampilan di HP setelah update.
+
 ## v2.3.6 -- Catatan penutup: audit "pematangan fitur" selesai total
 Tidak ada perubahan kode fungsional. Rilis ini murni menutup batch audit
 yang diminta user ("stop nambah fitur, fokus bersihkan kecacatan logika")
