@@ -89,6 +89,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _scanFeedback = MutableStateFlow<ScanFeedback?>(null)
     val scanFeedback: StateFlow<ScanFeedback?> = _scanFeedback.asStateFlow()
 
+    /**
+     * Dipanggil UI SEGERA setelah Snackbar ditampilkan. Wajib ada supaya event
+     * tidak nyangkut di StateFlow -- kalau tidak di-null-kan, HomeScreen yang
+     * di-dispose+dibuat ulang oleh Navigation Compose (mis. pergi ke
+     * SkippedFilesScreen lalu balik) akan menganggapnya event BARU dan
+     * menampilkan Snackbar yang sama lagi (bug yang dilaporkan user 2026-08-04).
+     */
+    fun consumeScanFeedback() {
+        _scanFeedback.value = null
+    }
+
     /** Detail file yang dilewati pada scan TERAKHIR, lengkap dengan alasannya. */
     private val _lastSkippedFiles = MutableStateFlow<List<SkippedFileInfo>>(emptyList())
     val lastSkippedFiles: StateFlow<List<SkippedFileInfo>> = _lastSkippedFiles.asStateFlow()

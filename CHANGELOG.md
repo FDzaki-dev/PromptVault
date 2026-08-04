@@ -3,6 +3,43 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.4.4 -- Fix bug regresi v2.4.3: Snackbar hasil scan muncul berulang
+User laporkan gejala nyata: tiap habis pencet "Lihat detail file yang
+dilewati" (navigasi ke SkippedFilesScreen) lalu balik, Snackbar hasil scan
+yang di v2.4.3 muncul lagi -- padahal scan baru tidak dijalankan.
+
+**Root cause**: `scanFeedback` di-model StateFlow yang isinya menempel terus
+di ViewModel (survive navigasi, sesuai tujuan awal), TAPI `LaunchedEffect
+(scanFeedback?.eventId)` yang menampilkannya cuma "one-shot" selama
+`HomeScreen` itu sendiri tetap hidup di composition. Navigation Compose
+men-dispose `HomeScreen` saat pindah layar dan MEMBUAT ULANG saat balik --
+instance baru itu tidak tahu event `eventId` yang sama sudah pernah
+ditampilkan sebelumnya, jadi efeknya jalan lagi. Ini regresi yang lolos dari
+preflight statis karena preflight tidak (dan tidak bisa) mendeteksi bug
+siklus-hidup Compose seperti ini -- murni ketahuan dari laporan gejala nyata
+user, sesuai proses yang benar.
+
+- **Fix**: state "sudah dikonsumsi" dipindah ke ViewModel lewat
+  `MainViewModel.consumeScanFeedback()` (set `_scanFeedback.value = null`),
+  dipanggil dari `HomeScreen` SEBELUM `snackbarHostState.showSnackbar(...)`
+  (bukan sesudah -- `showSnackbar` suspend sampai dismiss/timeout, kalau
+  konsumsi ditunda ke situ ada celah waktu user sempat gonta-ganti layar
+  sebelum Snackbar pertama kelar & re-trigger tetap bisa kejadian).
+- **Efek samping yang ikut difix**: karena `scanFeedback` sekarang di-null-
+  kan LEBIH AWAL dari sebelumnya, warna Snackbar (merah utk error) yang tadinya
+  dibaca langsung dari `scanFeedback?.isError` bisa balik ke warna normal
+  padahal Snackbar error masih tampil di layar. Ditambah `activeIsError`
+  (local state di HomeScreen, di-snapshot di awal LaunchedEffect) supaya
+  warna tetap konsisten selama durasi tampil Snackbar itu.
+
+File yang diubah: `MainViewModel.kt`, `HomeScreen.kt`, `MainActivity.kt`
+(wiring 1 param baru `onScanFeedbackConsumed`). 3 file, dalam Batch Lock.
+
+**Verifikasi runtime TIDAK BISA dilakukan** (sandbox tanpa Gradle) --
+preflight lolos 9/9, tapi tunggu konfirmasi kamu: pencet Scan Sekarang ->
+buka Lihat Detail File yang Dilewati -> balik -> Snackbar TIDAK boleh
+muncul lagi.
+
 ## v2.4.3 -- Audit sektor "feedback interaksi": Snackbar + haptic hasil Scan Sekarang
 User minta audit tuntas khusus sektor feedback: apa yang diharapkan user saat
 berinteraksi dengan app. Audit statis menyisir semua 8 screen + MainViewModel

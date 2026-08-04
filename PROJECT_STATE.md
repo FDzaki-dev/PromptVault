@@ -37,6 +37,16 @@
      tanya user dulu, jangan asumsikan perlu audit ulang.
 
 ## Versi/batch terakhir yang selesai
+- **versionCode 38 / versionName 2.4.4** -- user laporkan GEJALA NYATA:
+  Snackbar hasil scan (fitur baru v2.4.3) muncul berulang tiap habis buka
+  "Lihat detail file yang dilewati" lalu balik ke Home. Root cause: event
+  one-shot ditampilkan via `LaunchedEffect` di composable `HomeScreen`, tapi
+  Navigation Compose men-dispose+membuat-ulang `HomeScreen` tiap pindah
+  layar -- instance baru tidak tahu event sudah pernah tampil, jadi
+  Snackbar re-trigger. Fix: state "sudah dikonsumsi" dipindah ke
+  `MainViewModel.consumeScanFeedback()` (survive dispose composable), + fix
+  efek samping warna Snackbar (`activeIsError` local snapshot). Detail
+  teknis lengkap di CHANGELOG v2.4.4. **Belum dikonfirmasi user di HP asli.**
 - **versionCode 37 / versionName 2.4.3** -- user MINTA sendiri (bukan audit
   proaktif Claude, sesuai aturan permanen #3 di atas) audit tuntas sektor
   "feedback interaksi": apa yang user harapkan terjadi tiap kali dia

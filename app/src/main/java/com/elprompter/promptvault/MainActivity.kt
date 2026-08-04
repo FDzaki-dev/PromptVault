@@ -247,6 +247,7 @@ private fun PromptVaultRoot(
                 lastScanSummary = summary,
                 hasSkippedFiles = skipped.isNotEmpty(),
                 scanFeedback = scanFeedback,
+                onScanFeedbackConsumed = { viewModel.consumeScanFeedback() },
                 onScanNow = { viewModel.runManualScan() },
                 onOpenRules = { navController.navigate(Routes.RULES) },
                 onOpenLog = { navController.navigate(Routes.ACTIVITY_LOG) },

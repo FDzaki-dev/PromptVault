@@ -29,7 +29,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -52,6 +55,7 @@ fun HomeScreen(
     lastScanSummary: String?,
     hasSkippedFiles: Boolean,
     scanFeedback: MainViewModel.ScanFeedback?,
+    onScanFeedbackConsumed: () -> Unit,
     onScanNow: () -> Unit,
     onOpenRules: () -> Unit,
     onOpenLog: () -> Unit,
@@ -62,15 +66,27 @@ fun HomeScreen(
     val colors = MaterialTheme.colorScheme
     val haptics = LocalHapticFeedback.current
     val snackbarHostState = remember { SnackbarHostState() }
+    // Warna Snackbar yang SEDANG tayang di-snapshot terpisah dari scanFeedback
+    // -- supaya begitu onScanFeedbackConsumed() men-null-kan scanFeedback di
+    // ViewModel (lihat komentar di LaunchedEffect di bawah), warna Snackbar
+    // yang masih tampil di layar tidak ikut berubah balik ke warna normal.
+    var activeIsError by remember { mutableStateOf(false) }
 
     // Keyed ke eventId (bukan teks pesan) -- supaya scan kedua dengan hasil
     // teks identik ("Tidak ada file cocok" dua kali berturut) tetap memicu
     // Snackbar + haptic baru, bukan cuma diam karena StateFlow value sama.
     LaunchedEffect(scanFeedback?.eventId) {
         val feedback = scanFeedback ?: return@LaunchedEffect
+        activeIsError = feedback.isError
         haptics.performHapticFeedback(
             if (feedback.isError) HapticFeedbackType.LongPress else HapticFeedbackType.TextHandleMove
         )
+        // Konsumsi SEBELUM showSnackbar (bukan sesudah) -- showSnackbar itu
+        // suspend dan baru return setelah dismiss/timeout. Kalau di-null-kan
+        // sesudahnya, ada jendela waktu di mana user sempat navigasi
+        // pergi-pulang SEBELUM Snackbar pertama selesai, dan re-trigger tetap
+        // bisa kejadian. Konsumsi lebih awal menutup celah itu.
+        onScanFeedbackConsumed()
         snackbarHostState.showSnackbar(feedback.message)
     }
 
@@ -79,8 +95,8 @@ fun HomeScreen(
             SnackbarHost(snackbarHostState) { data ->
                 Snackbar(
                     snackbarData = data,
-                    containerColor = if (scanFeedback?.isError == true) colors.error else colors.primary,
-                    contentColor = if (scanFeedback?.isError == true) colors.onError else colors.onPrimary
+                    containerColor = if (activeIsError) colors.error else colors.primary,
+                    contentColor = if (activeIsError) colors.onError else colors.onPrimary
                 )
             }
         }
