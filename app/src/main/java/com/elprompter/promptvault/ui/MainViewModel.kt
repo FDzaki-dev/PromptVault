@@ -78,6 +78,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _lastScanSummary = MutableStateFlow<String?>(null)
     val lastScanSummary: StateFlow<String?> = _lastScanSummary.asStateFlow()
 
+    /**
+     * Sinyal one-shot terpisah dari [lastScanSummary]. Dibedakan lewat [ScanFeedback.eventId]
+     * (bukan isi teks) supaya Snackbar TETAP muncul walau hasil scan kali ini teksnya
+     * sama persis dengan scan sebelumnya (mis. "Tidak ada file cocok" dua kali berturut) --
+     * StateFlow biasa tidak akan re-trigger LaunchedEffect kalau value-nya identik.
+     */
+    data class ScanFeedback(val message: String, val isError: Boolean, val eventId: Long)
+
+    private val _scanFeedback = MutableStateFlow<ScanFeedback?>(null)
+    val scanFeedback: StateFlow<ScanFeedback?> = _scanFeedback.asStateFlow()
+
     /** Detail file yang dilewati pada scan TERAKHIR, lengkap dengan alasannya. */
     private val _lastSkippedFiles = MutableStateFlow<List<SkippedFileInfo>>(emptyList())
     val lastSkippedFiles: StateFlow<List<SkippedFileInfo>> = _lastSkippedFiles.asStateFlow()
@@ -86,13 +97,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _isScanning.value = true
             val result = fileSorter.scanAndSort()
-            _lastScanSummary.value = when {
+            val isError = result.foldersUnreadable
+            val summary = when {
                 result.foldersUnreadable -> "Folder Downloads tidak terbaca. Cek izin penyimpanan."
                 result.filesMoved == 0 && result.filesSkippedNoMatch == 0 -> "Tidak ada file cocok yang ditemukan."
                 else -> "${result.filesMoved} file dipindahkan, ${result.filesSkippedNoMatch} dilewati."
             }
+            _lastScanSummary.value = summary
             _lastSkippedFiles.value = result.skippedDetails
             _isScanning.value = false
+            // Dikirim TERAKHIR, setelah isScanning kembali false, supaya urutan
+            // yang diterima UI selalu: spinner hilang -> baru Snackbar/haptic muncul.
+            _scanFeedback.value = ScanFeedback(summary, isError, System.currentTimeMillis())
         }
     }
 

@@ -238,6 +238,7 @@ private fun PromptVaultRoot(
             val isScanning by viewModel.isScanning.collectAsStateWithLifecycle()
             val summary by viewModel.lastScanSummary.collectAsStateWithLifecycle()
             val skipped by viewModel.lastSkippedFiles.collectAsStateWithLifecycle()
+            val scanFeedback by viewModel.scanFeedback.collectAsStateWithLifecycle()
 
             HomeScreen(
                 ruleCount = rules.count { it.enabled },
@@ -245,6 +246,7 @@ private fun PromptVaultRoot(
                 isScanning = isScanning,
                 lastScanSummary = summary,
                 hasSkippedFiles = skipped.isNotEmpty(),
+                scanFeedback = scanFeedback,
                 onScanNow = { viewModel.runManualScan() },
                 onOpenRules = { navController.navigate(Routes.RULES) },
                 onOpenLog = { navController.navigate(Routes.ACTIVITY_LOG) },

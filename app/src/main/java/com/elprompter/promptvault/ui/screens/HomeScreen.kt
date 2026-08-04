@@ -22,15 +22,22 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
+import com.elprompter.promptvault.ui.MainViewModel
 import com.elprompter.promptvault.ui.components.GroupedList
 import com.elprompter.promptvault.ui.components.GroupedListRow
 import com.elprompter.promptvault.ui.components.VaultCard
@@ -44,6 +51,7 @@ fun HomeScreen(
     isScanning: Boolean,
     lastScanSummary: String?,
     hasSkippedFiles: Boolean,
+    scanFeedback: MainViewModel.ScanFeedback?,
     onScanNow: () -> Unit,
     onOpenRules: () -> Unit,
     onOpenLog: () -> Unit,
@@ -52,7 +60,31 @@ fun HomeScreen(
     onOpenSkippedFiles: () -> Unit
 ) {
     val colors = MaterialTheme.colorScheme
-    Scaffold { padding ->
+    val haptics = LocalHapticFeedback.current
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Keyed ke eventId (bukan teks pesan) -- supaya scan kedua dengan hasil
+    // teks identik ("Tidak ada file cocok" dua kali berturut) tetap memicu
+    // Snackbar + haptic baru, bukan cuma diam karena StateFlow value sama.
+    LaunchedEffect(scanFeedback?.eventId) {
+        val feedback = scanFeedback ?: return@LaunchedEffect
+        haptics.performHapticFeedback(
+            if (feedback.isError) HapticFeedbackType.LongPress else HapticFeedbackType.TextHandleMove
+        )
+        snackbarHostState.showSnackbar(feedback.message)
+    }
+
+    Scaffold(
+        snackbarHost = {
+            SnackbarHost(snackbarHostState) { data ->
+                Snackbar(
+                    snackbarData = data,
+                    containerColor = if (scanFeedback?.isError == true) colors.error else colors.primary,
+                    contentColor = if (scanFeedback?.isError == true) colors.onError else colors.onPrimary
+                )
+            }
+        }
+    ) { padding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()

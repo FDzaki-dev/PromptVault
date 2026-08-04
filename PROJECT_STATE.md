@@ -37,6 +37,37 @@
      tanya user dulu, jangan asumsikan perlu audit ulang.
 
 ## Versi/batch terakhir yang selesai
+- **versionCode 37 / versionName 2.4.3** -- user MINTA sendiri (bukan audit
+  proaktif Claude, sesuai aturan permanen #3 di atas) audit tuntas sektor
+  "feedback interaksi": apa yang user harapkan terjadi tiap kali dia
+  berinteraksi dengan app. Audit statis nyisir 8 screen + MainViewModel,
+  grep pola Snackbar/Toast/haptic. Hasil audit lengkap:
+  - **Sudah OK (tidak disentuh):** RuleListScreen (Snackbar "Rule dihapus"),
+    ActivityLogScreen (Snackbar "dikembalikan ke Downloads"), haptic
+    LongPress di VaultActionSheet (semua konfirmasi destruktif) & RuleCard
+    (drag/reorder), SettingsScreen (FilterChip highlight utk tema/interval/
+    conflict strategy sudah cukup sebagai feedback pilihan, import rule
+    sudah ada teks hasil persisten di layar).
+  - **GAP ditemukan & difix:** tombol "Scan Sekarang" di HomeScreen -- aksi
+    PALING SERING dipakai di seluruh app -- sebelumnya cuma update teks
+    pasif `lastScanSummary`. Kalau hasil scan kali ini teksnya identik
+    dengan sebelumnya (skenario umum: "Tidak ada file cocok" berulang),
+    user nol sinyal bahwa tombol barusan benar-benar merespons.
+  - **GAP dicatat, SENGAJA belum difix (di luar scope batch ini):** tombol
+    "Simpan" di AddEditRuleScreen tidak punya konfirmasi sukses eksplisit
+    (Snackbar/toast) -- saat ini feedback-nya cuma implisit lewat navigasi
+    balik ke list. Cukup untuk sekarang karena rule baru langsung kelihatan
+    di list, tapi kalau user suatu saat komplain "kayak gak kesave", ini
+    kandidat fix pertama yang harus dicek. Jangan diasumsikan sudah beres.
+  - **Fix teknis:** `MainViewModel.scanFeedback` (StateFlow baru, terpisah
+    dari `lastScanSummary`, dibedakan `eventId`=timestamp biar tetap
+    trigger walau teks sama) + `HomeScreen` dapat `SnackbarHost` & haptic
+    (`TextHandleMove` normal / `LongPress` utk folder tak terbaca, warna
+    Snackbar ganti `colors.error` saat error) + wiring 1 param baru di
+    `MainActivity.kt`. 4 file, dalam Batch Lock. Detail lengkap di
+    CHANGELOG v2.4.3.
+  - **Belum diverifikasi runtime** (sandbox tanpa Gradle) -- preflight
+    LOLOS semua kategori, tapi tunggu konfirmasi kamu di HP asli.
 - **versionCode 36 / versionName 2.4.2** -- rilis terakhir yang dikirim ke
   user. Fix: `.github/workflows/build.yml` SEBELUMNYA cuma pakai
   `actions/upload-artifact@v4` (Actions Artifact biasa), TIDAK PERNAH

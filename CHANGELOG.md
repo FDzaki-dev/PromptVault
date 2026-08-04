@@ -3,6 +3,45 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.4.3 -- Audit sektor "feedback interaksi": Snackbar + haptic hasil Scan Sekarang
+User minta audit tuntas khusus sektor feedback: apa yang diharapkan user saat
+berinteraksi dengan app. Audit statis menyisir semua 8 screen + MainViewModel
+untuk pola Snackbar/Toast/haptic. Temuan: RuleListScreen (hapus rule) dan
+ActivityLogScreen (undo) SUDAH punya Snackbar. Tapi aksi PALING SERING dipakai
+di app ini -- tombol "Scan Sekarang" di HomeScreen -- cuma update teks pasif
+`lastScanSummary` di dalam card. Kalau hasil scan kali ini teksnya sama persis
+dengan scan sebelumnya (mis. "Tidak ada file cocok" dua kali berturut), user
+TIDAK dapat sinyal apapun bahwa scan barusan benar-benar jalan -- terasa
+seperti tombol tidak merespons.
+
+- **Fix**: `MainViewModel` sekarang expose `scanFeedback: StateFlow<ScanFeedback?>`
+  terpisah dari `lastScanSummary`, dibedakan lewat `eventId` (timestamp) supaya
+  tetap trigger ulang walau teks pesan identik dengan sebelumnya.
+- **HomeScreen**: tambah `SnackbarHost` + haptic yang bereaksi ke `scanFeedback`
+  -- `HapticFeedbackType.TextHandleMove` (halus) untuk hasil normal,
+  `HapticFeedbackType.LongPress` (sama seperti pola konfirmasi destruktif di
+  `VaultActionSheet`) untuk kasus error (folder Downloads tidak terbaca / izin
+  bermasalah), plus warna Snackbar ikut berubah jadi `colors.error` saat error.
+- **Urutan sinyal**: `_scanFeedback` sengaja di-emit PALING TERAKHIR di
+  `runManualScan()`, setelah `isScanning` balik ke false -- supaya user selalu
+  lihat: spinner hilang dulu, baru Snackbar muncul (bukan bertabrakan).
+- **Tidak diubah** (dicek, dianggap cukup): highlight FilterChip di
+  SettingsScreen sudah jadi feedback visual yang wajar untuk pilihan tema/
+  interval/conflict strategy; import rule di SettingsScreen sudah punya teks
+  hasil persisten di layar. Tombol "Simpan" di AddEditRuleScreen tidak diubah
+  karena feedback-nya sudah implisit lewat navigasi kembali ke list (rule baru
+  langsung terlihat) -- di luar scope batch ini, dicatat sebagai kandidat
+  audit lanjutan di PROJECT_STATE.md kalau user minta lain kali.
+
+File yang diubah: `MainViewModel.kt`, `HomeScreen.kt`, `MainActivity.kt` (wiring
+1 baris param), `app/build.gradle.kts` (version bump). 4 file, dalam batas
+Batch Lock.
+
+**Verifikasi runtime TIDAK BISA dilakukan** (sandbox tanpa Android SDK/Gradle)
+-- preflight_check.sh (kurung seimbang, delegate `by`, import, dst) LOLOS
+100%, tapi tetap cuma jaring pengaman statis. Tunggu konfirmasi kamu setelah
+build asli bahwa Snackbar + getaran muncul benar setelah tap "Scan Sekarang".
+
 ## [Dokumentasi] v2.4.2 dinyatakan STABLE RELEASE (2026-08-04)
 Tidak ada perubahan kode/build. User konfirmasi APK sudah muncul di sidebar
 Releases dan minta project dinyatakan "selesai" secara resmi. Lihat
