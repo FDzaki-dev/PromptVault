@@ -3,6 +3,52 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.4.0 -- Overhaul performa scan (fokus 100% permintaan user, bukan finishing biasa)
+User laporan: app "kewalahan" scan bahkan cuma dengan ratusan file di
+Downloads (100-500), gejalanya freeze/lag lama, force close, DAN auto-sort
+background jadi lambat/telat -- ketiganya sekaligus. Audit `FileSorter.kt`
+menemukan 3 akar masalah independen yang saling memperparah:
+
+1. **Semua I/O jalan di Main thread**: `scanAndSort()` dipanggil dari
+   `MainViewModel.runManualScan()` lewat `viewModelScope.launch` (default ke
+   Main dispatcher). Karena fungsi ini TIDAK PERNAH pindah dispatcher, setiap
+   `File.listFiles()`, buka `RandomAccessFile` untuk cek lock, `renameTo()`,
+   `copyTo()` -- semua I/O blocking sinkron -- dulunya jalan LANGSUNG di UI
+   thread. Ini penyebab utama freeze & force-close (ANR). Fix: seluruh isi
+   `scanAndSortLocked()` sekarang dibungkus `withContext(Dispatchers.IO)`.
+2. **Urutan pengecekan terbalik**: fungsi `isLikelyStillWriting()` (delay 1
+   detik + buka file handle untuk cek lock) dulu dijalankan untuk SEMUA file
+   kandidat ZIP/TXT di Downloads, TERMASUK file yang tidak cocok rule
+   manapun dan tidak akan pernah dipindah. Fix: cek rule match (murah,
+   in-memory) sekarang jalan duluan; stability check cuma untuk file yang
+   memang akan dipindah.
+3. **Scan sekuensial, satu file per satu file**: `for (file in
+   candidateFiles)` berarti 300 file yang lolos ke stability check = ~300
+   detik (1 detik delay/file berturutan, tanpa paralelisme sama sekali).
+   Fix: tiap kandidat sekarang diproses lewat `async` + `Semaphore` (batas 6
+   proses bersamaan -- **asumsi teknis AI**, lihat PROJECT_STATE.md), hasil
+   digabung lewat `awaitAll()` lalu diagregasi SEKUENSIAL di luar coroutine
+   paralel (bukan mutable var dibagi lintas coroutine) supaya tidak perlu
+   Mutex tambahan untuk `moved`/`skipped`/`overlapWarnings`.
+
+**Tidak ada perubahan behavior/UI yang terlihat user** (pesan Log, alasan
+skip, hasil scan tetap identik) -- murni performa. `ActivityLogRepository`
+& `MoveHistoryRepository` sudah Room-backed sejak v2.2.0 sehingga aman
+dipanggil concurrent tanpa perubahan tambahan di kedua file itu.
+
+File yang diubah: `FileSorter.kt` saja (1 file, dalam batas Batch Lock).
+`MainViewModel.kt`/`AutoSortWorker.kt` TIDAK perlu disentuh karena
+`scanAndSort()` tetap `suspend fun` dengan signature sama persis --
+`withContext(Dispatchers.IO)` bekerja transparan dari dispatcher pemanggil
+manapun.
+
+**Verifikasi runtime TIDAK BISA dilakukan** (sandbox Claude tanpa Android
+SDK/Gradle) -- ini murni audit statis + reasoning tentang model concurrency
+Kotlin coroutines. Confidence tinggi karena perubahan idiomatik & didukung
+langsung oleh dokumentasi resmi kotlinx.coroutines, tapi tetap tunggu
+konfirmasi user setelah build CI sukses DAN scan beberapa ratus file di HP
+asli terasa jauh lebih cepat.
+
 ## v2.3.9 -- Konsistensi visual: padding seragam + animasi Onboarding
 Lanjutan batch finishing (bagian "konsistensi visual" yang tadinya belum
 disentuh). User konfirmasi CI v2.3.8 sukses build, lalu diaudit ulang sisi

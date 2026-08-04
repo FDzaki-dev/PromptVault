@@ -4,9 +4,24 @@
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
 ## Versi/batch terakhir yang selesai
-- **versionCode 33 / versionName 2.3.9** -- rilis terakhir yang dikirim ke
-  user. Padding luar layar distandarkan ke 16dp di seluruh app + Onboarding
-  dapat animasi Crossfade antar step. Lihat CHANGELOG v2.3.9.
+- **versionCode 34 / versionName 2.4.0** -- rilis terakhir yang dikirim ke
+  user. User laporan app "kewalahan" scan (freeze/lag + force close + auto-
+  sort background lambat) padahal cuma ratusan file di Downloads. Root
+  cause: SEMUA I/O `FileSorter.scanAndSort()` jalan di Main thread (tidak
+  pernah `withContext(Dispatchers.IO)`), stability-check mahal (delay 1
+  detik + buka file handle) jalan untuk SEMUA kandidat termasuk yang tidak
+  cocok rule apapun, dan diproses sekuensial satu-per-satu (bukan paralel).
+  Fix: reorder cek-rule-dulu-baru-stability-check, bungkus IO dispatcher,
+  proses paralel dengan `Semaphore(SCAN_CONCURRENCY=6)` + `async`/
+  `awaitAll()`. HANYA `FileSorter.kt` yang diubah. Lihat CHANGELOG v2.4.0
+  untuk detail teknis lengkap + AI Assumption Log di bawah untuk nilai 6.
+  **BELUM ada konfirmasi user bahwa scan di HP asli sudah terasa cepat**
+  (sandbox Claude tidak bisa verifikasi runtime/kompilasi) -- kalau sesi
+  depan user masih komplain scan lambat/berat, cek dulu apakah v2.4.0 sudah
+  ke-install sebelum audit ulang dari nol.
+- **versionCode 33 / versionName 2.3.9** -- rilis sebelumnya. Padding luar
+  layar distandarkan ke 16dp di seluruh app + Onboarding dapat animasi
+  Crossfade antar step. Lihat CHANGELOG v2.3.9.
 - **2026-08-02, finishing batch (izin legacy + UI polish):** user konfirmasi
   fix Home v2.3.1 sudah normal, lalu minta lanjut ke tahap "finishing":
   audit menyeluruh + robustness + polish UI. Audit/robustness sudah matang
@@ -145,8 +160,54 @@ worker/          -- AutoSortWorker (WorkManager), BootCompletedReceiver,
 5. **`MainActivity` pakai `android:launchMode="singleTask"`** (ditambah di
    v2.3.1) -- jangan dihapus, mencegah instance Activity dobel menumpuk di
    task yang sama saat dibuka ulang dari launcher (umum di custom ROM XOS).
+6. **`FileSorter.scanAndSort()` sekarang paralel dengan batas
+   `SCAN_CONCURRENCY = 6`** (v2.4.0).
+   - **Tanggal**: 2026-08-03.
+   - **Alasan**: scan sebelumnya sekuensial + jalan di Main thread -> freeze/
+     ANR/force-close bahkan di ratusan file (lihat CHANGELOG v2.4.0). Fix
+     butuh paralelisme supaya wall-time stability-check (delay 1 detik/file)
+     tidak sekedar dikali jumlah file kandidat.
+   - **Konsekuensi**: `SCAN_CONCURRENCY = 6` adalah **ASUMSI TEKNIS AI**
+     (belum divalidasi profiling nyata di HP user) -- titik tengah antara
+     memangkas wall-time signifikan vs tidak membuka terlalu banyak file
+     handle/`RandomAccessFile` bersamaan di HP kelas menengah-bawah (target:
+     Infinix Android 15/16). Kalau nanti user punya Downloads berisi ribuan
+     file dan masih terasa berat, INI kandidat pertama untuk di-tuning
+     (naikkan angka atau buat konfigurable dari Settings), bukan trigger
+     redesain ulang arsitektur scan.
+   - **Alternatif yang ditolak**: (a) concurrency tak terbatas (`async` tanpa
+     `Semaphore`) -- ditolak, resiko terlalu banyak file handle dibuka
+     bersamaan kalau Downloads berisi ribuan file; (b) tetap sekuensial tapi
+     hapus delay 1 detik sepenuhnya -- ditolak, itu bagian dari Dual
+     Stability Guard (§4 lama) yang mencegah file yang masih di-download
+     ikut terpindah setengah jadi/korup, tidak aman dihapus begitu saja.
 
 ## Riwayat insiden kronologis (JANGAN DIHAPUS, tambah entri baru di ATAS)
+
+### [2026-08-03] v2.4.0 -- Scan "kewalahan" di ratusan file: freeze/force-close/auto-sort lambat
+- **Gejala**: user laporan app kewalahan scan file di Downloads walau cuma
+  ratusan (100-500) file -- SEMUA gejala sekaligus (freeze/lag, force close,
+  auto-sort background lambat/telat), bukan cuma satu.
+- **Root cause #1**: `FileSorter.scanAndSort()` tidak pernah pindah
+  dispatcher. Dipanggil dari `MainViewModel.runManualScan()` lewat
+  `viewModelScope.launch` (default Main) -> semua I/O blocking (`listFiles`,
+  `RandomAccessFile` lock check, `renameTo`, `copyTo`) jalan LANGSUNG di UI
+  thread -> freeze/ANR/force-close.
+- **Root cause #2**: `isLikelyStillWriting()` (delay 1 detik + buka file
+  handle) jalan untuk SEMUA kandidat ZIP/TXT termasuk yang tidak cocok rule
+  apapun -- boros untuk file yang toh tidak akan pernah dipindah.
+- **Root cause #3**: loop `for (file in candidateFiles)` sekuensial, murni
+  satu-per-satu -- 300 file yang lolos ke stability check = ~300 detik
+  (1 detik delay/file berturutan tanpa paralelisme).
+- **Fix (`FileSorter.kt` saja, 1 file)**: reorder cek-rule-dulu (murah)
+  sebelum stability-check (mahal); bungkus seluruh `scanAndSortLocked()`
+  dengan `withContext(Dispatchers.IO)`; proses tiap kandidat lewat
+  `async` + `Semaphore(SCAN_CONCURRENCY=6)`, hasil digabung `awaitAll()`
+  lalu diagregasi sekuensial (bukan mutable var lintas coroutine, hindari
+  Mutex tambahan). Lihat Keputusan Arsitektur #6 & CHANGELOG v2.4.0.
+- **Status**: BELUM dikonfirmasi user (CI build + tes di HP asli belum
+  jalan saat entri ini ditulis). Sesi berikutnya WAJIB tanya dulu apakah
+  v2.4.0 sudah terasa lebih cepat sebelum audit ulang dari nol.
 
 ### [2026-08-02] v2.3.7 GAGAL BUILD di CI -- animateItemPlacement salah pakai + alias ikon salah
 - **Gejala**: user upload `build-failure-log-v2_3_7.zip` (log Gradle CI).

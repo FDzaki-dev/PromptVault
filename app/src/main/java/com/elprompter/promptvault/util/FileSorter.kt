@@ -10,9 +10,15 @@ import com.elprompter.promptvault.data.MoveHistoryRepository
 import com.elprompter.promptvault.data.Rule
 import com.elprompter.promptvault.data.RuleRepository
 import com.elprompter.promptvault.data.SettingsRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.RandomAccessFile
 import java.util.UUID
@@ -139,68 +145,70 @@ class FileSorter(
      */
     suspend fun scanAndSort(): ScanResult = scanMutex.withLock { scanAndSortLocked() }
 
-    private suspend fun scanAndSortLocked(): ScanResult {
+    /**
+     * [perf-overhaul v2.4.0] Tiga masalah performa yang menyebabkan app
+     * "kewalahan" bahkan di ratusan file, sekarang diperbaiki sekaligus:
+     *
+     * 1. **Semua I/O sekarang di [Dispatchers.IO]**: sebelumnya fungsi ini
+     *    berjalan di dispatcher pemanggil (Main, lewat `viewModelScope.launch`
+     *    di [MainViewModel]) -- setiap `File.listFiles()`, `RandomAccessFile`
+     *    lock check, `renameTo()`/`copyTo()` adalah I/O blocking sinkron yang
+     *    dulunya mengeksekusi LANGSUNG di UI thread -> freeze/ANR/force-close.
+     * 2. **Urutan pengecekan dibalik**: [isLikelyStillWriting] (delay 1 detik +
+     *    buka `RandomAccessFile` untuk cek lock) dulunya jalan untuk SEMUA file
+     *    kandidat termasuk yang TIDAK PERNAH akan dipindah karena tidak cocok
+     *    rule manapun. Sekarang pengecekan rule (murah, in-memory) jalan dulu;
+     *    stability check hanya untuk file yang benar-benar akan dipindah.
+     * 3. **Diproses paralel dengan batas [SCAN_CONCURRENCY]**: dulunya
+     *    `for (file in candidateFiles)` sekuensial -- 300 file yang semuanya
+     *    lolos ke stability check berarti ~300 detik (delay 1 detik/file
+     *    berturutan). Sekarang tiap kandidat diproses lewat `async` dengan
+     *    [Semaphore] agar wall-time mendekati (jumlah file / SCAN_CONCURRENCY)
+     *    detik, bukan (jumlah file) detik, tanpa membuka terlalu banyak file
+     *    handle bersamaan.
+     *
+     * Hasil per-file dikumpulkan lewat `awaitAll()` lalu digabung SEKUENSIAL
+     * di luar coroutine paralel (bukan mutable var dibagi lintas coroutine),
+     * supaya `moved`/`skipped`/`overlapWarnings` tetap aman tanpa race
+     * condition maupun butuh Mutex tambahan.
+     */
+    private suspend fun scanAndSortLocked(): ScanResult = withContext(Dispatchers.IO) {
         val rules = ruleRepository.getRules().filter { it.enabled }
         val conflictStrategy = settingsRepository.getConflictStrategy()
 
         if (!downloadsDir.exists() || !downloadsDir.canRead()) {
             activityLogRepository.add(LogLevel.ERROR, "Folder Downloads tidak terbaca. Cek izin penyimpanan.")
-            return ScanResult(0, 0, foldersUnreadable = true, overlapWarnings = emptyList())
+            return@withContext ScanResult(0, 0, foldersUnreadable = true, overlapWarnings = emptyList())
         }
 
         if (rules.isEmpty()) {
             activityLogRepository.add(LogLevel.INFO, "Scan dijalankan, tapi belum ada rule aktif.")
-            return ScanResult(0, 0, foldersUnreadable = false, overlapWarnings = emptyList())
+            return@withContext ScanResult(0, 0, foldersUnreadable = false, overlapWarnings = emptyList())
         }
 
         val candidateFiles = listCandidateFiles()
 
         if (candidateFiles.isEmpty()) {
             activityLogRepository.add(LogLevel.INFO, "Scan selesai: tidak ada file ZIP/TXT baru yang cocok.")
-            return ScanResult(0, 0, foldersUnreadable = false, overlapWarnings = emptyList())
+            return@withContext ScanResult(0, 0, foldersUnreadable = false, overlapWarnings = emptyList())
         }
+
+        val semaphore = Semaphore(SCAN_CONCURRENCY)
+        val results = candidateFiles.map { file ->
+            async { semaphore.withPermit { processCandidate(file, rules, conflictStrategy) } }
+        }.awaitAll()
 
         var moved = 0
         var skipped = 0
         val overlapWarnings = mutableListOf<String>()
         val skippedDetails = mutableListOf<SkippedFileInfo>()
-
-        for (file in candidateFiles) {
-            if (isLikelyStillWriting(file)) {
-                skipped++
-                skippedDetails.add(
-                    SkippedFileInfo(
-                        fileName = file.name,
-                        reason = "Ditunda: file baru saja berubah, kemungkinan masih ditulis/didownload. Akan dicoba lagi scan berikutnya."
-                    )
-                )
-                continue
-            }
-
-            val sizeKb = file.sizeKb()
-            val matches = RuleOverlapChecker.matchingRules(file.name, sizeKb, rules)
-            if (matches.isEmpty()) {
-                skipped++
-                skippedDetails.add(SkippedFileInfo(file.name, explainNoMatch(file, sizeKb, rules)))
-                continue
-            }
-            if (matches.size > 1) {
-                val msg = "\"${file.name}\" cocok dengan ${matches.size} rule (${matches.joinToString { it.folderName }}). " +
-                    "Dipindahkan memakai rule prioritas tertinggi: \"${matches.first().folderName}\"."
-                overlapWarnings.add(msg)
-                activityLogRepository.add(LogLevel.WARNING, msg)
-            }
-            val rule = matches.first()
-            val moveOutcome = moveFile(file, rule, conflictStrategy)
-            when (moveOutcome) {
-                MoveOutcome.MOVED -> moved++
-                MoveOutcome.SKIPPED_CONFLICT -> {
+        for (result in results) {
+            result.overlapWarning?.let { overlapWarnings.add(it) }
+            when (result) {
+                is CandidateOutcome.Moved -> moved++
+                is CandidateOutcome.Skipped -> {
                     skipped++
-                    skippedDetails.add(SkippedFileInfo(file.name, "Sudah ada file dengan nama sama di PromptVault/${rule.folderName}/ (strategi konflik: Lewati)"))
-                }
-                MoveOutcome.FAILED -> {
-                    skipped++
-                    skippedDetails.add(SkippedFileInfo(file.name, "Gagal dipindahkan (lihat Log untuk detail error)"))
+                    skippedDetails.add(result.info)
                 }
             }
         }
@@ -212,7 +220,57 @@ class FileSorter(
         }
         activityLogRepository.add(LogLevel.SUCCESS, summary)
 
-        return ScanResult(moved, skipped, foldersUnreadable = false, overlapWarnings = overlapWarnings, skippedDetails = skippedDetails)
+        ScanResult(moved, skipped, foldersUnreadable = false, overlapWarnings = overlapWarnings, skippedDetails = skippedDetails)
+    }
+
+    /** Hasil pemrosesan satu file kandidat, dikumpulkan lewat awaitAll() lalu digabung sekuensial di [scanAndSortLocked]. */
+    private sealed class CandidateOutcome(val overlapWarning: String?) {
+        class Moved(overlapWarning: String?) : CandidateOutcome(overlapWarning)
+        class Skipped(val info: SkippedFileInfo, overlapWarning: String? = null) : CandidateOutcome(overlapWarning)
+    }
+
+    /**
+     * Cek rule match (murah) SEBELUM stability check (mahal: delay + buka file
+     * handle) -- lihat penjelasan §2 di [scanAndSortLocked]. Dipanggil paralel
+     * lewat Semaphore, aman karena tidak menyentuh state yang dibagi lintas
+     * pemanggilan (moveFile/activityLogRepository/moveHistoryRepository sudah
+     * masing-masing aman dipanggil concurrent).
+     */
+    private suspend fun processCandidate(file: File, rules: List<Rule>, conflictStrategy: ConflictStrategy): CandidateOutcome {
+        val sizeKb = file.sizeKb()
+        val matches = RuleOverlapChecker.matchingRules(file.name, sizeKb, rules)
+        if (matches.isEmpty()) {
+            return CandidateOutcome.Skipped(SkippedFileInfo(file.name, explainNoMatch(file, sizeKb, rules)))
+        }
+
+        if (isLikelyStillWriting(file)) {
+            return CandidateOutcome.Skipped(
+                SkippedFileInfo(
+                    fileName = file.name,
+                    reason = "Ditunda: file baru saja berubah, kemungkinan masih ditulis/didownload. Akan dicoba lagi scan berikutnya."
+                )
+            )
+        }
+
+        var overlapWarning: String? = null
+        if (matches.size > 1) {
+            overlapWarning = "\"${file.name}\" cocok dengan ${matches.size} rule (${matches.joinToString { it.folderName }}). " +
+                "Dipindahkan memakai rule prioritas tertinggi: \"${matches.first().folderName}\"."
+            activityLogRepository.add(LogLevel.WARNING, overlapWarning)
+        }
+
+        val rule = matches.first()
+        return when (moveFile(file, rule, conflictStrategy)) {
+            MoveOutcome.MOVED -> CandidateOutcome.Moved(overlapWarning)
+            MoveOutcome.SKIPPED_CONFLICT -> CandidateOutcome.Skipped(
+                SkippedFileInfo(file.name, "Sudah ada file dengan nama sama di PromptVault/${rule.folderName}/ (strategi konflik: Lewati)"),
+                overlapWarning
+            )
+            MoveOutcome.FAILED -> CandidateOutcome.Skipped(
+                SkippedFileInfo(file.name, "Gagal dipindahkan (lihat Log untuk detail error)"),
+                overlapWarning
+            )
+        }
     }
 
     private fun explainNoMatch(file: File, sizeKb: Long, rules: List<Rule>): String {
@@ -363,6 +421,19 @@ class FileSorter(
 
         /** Jeda pengecekan ukuran file untuk Dual Stability Guard (§4). */
         private const val SIZE_CHECK_DELAY_MS = 1_000L
+
+        /**
+         * [perf-overhaul v2.4.0] Batas jumlah file yang diproses BERSAMAAN saat
+         * scan (lihat [processCandidate]). Nilai ini ASUMSI TEKNIS AI (dicatat
+         * di PROJECT_STATE.md): 6 dipilih sebagai titik tengah -- cukup tinggi
+         * untuk memangkas wall-time stability-check (delay 1 detik/file) secara
+         * signifikan, cukup rendah untuk tidak membuka terlalu banyak file
+         * handle/RandomAccessFile bersamaan di HP kelas menengah-bawah. Kalau
+         * ke depan user punya HP dengan Downloads berisi ribuan file dan masih
+         * terasa berat, ini kandidat pertama untuk di-tuning (naikkan concurrency
+         * atau buat konfigurable), bukan trigger untuk redesain ulang.
+         */
+        private const val SCAN_CONCURRENCY = 6
 
         /** Akhiran nama file dari browser/downloader yang menandakan unduhan belum selesai. */
         private val TEMP_FILE_MARKERS = listOf(
