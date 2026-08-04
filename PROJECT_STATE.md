@@ -172,18 +172,37 @@
   dipecah jadi batch. Status per bagian:
   - §3 Room DB Migration -- **SELESAI** (Batch 1, v2.2.0)
   - §4 File Writing Stability & Temp-File Filter -- **SELESAI** (Batch 2, v2.2.1)
-  - §1 SAF/Scoped Storage abstraction -- **BELUM, DIJEDA** atas keputusan user
-  - §2 MediaStore rescan/ghost file cleanup -- **BELUM, DIJEDA**
-  - §5 Coroutine lifecycle & Foreground Service -- **BELUM, DIJEDA**
-  - §6 CI/CD preflight+dependency lock lanjutan -- **BELUM, DIJEDA** (sebagian
-    kecil, yaitu compile-check fail-fast, sudah ada duluan di build.yml
-    sebelum roadmap ini, di luar batch manapun)
-  - **Keputusan eksplisit dari user (2026-08-01):** JANGAN lanjutkan batch
-    yang belum dikerjakan kecuali benar-benar urgent/ada manfaat langsung.
-    Trigger untuk lanjut: crash nyata saat auto-sort >50 file (→ §5), akses
-    folder hilang setelah restart HP (→ §1), atau file "hantu" muncul di file
-    manager bawaan (→ §2). Jangan proaktif menawarkan lanjut batch tanpa salah
-    satu gejala ini muncul duluan.
+  - §2 MediaStore rescan/ghost file cleanup -- **SELESAI** (v2.5.0, 2026-08-04).
+    User eksplisit minta tuntaskan semua item dijeda; spec asli tidak ada
+    teksnya di repo, didesain ulang dari standar Android + konteks app
+    (`MediaScannerConnection.scanFile()` tiap move/undo + query cleanup
+    ghost entry sekali per scan). BELUM diverifikasi runtime -- lihat
+    CHANGELOG v2.5.0 untuk detail & yang perlu dikonfirmasi user.
+  - §1 SAF/Scoped Storage abstraction -- **BELUM, ANTRE** (2026-08-04: user
+    minta tuntaskan, TAPI ini yang PALING BESAR & PALING BERISIKO -- rombak
+    total `FileSorter.kt` dari `java.io.File` ke `DocumentFile`, nyentuh
+    hampir semua fungsi inti scan/move/undo. Sengaja dikerjakan PALING
+    TERAKHIR dari 4 item, satu batch besar tersendiri, bukan digabung
+    dengan item lain.)
+  - §5 Coroutine lifecycle & Foreground Service -- **BELUM, ANTRE** (2026-08-04:
+    user minta tuntaskan, urutan setelah §2. Ubah `AutoSortWorker`/
+    `WorkScheduler`, modul `worker/`.)
+  - §6 CI/CD preflight+dependency lock lanjutan -- **BELUM, TERHAMBAT
+    STRUKTURAL** (2026-08-04: Gradle dependency locking butuh `./gradlew
+    --write-locks` yang JALAN, sandbox Claude tidak punya Android SDK/Gradle/
+    akses network -- lockfile yang di-generate tanpa itu isinya spekulatif
+    dan BISA MEMATIKAN BUILD CI TOTAL kalau salah. TIDAK dikerjakan blind;
+    butuh sesi dengan akses Gradle asli, atau instruksi lebih spesifik dari
+    user soal ruang lingkupnya.)
+  - **Keputusan 2026-08-04 (menggantikan keputusan 2026-08-01 di bawah):**
+    user eksplisit minta tuntaskan §1/§2/§5/§6 SEKARANG (bukan tunggu
+    trigger). Dieksekusi BERTAHAP satu atomic batch per sesi/pesan (bukan
+    sekaligus -- 4 item beda area arsitektur, digabung sekaligus melanggar
+    Batch Lock "maks 1 modul per batch" versi user sendiri). Urutan
+    dieksekusi: §2 (selesai) -> §5 -> §1. §6 diskip sampai ada akses Gradle
+    nyata atau instruksi scope lebih spesifik.
+  - ~~Keputusan 2026-08-01 (SUDAH DIGANTI di atas): jangan lanjutkan tanpa
+    trigger gejala nyata.~~
 - Redesign visual besar (v2.3.0) sudah dikirim & di-fix regresinya (v2.3.1).
   Arah desain "4-color accent system" ini sekarang JADI STANDAR -- jangan
   balik ke skema lama (hijau dominan di semua ikon) di update berikutnya.

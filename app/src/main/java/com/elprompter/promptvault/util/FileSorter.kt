@@ -1,7 +1,10 @@
 package com.elprompter.promptvault.util
 
+import android.content.ContentUris
 import android.content.Context
+import android.media.MediaScannerConnection
 import android.os.Environment
+import android.provider.MediaStore
 import com.elprompter.promptvault.data.ActivityLogRepository
 import com.elprompter.promptvault.data.ConflictStrategy
 import com.elprompter.promptvault.data.LogLevel
@@ -220,7 +223,58 @@ class FileSorter(
         }
         activityLogRepository.add(LogLevel.SUCCESS, summary)
 
+        // §2 roadmap backend -- bersihkan entri MediaStore "hantu" yang SUDAH
+        // terlanjur nyangkut dari sebelum fix scanFile() di atas ada (mis. dari
+        // versi lama app, atau file yang dihapus manual lewat file manager lain
+        // tanpa lewat PromptVault). Query murah (1x per scan, bukan per file),
+        // TIDAK pernah menggagalkan scan utama kalau error/permission masalah.
+        cleanupGhostMediaStoreEntries()
+
         ScanResult(moved, skipped, foldersUnreadable = false, overlapWarnings = overlapWarnings, skippedDetails = skippedDetails)
+    }
+
+    /**
+     * Cari baris MediaStore yang path-nya di bawah Downloads/PromptVault/ TAPI
+     * file fisiknya sudah tidak ada di disk (entri "hantu") -- lalu hapus baris
+     * itu. Kenapa bisa "hantu": app ini pakai `java.io.File` langsung (bukan
+     * SAF, lihat Keputusan Arsitektur #2 di PROJECT_STATE.md), jadi rename/
+     * delete lewat filesystem tidak otomatis sinkron ke index MediaStore kalau
+     * ada app LAIN yang sempat baca/index file itu duluan sebelum dipindah.
+     * `MediaStore.Files.FileColumns.DATA` deprecated sejak API 29, tapi TETAP
+     * berfungsi untuk app dengan `MANAGE_EXTERNAL_STORAGE` (app ini sudah
+     * pakai izin itu) -- dipilih daripada migrasi total ke SAF/DocumentFile
+     * karena itu §1 yang terpisah & sengaja belum dikerjakan (lihat komentar
+     * di scanAndSort soal §1).
+     */
+    private fun cleanupGhostMediaStoreEntries() {
+        try {
+            val resolver = context.contentResolver
+            val collection = MediaStore.Files.getContentUri("external")
+            val projection = arrayOf(MediaStore.Files.FileColumns._ID, MediaStore.Files.FileColumns.DATA)
+            val selection = "${MediaStore.Files.FileColumns.DATA} LIKE ?"
+            val selectionArgs = arrayOf("${vaultRootDir.absolutePath}%")
+            var removedCount = 0
+
+            resolver.query(collection, projection, selection, selectionArgs, null)?.use { cursor ->
+                val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID)
+                val dataColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATA)
+                while (cursor.moveToNext()) {
+                    val path = cursor.getString(dataColumn) ?: continue
+                    if (!File(path).exists()) {
+                        val id = cursor.getLong(idColumn)
+                        val itemUri = ContentUris.withAppendedId(collection, id)
+                        if (resolver.delete(itemUri, null, null) > 0) removedCount++
+                    }
+                }
+            }
+
+            if (removedCount > 0) {
+                activityLogRepository.add(LogLevel.INFO, "$removedCount entri MediaStore usang (file sudah tidak ada) dibersihkan.")
+            }
+        } catch (e: Exception) {
+            // Non-fatal dengan sengaja -- kegagalan cleanup kosmetik ini TIDAK
+            // BOLEH pernah menggagalkan/membatalkan hasil scan utama yang nyata.
+        }
     }
 
     /** Hasil pemrosesan satu file kandidat, dikumpulkan lewat awaitAll() lalu digabung sekuensial di [scanAndSortLocked]. */
@@ -343,6 +397,19 @@ class FileSorter(
             val success = file.renameTo(destFile) || copyThenDelete(file, destFile)
 
             if (success) {
+                // §2 roadmap backend -- Ghost/stale MediaStore entry: app pindah file
+                // lewat java.io.File langsung (bukan SAF/MediaStore API), jadi index
+                // MediaStore TIDAK otomatis update. Tanpa scanFile ini, file manager
+                // bawaan/app lain yang baca lewat MediaStore (bukan lewat FS langsung)
+                // bisa masih nunjukkin file di lokasi LAMA (sudah tidak ada / "ghost"),
+                // dan file di lokasi BARU belum ke-index sampai user reboot/scan manual.
+                // Non-fatal dengan sengaja: kalau scanFile gagal/exception, pemindahan
+                // filenya SENDIRI sudah sukses duluan di atas -- jangan sampai indexing
+                // MediaStore yang notabene kosmetik menggagalkan hasil MOVED yang nyata.
+                try {
+                    MediaScannerConnection.scanFile(context, arrayOf(file.absolutePath, destFile.absolutePath), null, null)
+                } catch (_: Exception) { /* non-fatal, lihat komentar di atas */ }
+
                 moveHistoryRepository.record(
                     MoveHistoryEntry(
                         id = UUID.randomUUID().toString(),
@@ -395,6 +462,10 @@ class FileSorter(
 
             val success = current.renameTo(restoreTarget) || copyThenDelete(current, restoreTarget)
             if (success) {
+                try {
+                    MediaScannerConnection.scanFile(context, arrayOf(current.absolutePath, restoreTarget.absolutePath), null, null)
+                } catch (_: Exception) { /* non-fatal, sama seperti di moveFile() */ }
+
                 moveHistoryRepository.markUndone(entry.id)
                 activityLogRepository.add(LogLevel.SUCCESS, "Undo berhasil: \"${entry.fileName}\" dikembalikan ke Downloads.")
             } else {

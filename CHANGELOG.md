@@ -3,6 +3,51 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.5.0 -- §2 Roadmap backend selesai: MediaStore ghost-file cleanup
+User eksplisit minta tuntaskan SEMUA item roadmap backend yang sebelumnya
+sengaja DIJEDA (§1 SAF, §2 MediaStore, §5 Foreground Service, §6 CI
+dependency lock). Spec asli "BACKEND & CI/CD EXECUTABLE SPECIFICATION"
+TIDAK ada teksnya di repo (cuma ringkasan 1 baris di PROJECT_STATE.md) --
+user konfirmasi desain ulang dari standar Android + konteks app. Dieksekusi
+BERTAHAP per item (bukan sekaligus, sesuai Batch Lock -- 4 item ini masing-
+masing atomic change terpisah, beda area arsitektur). §2 duluan karena
+paling mandiri & risikonya paling terukur secara statis (murni logic Kotlin,
+tidak butuh Gradle/network buat verifikasi seperti §6, tidak seberat §1/§5).
+
+**Masalah**: app pindah file lewat `java.io.File.renameTo()`/copy langsung
+(BUKAN SAF/MediaStore API -- keputusan arsitektur #2 yang sudah ada di
+PROJECT_STATE.md). Efek samping: index MediaStore (dipakai file manager
+bawaan, app lain yang baca lewat Content Provider bukan filesystem langsung)
+TIDAK otomatis update. Dua gejala: (a) file yang baru dipindah baru muncul
+di app lain setelah reboot/scan manual, (b) entri "hantu" nyangkut di
+MediaStore menunjuk ke path lama yang filenya sudah tidak ada.
+
+- **Fix (a)**: `MediaScannerConnection.scanFile()` dipanggil untuk path lama
+  + baru setiap kali `moveFile()` atau `undo()` sukses -- MediaStore langsung
+  disuruh re-index kedua lokasi. Non-fatal by design: kalau scanFile gagal,
+  pemindahan filenya SENDIRI tetap dianggap sukses (jangan sampai indexing
+  kosmetik menggagalkan hasil nyata).
+- **Fix (b)**: fungsi baru `cleanupGhostMediaStoreEntries()` -- query
+  `MediaStore.Files` untuk baris di bawah `Downloads/PromptVault/`, cek tiap
+  baris apakah file fisiknya masih ada (`File(path).exists()`), hapus baris
+  yang tidak ada filenya. Dipanggil SEKALI per scan (bukan per file, jaga
+  performa sesuai prinsip v2.4.0/v2.4.1), non-fatal kalau query/delete gagal.
+  Pakai `MediaStore.Files.FileColumns.DATA` (deprecated API 29+ tapi tetap
+  jalan untuk app dengan `MANAGE_EXTERNAL_STORAGE`, yang app ini sudah
+  pakai) -- dipilih daripada migrasi ke SAF karena itu §1 yang terpisah.
+
+File yang diubah: `FileSorter.kt` (Core File, edit parsial -- cuma tambah
+2 blok kecil + 1 fungsi baru, tidak ubah logika match/rule/conflict yang
+sudah ada). 1 file, jauh di bawah Batch Lock.
+
+**Verifikasi runtime TIDAK BISA dilakukan** (sandbox tanpa Android SDK,
+tidak ada device buat lihat MediaStore beneran ke-update). Preflight statis
+lolos 9/9, tapi ini murni jaring pengaman sintaks -- TIDAK bisa konfirmasi
+`MediaScannerConnection`/`ContentResolver.query` benar-benar berperilaku
+seperti didokumentasikan di device asli. **Tolong konfirmasi setelah build:
+pindahkan 1 file, cek muncul di file manager LAIN (bukan PromptVault)
+tanpa reboot.**
+
 ## v2.4.4 -- Fix bug regresi v2.4.3: Snackbar hasil scan muncul berulang
 User laporkan gejala nyata: tiap habis pencet "Lihat detail file yang
 dilewati" (navigasi ke SkippedFilesScreen) lalu balik, Snackbar hasil scan
