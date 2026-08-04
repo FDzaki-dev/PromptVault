@@ -3,6 +3,12 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## [Dokumentasi] v2.4.2 dinyatakan STABLE RELEASE (2026-08-04)
+Tidak ada perubahan kode/build. User konfirmasi APK sudah muncul di sidebar
+Releases dan minta project dinyatakan "selesai" secara resmi. Lihat
+PROJECT_STATE.md bagian "STATUS PROJECT: SELESAI / STABLE" untuk kriteria
+Definition of Done dan aturan permanen sesi berikutnya (stop audit proaktif).
+
 ## v2.4.2 -- Fix CI: APK sekarang publish ke GitHub Release (bukan cuma Actions Artifact)
 User cek repo, APK signed tidak muncul di sidebar Releases seperti seharusnya
 (sesuai aturan proyek "GitHub Release Rule"). Audit `.github/workflows/build.yml`

@@ -3,23 +3,51 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
+## STATUS PROJECT: SELESAI / STABLE (declared 2026-08-04)
+- **v2.4.2 dinyatakan resmi sebagai STABLE RELEASE.** User (pemilik project)
+  eksplisit bilang capek dan minta project ini benar-benar dinyatakan
+  "selesai" tanpa audit tak berujung. Kriteria "Definition of Done" di bawah
+  ini SEMUA terpenuhi per 2026-08-04:
+  - Audit kode menyeluruh seluruh modul: SELESAI TOTAL (lihat entri
+    2026-08-01 "PENUTUP audit" di bawah).
+  - Semua bug yang pernah ditemukan sepanjang riwayat project: fixed &
+    dikonfirmasi (race condition v2.3.3, dialog rule v2.3.4, worker
+    lifecycle v2.3.5, izin storage v2.3.7, packaging ZIP Claude 2026-08-04,
+    CI GitHub Release v2.4.2).
+  - Performa (scan paralel v2.4.0, trim berkala v2.4.1): confirmed cepat di
+    device asli user.
+  - CI/CD: compile-check, unit test, build APK, publish ke GitHub Release
+    -- **CONFIRMED user APK sudah muncul di sidebar Releases** setelah
+    v2.4.2 (konfirmasi diterima 2026-08-04, closing item yang sebelumnya
+    "BELUM ada konfirmasi").
+  - 4 item roadmap backend (SAF, MediaStore ghost cleanup, Foreground
+    Service, CI lock lanjutan) TETAP DIJEDA -- statusnya sudah final
+    "ditunda dengan trigger eksplisit" (lihat bagian Roadmap backend di
+    bawah), BUKAN dihitung sebagai pekerjaan belum selesai.
+- **ATURAN PERMANEN untuk sesi Claude berikutnya (jangan dilanggar):**
+  1. JANGAN menawarkan audit/polish/"mau lanjut apa lagi?" secara proaktif.
+     Project ini stabil -- diam kecuali user yang mulai duluan.
+  2. 4 item roadmap backend yang dijeda TETAP dijeda selamanya, kecuali
+     salah satu trigger eksplisit di bagian "Roadmap backend" benar-benar
+     terjadi (bukan dibahas ulang saat idle/nganggur).
+  3. Eksekusi HANYA kalau user secara eksplisit minta fitur baru spesifik
+     atau melaporkan bug/gejala nyata (termasuk lewat crash log
+     Documents/PromptVault/logs/).
+  4. Kalau ragu apakah sesuatu "perlu dibenahi", DEFAULT-nya adalah TIDAK --
+     tanya user dulu, jangan asumsikan perlu audit ulang.
+
 ## Versi/batch terakhir yang selesai
 - **versionCode 36 / versionName 2.4.2** -- rilis terakhir yang dikirim ke
-  user. User cek repo, APK signed tidak muncul di sidebar Releases. Audit
-  `.github/workflows/build.yml` konfirmasi workflow SELAMA INI cuma pakai
+  user. Fix: `.github/workflows/build.yml` SEBELUMNYA cuma pakai
   `actions/upload-artifact@v4` (Actions Artifact biasa), TIDAK PERNAH
   benar-benar publish ke GitHub Release -- melanggar aturan proyek sendiri
-  ("GitHub Release Rule"), lolos sejak workflow dibuat karena preflight lama
-  tidak punya kategori yang mengecek ini. Fix: tambah `permissions:
+  ("GitHub Release Rule"). Fix: tambah `permissions:
   contents: write` + step `softprops/action-gh-release@v2` (tag otomatis
   `v<versionName>`, APK ter-attach, update release yang sama kalau tag sudah
   ada). Preflight ditambah kategori #9 supaya gap ini tidak lolos lagi.
   HANYA `.github/workflows/build.yml` + `scripts/preflight_check.sh` yang
   diubah. Lihat CHANGELOG v2.4.2 untuk detail teknis lengkap.
-  **BELUM ada konfirmasi user bahwa APK sudah benar-benar muncul di sidebar
-  Releases setelah CI jalan** (sandbox Claude tidak bisa akses GitHub
-  Actions) -- kalau sesi depan masih komplain APK/Release tidak muncul, cek
-  dulu apakah v2.4.2 sudah ke-push & CI selesai jalan sebelum audit ulang.
+  **CONFIRMED 2026-08-04: user cek, APK sudah muncul di sidebar Releases.**
 - **versionCode 35 / versionName 2.4.1** -- rilis sebelumnya. Trim berkala
   tiap 20 insert di ActivityLogRepository & MoveHistoryRepository (bukan
   tiap insert) -- kurangi write-contention SQLite saat scan paralel. Lihat
