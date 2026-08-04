@@ -48,6 +48,18 @@ seperti didokumentasikan di device asli. **Tolong konfirmasi setelah build:
 pindahkan 1 file, cek muncul di file manager LAIN (bukan PromptVault)
 tanpa reboot.**
 
+**[COMPILE-FIX 2026-08-04]** CI build v2.5.0 gagal: `compileDebugKotlin`
+error di `FileSorter.kt:272` -- "Suspend function 'add' should be called
+only from a coroutine or another suspend function". Sebab: fungsi baru
+`cleanupGhostMediaStoreEntries()` di atas ke-deklarasi `private fun` biasa
+(lupa `suspend`), padahal isinya manggil `activityLogRepository.add()`
+(suspend). Fix: tambah keyword `suspend` di deklarasinya -- pemanggilnya
+(`scanAndSortLocked`) sudah suspend context, jadi aman, tidak ada
+pemanggil lain yang perlu disesuaikan. HANYA 1 baris di `FileSorter.kt`
+diubah, tidak ada logika lain disentuh. Static scan ulang seluruh fungsi
+di file ini (semua pemanggilan `activityLogRepository.add`/
+`moveHistoryRepository.*`) -- tidak ada mismatch suspend lain ditemukan.
+
 ## v2.4.4 -- Fix bug regresi v2.4.3: Snackbar hasil scan muncul berulang
 User laporkan gejala nyata: tiap habis pencet "Lihat detail file yang
 dilewati" (navigasi ke SkippedFilesScreen) lalu balik, Snackbar hasil scan

@@ -246,7 +246,7 @@ class FileSorter(
      * karena itu §1 yang terpisah & sengaja belum dikerjakan (lihat komentar
      * di scanAndSort soal §1).
      */
-    private fun cleanupGhostMediaStoreEntries() {
+    private suspend fun cleanupGhostMediaStoreEntries() {
         try {
             val resolver = context.contentResolver
             val collection = MediaStore.Files.getContentUri("external")

@@ -37,6 +37,19 @@
      tanya user dulu, jangan asumsikan perlu audit ulang.
 
 ## Versi/batch terakhir yang selesai
+- **versionCode 39 / versionName 2.5.0 -- COMPILE-FIX 2026-08-04:** user
+  upload log CI build gagal (`compileDebugKotlin` FAILED,
+  `FileSorter.kt:272:39`: "Suspend function 'add' should be called only
+  from a coroutine or another suspend function"). Root cause: fungsi
+  `cleanupGhostMediaStoreEntries()` (bagian §2 roadmap backend MediaStore
+  ghost cleanup di v2.5.0) lupa diberi keyword `suspend`, padahal manggil
+  `activityLogRepository.add()` yang suspend. Fix: tambah `suspend` di
+  deklarasi fungsi itu -- pemanggil (`scanAndSortLocked`, sudah suspend
+  context) tidak perlu diubah. 1 baris, 1 file. Static re-scan seluruh
+  pemanggilan suspend lain di `FileSorter.kt` (undo, moveFile,
+  processCandidate, scanAndSortLocked) -- semua sudah konsisten, tidak ada
+  mismatch lain. **Belum ada konfirmasi build hijau dari CI/device asli --
+  tunggu run berikutnya.**
 - **versionCode 38 / versionName 2.4.4** -- user laporkan GEJALA NYATA:
   Snackbar hasil scan (fitur baru v2.4.3) muncul berulang tiap habis buka
   "Lihat detail file yang dilewati" lalu balik ke Home. Root cause: event
