@@ -185,6 +185,36 @@ worker/          -- AutoSortWorker (WorkManager), BootCompletedReceiver,
 
 ## Riwayat insiden kronologis (JANGAN DIHAPUS, tambah entri baru di ATAS)
 
+### [2026-08-04] Bug packaging Claude: ZIP kehilangan .github/workflows/ dan .gitignore
+- **Gejala**: user push ZIP v2.4.1, repo GitHub jadi kehilangan folder
+  `.github/workflows/` (CI workflow hilang total) dan `.gitignore`, padahal
+  file-file lain lengkap. User laporan "ada yang hilang" setelah cek repo.
+- **Root cause (kesalahan Claude, di proses packaging bukan di kode app)**:
+  command `zip -x '*.git*'` yang dimaksudkan untuk mengecualikan folder
+  `.git/` (version control internal) ternyata pakai pattern terlalu lebar --
+  `*.git*` cocok dengan SEMUA path yang mengandung substring "git" di posisi
+  manapun, termasuk `.github` (mengandung ".git" di awal + "hub") dan
+  `.gitignore` (mengandung ".git" di awal + "ignore"). Akibatnya kedua file
+  itu ikut ter-exclude dari ZIP tanpa disadari sampai user cek repo langsung.
+- **Insiden terkait**: sebelum ini juga ada bug packaging (ZIP dibungkus
+  folder `PromptVault-main/` padahal aturan proyek adalah file langsung di
+  root ZIP) yang bikin Termux extract nested -- sempat difix manual oleh
+  user via `mv`+`shopt -s dotglob`. Kedua bug ini SATU AKAR: proses
+  packaging ZIP tidak divalidasi against daftar file yang sudah diketahui
+  (`FILE_MANIFEST.txt`) sebelum dikirim.
+- **Fix**: exclude pattern diganti jadi spesifik (`-x '.git/*' -x '.git'`,
+  bukan wildcard longgar), dan ZIP di-generate langsung dari root project
+  (`zip -r ... .`, bukan `zip -r ... PromptVault-main`) supaya flat di root
+  sesuai aturan. Dikirim ulang sebagai ZIP v2.4.1 revisi.
+- **Pelajaran untuk sesi Claude berikutnya**: SEBELUM present_files ZIP
+  apapun, WAJIB `unzip -l` hasil ZIP dan bandingkan jumlah entri + cek
+  eksplisit `.github`/`.gitignore` ada, JANGAN cuma percaya command zip
+  berhasil (exit code 0 tidak menjamin isi lengkap kalau exclude pattern
+  salah). Idealnya diff nama file dalam ZIP vs `FILE_MANIFEST.txt`.
+- **Status**: fix sudah dikirim (ZIP v2.4.1 revisi), BELUM ada konfirmasi
+  user bahwa CI Actions sekarang jalan normal dengan workflow yang sudah
+  lengkap.
+
 ### [2026-08-03] v2.4.0 -- Scan "kewalahan" di ratusan file: freeze/force-close/auto-sort lambat
 - **Gejala**: user laporan app kewalahan scan file di Downloads walau cuma
   ratusan (100-500) file -- SEMUA gejala sekaligus (freeze/lag, force close,
