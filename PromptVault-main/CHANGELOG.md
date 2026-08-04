@@ -3,6 +3,39 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.4.1 -- Kurangi write-contention SQLite saat scan paralel (lanjutan optimasi v2.4.0)
+User konfirmasi v2.4.0 (scan paralel + IO dispatcher) sudah terasa cepat di
+HP asli, lalu diminta lanjut fokus performa. Audit lanjutan ke jalur yang
+DIPANGGIL selama scan (bukan scan-nya sendiri) menemukan bottleneck baru:
+
+- **`ActivityLogRepository.add()` dan `MoveHistoryRepository.record()`
+  memanggil `dao.trimToMax()` di SETIAP insert, tanpa terkecuali.**
+  `trimToMax()` adalah `DELETE ... WHERE id NOT IN (SELECT id ... ORDER BY
+  timestampMillis DESC LIMIT :maxEntries)` -- query yang scan+sort seluruh
+  tabel tiap kali dipanggil. Selama scan v2.4.0 memproses banyak file
+  paralel lewat `Semaphore(6)`, tiap kandidat file bisa memicu 1+ log line
+  (skip reason / overlap warning / hasil pindah) -- untuk scan 300 file,
+  ini berarti ratusan `trimToMax()` beruntun, masing-masing memperebutkan
+  write-lock SQLite (Room menyerialkan write transaction secara internal).
+  Efeknya: paralelisme yang baru ditambahkan di `FileSorter` sebagian
+  "dimakan lagi" oleh serialisasi di sisi database.
+- **Fix**: trim sekarang berkala, bukan tiap insert -- `AtomicInteger`
+  per-instance repository, trim dijalankan tiap kelipatan
+  `TRIM_CHECK_INTERVAL = 20` insert (aman dipanggil concurrent lintas
+  coroutine tanpa Mutex tambahan). Konsekuensinya tabel boleh melebihi
+  `MAX_ENTRIES` sampai maksimal 19 baris ekstra di antara dua trim -- tidak
+  terlihat user (log/riwayat undo tetap tampil normal, cuma retensi
+  membulat ke kelipatan 20), jauh lebih murah daripada trim tiap baris.
+
+File yang diubah: `ActivityLogRepository.kt`, `MoveHistoryRepository.kt`
+(2 file, dalam batas Batch Lock). Tidak ada perubahan API publik/schema,
+`FileSorter`/`MainViewModel`/`AutoSortWorker` tidak perlu disentuh.
+
+**Verifikasi runtime TIDAK BISA dilakukan** (sandbox tanpa Android
+SDK/Gradle) -- murni audit statis + reasoning tentang pola concurrency
+Room/SQLite. Confidence tinggi (perubahan idiomatik, isolated ke 2
+repository), tapi tetap tunggu konfirmasi user setelah build CI sukses.
+
 ## v2.4.0 -- Overhaul performa scan (fokus 100% permintaan user, bukan finishing biasa)
 User laporan: app "kewalahan" scan bahkan cuma dengan ratusan file di
 Downloads (100-500), gejalanya freeze/lag lama, force close, DAN auto-sort

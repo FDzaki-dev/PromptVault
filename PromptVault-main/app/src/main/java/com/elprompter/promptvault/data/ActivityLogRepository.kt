@@ -6,6 +6,7 @@ import com.elprompter.promptvault.data.db.AppDatabase
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Riwayat aktivitas PERMANEN.
@@ -19,13 +20,27 @@ import java.util.UUID
  * Catatan migrasi: riwayat log lama yang tersimpan di DataStore TIDAK
  * dipindahkan otomatis ke Room (disepakati tidak urgent, data ini bukan data
  * kritis pengguna). Log akan mulai kosong kembali setelah update ke versi ini.
+ *
+ * [perf v2.4.1] Trim SEKARANG BERKALA (tiap [TRIM_CHECK_INTERVAL] insert),
+ * bukan tiap panggilan [add]. Sebelumnya `trimToMax()` (DELETE dengan
+ * subquery ORDER BY + LIMIT, scan seluruh tabel) jalan di SETIAP insert --
+ * saat scan v2.4.0 memproses banyak file paralel lewat Semaphore(6), tiap
+ * kandidat bisa memicu 1+ log line, jadi ratusan trim beruntun yang saling
+ * berebut write-lock SQLite (Room menyerialkan write transaction), justru
+ * MENAHAN konkurensi yang baru dioptimasi di FileSorter. [insertCounter]
+ * (AtomicInteger, di-reset tiap trim) aman dipanggil concurrent lintas
+ * coroutine tanpa Mutex tambahan. Tabel boleh melebihi MAX_ENTRIES sampai
+ * maksimal (TRIM_CHECK_INTERVAL - 1) baris di antara trim -- tidak terlihat
+ * user, jauh lebih murah daripada trim tiap baris.
  */
 class ActivityLogRepository(context: Context) {
 
     private val dao = AppDatabase.getInstance(context).activityLogDao()
+    private val insertCounter = AtomicInteger(0)
 
     companion object {
         private const val MAX_ENTRIES = 500
+        private const val TRIM_CHECK_INTERVAL = 20
     }
 
     val logFlow: Flow<List<ActivityLogEntry>> = dao.observeAll().map { rows -> rows.map { it.toDomain() } }
@@ -39,7 +54,9 @@ class ActivityLogRepository(context: Context) {
                 message = message
             )
         )
-        dao.trimToMax(MAX_ENTRIES)
+        if (insertCounter.incrementAndGet() % TRIM_CHECK_INTERVAL == 0) {
+            dao.trimToMax(MAX_ENTRIES)
+        }
     }
 
     suspend fun clear() {

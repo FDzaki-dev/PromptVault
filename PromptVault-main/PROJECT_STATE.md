@@ -4,20 +4,21 @@
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
 ## Versi/batch terakhir yang selesai
-- **versionCode 34 / versionName 2.4.0** -- rilis terakhir yang dikirim ke
-  user. User laporan app "kewalahan" scan (freeze/lag + force close + auto-
-  sort background lambat) padahal cuma ratusan file di Downloads. Root
-  cause: SEMUA I/O `FileSorter.scanAndSort()` jalan di Main thread (tidak
-  pernah `withContext(Dispatchers.IO)`), stability-check mahal (delay 1
-  detik + buka file handle) jalan untuk SEMUA kandidat termasuk yang tidak
-  cocok rule apapun, dan diproses sekuensial satu-per-satu (bukan paralel).
-  Fix: reorder cek-rule-dulu-baru-stability-check, bungkus IO dispatcher,
-  proses paralel dengan `Semaphore(SCAN_CONCURRENCY=6)` + `async`/
-  `awaitAll()`. HANYA `FileSorter.kt` yang diubah. Lihat CHANGELOG v2.4.0
-  untuk detail teknis lengkap + AI Assumption Log di bawah untuk nilai 6.
-  **BELUM ada konfirmasi user bahwa scan di HP asli sudah terasa cepat**
+- **versionCode 35 / versionName 2.4.1** -- rilis terakhir yang dikirim ke
+  user. User KONFIRMASI v2.4.0 (scan paralel) sudah terasa cepat di HP asli,
+  lalu diminta lanjut fokus optimasi/performance. Audit lanjutan ke jalur
+  yang DIPANGGIL selama scan (bukan scan itu sendiri) menemukan
+  `ActivityLogRepository.add()`/`MoveHistoryRepository.record()` memanggil
+  `dao.trimToMax()` (DELETE+subquery ORDER BY, scan seluruh tabel) di
+  SETIAP insert -- selama scan paralel Semaphore(6), ini jadi ratusan trim
+  beruntun yang berebut write-lock SQLite, menahan sebagian paralelisme
+  v2.4.0. Fix: trim berkala tiap 20 insert (`AtomicInteger` counter
+  per-instance), bukan tiap insert. HANYA `ActivityLogRepository.kt` +
+  `MoveHistoryRepository.kt` yang diubah. Lihat CHANGELOG v2.4.1 untuk
+  detail teknis lengkap.
+  **BELUM ada konfirmasi user bahwa efek trim-berkala ini terasa/terverifikasi**
   (sandbox Claude tidak bisa verifikasi runtime/kompilasi) -- kalau sesi
-  depan user masih komplain scan lambat/berat, cek dulu apakah v2.4.0 sudah
+  depan lanjut optimasi lagi, cek dulu apakah v2.4.1 sudah
   ke-install sebelum audit ulang dari nol.
 - **versionCode 33 / versionName 2.3.9** -- rilis sebelumnya. Padding luar
   layar distandarkan ke 16dp di seluruh app + Onboarding dapat animasi
