@@ -90,6 +90,17 @@ else
 fi
 
 echo ""
+echo "== 9. CI wajib publish APK ke GitHub Release (bukan cuma Actions Artifact) =="
+# [ditambahkan 2026-08-04] Sebelum ini, workflow cuma pakai upload-artifact
+# (login-only, expired 90 hari, tidak muncul di sidebar Releases repo) --
+# lolos dari preflight lama karena tidak ada kategori yang mengecek ini.
+if grep -q "softprops/action-gh-release\|actions/create-release\|gh release " .github/workflows/build.yml 2>/dev/null; then
+  ok "Ada step publish ke GitHub Release"
+else
+  fail "TIDAK ada step publish ke GitHub Release di build.yml -- APK cuma jadi Actions Artifact, melanggar GitHub Release Rule"
+fi
+
+echo ""
 if [ "$FAIL" -eq 0 ]; then
   echo "🟢 SEMUA AMAN -- boleh lanjut package ZIP."
 else

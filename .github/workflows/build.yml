@@ -5,6 +5,9 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -113,6 +116,23 @@ jobs:
         with:
           name: PromptVault-v${{ steps.version.outputs.version }}
           path: out/*.apk
+
+      # [fix 2026-08-04] SEBELUMNYA APK cuma jadi Actions Artifact (butuh
+      # login GitHub + expired 90 hari, tidak terlihat di sidebar Releases
+      # repo). Sesuai aturan proyek, APK signed WAJIB muncul di GitHub
+      # Release supaya bisa diunduh langsung tanpa dibungkus .zip dan tanpa
+      # login. Tag dibuat otomatis dari versionName -- kalau tag sama sudah
+      # ada (re-run versi yang sama), action ini UPDATE release yang sama
+      # (bukan gagal/duplikat).
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: PromptVault v${{ steps.version.outputs.version }}
+          files: out/*.apk
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload build log on failure
         if: failure()

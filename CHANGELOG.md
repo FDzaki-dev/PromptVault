@@ -3,6 +3,34 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.4.2 -- Fix CI: APK sekarang publish ke GitHub Release (bukan cuma Actions Artifact)
+User cek repo, APK signed tidak muncul di sidebar Releases seperti seharusnya
+(sesuai aturan proyek "GitHub Release Rule"). Audit `.github/workflows/build.yml`
+konfirmasi: workflow SELAMA INI cuma pakai `actions/upload-artifact@v4` --
+Actions Artifact biasa (butuh login GitHub, expired 90 hari, tidak muncul di
+Releases repo), TIDAK PERNAH benar-benar publish ke GitHub Release. Ini gap
+yang lolos sejak workflow pertama kali dibuat, tidak ketahuan karena preflight
+lama tidak punya kategori yang mengecek ini.
+
+- **Fix**: tambah `permissions: contents: write` di level workflow (wajib
+  untuk action bisa buat Release), dan step baru `softprops/action-gh-release@v2`
+  setelah step upload-artifact (artifact lama TETAP dipertahankan sebagai
+  fallback, tidak dihapus) -- tag dibuat otomatis `v<versionName>`, APK
+  ter-attach ke Release itu. Kalau tag versi yang sama sudah ada (re-run),
+  action ini UPDATE release yang sama, bukan gagal/duplikat.
+- **Preflight**: ditambah kategori #9 -- cek `build.yml` mengandung step
+  publish Release (`softprops/action-gh-release`/`actions/create-release`/
+  `gh release`), FAIL kalau tidak ada. Supaya gap seperti ini tidak lolos
+  lagi ke rilis berikutnya.
+
+File yang diubah: `.github/workflows/build.yml`, `scripts/preflight_check.sh`
+(2 file, dalam batas Batch Lock). Tidak ada perubahan kode aplikasi.
+
+**Verifikasi runtime TIDAK BISA dilakukan** (sandbox tanpa akses GitHub
+Actions) -- step `softprops/action-gh-release@v2` adalah action pihak
+ketiga yang umum dipakai & terdokumentasi, tapi tetap tunggu konfirmasi user
+setelah CI jalan bahwa Release + APK benar-benar muncul di sidebar repo.
+
 ## v2.4.1 -- Kurangi write-contention SQLite saat scan paralel (lanjutan optimasi v2.4.0)
 User konfirmasi v2.4.0 (scan paralel + IO dispatcher) sudah terasa cepat di
 HP asli, lalu diminta lanjut fokus performa. Audit lanjutan ke jalur yang

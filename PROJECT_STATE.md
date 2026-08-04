@@ -4,22 +4,26 @@
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
 ## Versi/batch terakhir yang selesai
-- **versionCode 35 / versionName 2.4.1** -- rilis terakhir yang dikirim ke
-  user. User KONFIRMASI v2.4.0 (scan paralel) sudah terasa cepat di HP asli,
-  lalu diminta lanjut fokus optimasi/performance. Audit lanjutan ke jalur
-  yang DIPANGGIL selama scan (bukan scan itu sendiri) menemukan
-  `ActivityLogRepository.add()`/`MoveHistoryRepository.record()` memanggil
-  `dao.trimToMax()` (DELETE+subquery ORDER BY, scan seluruh tabel) di
-  SETIAP insert -- selama scan paralel Semaphore(6), ini jadi ratusan trim
-  beruntun yang berebut write-lock SQLite, menahan sebagian paralelisme
-  v2.4.0. Fix: trim berkala tiap 20 insert (`AtomicInteger` counter
-  per-instance), bukan tiap insert. HANYA `ActivityLogRepository.kt` +
-  `MoveHistoryRepository.kt` yang diubah. Lihat CHANGELOG v2.4.1 untuk
-  detail teknis lengkap.
-  **BELUM ada konfirmasi user bahwa efek trim-berkala ini terasa/terverifikasi**
-  (sandbox Claude tidak bisa verifikasi runtime/kompilasi) -- kalau sesi
-  depan lanjut optimasi lagi, cek dulu apakah v2.4.1 sudah
-  ke-install sebelum audit ulang dari nol.
+- **versionCode 36 / versionName 2.4.2** -- rilis terakhir yang dikirim ke
+  user. User cek repo, APK signed tidak muncul di sidebar Releases. Audit
+  `.github/workflows/build.yml` konfirmasi workflow SELAMA INI cuma pakai
+  `actions/upload-artifact@v4` (Actions Artifact biasa), TIDAK PERNAH
+  benar-benar publish ke GitHub Release -- melanggar aturan proyek sendiri
+  ("GitHub Release Rule"), lolos sejak workflow dibuat karena preflight lama
+  tidak punya kategori yang mengecek ini. Fix: tambah `permissions:
+  contents: write` + step `softprops/action-gh-release@v2` (tag otomatis
+  `v<versionName>`, APK ter-attach, update release yang sama kalau tag sudah
+  ada). Preflight ditambah kategori #9 supaya gap ini tidak lolos lagi.
+  HANYA `.github/workflows/build.yml` + `scripts/preflight_check.sh` yang
+  diubah. Lihat CHANGELOG v2.4.2 untuk detail teknis lengkap.
+  **BELUM ada konfirmasi user bahwa APK sudah benar-benar muncul di sidebar
+  Releases setelah CI jalan** (sandbox Claude tidak bisa akses GitHub
+  Actions) -- kalau sesi depan masih komplain APK/Release tidak muncul, cek
+  dulu apakah v2.4.2 sudah ke-push & CI selesai jalan sebelum audit ulang.
+- **versionCode 35 / versionName 2.4.1** -- rilis sebelumnya. Trim berkala
+  tiap 20 insert di ActivityLogRepository & MoveHistoryRepository (bukan
+  tiap insert) -- kurangi write-contention SQLite saat scan paralel. Lihat
+  CHANGELOG v2.4.1.
 - **versionCode 33 / versionName 2.3.9** -- rilis sebelumnya. Padding luar
   layar distandarkan ke 16dp di seluruh app + Onboarding dapat animasi
   Crossfade antar step. Lihat CHANGELOG v2.3.9.
