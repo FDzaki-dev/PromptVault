@@ -3,6 +3,58 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.7.0 -- §1 Roadmap backend Fase 1/2 (HYBRID): SAF folder picker (dormant, belum dipakai FileSorter)
+Keputusan user 2026-08-05: §1 SAF terlalu berisiko untuk full-replace (tidak
+bisa di-compile-test di sandbox, nyentuh hampir semua fungsi inti). Approach
+yang dipilih: **HYBRID** -- SAF cuma opsi TAMBAHAN, MANAGE_EXTERNAL_STORAGE
+tetap jadi mekanisme default/fallback. Dipecah jadi 2 fase supaya risiko
+kecil per batch (bukan satu rombakan raksasa):
+
+- **Fase 1 (batch ini, v2.7.0)**: infrastruktur SAF picker + penyimpanan URI
+  saja. TIDAK ADA perubahan ke `FileSorter.kt` sama sekali -- scan/move/undo
+  TETAP 100% java.io.File seperti sekarang, untuk SEMUA user (termasuk yang
+  memilih folder SAF). URI yang dipilih baru DISIMPAN, belum DIPAKAI.
+- **Fase 2 (batch berikutnya, terpisah)**: `FileSorter` baca URI tersimpan --
+  kalau ada & masih valid, pakai `DocumentFile` untuk scan/move/undo di folder
+  itu; kalau tidak ada/tidak valid lagi, fallback ke Downloads/java.io.File
+  seperti sekarang. Ini bagian paling berisiko, sengaja dipisah supaya Fase 1
+  bisa dikonfirmasi jalan dulu (picker muncul, izin persist, URI tersimpan)
+  sebelum logic scan/move/undo yang jauh lebih kompleks disentuh.
+
+**Kenapa dipecah begini**: kalau Fase 1+2 digabung sekaligus dan ada bug di
+manapun, tidak jelas apakah masalahnya di UI picker atau di logic scan --
+menyulitkan debug tanpa akses Gradle/device. Dengan Fase 1 terisolasi (tidak
+menyentuh FileSorter), risiko regresi ke fitur sortir yang sudah stabil = 0.
+
+**Perubahan**:
+- `SettingsRepository.kt`: field baru `safTreeUriFlow`/`getSafTreeUri()`/
+  `setSafTreeUri()` (DataStore, nullable String, simpan `Uri.toString()`).
+- `MainViewModel.kt`: expose `safTreeUri: StateFlow<String?>` +
+  `setSafTreeUri()`/`clearSafTreeUri()`.
+- `MainActivity.kt` (Protected File, edit parsial): launcher baru
+  `ActivityResultContracts.OpenDocumentTree()` -- panggil
+  `contentResolver.takePersistableUriPermission()` SEBELUM simpan URI (wajib,
+  kalau tidak izin hilang begitu proses app mati). `PromptVaultRoot` dapat 1
+  parameter baru `onPickSafFolder`.
+- `SettingsScreen.kt`: section baru "Folder Kustom (Opsional)" -- tampilkan
+  folder terpilih (decode nama dari URI) atau "Belum ada folder kustom
+  dipilih (pakai Downloads)", tombol Pilih/Ganti Folder & Hapus.
+
+File yang diubah: `SettingsRepository.kt`, `MainViewModel.kt`,
+`MainActivity.kt` (parsial), `SettingsScreen.kt`. 4 file, dalam Batch Lock.
+Tidak ada perubahan ke `AndroidManifest.xml` -- `OpenDocumentTree()` adalah
+system picker, tidak butuh permission tambahan di manifest.
+
+**Verifikasi runtime TIDAK BISA dilakukan** (sandbox tanpa Android
+SDK/device). Preflight statis lolos 10/10. **Yang PALING PENTING
+dikonfirmasi di HP asli sebelum lanjut Fase 2**: (1) tombol "Pilih Folder"
+di Pengaturan memunculkan picker sistem, (2) setelah pilih folder & buka
+app lagi (restart proses), nama folder masih muncul di layar Pengaturan
+(bukti persisted permission benar-benar tersimpan lintas proses), (3) tombol
+"Hapus, Kembali ke Downloads" mengosongkan lagi. Kalau salah satu gagal,
+JANGAN lanjut ke Fase 2 sebelum ini beres -- Fase 2 bergantung total ke
+fondasi ini benar.
+
 ## v2.6.0 -- §5 Roadmap backend selesai: Coroutine lifecycle & Foreground Service
 Lanjutan dari v2.5.0 (§2 selesai). Urutan roadmap: §2 -> §5 -> §1 (§6 tetap
 diskip, butuh akses Gradle nyata).

@@ -72,6 +72,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             state.asStateFlow()
         }
 
+    /** Batch §1 Fase 1/2 (hybrid SAF, opsional) -- null berarti masih pakai Downloads/java.io.File biasa. */
+    val safTreeUri: StateFlow<String?> = settingsRepository.safTreeUriFlow
+        .let { flow ->
+            val state = MutableStateFlow<String?>(null)
+            viewModelScope.launch { flow.collect { state.value = it } }
+            state.asStateFlow()
+        }
+
     private val _isScanning = MutableStateFlow(false)
     val isScanning: StateFlow<Boolean> = _isScanning.asStateFlow()
 
@@ -154,6 +162,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setThemeMode(mode: ThemeMode) {
         viewModelScope.launch { settingsRepository.setThemeMode(mode) }
+    }
+
+    /** Dipanggil MainActivity SETELAH takePersistableUriPermission() sukses -- URI mentah, sudah persistable. */
+    fun setSafTreeUri(uriString: String) {
+        viewModelScope.launch { settingsRepository.setSafTreeUri(uriString) }
+    }
+
+    /**
+     * Lepas SAF & kembali ke Downloads/java.io.File. Pelepasan persisted permission
+     * dilakukan di pemanggil (MainActivity, yang punya akses `contentResolver`) --
+     * fungsi ini hanya membersihkan state tersimpan.
+     */
+    fun clearSafTreeUri() {
+        viewModelScope.launch { settingsRepository.setSafTreeUri(null) }
     }
 
     fun undoMove(entry: MoveHistoryEntry) {

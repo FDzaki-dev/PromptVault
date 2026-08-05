@@ -100,6 +100,34 @@ class MainActivity : ComponentActivity() {
         ActivityResultContracts.RequestMultiplePermissions()
     ) { _ -> legacyPermissionRecheckTrigger++ }
 
+    /**
+     * Batch §1 Fase 1/2 (hybrid SAF, opsional, keputusan user 2026-08-05).
+     * `OpenDocumentTree()` menampilkan picker folder bawaan sistem. Hasil
+     * `uri` bisa null (user batal). Kalau tidak null, WAJIB
+     * `takePersistableUriPermission()` di sini SEBELUM disimpan -- tanpa itu
+     * izin akses ke tree tsb hilang begitu proses app mati (izin dari
+     * OpenDocumentTree defaultnya cuma hidup selama "sesi" intent result,
+     * bukan permanen).
+     */
+    private val safTreePickerLauncher = registerForActivityResult(
+        ActivityResultContracts.OpenDocumentTree()
+    ) { uri ->
+        if (uri != null) {
+            try {
+                contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                )
+                viewModel.setSafTreeUri(uri.toString())
+            } catch (e: SecurityException) {
+                // Best-effort: kalau gagal ambil persisted permission (jarang,
+                // biasanya storage rusak/OEM aneh), JANGAN simpan URI yang
+                // izinnya tidak akan bertahan -- biarkan user tetap di mode
+                // Downloads/java.io.File biasa (fallback aman, bukan crash).
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         // Splash brand-in (Pine) sebelum konten Compose siap -- kesan pertama
         // yang konsisten, bukan layar putih kosong khas app "belum jadi".
@@ -137,7 +165,8 @@ class MainActivity : ComponentActivity() {
                                     Manifest.permission.WRITE_EXTERNAL_STORAGE
                                 )
                             )
-                        }
+                        },
+                        onPickSafFolder = { safTreePickerLauncher.launch(null) }
                     )
                 }
             }
@@ -149,7 +178,8 @@ class MainActivity : ComponentActivity() {
 private fun PromptVaultRoot(
     viewModel: MainViewModel,
     legacyPermissionRecheckTrigger: Int,
-    onRequestLegacyStoragePermission: () -> Unit
+    onRequestLegacyStoragePermission: () -> Unit,
+    onPickSafFolder: () -> Unit
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val navController = rememberNavController()
@@ -306,6 +336,7 @@ private fun PromptVaultRoot(
             val interval by viewModel.intervalMinutes.collectAsStateWithLifecycle()
             val conflictStrategy by viewModel.conflictStrategy.collectAsStateWithLifecycle()
             val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
+            val safTreeUri by viewModel.safTreeUri.collectAsStateWithLifecycle()
             SettingsScreen(
                 currentIntervalMinutes = interval,
                 onIntervalSelected = { viewModel.setIntervalMinutes(it) },
@@ -313,6 +344,9 @@ private fun PromptVaultRoot(
                 onConflictStrategySelected = { viewModel.setConflictStrategy(it) },
                 currentThemeMode = themeMode,
                 onThemeModeSelected = { viewModel.setThemeMode(it) },
+                currentSafTreeUri = safTreeUri,
+                onPickSafFolder = { onPickSafFolder() },
+                onClearSafFolder = { viewModel.clearSafTreeUri() },
                 onExportRequested = { viewModel.exportRulesJson() },
                 onImportRequested = { text, cb -> viewModel.importRulesJson(text, cb) },
                 onBack = { navController.popBackStack() }

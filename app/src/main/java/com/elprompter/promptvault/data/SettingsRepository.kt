@@ -29,6 +29,7 @@ class SettingsRepository(private val context: Context) {
     private val intervalKey = intPreferencesKey("auto_scan_interval_minutes")
     private val conflictKey = stringPreferencesKey("conflict_strategy")
     private val themeModeKey = stringPreferencesKey("theme_mode")
+    private val safTreeUriKey = stringPreferencesKey("saf_tree_uri")
 
     companion object {
         const val DEFAULT_INTERVAL_MINUTES = 15
@@ -64,5 +65,27 @@ class SettingsRepository(private val context: Context) {
 
     suspend fun setThemeMode(mode: ThemeMode) {
         context.promptVaultDataStore.edit { prefs -> prefs[themeModeKey] = mode.name }
+    }
+
+    /**
+     * Batch §1 (roadmap backend "SAF/Scoped Storage abstraction") -- Fase 1/2,
+     * HYBRID sesuai keputusan user 2026-08-05: SAF cuma OPSIONAL, bukan
+     * pengganti MANAGE_EXTERNAL_STORAGE. Kalau null (default), FileSorter
+     * TETAP pakai folder Downloads via java.io.File seperti sekarang -- tidak
+     * ada perubahan perilaku untuk user yang tidak menyentuh fitur ini.
+     * Menyimpan `Uri.toString()` dari tree yang dipilih lewat SAF picker
+     * (`ActivityResultContracts.OpenDocumentTree()` di MainActivity), SETELAH
+     * `takePersistableUriPermission()` sukses.
+     */
+    val safTreeUriFlow: Flow<String?> = context.promptVaultDataStore.data.map { prefs ->
+        prefs[safTreeUriKey]
+    }
+
+    suspend fun getSafTreeUri(): String? = safTreeUriFlow.first()
+
+    suspend fun setSafTreeUri(uriString: String?) {
+        context.promptVaultDataStore.edit { prefs ->
+            if (uriString == null) prefs.remove(safTreeUriKey) else prefs[safTreeUriKey] = uriString
+        }
     }
 }

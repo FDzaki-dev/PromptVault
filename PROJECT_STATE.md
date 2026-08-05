@@ -37,6 +37,20 @@
      tanya user dulu, jangan asumsikan perlu audit ulang.
 
 ## Versi/batch terakhir yang selesai
+- **versionCode 41 / versionName 2.7.0 -- §1 roadmap backend Fase 1/2
+  (SAF folder picker, HYBRID, dormant), 2026-08-05:** Sesuai keputusan user
+  (hybrid, bukan full-replace): infrastruktur SAF picker + penyimpanan URI
+  ditambah (`SettingsRepository`, `MainViewModel`, `MainActivity`,
+  `SettingsScreen`), TAPI `FileSorter.kt` BELUM disentuh sama sekali --
+  scan/move/undo tetap 100% java.io.File untuk semua user, URI SAF baru
+  tersimpan belum dipakai. Fase 2 (FileSorter baca URI & pakai DocumentFile,
+  dengan fallback) sengaja DIPISAH ke batch berikutnya supaya risiko kecil
+  per langkah. Detail lengkap di CHANGELOG v2.7.0. **BELUM ada konfirmasi
+  runtime -- WAJIB dikonfirmasi (picker muncul, URI persist lintas restart
+  app, tombol hapus jalan) SEBELUM lanjut ke Fase 2.** Urutan roadmap
+  sekarang: §2 selesai -> §5 selesai -> §1 Fase 1 selesai -> **§1 Fase 2
+  (berikutnya)**, lalu masuk prioritas audit eksternal (unit/UI test,
+  optimasi search/indexing, dst).
 - **versionCode 40 / versionName 2.6.0 -- §5 roadmap backend selesai
   (Coroutine lifecycle & Foreground Service), 2026-08-05:**
   **[COMPILE-FIX 2026-08-05]** CI gagal `processDebugMainManifest`:
@@ -50,14 +64,7 @@
   cancellation otomatis lewat structured concurrency. File baru
   `AutoSortNotification.kt` + edit `AutoSortWorker.kt`, `PromptVaultApp.kt`,
   `AndroidManifest.xml` (parsial), `strings.xml`. Detail lengkap di
-  CHANGELOG v2.6.0. **User putuskan setelah audit eksternal (skor 9.2/10,
-  2026-08-05): tuntaskan §5 lalu §1 dulu, baru masuk ke prioritas dari
-  audit itu (unit/UI test, optimasi search/indexing, dst).** Urutan roadmap
-  sekarang: §2 selesai -> §5 selesai -> **§1 (berikutnya)**. **Belum ada
-  konfirmasi runtime dari user** -- terutama notifikasi foreground service
-  benar-benar muncul saat auto-sort jalan sendiri di background (bukan scan
-  manual), dan tidak ada crash terkait restriksi background service Android
-  12+.
+  CHANGELOG v2.6.0.
 - **versionCode 39 / versionName 2.5.0 -- COMPILE-FIX 2026-08-04:** user
   upload log CI build gagal (`compileDebugKotlin` FAILED,
   `FileSorter.kt:272:39`: "Suspend function 'add' should be called only
@@ -212,12 +219,16 @@
     (`MediaScannerConnection.scanFile()` tiap move/undo + query cleanup
     ghost entry sekali per scan). BELUM diverifikasi runtime -- lihat
     CHANGELOG v2.5.0 untuk detail & yang perlu dikonfirmasi user.
-  - §1 SAF/Scoped Storage abstraction -- **BELUM, ANTRE, BERIKUTNYA**
-    (2026-08-04: user minta tuntaskan, TAPI ini yang PALING BESAR & PALING
-    BERISIKO -- rombak total `FileSorter.kt` dari `java.io.File` ke
-    `DocumentFile`, nyentuh hampir semua fungsi inti scan/move/undo.
-    Sengaja dikerjakan PALING TERAKHIR dari 4 item, satu batch besar
-    tersendiri, bukan digabung dengan item lain.)
+  - §1 SAF/Scoped Storage abstraction -- **SEBAGIAN: Fase 1/2 SELESAI**
+    (v2.7.0, 2026-08-05, HYBRID sesuai keputusan user -- BUKAN full-replace).
+    Fase 1 = picker SAF + penyimpanan URI saja, `FileSorter.kt` BELUM
+    disentuh (masih 100% java.io.File untuk semua user). **Fase 2 (BELUM,
+    ANTRE, BERIKUTNYA)** = `FileSorter` baca URI tersimpan, pakai
+    `DocumentFile` untuk scan/move/undo kalau ada, fallback ke
+    Downloads/java.io.File kalau tidak ada/tidak valid. Fase 2 BARU boleh
+    dikerjakan SETELAH Fase 1 dikonfirmasi jalan di HP asli (lihat entri
+    versi v2.7.0 di atas) -- jangan asumsikan Fase 1 pasti benar tanpa
+    konfirmasi runtime.
   - §5 Coroutine lifecycle & Foreground Service -- **SELESAI** (v2.6.0,
     2026-08-05). Audit lifecycle: tidak ada bug (structured concurrency
     sudah cukup). Fix nyata: `AutoSortWorker` promosi ke foreground service
@@ -273,11 +284,12 @@ worker/          -- AutoSortWorker (WorkManager), BootCompletedReceiver,
    Data lama di DataStore TIDAK dimigrasikan ke Room (disepakati: tidak
    kritis, tidak urgent) -- kalau ada user lama upgrade dari <v2.2.0, log &
    riwayat undo mereka reset sekali.
-2. **FileSorter masih `java.io.File`**, bukan SAF/`DocumentFile`. Ini
-   keputusan SADAR menunda §1 (bukan lupa) -- app pakai
-   `MANAGE_EXTERNAL_STORAGE` yang sudah cukup untuk kasus penggunaan saat
-   ini (folder Downloads, akses penuh). Jangan refactor ke SAF tanpa trigger
-   yang disebut di atas.
+2. **FileSorter masih `java.io.File`**, bukan SAF/`DocumentFile` -- MASIH
+   BERLAKU per v2.7.0. §1 dikerjakan HYBRID: SAF picker + penyimpanan URI
+   sudah ada (v2.7.0), tapi `FileSorter` BELUM dirombak (itu Fase 2, lihat
+   roadmap §1 di atas). `MANAGE_EXTERNAL_STORAGE` tetap mekanisme DEFAULT
+   untuk semua user sampai Fase 2 selesai & dikonfirmasi. Jangan asumsikan
+   SAF sudah aktif dipakai cuma karena UI picker-nya sudah ada.
 3. **Sistem warna 4-aksen**: Material3 `primary`(hijau/Pine) `tertiary`(amber)
    `error`(merah/Rust) + aksen kustom ke-4 `VaultTheme.extraColors.slate`
    (biru batu, di luar 4 role Material3 baku, disimpan lewat
