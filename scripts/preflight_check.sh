@@ -101,6 +101,19 @@ else
 fi
 
 echo ""
+echo "== 10. Well-formedness XML (semua res/*.xml + AndroidManifest.xml) =="
+# [ditambahkan 2026-08-05, insiden v2.6.0] sebelumnya tidak ada kategori yang
+# validasi XML well-formed -- lolos preflight lama, baru ketahuan pas CI gagal
+# gara-gara "--" di dalam komentar <!-- -->.
+XML_ISSUE=0
+for f in $(find app/src/main -name "*.xml"); do
+  if ! python3 -c "import xml.dom.minidom as m; m.parse('$f')" 2>/tmp/xmlerr; then
+    fail "XML tidak valid: $f -- $(cat /tmp/xmlerr | tail -1)"; XML_ISSUE=1
+  fi
+done
+[ "$XML_ISSUE" -eq 0 ] && ok "Semua XML well-formed"
+
+echo ""
 if [ "$FAIL" -eq 0 ]; then
   echo "🟢 SEMUA AMAN -- boleh lanjut package ZIP."
 else

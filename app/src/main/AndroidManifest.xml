@@ -11,7 +11,7 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <!-- Batch §5: wajib sejak targetSdk 34 (Android 14) untuk setForeground()
-         bertipe dataSync di AutoSortWorker -- lihat AutoSortNotification.kt -->
+         bertipe dataSync di AutoSortWorker, lihat AutoSortNotification.kt -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
@@ -51,7 +51,7 @@
         <!-- Batch §5: WorkManager sudah mendeklarasikan service ini lewat manifest
              merge library-nya sendiri, tapi di-override eksplisit di sini supaya
              foregroundServiceType="dataSync" PASTI ter-set (bukan bergantung ke
-             default library yang bisa berubah antar versi) -- pola resmi yang
+             default library yang bisa berubah antar versi), pola resmi yang
              didokumentasikan Android untuk WorkManager + foreground service type. -->
         <service
             android:name="androidx.work.impl.foreground.SystemForegroundService"

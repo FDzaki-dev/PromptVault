@@ -61,6 +61,20 @@ dibuka user sebelumnya) -- ini skenario paling beresiko untuk restriksi
 Android 12+, walau secara teori dokumentasi resmi Android WorkManager +
 `setForeground()` termasuk jalur yang diizinkan.
 
+**[COMPILE-FIX 2026-08-05]** CI build v2.6.0 gagal: `processDebugMainManifest`
+error `SAXParseException` -- `The string "--" is not permitted within
+comments` di `AndroidManifest.xml` baris 14. Sebab: 2 komentar penjelasan
+yang ditambahkan di batch §5 (izin `FOREGROUND_SERVICE_DATA_SYNC` & override
+`<service>`) memakai `--` sebagai pemisah kalimat di dalam teks komentar --
+valid di komentar Kotlin (`//`) tapi XML MELARANG KERAS substring `--` di
+badan komentar `<!-- -->` (aturan spec XML 1.0, bukan quirk Android). Fix:
+ganti `--` di kedua komentar itu jadi koma biasa, tidak ada perubahan logika
+apapun. Preflight statis sebelumnya LOLOS karena kategori #8 cuma cek
+validitas YAML workflow, bukan well-formedness XML manifest -- gap ini
+dicatat untuk preflight_check.sh ke depan (lihat PROJECT_STATE.md).
+`versionCode`/`versionName` TIDAK dibumping (build sebelumnya tidak pernah
+sukses jadi APK, sama seperti pola compile-fix v2.5.0).
+
 ## v2.5.0 -- §2 Roadmap backend selesai: MediaStore ghost-file cleanup
 User eksplisit minta tuntaskan SEMUA item roadmap backend yang sebelumnya
 sengaja DIJEDA (§1 SAF, §2 MediaStore, §5 Foreground Service, §6 CI

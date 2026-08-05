@@ -38,8 +38,12 @@
 
 ## Versi/batch terakhir yang selesai
 - **versionCode 40 / versionName 2.6.0 -- §5 roadmap backend selesai
-  (Coroutine lifecycle & Foreground Service), 2026-08-05:** `AutoSortWorker`
-  sekarang `setForeground()` (notifikasi ongoing low-priority) sebelum scan
+  (Coroutine lifecycle & Foreground Service), 2026-08-05:**
+  **[COMPILE-FIX 2026-08-05]** CI gagal `processDebugMainManifest`:
+  `AndroidManifest.xml` punya `--` di dalam 2 komentar (XML melarang keras
+  substring itu di badan `<!-- -->`, beda dari komentar Kotlin `//`). Fix:
+  ganti `--` jadi koma di kedua komentar, tidak ada perubahan logika. Detail
+  di CHANGELOG v2.6.0. `AutoSortWorker` sekarang `setForeground()` (notifikasi ongoing low-priority) sebelum scan
   mulai, supaya OS tidak gampang menjeda/membunuh worker saat scan panjang
   di background. Audit coroutine lifecycle: TIDAK ada bug, `withContext(IO)`
   + `async`/`awaitAll()` yang sudah ada dari v2.4.0 sudah cooperative
@@ -312,6 +316,13 @@ worker/          -- AutoSortWorker (WorkManager), BootCompletedReceiver,
      ikut terpindah setengah jadi/korup, tidak aman dihapus begitu saja.
 
 ## Riwayat insiden kronologis (JANGAN DIHAPUS, tambah entri baru di ATAS)
+
+### [2026-08-05] v2.6.0 GAGAL BUILD di CI -- "--" di dalam komentar XML AndroidManifest.xml
+- **Gejala**: user upload `build-failure-log-v2_6_0.zip`. `:app:processDebugMainManifest FAILED` -- `SAXParseException: The string "--" is not permitted within comments`, baris 14 `AndroidManifest.xml`.
+- **Root cause (kesalahan Claude)**: 2 komentar penjelasan batch §5 memakai `--` sebagai pemisah kalimat (kebiasaan dari komentar Kotlin `//`), tapi spec XML 1.0 MELARANG substring `--` di badan komentar `<!-- -->` mana pun, bukan cuma di Android. `preflight_check.sh` tidak menangkap ini karena kategori #8 cuma validasi YAML CI, tidak ada cek well-formedness XML manifest/resource.
+- **Fix**: ganti `--` jadi koma di kedua komentar, tidak ada perubahan logika. Lihat CHANGELOG v2.6.0.
+- **Pelajaran untuk sesi Claude berikutnya**: JANGAN pakai `--` di dalam komentar `<!-- -->` XML apapun (manifest, layout, semua res/*.xml) -- pakai koma atau titik. Idealnya `preflight_check.sh` ditambah kategori validasi XML well-formed (`xml.dom.minidom.parse` per file `.xml`) sebelum ZIP dikirim -- belum ditambahkan ke script, catat sebagai item untuk sesi berikutnya kalau relevan.
+- **Status**: fix sudah dikirim (v2.6.0 revisi), belum ada konfirmasi CI hijau dari user.
 
 ### [2026-08-04] Bug packaging Claude: ZIP kehilangan .github/workflows/ dan .gitignore
 - **Gejala**: user push ZIP v2.4.1, repo GitHub jadi kehilangan folder
