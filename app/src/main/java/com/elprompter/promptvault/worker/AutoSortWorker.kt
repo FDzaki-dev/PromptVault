@@ -14,6 +14,17 @@ class AutoSortWorker(appContext: Context, params: WorkerParameters) : CoroutineW
 
     override suspend fun doWork(): Result {
         return try {
+            // Batch §5: promosikan ke foreground service SEBELUM scan mulai, supaya
+            // OS tidak menjeda/membunuh worker di tengah scan panjang (lihat
+            // AutoSortNotification.kt untuk alasan lengkap). Best-effort: kalau
+            // sistem menolak (skenario tak terduga di sebagian OEM), auto-sort
+            // TETAP lanjut jalan sebagai background worker biasa -- jangan sampai
+            // kegagalan promosi foreground menggagalkan seluruh proses sortir.
+            try {
+                setForeground(AutoSortNotification.foregroundInfo(applicationContext))
+            } catch (e: Exception) {
+                // sengaja ditelan -- lihat komentar di atas
+            }
             val sorter = FileSorter(
                 context = applicationContext,
                 ruleRepository = RuleRepository(applicationContext),

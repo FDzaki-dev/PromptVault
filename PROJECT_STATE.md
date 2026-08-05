@@ -37,6 +37,23 @@
      tanya user dulu, jangan asumsikan perlu audit ulang.
 
 ## Versi/batch terakhir yang selesai
+- **versionCode 40 / versionName 2.6.0 -- §5 roadmap backend selesai
+  (Coroutine lifecycle & Foreground Service), 2026-08-05:** `AutoSortWorker`
+  sekarang `setForeground()` (notifikasi ongoing low-priority) sebelum scan
+  mulai, supaya OS tidak gampang menjeda/membunuh worker saat scan panjang
+  di background. Audit coroutine lifecycle: TIDAK ada bug, `withContext(IO)`
+  + `async`/`awaitAll()` yang sudah ada dari v2.4.0 sudah cooperative
+  cancellation otomatis lewat structured concurrency. File baru
+  `AutoSortNotification.kt` + edit `AutoSortWorker.kt`, `PromptVaultApp.kt`,
+  `AndroidManifest.xml` (parsial), `strings.xml`. Detail lengkap di
+  CHANGELOG v2.6.0. **User putuskan setelah audit eksternal (skor 9.2/10,
+  2026-08-05): tuntaskan §5 lalu §1 dulu, baru masuk ke prioritas dari
+  audit itu (unit/UI test, optimasi search/indexing, dst).** Urutan roadmap
+  sekarang: §2 selesai -> §5 selesai -> **§1 (berikutnya)**. **Belum ada
+  konfirmasi runtime dari user** -- terutama notifikasi foreground service
+  benar-benar muncul saat auto-sort jalan sendiri di background (bukan scan
+  manual), dan tidak ada crash terkait restriksi background service Android
+  12+.
 - **versionCode 39 / versionName 2.5.0 -- COMPILE-FIX 2026-08-04:** user
   upload log CI build gagal (`compileDebugKotlin` FAILED,
   `FileSorter.kt:272:39`: "Suspend function 'add' should be called only
@@ -191,15 +208,17 @@
     (`MediaScannerConnection.scanFile()` tiap move/undo + query cleanup
     ghost entry sekali per scan). BELUM diverifikasi runtime -- lihat
     CHANGELOG v2.5.0 untuk detail & yang perlu dikonfirmasi user.
-  - §1 SAF/Scoped Storage abstraction -- **BELUM, ANTRE** (2026-08-04: user
-    minta tuntaskan, TAPI ini yang PALING BESAR & PALING BERISIKO -- rombak
-    total `FileSorter.kt` dari `java.io.File` ke `DocumentFile`, nyentuh
-    hampir semua fungsi inti scan/move/undo. Sengaja dikerjakan PALING
-    TERAKHIR dari 4 item, satu batch besar tersendiri, bukan digabung
-    dengan item lain.)
-  - §5 Coroutine lifecycle & Foreground Service -- **BELUM, ANTRE** (2026-08-04:
-    user minta tuntaskan, urutan setelah §2. Ubah `AutoSortWorker`/
-    `WorkScheduler`, modul `worker/`.)
+  - §1 SAF/Scoped Storage abstraction -- **BELUM, ANTRE, BERIKUTNYA**
+    (2026-08-04: user minta tuntaskan, TAPI ini yang PALING BESAR & PALING
+    BERISIKO -- rombak total `FileSorter.kt` dari `java.io.File` ke
+    `DocumentFile`, nyentuh hampir semua fungsi inti scan/move/undo.
+    Sengaja dikerjakan PALING TERAKHIR dari 4 item, satu batch besar
+    tersendiri, bukan digabung dengan item lain.)
+  - §5 Coroutine lifecycle & Foreground Service -- **SELESAI** (v2.6.0,
+    2026-08-05). Audit lifecycle: tidak ada bug (structured concurrency
+    sudah cukup). Fix nyata: `AutoSortWorker` promosi ke foreground service
+    lewat `setForeground()`. Lihat CHANGELOG v2.6.0. BELUM diverifikasi
+    runtime.
   - §6 CI/CD preflight+dependency lock lanjutan -- **BELUM, TERHAMBAT
     STRUKTURAL** (2026-08-04: Gradle dependency locking butuh `./gradlew
     --write-locks` yang JALAN, sandbox Claude tidak punya Android SDK/Gradle/
@@ -212,8 +231,12 @@
     trigger). Dieksekusi BERTAHAP satu atomic batch per sesi/pesan (bukan
     sekaligus -- 4 item beda area arsitektur, digabung sekaligus melanggar
     Batch Lock "maks 1 modul per batch" versi user sendiri). Urutan
-    dieksekusi: §2 (selesai) -> §5 -> §1. §6 diskip sampai ada akses Gradle
-    nyata atau instruksi scope lebih spesifik.
+    dieksekusi: §2 (selesai) -> §5 (selesai) -> §1 (berikutnya). §6 diskip
+    sampai ada akses Gradle nyata atau instruksi scope lebih spesifik.
+  - **Keputusan 2026-08-05**: audit eksternal masuk (skor 9.2/10, fokus
+    testing/performa/backup-recovery). User putuskan: tuntaskan §5 lalu §1
+    dulu (roadmap lama), BARU habis itu masuk ke prioritas dari audit
+    eksternal tsb.
   - ~~Keputusan 2026-08-01 (SUDAH DIGANTI di atas): jangan lanjutkan tanpa
     trigger gejala nyata.~~
 - Redesign visual besar (v2.3.0) sudah dikirim & di-fix regresinya (v2.3.1).

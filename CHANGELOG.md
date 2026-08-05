@@ -3,6 +3,64 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.6.0 -- §5 Roadmap backend selesai: Coroutine lifecycle & Foreground Service
+Lanjutan dari v2.5.0 (§2 selesai). Urutan roadmap: §2 -> §5 -> §1 (§6 tetap
+diskip, butuh akses Gradle nyata).
+
+**Masalah**: `AutoSortWorker` (CoroutineWorker periodic via WorkManager) jalan
+murni sebagai background worker biasa. Di Android 12+ ada batasan eksekusi
+background yang lebih agresif -- worker yang jalan lama (scan ratusan file,
+tiap kandidat ada stability-check 1 detik, lihat v2.4.0) beresiko
+dijeda/dibunuh OS di device yang agresif membatasi baterai (device utama
+user, Infinix custom ROM XOS, termasuk kategori ini), tanpa notifikasi
+apapun ke user kenapa auto-sort kadang tidak tuntas.
+
+**Audit coroutine lifecycle**: `scanAndSortLocked()` sudah `withContext
+(Dispatchers.IO)` + `async`/`awaitAll()` (v2.4.0) -- ini sudah cooperative
+cancellation gratis lewat structured concurrency kotlinx.coroutines: kalau
+WorkManager memanggil `onStopped()` (constraints tidak lagi terpenuhi / OS
+minta stop), `CoroutineWorker` otomatis cancel coroutine `doWork()`, dan
+seluruh child coroutine di `scanAndSortLocked()` ikut ter-cancel otomatis di
+titik suspensinya masing-masing (delay stability-check, I/O). **Tidak ada
+bug ditemukan di sektor ini** -- tidak perlu perubahan kode untuk bagian
+lifecycle-nya, murni foreground service yang jadi gap nyata.
+
+**Fix (foreground service)**:
+- File baru `worker/AutoSortNotification.kt`: notification channel
+  (`IMPORTANCE_LOW`, tanpa suara, `setShowBadge(false)`) + builder
+  `ForegroundInfo` (pakai `FOREGROUND_SERVICE_TYPE_DATA_SYNC` di API 29+,
+  constructor 2-argumen tanpa type di API < 29).
+- `AutoSortWorker.doWork()`: panggil `setForeground(...)` SEBELUM
+  `sorter.scanAndSort()`. Dibungkus try-catch best-effort -- kalau OS
+  menolak promosi foreground (skenario tak terduga), auto-sort TETAP lanjut
+  sebagai background worker biasa, tidak menggagalkan seluruh proses.
+- `PromptVaultApp.onCreate()`: panggil `AutoSortNotification.ensureChannel()`
+  sekali di awal proses (idempoten) supaya channel sudah ada sebelum worker
+  pertama kali butuh `setForeground()`.
+- `AndroidManifest.xml` (Protected File, edit parsial): tambah permission
+  `FOREGROUND_SERVICE_DATA_SYNC` (wajib sejak targetSdk 34 untuk service
+  type dataSync), dan override eksplisit
+  `<service android:name="androidx.work.impl.foreground.SystemForegroundService"
+  android:foregroundServiceType="dataSync" tools:node="merge" />` supaya
+  type-nya PASTI ter-set, bukan bergantung default manifest merge WorkManager.
+- `strings.xml`: 4 string baru (nama+deskripsi channel, judul+teks
+  notifikasi).
+
+File yang diubah: `AutoSortWorker.kt`, `PromptVaultApp.kt`,
+`AndroidManifest.xml`, `strings.xml` (edit parsial) + 1 file baru
+(`AutoSortNotification.kt`). 5 file, dalam Batch Lock (1 modul: `worker/`
++ pendukungnya).
+
+**Verifikasi runtime TIDAK BISA dilakukan** (sandbox tanpa Android
+SDK/device). Preflight statis lolos 9/9. Yang PALING PENTING dikonfirmasi
+di HP asli: (1) notifikasi "Auto-sort berjalan" benar-benar muncul saat
+scan otomatis jalan (bukan cuma manual "Scan Sekarang" yang tidak lewat
+worker ini), (2) tidak ada crash/`ForegroundServiceStartNotAllowedException`
+di Logcat/crash log app saat worker jalan di background murni (app tidak
+dibuka user sebelumnya) -- ini skenario paling beresiko untuk restriksi
+Android 12+, walau secara teori dokumentasi resmi Android WorkManager +
+`setForeground()` termasuk jalur yang diizinkan.
+
 ## v2.5.0 -- §2 Roadmap backend selesai: MediaStore ghost-file cleanup
 User eksplisit minta tuntaskan SEMUA item roadmap backend yang sebelumnya
 sengaja DIJEDA (§1 SAF, §2 MediaStore, §5 Foreground Service, §6 CI

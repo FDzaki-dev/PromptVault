@@ -1,3 +1,9 @@
 <resources>
     <string name="app_name">PromptVault</string>
+
+    <!-- Batch §5: notification channel + teks foreground service auto-sort -->
+    <string name="auto_sort_channel_name">Auto-Sort</string>
+    <string name="auto_sort_channel_desc">Status pemindaian otomatis file di folder Downloads</string>
+    <string name="auto_sort_notif_title">Auto-sort berjalan</string>
+    <string name="auto_sort_notif_text">PromptVault sedang menyortir file di Downloads</string>
 </resources>

@@ -51,6 +51,7 @@ app/src/main/java/com/elprompter/promptvault/ui/theme/Type.kt
 app/src/main/java/com/elprompter/promptvault/util/FileSorter.kt
 app/src/main/java/com/elprompter/promptvault/util/GlobMatcher.kt
 app/src/main/java/com/elprompter/promptvault/util/RuleOverlapChecker.kt
+app/src/main/java/com/elprompter/promptvault/worker/AutoSortNotification.kt
 app/src/main/java/com/elprompter/promptvault/worker/AutoSortWorker.kt
 app/src/main/java/com/elprompter/promptvault/worker/BootCompletedReceiver.kt
 app/src/main/java/com/elprompter/promptvault/worker/WorkScheduler.kt
