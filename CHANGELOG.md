@@ -3,6 +3,17 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## Fix runtime: SAF gagal baca folder custom (2026-08-06)
+Verifikasi runtime pertama §1 Fase 2 GAGAL: folder custom dipilih, file
+ditaruh, scan tetap bilang "tidak ada file cocok" tanpa error. Root cause:
+`resolveSafRoot()` pakai `doc.exists()`/`doc.canRead()` sbg gerbang --
+keduanya false-negative dikenal luas di banyak `DocumentProvider` (SD card
+dll). Gerbang gagal -> `return null` diam-diam -> fallback ke Downloads,
+scan folder yang salah tanpa jejak. Fix: gerbang jadi `doc.isDirectory` +
+`doc.listFiles()` sbg probe akses nyata di try-catch, dan tambah log ERROR
+eksplisit di ActivityLog untuk kedua jalur gagal (sebelumnya 100% silent).
+versionCode/versionName tetap 42/2.8.0. BELUM dikonfirmasi user pasca-fix.
+
 ## Compile-fix v2.8.0 ronde 2 (2026-08-06)
 CI FAILED lagi setelah fix ronde 1 (di bawah): `FileSorter.kt:357` &
 `:364` -- 2 baris early-return (`rules.isEmpty()` / `candidateFiles.isEmpty()`)

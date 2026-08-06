@@ -83,8 +83,21 @@ class FileSorter(
         val uriString = settingsRepository.getSafTreeUri() ?: return null
         return try {
             val doc = DocumentFile.fromTreeUri(context, Uri.parse(uriString))
-            if (doc != null && doc.exists() && doc.canRead() && doc.isDirectory) doc else null
+            if (doc == null || !doc.isDirectory) {
+                activityLogRepository.add(LogLevel.ERROR, "Folder kustom tidak valid/tidak ditemukan, fallback ke Downloads.")
+                return null
+            }
+            // SENGAJA tidak pakai doc.exists()/doc.canRead() sebagai gerbang --
+            // keduanya bergantung pada COLUMN_FLAGS yang banyak DocumentProvider
+            // (kartu SD, dll) tidak isi dengan benar, jadi sering FALSE NEGATIVE
+            // walau folder sebenarnya bisa diakses. listFiles() di sini dipakai
+            // sebagai probe akses NYATA -- kalau memang tidak bisa dibaca, ini
+            // akan lempar Exception yang ditangkap di bawah, bukan diam-diam
+            // return array kosong yang salah diartikan "folder kosong".
+            doc.listFiles()
+            doc
         } catch (e: Exception) {
+            activityLogRepository.add(LogLevel.ERROR, "Folder kustom gagal dibaca (${e.message ?: e.javaClass.simpleName}), fallback ke Downloads.")
             null
         }
     }

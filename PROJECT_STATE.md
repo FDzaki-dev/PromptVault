@@ -36,7 +36,38 @@
   4. Kalau ragu apakah sesuatu "perlu dibenahi", DEFAULT-nya adalah TIDAK --
      tanya user dulu, jangan asumsikan perlu audit ulang.
 
-## Hotfix compile error (2026-08-06, tanpa bump versi)
+## Insiden #4 -- §1 SAF gagal baca folder custom, silent fallback (2026-08-06)
+- **Laporan user (runtime, HP asli)**: pilih folder kustom via picker, taruh
+  file ZIP/TXT di dalamnya, scan -> "Tidak ada file cocok yang ditemukan."
+  Tidak ada error apapun ditampilkan. Ini verifikasi runtime PERTAMA untuk
+  §1 Fase 2, dan GAGAL.
+- **Root cause**: `resolveSafRoot()` pakai `doc.exists() && doc.canRead()`
+  sebagai gerbang sebelum mempercayai tree URI. Keduanya method
+  `DocumentFile` yang TERKENAL false-negative di banyak `DocumentProvider`
+  (kartu SD, beberapa file manager OEM) karena bergantung pada
+  `COLUMN_FLAGS` yang provider sering tidak isi lengkap -- padahal folder
+  sebenarnya bisa diakses. Begitu gerbang gagal, `resolveSafRoot()` diam-diam
+  `return null` (BY DESIGN, supaya SAF gagal tidak pernah crash user) ->
+  `scanAndSortLocked()` fallback total ke Downloads/java.io.File -> scan
+  "sukses" tapi baca folder yang salah, TANPA jejak error ke user.
+- **Fix**: buang gerbang `exists()`/`canRead()`. Validasi cukup
+  `doc.isDirectory`, lalu `doc.listFiles()` dipanggil sebagai PROBE akses
+  nyata di dalam try-catch yang sudah ada -- kalau memang tidak bisa dibaca,
+  provider akan melempar Exception asli, bukan heuristik yang salah. Tambah
+  `activityLogRepository.add(LogLevel.ERROR, ...)` di kedua jalur gagal (tree
+  invalid / listFiles() exception) supaya kegagalan SAF SEKARANG TERLIHAT di
+  Riwayat Aktivitas -- sebelumnya 100% silent.
+- **BELUM dikonfirmasi user**: fix ini berdasar root-cause paling mungkin
+  (dan bug `DocumentFile.canRead()` ini memang didokumentasikan luas), TAPI
+  belum ada log Riwayat Aktivitas asli dari device user yang dicek untuk
+  konfirmasi 100%. Kalau setelah fix ini scan MASIH kosong, cek entri
+  ActivityLog terbaru -- sekarang harus ada pesan ERROR spesifik (bukan diam
+  lagi), itu kunci diagnosa lanjutan.
+
+
+- **Build v2.8.0 CONFIRMED GREEN di CI (2026-08-06)** setelah ronde 2 fix
+  di bawah. Compile-only confirmation -- runtime di device ASLI masih
+  BELUM diverifikasi untuk §1 Fase 2 SAF (batch paling berisiko).
 - **Build v2.8.0 FAILED di CI**: `FileSorter.kt` baris 357 & 364, dalam
   `scanAndSortSafLocked()` (batch SAF Fase 2, 2026-08-05) -- `return` polos
   dipakai di dalam blok `coroutineScope { ... }`. Parameter `block` di
