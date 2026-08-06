@@ -17,6 +17,7 @@ import com.elprompter.promptvault.data.RuleRepository
 import com.elprompter.promptvault.data.SettingsRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
@@ -350,7 +351,7 @@ class FileSorter(
         safRoot: DocumentFile,
         rules: List<Rule>,
         conflictStrategy: ConflictStrategy
-    ): ScanResult {
+    ): ScanResult = coroutineScope {
         if (rules.isEmpty()) {
             activityLogRepository.add(LogLevel.INFO, "Scan dijalankan, tapi belum ada rule aktif.")
             return ScanResult(0, 0, foldersUnreadable = false, overlapWarnings = emptyList())
@@ -390,7 +391,7 @@ class FileSorter(
         }
         activityLogRepository.add(LogLevel.SUCCESS, summary)
 
-        return ScanResult(moved, skipped, foldersUnreadable = false, overlapWarnings = overlapWarnings, skippedDetails = skippedDetails)
+        return@coroutineScope ScanResult(moved, skipped, foldersUnreadable = false, overlapWarnings = overlapWarnings, skippedDetails = skippedDetails)
     }
 
     /** Versi SAF dari [listCandidateFiles]. */
