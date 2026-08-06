@@ -3,17 +3,28 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
-## Compile-fix v2.8.0 (2026-08-06)
+## Compile-fix v2.8.0 ronde 2 (2026-08-06)
+CI FAILED lagi setelah fix ronde 1 (di bawah): `FileSorter.kt:357` &
+`:364` -- 2 baris early-return (`rules.isEmpty()` / `candidateFiles.isEmpty()`)
+masih pakai `return` polos di dalam `coroutineScope{}`. Koreksi klaim ronde 1:
+`coroutineScope`'s `block` param di kotlinx.coroutines itu `crossinline`,
+BUKAN sekadar `inline` -- jadi non-local `return` polos DILARANG compiler
+("'return' is not allowed here"), hanya `return@coroutineScope` (labeled)
+yang valid. Baris terakhir fungsi (:394) sudah benar; 2 baris awal
+kelewatan. Fix: `return` -> `return@coroutineScope` di kedua baris. Tidak
+ada perubahan logika. versionCode/versionName tetap 42/2.8.0.
+
+## Compile-fix v2.8.0 ronde 1 (2026-08-06)
 CI gagal di `scanAndSortSafLocked()`: fungsi ini `private suspend fun` biasa
 (bukan `withContext{}`/`coroutineScope{}`), jadi `async{}`/`awaitAll()` di
 dalamnya tidak punya receiver `CoroutineScope` -> unresolved reference.
 Beda dari `scanAndSortLocked()` legacy yang sudah dibungkus
 `withContext(Dispatchers.IO){}`. Fix: bungkus body dengan `coroutineScope{}`
 + import `kotlinx.coroutines.coroutineScope`, `return` awal jadi
-`return@coroutineScope` di ujung fungsi (non-local return tetap valid krn
-`coroutineScope` inline). Tidak ada perubahan logika/behavior, versionCode
-tetap 42 / versionName tetap 2.8.0 (Fase 2 SAF masih BELUM dikonfirmasi
-runtime, jadi tidak layak naik versi baru dari compile-fix murni).
+`return@coroutineScope` di ujung fungsi. Tidak ada perubahan logika/behavior,
+versionCode tetap 42 / versionName tetap 2.8.0 (Fase 2 SAF masih BELUM
+dikonfirmasi runtime, jadi tidak layak naik versi baru dari compile-fix
+murni).
 
 ## v2.8.0 -- §1 Roadmap backend Fase 2/2 (HYBRID): FileSorter pakai DocumentFile
 Lanjutan v2.7.0 (Fase 1, dikonfirmasi jalan di HP asli: picker muncul, izin

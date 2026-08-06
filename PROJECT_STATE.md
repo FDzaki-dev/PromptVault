@@ -36,6 +36,20 @@
   4. Kalau ragu apakah sesuatu "perlu dibenahi", DEFAULT-nya adalah TIDAK --
      tanya user dulu, jangan asumsikan perlu audit ulang.
 
+## Hotfix compile error (2026-08-06, tanpa bump versi)
+- **Build v2.8.0 FAILED di CI**: `FileSorter.kt` baris 357 & 364, dalam
+  `scanAndSortSafLocked()` (batch SAF Fase 2, 2026-08-05) -- `return` polos
+  dipakai di dalam blok `coroutineScope { ... }`. Parameter `block` di
+  `kotlinx.coroutines.coroutineScope` adalah `crossinline`, jadi non-local
+  `return` DILARANG compiler ("'return' is not allowed here"). Baris 394 di
+  fungsi yang sama sudah benar pakai `return@coroutineScope` -- 2 baris awal
+  (early-return saat rules kosong / candidateFiles kosong) kelewatan saat
+  batch itu ditulis.
+- **Fix**: ganti `return ScanResult(...)` -> `return@coroutineScope
+  ScanResult(...)` di kedua baris. Tidak ada perubahan logika/behavior,
+  murni syntax fix. versionCode/versionName TETAP 42/2.8.0 (belum pernah
+  publish sukses).
+
 ## Versi/batch terakhir yang selesai
 - **versionCode 42 / versionName 2.8.0 -- §1 roadmap backend Fase 2/2 SELESAI
   (FileSorter pakai DocumentFile), 2026-08-05:** §1 SEKARANG FUNGSIONAL

@@ -354,14 +354,14 @@ class FileSorter(
     ): ScanResult = coroutineScope {
         if (rules.isEmpty()) {
             activityLogRepository.add(LogLevel.INFO, "Scan dijalankan, tapi belum ada rule aktif.")
-            return ScanResult(0, 0, foldersUnreadable = false, overlapWarnings = emptyList())
+            return@coroutineScope ScanResult(0, 0, foldersUnreadable = false, overlapWarnings = emptyList())
         }
 
         val candidateFiles = listCandidateFilesSaf(safRoot)
 
         if (candidateFiles.isEmpty()) {
             activityLogRepository.add(LogLevel.INFO, "Scan selesai: tidak ada file ZIP/TXT baru yang cocok.")
-            return ScanResult(0, 0, foldersUnreadable = false, overlapWarnings = emptyList())
+            return@coroutineScope ScanResult(0, 0, foldersUnreadable = false, overlapWarnings = emptyList())
         }
 
         val semaphore = Semaphore(SCAN_CONCURRENCY)
