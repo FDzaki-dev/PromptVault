@@ -3,6 +3,12 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.8.2 -- Fitur: tombol Salin Log (2026-08-06)
+`ActivityLogScreen` tab "Log" dapat tombol copy di top bar -- nyalin semua
+entri log ke clipboard (`[timestamp] LEVEL: pesan`), biar user bisa cepat
+ekstrak & kirim log ERROR utk diagnosa (mis. SAF gagal vs folder custom
+emang kosong) tanpa perlu ADB/Logcat. versionCode 43->44.
+
 ## v2.8.1 -- Bump versi + fix GitHub Release "stuck" (2026-08-06)
 Tag release ikut `versionName`; 2 hotfix sebelumnya (return@coroutineScope,
 resolveSafRoot) tidak naikkan versi -> tag sama `v2.8.0` -> Release cuma

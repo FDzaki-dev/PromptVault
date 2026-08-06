@@ -13,8 +13,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import com.elprompter.promptvault.ui.components.VaultCard
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Undo
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
@@ -29,6 +32,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ClipboardManager
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import com.elprompter.promptvault.data.ActivityLogEntry
 import com.elprompter.promptvault.data.LogLevel
@@ -53,12 +59,44 @@ fun ActivityLogScreen(
     var tab by remember { mutableStateOf(0) }
     var pendingUndo by remember { mutableStateOf<MoveHistoryEntry?>(null) }
     val formatter = remember { SimpleDateFormat("dd MMM HH:mm", Locale("id", "ID")) }
+    val logExportFormatter = remember { SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale("id", "ID")) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val colors = MaterialTheme.colorScheme
+    val clipboardManager: ClipboardManager = LocalClipboardManager.current
 
     Scaffold(
-        topBar = { VaultTopBar(title = "Riwayat Aktivitas", onBack = onBack) },
+        topBar = {
+            VaultTopBar(
+                title = "Riwayat Aktivitas",
+                onBack = onBack,
+                actions = {
+                    // Batch fix (2026-08-06): user butuh cara cepat ekspor log utk
+                    // analisis SAF/bug lain tanpa ADB/Logcat -- copy SEMUA entri log
+                    // (bukan cuma yg kelihatan di layar) sbg teks plain ke clipboard,
+                    // format [timestamp] LEVEL: pesan, urutan terbaru dulu (sama spt
+                    // tampilan). Hanya tampil di tab "Log" (tab==0), tidak relevan
+                    // utk tab Undo. Kosong -> tombol tetap ada tapi salin string
+                    // placeholder, bukan disable, biar konsisten & tidak butuh state
+                    // tambahan.
+                    if (tab == 0) {
+                        IconButton(onClick = {
+                            val text = if (logEntries.isEmpty()) {
+                                "(Belum ada aktivitas log)"
+                            } else {
+                                logEntries.joinToString("\n") { entry ->
+                                    "[${logExportFormatter.format(Date(entry.timestampMillis))}] ${entry.level}: ${entry.message}"
+                                }
+                            }
+                            clipboardManager.setText(AnnotatedString(text))
+                            scope.launch { snackbarHostState.showSnackbar("Log disalin ke clipboard") }
+                        }) {
+                            Icon(Icons.Filled.ContentCopy, contentDescription = "Salin Log", tint = colors.primary)
+                        }
+                    }
+                }
+            )
+        },
         snackbarHost = {
             SnackbarHost(snackbarHostState) { data ->
                 Snackbar(snackbarData = data, containerColor = colors.primary, contentColor = colors.onPrimary)

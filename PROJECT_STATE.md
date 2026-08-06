@@ -36,7 +36,23 @@
   4. Kalau ragu apakah sesuatu "perlu dibenahi", DEFAULT-nya adalah TIDAK --
      tanya user dulu, jangan asumsikan perlu audit ulang.
 
-## Insiden #5 -- GitHub Release "stuck" krn tag reuse (2026-08-06)
+## Fitur: tombol Salin Log (2026-08-06)
+- **Konteks**: user butuh cara cepat ekstrak log ERROR (dari fix
+  resolveSafRoot sebelumnya) tanpa ADB/Logcat, sementara pesan "Tidak ada
+  file cocok yang ditemukan" identik dipakai baik saat SAF gagal->fallback
+  MAUPUN SAF sukses tapi folder emang kosong -- tidak bisa dibedakan dari
+  layar Home.
+- **Fix**: `ActivityLogScreen` tab "Log" dapat `IconButton` (ContentCopy) di
+  top bar -- nyalin SEMUA entri log (bukan cuma yg terlihat di layar) ke
+  clipboard via `ClipboardManager`, format `[yyyy-MM-dd HH:mm:ss] LEVEL:
+  pesan`, urutan sama seperti tampilan (terbaru dulu). Hanya muncul di tab
+  Log, snackbar konfirmasi "Log disalin ke clipboard".
+- versionCode 43->44, versionName 2.8.1->2.8.2 (fitur user-visible baru,
+  konsisten dgn kebijakan bump-utk-traceability dari insiden #5).
+- **Belum terjawab**: apakah SAF sebenarnya gagal atau folder custom
+  memang kosong saat scan -- tunggu user kirim hasil Salin Log.
+
+
 - **Laporan user**: build CI ijo (fix resolveSafRoot), tapi halaman GitHub
   Release masih kelihatan APK/versi sebelumnya.
 - **Root cause**: tag release = `v${versionName}`. 2 hotfix beruntun
