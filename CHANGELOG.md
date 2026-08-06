@@ -3,6 +3,14 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.8.1 -- Bump versi + fix GitHub Release "stuck" (2026-08-06)
+Tag release ikut `versionName`; 2 hotfix sebelumnya (return@coroutineScope,
+resolveSafRoot) tidak naikkan versi -> tag sama `v2.8.0` -> Release cuma
+di-UPDATE in-place, tampilan tidak berubah, user kira stuck/gagal publish.
+Bump versionCode 42->43, versionName ->2.8.1 supaya dapat tag & entri
+Release baru yang jelas -- termasuk membawa fix resolveSafRoot (SAF gagal
+baca folder custom, silent fallback) ke build yang bisa diverifikasi.
+
 ## Fix runtime: SAF gagal baca folder custom (2026-08-06)
 Verifikasi runtime pertama §1 Fase 2 GAGAL: folder custom dipilih, file
 ditaruh, scan tetap bilang "tidak ada file cocok" tanpa error. Root cause:

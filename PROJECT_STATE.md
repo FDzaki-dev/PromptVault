@@ -36,7 +36,25 @@
   4. Kalau ragu apakah sesuatu "perlu dibenahi", DEFAULT-nya adalah TIDAK --
      tanya user dulu, jangan asumsikan perlu audit ulang.
 
-## Insiden #4 -- §1 SAF gagal baca folder custom, silent fallback (2026-08-06)
+## Insiden #5 -- GitHub Release "stuck" krn tag reuse (2026-08-06)
+- **Laporan user**: build CI ijo (fix resolveSafRoot), tapi halaman GitHub
+  Release masih kelihatan APK/versi sebelumnya.
+- **Root cause**: tag release = `v${versionName}`. 2 hotfix beruntun
+  (coroutineScope + resolveSafRoot) SENGAJA tidak naikkan versionName
+  (dianggap syntax/logic fix murni) -> tag tetap `v2.8.0` sama dgn build
+  sebelumnya -> `action-gh-release` UPDATE release yang sama (by design),
+  jadi tampilan (judul/tag/nomor versi) di halaman Release TIDAK BERUBAH
+  sama sekali walau asset APK di baliknya mestinya ketimpa. Tidak ada cara
+  visual buat user verifikasi APK baru benar ke-publish -- kelihatan macam
+  stuck/gagal padahal desainnya memang begitu.
+- **Koreksi kebijakan**: hotfix yang mengubah PERILAKU RUNTIME nyata (bukan
+  cuma syntax, spt resolveSafRoot) WAJIB bump versi biar dapat tag/entri
+  Release baru & bisa diverifikasi. Hotfix syntax-only (spt
+  return@coroutineScope) boleh tanpa bump SELAMA belum pernah publish sukses
+  sebelumnya di versi itu.
+- **Fix**: versionCode 42->43, versionName 2.8.0->2.8.1.
+
+
 - **Laporan user (runtime, HP asli)**: pilih folder kustom via picker, taruh
   file ZIP/TXT di dalamnya, scan -> "Tidak ada file cocok yang ditemukan."
   Tidak ada error apapun ditampilkan. Ini verifikasi runtime PERTAMA untuk
