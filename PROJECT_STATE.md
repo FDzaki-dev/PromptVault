@@ -37,6 +37,25 @@
      tanya user dulu, jangan asumsikan perlu audit ulang.
 
 ## Versi/batch terakhir yang selesai
+- **versionCode 42 / versionName 2.8.0 -- §1 roadmap backend Fase 2/2 SELESAI
+  (FileSorter pakai DocumentFile), 2026-08-05:** §1 SEKARANG FUNGSIONAL
+  PENUH. `scanAndSortLocked()` cek `resolveSafRoot()` di awal -- ada URI SAF
+  valid -> delegasi total ke `scanAndSortSafLocked()` (jalur DocumentFile
+  baru, terpisah total dari jalur legacy); tidak ada/tidak valid -> fallback
+  ke Downloads/java.io.File PERSIS seperti sebelumnya. `undo()` jadi
+  dispatcher berdasarkan `destUri.startsWith("content://")`.
+  `MoveHistoryEntity` (Protected: DB Schema/DAO) TIDAK diubah -- sudah
+  bertipe String generik dari awal. Keterbatasan sengaja: preview
+  pattern/diagnostik tetap baca Downloads walau SAF aktif (fungsi
+  non-suspend); Dual Stability Guard SAF cuma 2/3 sinyal (tanpa file-lock
+  check); §2 ghost-cleanup tidak jalan di jalur SAF; move/undo pakai
+  copy-lalu-hapus bukan `DocumentsContract.moveDocument`. Detail lengkap +
+  checklist verifikasi WAJIB di CHANGELOG v2.8.0. **INI BATCH PALING
+  BERISIKO SEJAUH INI (menyentuh fungsi inti scan/move/undo) DAN SAMA
+  SEKALI BELUM ADA KONFIRMASI RUNTIME** -- preflight statis lolos 10/10
+  tapi itu bukan jaminan kompilasi/behavior benar. WAJIB jalankan checklist
+  5 poin di CHANGELOG v2.8.0 sebelum dianggap stabil, terutama poin 1
+  (mode Downloads/non-SAF tidak boleh regresi).
 - **versionCode 41 / versionName 2.7.0 -- §1 roadmap backend Fase 1/2
   (SAF folder picker, HYBRID, dormant), 2026-08-05:** Sesuai keputusan user
   (hybrid, bukan full-replace): infrastruktur SAF picker + penyimpanan URI
@@ -219,16 +238,12 @@
     (`MediaScannerConnection.scanFile()` tiap move/undo + query cleanup
     ghost entry sekali per scan). BELUM diverifikasi runtime -- lihat
     CHANGELOG v2.5.0 untuk detail & yang perlu dikonfirmasi user.
-  - §1 SAF/Scoped Storage abstraction -- **SEBAGIAN: Fase 1/2 SELESAI**
-    (v2.7.0, 2026-08-05, HYBRID sesuai keputusan user -- BUKAN full-replace).
-    Fase 1 = picker SAF + penyimpanan URI saja, `FileSorter.kt` BELUM
-    disentuh (masih 100% java.io.File untuk semua user). **Fase 2 (BELUM,
-    ANTRE, BERIKUTNYA)** = `FileSorter` baca URI tersimpan, pakai
-    `DocumentFile` untuk scan/move/undo kalau ada, fallback ke
-    Downloads/java.io.File kalau tidak ada/tidak valid. Fase 2 BARU boleh
-    dikerjakan SETELAH Fase 1 dikonfirmasi jalan di HP asli (lihat entri
-    versi v2.7.0 di atas) -- jangan asumsikan Fase 1 pasti benar tanpa
-    konfirmasi runtime.
+  - §1 SAF/Scoped Storage abstraction -- **SELESAI (Fase 1+2, v2.7.0+v2.8.0,
+    2026-08-05, HYBRID)**. FileSorter sekarang dual-path: DocumentFile kalau
+    SAF aktif & valid, java.io.File/Downloads kalau tidak. Lihat CHANGELOG
+    v2.8.0 untuk keterbatasan yang sengaja diterima & checklist verifikasi
+    WAJIB (BELUM dikonfirmasi runtime sama sekali untuk Fase 2 -- ini batch
+    paling berisiko sejauh ini).
   - §5 Coroutine lifecycle & Foreground Service -- **SELESAI** (v2.6.0,
     2026-08-05). Audit lifecycle: tidak ada bug (structured concurrency
     sudah cukup). Fix nyata: `AutoSortWorker` promosi ke foreground service
@@ -284,12 +299,14 @@ worker/          -- AutoSortWorker (WorkManager), BootCompletedReceiver,
    Data lama di DataStore TIDAK dimigrasikan ke Room (disepakati: tidak
    kritis, tidak urgent) -- kalau ada user lama upgrade dari <v2.2.0, log &
    riwayat undo mereka reset sekali.
-2. **FileSorter masih `java.io.File`**, bukan SAF/`DocumentFile` -- MASIH
-   BERLAKU per v2.7.0. §1 dikerjakan HYBRID: SAF picker + penyimpanan URI
-   sudah ada (v2.7.0), tapi `FileSorter` BELUM dirombak (itu Fase 2, lihat
-   roadmap §1 di atas). `MANAGE_EXTERNAL_STORAGE` tetap mekanisme DEFAULT
-   untuk semua user sampai Fase 2 selesai & dikonfirmasi. Jangan asumsikan
-   SAF sudah aktif dipakai cuma karena UI picker-nya sudah ada.
+2. **FileSorter sekarang DUAL-PATH** (per v2.8.0) -- java.io.File/Downloads
+   TETAP jadi mekanisme DEFAULT untuk semua user, TAPI kalau user pilih
+   folder kustom lewat SAF (Pengaturan), scan/move/undo jalan lewat
+   `DocumentFile` di jalur terpisah (`*Saf` functions). Lihat CHANGELOG
+   v2.8.0 untuk detail & keterbatasan sengaja. **BELUM ada konfirmasi
+   runtime untuk jalur SAF ini** -- kalau ada bug dilaporkan user terkait
+   SAF, cek CHANGELOG v2.8.0 dulu (kemungkinan besar salah satu keterbatasan
+   yang sudah didokumentasikan, bukan bug baru).
 3. **Sistem warna 4-aksen**: Material3 `primary`(hijau/Pine) `tertiary`(amber)
    `error`(merah/Rust) + aksen kustom ke-4 `VaultTheme.extraColors.slate`
    (biru batu, di luar 4 role Material3 baku, disimpan lewat

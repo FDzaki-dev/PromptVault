@@ -22,8 +22,8 @@ android {
         applicationId = "com.elprompter.promptvault"
         minSdk = 26
         targetSdk = 34
-        versionCode = 41
-        versionName = "2.7.0"
+        versionCode = 42
+        versionName = "2.8.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -78,6 +78,10 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.4")
     implementation("androidx.activity:activity-compose:1.9.1")
     implementation("androidx.core:core-splashscreen:1.0.1")
+    // Batch §1 Fase 2: DocumentFile untuk scan/move/undo lewat SAF (hybrid,
+    // opsional -- lihat FileSorter.kt). Versi 1.0.1 = versi stabil terakhir,
+    // API-nya sudah lama tidak berubah.
+    implementation("androidx.documentfile:documentfile:1.0.1")
 
     implementation(platform("androidx.compose:compose-bom:2024.06.00"))
     implementation("androidx.compose.ui:ui")

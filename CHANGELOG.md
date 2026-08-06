@@ -3,6 +3,73 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.8.0 -- §1 Roadmap backend Fase 2/2 (HYBRID): FileSorter pakai DocumentFile
+Lanjutan v2.7.0 (Fase 1, dikonfirmasi jalan di HP asli: picker muncul, izin
+persist lintas restart app). §1 SEKARANG FUNGSIONAL PENUH: kalau user pilih
+folder kustom lewat SAF, `FileSorter` scan/move/undo di folder ITU lewat
+`DocumentFile`, bukan lagi cuma nyimpen URI yang dormant.
+
+**Desain**: `scanAndSortLocked()` panggil `resolveSafRoot()` di awal --
+kalau ada URI SAF tersimpan DAN masih valid (`exists()`, `canRead()`,
+`isDirectory`), delegasikan SELURUH scan ke `scanAndSortSafLocked()` (jalur
+baru, DocumentFile). Kalau tidak ada/tidak valid, lanjut ke jalur Downloads/
+java.io.File PERSIS SEPERTI SEBELUM Fase 2 ada -- fallback otomatis & diam-
+diam, tidak pernah error ke user hanya gara-gara SAF gagal.
+
+**Kenapa jalur SAF DIDUPLIKASI (bukan digabung generic)**: supaya jalur
+Downloads/java.io.File yang sudah stabil sejak v2.4.0 nol risiko regresi --
+tidak ada satu baris pun logikanya yang disentuh. Fungsi baru (semua
+suffix `Saf`): `scanAndSortSafLocked`, `listCandidateFilesSaf`,
+`isLikelyStillWritingSaf`, `processCandidateSaf`, `moveFileSaf`, `undoSaf`,
+plus helper `findOrCreateChildDirSaf` & `copyDocumentBytes`.
+
+**Kejutan baik**: `MoveHistoryEntity`/`MoveHistoryEntry` (Protected: DB
+Schema/DAO) TIDAK PERLU diubah sama sekali -- `originalParentUri`/`destUri`
+sudah bertipe `String` generik dari awal (komentar di source-nya bahkan
+sudah menyebut "SAF / MediaStore" sebagai kemungkinan). Jadi entry SAF
+tinggal menyimpan `content://...` di situ, dan `undo()` publik jadi
+dispatcher: `destUri.startsWith("content://")` -> `undoSaf()`, selain itu
+-> `undoLegacy()` (isi asli `undo()`, cuma diganti nama).
+
+**Keterbatasan yang SENGAJA diterima batch ini** (didokumentasikan sebagai
+trade-off, bukan bug yang lolos tanpa sadar):
+1. `previewPatternMatches()` & `listDownloadsCandidateFileNames()` (layar
+   Tambah/Edit Rule & Diagnostik) TETAP baca Downloads/java.io.File walau
+   mode SAF aktif -- keduanya fungsi non-suspend dipanggil sinkron dari UI;
+   baca setting SAF butuh suspend. Kalau dibutuhkan, ini batch terpisah.
+2. Dual Stability Guard versi SAF cuma 2 dari 3 sinyal legacy (age +
+   size-delta, TANPA file-lock check) -- SAF/`ParcelFileDescriptor` tidak
+   punya padanan `RandomAccessFile.tryLock()` yang konsisten lintas
+   document provider.
+3. §2 (cleanup ghost MediaStore) tidak dipanggil di jalur SAF -- query
+   berbasis path java.io.File, tidak relevan untuk `content://`.
+4. Move & undo pakai copy-lalu-hapus (konsisten dengan fallback
+   `copyThenDelete` yang sudah dipakai jalur legacy), BUKAN
+   `DocumentsContract.moveDocument` -- lebih portable lintas provider.
+
+**Perubahan**: `FileSorter.kt` (perubahan besar, lihat di atas) +
+`build.gradle.kts` (dependency baru `androidx.documentfile:documentfile:1.0.1`,
+Protected File, edit parsial/tambah 1 baris). 2 file, tapi **DIDEKLARASIKAN
+SEBAGAI ATOMIC CHANGE** (migrasi arsitektur inti) sesuai Batch Lock rule --
+tidak dipecah lebih lanjut karena scan/move/undo untuk 1 mode (SAF) memang
+satu kesatuan fungsional yang tidak masuk akal displit ke commit terpisah.
+
+**Verifikasi runtime TIDAK BISA dilakukan sama sekali** (sandbox tanpa
+Android SDK/device) -- **INI BATCH PALING BERISIKO SEJAUH INI**, ditandai
+eksplisit di sini karena `FileSorter` adalah fungsi inti aplikasi. Preflight
+statis lolos 10/10 (kurung seimbang, import benar, XML valid), TAPI itu
+TIDAK sama dengan kompilasi Kotlin sukses apalagi behavior benar di
+runtime. **Checklist WAJIB di HP asli sebelum dianggap stabil**:
+1. Mode Downloads (TANPA pilih folder SAF) -- scan/move/undo masih persis
+   seperti sebelumnya (regression check jalur legacy).
+2. Mode SAF aktif: taruh file ZIP/TXT di folder kustom, scan manual,
+   pastikan file pindah ke `<folder kustom>/PromptVault/<rule>/`.
+3. Undo pada entry SAF -- file balik ke folder kustom asal.
+4. Auto-sort background (`AutoSortWorker`) dengan SAF aktif -- pastikan
+   tidak crash (worker jalan di proses terpisah dari UI, akses
+   `DocumentFile`/`ContentResolver` harus tetap valid di context Application).
+5. Konflik nama file (RENAME/SKIP/OVERWRITE) di folder SAF.
+
 ## v2.7.0 -- §1 Roadmap backend Fase 1/2 (HYBRID): SAF folder picker (dormant, belum dipakai FileSorter)
 Keputusan user 2026-08-05: §1 SAF terlalu berisiko untuk full-replace (tidak
 bisa di-compile-test di sandbox, nyentuh hampir semua fungsi inti). Approach
