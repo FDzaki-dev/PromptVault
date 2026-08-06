@@ -36,7 +36,35 @@
   4. Kalau ragu apakah sesuatu "perlu dibenahi", DEFAULT-nya adalah TIDAK --
      tanya user dulu, jangan asumsikan perlu audit ulang.
 
-## Fitur: tombol Salin Log (2026-08-06)
+## Insiden #6 -- listCandidateFilesSaf gagal detect file (MIME false-negative), SAMA KELAS BUG dgn insiden #4 (2026-08-06)
+- **Koreksi**: kesimpulan insiden #4 (folder kosong = bukan bug) SALAH.
+  User klarifikasi: folder ADA banyak file, tidak ke-scan sama sekali.
+  1 file yang berhasil (18:53:46) itu KEBETULAN lolos, bukan bukti fitur
+  sehat -- 82 file "dilewati" scan itu, sisanya yg ratusan scan berikutnya
+  malah 0 kandidat sama sekali.
+- **Root cause**: `listCandidateFilesSaf()` syaratkan `doc.isFile == true`.
+  `DocumentFile.isFile()` query MIME type ke provider -- kalau MIME kosong/
+  salah (umum, tergantung cara file itu nyampe: SD card/sync app/dll),
+  `isFile()` FALSE NEGATIF walau file valid & bisa dibaca. Persis kelas bug
+  yang sama dengan `resolveSafRoot` exists()/canRead() (insiden #4 versi
+  lama). Karena MIME per-file beda-beda tergantung asal filenya, hasilnya
+  "acak" -- sebagian file lolos, sebagian tidak, cocok dgn gejala user.
+- **Fix**: ganti syarat `doc.isFile` -> `!doc.isDirectory`. `isDirectory()`
+  cek `MIME_TYPE_DIR` yang jauh lebih konsisten diisi provider drpd MIME
+  type detail file individual -- dipakai sbg negative check yg reliable,
+  bukan positive check yg rawan.
+- **PELAJARAN PERMANEN**: SEMUA method boolean `DocumentFile` (`isFile`,
+  `canRead`, `canWrite`, `exists`) TIDAK BOLEH dipercaya sbg gerbang
+  keputusan tanpa probe akses nyata (`listFiles()`, baca konten, dst) --
+  ini kelas bug berulang di batch SAF, cek ulang SEMUA pemakaian method2
+  ini di file ini kalau ada laporan gejala serupa lagi.
+- **Sekalian dibenerin (masih atomic, 1 modul FileSorter.kt SAF)**: 2 gerbang
+  boolean serupa di `undoSaf()` -- `current.exists()` & `originalRoot.canWrite()`
+  -- dibuang dgn pola sama (null/isDirectory check + biarkan operasi nyata
+  createFile/copy yg gagal natural, ketangkap try-catch existing).
+- **BELUM dikonfirmasi user** -- tunggu hasil scan + Salin Log berikutnya.
+
+
 - **Konteks**: user butuh cara cepat ekstrak log ERROR (dari fix
   resolveSafRoot sebelumnya) tanpa ADB/Logcat, sementara pesan "Tidak ada
   file cocok yang ditemukan" identik dipakai baik saat SAF gagal->fallback
@@ -91,12 +119,10 @@
   `activityLogRepository.add(LogLevel.ERROR, ...)` di kedua jalur gagal (tree
   invalid / listFiles() exception) supaya kegagalan SAF SEKARANG TERLIHAT di
   Riwayat Aktivitas -- sebelumnya 100% silent.
-- **BELUM dikonfirmasi user**: fix ini berdasar root-cause paling mungkin
-  (dan bug `DocumentFile.canRead()` ini memang didokumentasikan luas), TAPI
-  belum ada log Riwayat Aktivitas asli dari device user yang dicek untuk
-  konfirmasi 100%. Kalau setelah fix ini scan MASIH kosong, cek entri
-  ActivityLog terbaru -- sekarang harus ada pesan ERROR spesifik (bukan diam
-  lagi), itu kunci diagnosa lanjutan.
+- **KOREKSI 2026-08-06 (lihat Insiden #6)**: kesimpulan CONFIRMED di atas
+  SALAH -- user klarifikasi folder TIDAK kosong, ratusan file gagal
+  ke-detect krn bug baru `listCandidateFilesSaf` (`doc.isFile` false-negatif,
+  fixed v2.8.3). §1 balik ke status BELUM confirmed runtime sepenuhnya.
 
 
 - **Build v2.8.0 CONFIRMED GREEN di CI (2026-08-06)** setelah ronde 2 fix
@@ -317,12 +343,16 @@
     (`MediaScannerConnection.scanFile()` tiap move/undo + query cleanup
     ghost entry sekali per scan). BELUM diverifikasi runtime -- lihat
     CHANGELOG v2.5.0 untuk detail & yang perlu dikonfirmasi user.
-  - §1 SAF/Scoped Storage abstraction -- **SELESAI (Fase 1+2, v2.7.0+v2.8.0,
-    2026-08-05, HYBRID)**. FileSorter sekarang dual-path: DocumentFile kalau
-    SAF aktif & valid, java.io.File/Downloads kalau tidak. Lihat CHANGELOG
-    v2.8.0 untuk keterbatasan yang sengaja diterima & checklist verifikasi
-    WAJIB (BELUM dikonfirmasi runtime sama sekali untuk Fase 2 -- ini batch
-    paling berisiko sejauh ini).
+  - §1 SAF/Scoped Storage abstraction -- **KODE SELESAI, RUNTIME BELUM
+    STABIL (Fase 1+2, v2.7.0-v2.8.3, 2026-08-05/06)**. FileSorter dual-path:
+    DocumentFile kalau SAF aktif & valid, java.io.File/Downloads kalau
+    tidak. 2 bug nyata ketemu lewat testing device asli, SATU KELAS
+    (method boolean DocumentFile tidak bisa dipercaya sbg gerbang):
+    `resolveSafRoot` exists/canRead (fixed v2.8.1) & `listCandidateFilesSaf`
+    isFile (fixed v2.8.3, insiden #6). Kalau muncul gejala serupa lagi
+    (file tidak ke-detect padahal ada), CURIGAI DULU method boolean
+    DocumentFile lain yg belum diaudit (`canWrite`, dst) sebelum cari
+    penyebab lain.
   - §5 Coroutine lifecycle & Foreground Service -- **SELESAI** (v2.6.0,
     2026-08-05). Audit lifecycle: tidak ada bug (structured concurrency
     sudah cukup). Fix nyata: `AutoSortWorker` promosi ke foreground service

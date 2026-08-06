@@ -3,6 +3,16 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.8.3 -- Fix: listCandidateFilesSaf gagal detect file, MIME false-negative (2026-08-06)
+Kelas bug SAMA dgn v2.8.1 (`resolveSafRoot`). `listCandidateFilesSaf()`
+syaratkan `doc.isFile` -- query MIME type provider, false-negatif kalau MIME
+kosong/salah (umum tergantung asal file). Hasil: sebagian file di folder
+custom ke-skip TOTAL dari deteksi scan (acak per file, tergantung MIME-nya).
+Fix: syarat ganti ke `!doc.isDirectory` (MIME_TYPE_DIR jauh lebih konsisten
+diisi provider drpd MIME detail). versionCode 44->45. PELAJARAN: audit semua
+pemakaian method boolean DocumentFile (isFile/canRead/canWrite/exists) di
+FileSorter.kt -- kelas bug ini bisa berulang di tempat lain yg belum ketauan.
+
 ## v2.8.2 -- Fitur: tombol Salin Log (2026-08-06)
 `ActivityLogScreen` tab "Log" dapat tombol copy di top bar -- nyalin semua
 entri log ke clipboard (`[timestamp] LEVEL: pesan`), biar user bisa cepat

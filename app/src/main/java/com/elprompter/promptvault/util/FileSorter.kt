@@ -411,7 +411,15 @@ class FileSorter(
     private fun listCandidateFilesSaf(safRoot: DocumentFile): List<DocumentFile> {
         return safRoot.listFiles().filter { doc ->
             val name = doc.name
-            !name.isNullOrBlank() && doc.isFile &&
+            // SENGAJA pakai !doc.isDirectory, BUKAN doc.isFile. isFile() balik
+            // ke query MIME type provider -- kalau provider tidak isi kolom MIME
+            // dengan benar (umum, tergantung cara file itu nyampe di folder: SD
+            // card, sync app, dll), isFile() FALSE NEGATIF walau file valid,
+            // dan lolos-tidaknya jadi acak per file (persis kelas bug yang sama
+            // dgn resolveSafRoot exists()/canRead(), lihat insiden #4/#6).
+            // isDirectory() cek MIME_TYPE_DIR yang jauh lebih konsisten diisi
+            // provider, jadi dipakai sebagai NEGATIVE check yang bisa dipercaya.
+            !name.isNullOrBlank() && !doc.isDirectory &&
                 (name.substringAfterLast('.', "").equals("zip", true) ||
                     name.substringAfterLast('.', "").equals("txt", true)) &&
                 !TEMP_FILE_MARKERS.any { name.lowercase().endsWith(it) }
@@ -579,12 +587,18 @@ class FileSorter(
     private suspend fun undoSaf(entry: MoveHistoryEntry): Boolean {
         return try {
             val current = DocumentFile.fromSingleUri(context, Uri.parse(entry.destUri))
-            if (current == null || !current.exists()) {
+            // SENGAJA tidak pakai current.exists() sbg gerbang (kelas bug sama
+            // spt insiden #4/#6 -- method boolean DocumentFile false-negatif).
+            // Cukup null-check; kalau memang sudah tidak ada, createFile/copy di
+            // bawah akan gagal natural & ketangkap try-catch luar.
+            if (current == null) {
                 activityLogRepository.add(LogLevel.ERROR, "Undo gagal: \"${entry.fileName}\" sudah tidak ada di tujuan.")
                 return false
             }
             val originalRoot = DocumentFile.fromTreeUri(context, Uri.parse(entry.originalParentUri))
-            if (originalRoot == null || !originalRoot.canWrite()) {
+            // Sama: canWrite() dibuang, cukup null-check + isDirectory. Izin
+            // tulis nyata diuji lewat createFile() asli di bawah, bukan heuristik.
+            if (originalRoot == null || !originalRoot.isDirectory) {
                 activityLogRepository.add(
                     LogLevel.ERROR,
                     "Undo gagal: folder kustom asal \"${entry.fileName}\" sudah tidak bisa diakses (izin dicabut?)."
