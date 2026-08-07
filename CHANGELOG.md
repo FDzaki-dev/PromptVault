@@ -3,6 +3,28 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.12.1 -- COMPILE-FIX: `zipSorterViewModel` Unresolved reference di NavHost (2026-08-07)
+User upload `build-failure-log-v2_12_0.zip`. `:app:compileDebugKotlin FAILED`
+-- 4x "Unresolved reference: zipSorterViewModel" di `MainActivity.kt` (baris
+composable ZIP_SORTER).
+- **Root cause (kesalahan Claude)**: `NavHost`/semua `composable{}` route
+  ternyata TIDAK berada langsung di dalam class `MainActivity` -- sudah lama
+  diekstrak ke fungsi top-level `private fun PromptVaultRoot(viewModel:
+  MainViewModel, ...)` (dipanggil dari `setContent{}`). Properti activity
+  `zipSorterViewModel` yang ditambah batch v2.12.0 TIDAK otomatis kebawa ke
+  scope fungsi terpisah itu -- beda dengan `viewModel` (`MainViewModel`) yang
+  memang sudah jadi parameter resmi `PromptVaultRoot` sejak awal.
+- **Fix**: tambah parameter `zipSorterViewModel: ZipSorterViewModel` ke
+  `PromptVaultRoot`, teruskan dari `setContent{}` (`zipSorterViewModel =
+  zipSorterViewModel`). Tidak ada perubahan logika lain -- 1 file,
+  `MainActivity.kt`, murni compile-fix.
+- **Pelajaran**: kalau nambah state/viewModel baru yang dipakai di dalam
+  `composable{}`, WAJIB cek dulu apakah `NavHost` ada di scope class Activity
+  atau sudah diekstrak ke fungsi Composable terpisah -- jangan asumsikan
+  properti activity otomatis in-scope.
+- versionCode/versionName TETAP 51/2.12.0 (compile-fix, belum pernah publish
+  sukses di versi ini).
+
 ## v2.12.0 -- Fitur baru: modul Zip Sorter (engine kategori file + auto-extract ZIP) (2026-08-07)
 User upload dokumen boilerplate "Android File & Zip Auto-Sorter Core Engine"
 (package asli `com.example.filesorter`) dan minta diterapkan ke PromptVault

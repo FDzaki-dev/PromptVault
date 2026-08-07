@@ -3,7 +3,11 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
-## STATUS PROJECT: v2.12.0 -- fitur baru diminta eksplisit user (2026-08-07)
+## STATUS PROJECT: v2.12.0 COMPILE-FIX terkirim (v2.12.1 label, versi tetap 2.12.0) -- 2026-08-07
+- Fix `zipSorterViewModel` Unresolved reference (NavHost ada di fungsi
+  top-level `PromptVaultRoot`, bukan di class Activity langsung -- lihat
+  CHANGELOG v2.12.1). 1 file (`MainActivity.kt`), murni compile-fix.
+- **Belum ada konfirmasi CI hijau dari user untuk fix ini.**
 - Status "SELESAI/STABLE" (declared 2026-08-04, lihat bawah) TETAP BERLAKU
   untuk seluruh rule engine utama -- TIDAK dibatalkan/di-audit ulang.
 - User eksplisit upload dokumen boilerplate & minta modul baru "Zip Sorter"

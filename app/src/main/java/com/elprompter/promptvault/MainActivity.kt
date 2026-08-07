@@ -160,6 +160,7 @@ class MainActivity : ComponentActivity() {
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     PromptVaultRoot(
                         viewModel = viewModel,
+                        zipSorterViewModel = zipSorterViewModel,
                         legacyPermissionRecheckTrigger = legacyPermissionRecheckTrigger,
                         onRequestLegacyStoragePermission = {
                             legacyStoragePermissionLauncher.launch(
@@ -180,6 +181,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun PromptVaultRoot(
     viewModel: MainViewModel,
+    zipSorterViewModel: ZipSorterViewModel,
     legacyPermissionRecheckTrigger: Int,
     onRequestLegacyStoragePermission: () -> Unit,
     onPickSafFolder: () -> Unit
