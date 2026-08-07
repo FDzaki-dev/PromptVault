@@ -41,7 +41,11 @@ import java.util.Locale
  * (status WorkManager & jadwal berikutnya) tanpa perlu adb/dev tools.
  */
 @Composable
-fun DiagnosticsScreen(downloadsFileNames: List<String>, onBack: () -> Unit) {
+fun DiagnosticsScreen(
+    downloadsFileNames: List<String>,
+    onBack: () -> Unit,
+    onOpenZipSorter: () -> Unit = {}
+) {
     val context = LocalContext.current
     var statusText by remember { mutableStateOf("Memuat status WorkManager…") }
     var crashLogs by remember { mutableStateOf<List<CrashLogger.CrashLogEntry>>(emptyList()) }
@@ -155,6 +159,17 @@ fun DiagnosticsScreen(downloadsFileNames: List<String>, onBack: () -> Unit) {
                 Text("3. Restart HP, jangan buka app secara manual.")
                 Text("4. Tunggu sesuai interval, lalu cek lagi apakah file baru ikut terpindah.")
                 Text("5. Jika status di atas tetap \"ENQUEUED\"/\"RUNNING\" setelah restart, auto-sort survive reboot.")
+            }
+        }
+
+        VaultCard(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Zip Sorter (modul terpisah)", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "Engine sortir file per kategori + auto-extract ZIP, terpisah dari rule engine utama.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                androidx.compose.material3.TextButton(onClick = onOpenZipSorter) { Text("Buka Zip Sorter") }
             }
         }
     }

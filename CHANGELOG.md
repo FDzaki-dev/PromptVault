@@ -3,6 +3,57 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.12.0 -- Fitur baru: modul Zip Sorter (engine kategori file + auto-extract ZIP) (2026-08-07)
+User upload dokumen boilerplate "Android File & Zip Auto-Sorter Core Engine"
+(package asli `com.example.filesorter`) dan minta diterapkan ke PromptVault
+dengan package disesuaikan + contoh ViewModel/Screen SAF. Diimplementasi
+sebagai modul **terisolasi total** `zipsorter/` (model, util, repository,
+worker) -- TIDAK menyentuh/menggantikan rule engine utama (`util/FileSorter.kt`)
+supaya risiko nol terhadap fitur existing yang sudah SELESAI/STABLE.
+
+**File baru (6, 1 modul, dalam Batch Lock):**
+- `zipsorter/model/FileSortModels.kt` -- FileCategory/SortState/SortConfig.
+- `zipsorter/util/ZipFileUriHelper.kt` -- helper SAF (unique filename, folder).
+- `zipsorter/repository/ZipSorterRepository.kt` -- scan+extract+move via DocumentFile.
+- `zipsorter/worker/ZipSortWorker.kt` -- CoroutineWorker (opsional, belum dijadwalkan).
+- `ui/ZipSorterViewModel.kt` -- AndroidViewModel, state via StateFlow.
+- `ui/screens/ZipSorterScreen.kt` -- contoh Compose screen + `ActivityResultContracts.OpenDocumentTree()`.
+
+**Bug di dokumen sumber user, DIPERBAIKI saat diadaptasi (bukan disalin mentah):**
+1. `ZipSortWorker` (draft: `FileSortWorker`) -- `override async suspend fun doWork()`
+   BUKAN syntax Kotlin valid (`async` bukan keyword deklarasi fungsi). Fix: `override suspend fun doWork()`.
+2. `ZipSorterRepository`: gerbang `doc.isFile` berisiko false-negative sama
+   persis dengan insiden #6 di `FileSorter.kt` lama (MIME kosong/salah dari
+   provider). Fix: pola `!doc.isDirectory` (positive check via MIME_TYPE_DIR
+   yang lebih reliable), konsisten dengan pelajaran permanen di PROJECT_STATE.md.
+3. `extractZip()` deklarasi return `Boolean` tapi tidak pernah return `false`
+   saat exception (exception cuma di-print, fungsi lanjut seolah sukses).
+   Fix: dibungkus try-catch, return `false` eksplisit di jalur gagal.
+4. `getUniqueTargetFile()` (util lama) berpotensi infinite-loop/create-lalu-cek-ulang
+   pada file yang baru saja dibuatnya sendiri. Ditulis ulang jadi lurus:
+   cek nama tersedia dulu (loop counter), baru `createFile()` sekali di akhir.
+5. `processFolder()` tidak menangani folder target invalid/kosong dengan rapi
+   (bisa div/0 di perhitungan progress `totalFiles`). Fix: early-return
+   `SortState.Error`/`SortState.Success(0,0)` eksplisit.
+
+**Wiring (parsial, protected assets, minimal):**
+- `ui/Navigation.kt`: tambah `Routes.ZIP_SORTER`.
+- `MainActivity.kt`: tambah `zipSorterViewModel` + 1 `composable(Routes.ZIP_SORTER)`.
+- `ui/screens/DiagnosticsScreen.kt`: tambah 1 `VaultCard` + tombol "Buka Zip Sorter"
+  (param `onOpenZipSorter` default no-op, tidak mengubah pemanggilan lama manapun).
+- `app/build.gradle.kts`: TIDAK ada dependency baru -- `androidx.documentfile:documentfile:1.0.1`
+  & `androidx.work:work-runtime-ktx` sudah ada dari batch §1/§5 lama. AndroidManifest.xml
+  TIDAK diubah -- SAF `OpenDocumentTree` tidak butuh permission tambahan.
+
+**Keterbatasan sengaja / belum dikerjakan (di luar scope, jangan diasumsikan bug):**
+- `ZipSortWorker` dibuat tapi belum didaftarkan ke WorkManager/scheduler manapun --
+  murni disediakan sebagai komponen siap pakai kalau user mau jadwalkan nanti.
+- Modul ini TIDAK terhubung ke `Rule`/`ActivityLogRepository`/`MoveHistoryRepository`
+  milik engine utama -- kategori & log-nya independen, by design (isolasi modul).
+- **BELUM diverifikasi runtime** (sandbox tanpa Gradle/device) -- WAJIB build CI +
+  test manual (pilih folder, taruh file campuran+ZIP, cek hasil grouping & extract)
+  sebelum dianggap matang.
+
 ## v2.8.3 -- Fix: listCandidateFilesSaf gagal detect file, MIME false-negative (2026-08-06)
 Kelas bug SAMA dgn v2.8.1 (`resolveSafRoot`). `listCandidateFilesSaf()`
 syaratkan `doc.isFile` -- query MIME type provider, false-negatif kalau MIME

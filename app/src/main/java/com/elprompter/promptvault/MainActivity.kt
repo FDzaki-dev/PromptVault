@@ -78,6 +78,8 @@ import com.elprompter.promptvault.ui.screens.OnboardingScreen
 import com.elprompter.promptvault.ui.screens.RuleListScreen
 import com.elprompter.promptvault.ui.screens.SettingsScreen
 import com.elprompter.promptvault.ui.screens.SkippedFilesScreen
+import com.elprompter.promptvault.ui.screens.ZipSorterScreen
+import com.elprompter.promptvault.ui.ZipSorterViewModel
 import com.elprompter.promptvault.ui.theme.Kraft
 import com.elprompter.promptvault.ui.theme.ObsidianBase
 import com.elprompter.promptvault.ui.theme.PromptVaultTheme
@@ -89,6 +91,7 @@ private val onboardingDoneKey = booleanPreferencesKey("onboarding_done")
 class MainActivity : ComponentActivity() {
 
     private val viewModel: MainViewModel by viewModels()
+    private val zipSorterViewModel: ZipSorterViewModel by viewModels()
 
     // Hasil izin (granted/denied) tidak dipakai langsung -- state permission
     // sebenarnya selalu dibaca ulang lewat hasManageStoragePermission() lewat
@@ -355,11 +358,26 @@ private fun PromptVaultRoot(
         composable(Routes.DIAGNOSTICS) {
             var fileNames by remember { mutableStateOf<List<String>>(emptyList()) }
             LaunchedEffect(Unit) { fileNames = viewModel.listDownloadsFileNames() }
-            DiagnosticsScreen(downloadsFileNames = fileNames, onBack = { navController.popBackStack() })
+            DiagnosticsScreen(
+                downloadsFileNames = fileNames,
+                onBack = { navController.popBackStack() },
+                onOpenZipSorter = { navController.navigate(Routes.ZIP_SORTER) }
+            )
         }
         composable(Routes.SKIPPED_FILES) {
             val skipped by viewModel.lastSkippedFiles.collectAsStateWithLifecycle()
             SkippedFilesScreen(skipped = skipped, onBack = { navController.popBackStack() })
+        }
+        composable(Routes.ZIP_SORTER) {
+            val folderUri by zipSorterViewModel.selectedFolderUri.collectAsStateWithLifecycle()
+            val sortState by zipSorterViewModel.sortState.collectAsStateWithLifecycle()
+            ZipSorterScreen(
+                selectedFolderUri = folderUri,
+                sortState = sortState,
+                onPickFolder = { uri -> zipSorterViewModel.onFolderPicked(uri) },
+                onStartSort = { zipSorterViewModel.startSort() },
+                onBack = { navController.popBackStack() }
+            )
         }
     }
 }

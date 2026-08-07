@@ -3,7 +3,23 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
-## STATUS PROJECT: SELESAI / STABLE (declared 2026-08-04)
+## STATUS PROJECT: v2.12.0 -- fitur baru diminta eksplisit user (2026-08-07)
+- Status "SELESAI/STABLE" (declared 2026-08-04, lihat bawah) TETAP BERLAKU
+  untuk seluruh rule engine utama -- TIDAK dibatalkan/di-audit ulang.
+- User eksplisit upload dokumen boilerplate & minta modul baru "Zip Sorter"
+  (kategori file otomatis + auto-extract ZIP) diintegrasikan, package
+  disesuaikan ke `com.elprompter.promptvault`, plus contoh ViewModel+Screen
+  SAF `ACTION_OPEN_DOCUMENT_TREE`. Ini exception valid dari aturan permanen
+  #3 di bawah (fitur baru spesifik diminta user, bukan audit proaktif).
+- Diimplementasi sebagai package **terisolasi total** `zipsorter/` --
+  TIDAK menyentuh `util/FileSorter.kt` (rule engine lama) sama sekali.
+  Detail lengkap + bug di dokumen sumber yang diperbaiki: lihat CHANGELOG
+  v2.12.0.
+- **BELUM diverifikasi runtime** (build CI + device asli) -- sesi
+  berikutnya JANGAN anggap modul ini matang sampai user konfirmasi.
+- versionCode 50->51, versionName 2.11.1->2.12.0.
+
+## STATUS PROJECT SEBELUMNYA: SELESAI / STABLE (declared 2026-08-04)
 - **v2.4.2 dinyatakan resmi sebagai STABLE RELEASE.** User (pemilik project)
   eksplisit bilang capek dan minta project ini benar-benar dinyatakan
   "selesai" tanpa audit tak berujung. Kriteria "Definition of Done" di bawah
