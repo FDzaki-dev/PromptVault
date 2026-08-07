@@ -848,6 +848,26 @@ menyusul di batch terpisah (anti "rombak total" sekali jalan).
 - Pencarian APK sekarang dinamis (`find ... -name "*.apk"`), bukan hardcode
   nama file, dan otomatis warning kalau APK yang ketemu tidak bertanda tangan
 
+## v2.9.0 -- Crash Logger bawaan (MediaStore, tanpa permission legacy)
+- **Fitur baru**: `util/CrashLogger.kt` -- uncaught exception handler global,
+  dipasang paling awal di `PromptVaultApp.onCreate()` (sebelum apapun lain).
+  Setiap crash otomatis ditulis ke
+  `Documents/PromptVault/logs/crash_<yyyyMMdd_HHmmss>_<uuid8>.txt` lewat
+  `MediaStore.Files` (API 29+, scoped storage resmi) -- TIDAK butuh
+  `WRITE_EXTERNAL_STORAGE`.
+- Metadata lengkap per log: App Version+versionCode, OS (release+SDK),
+  Device (manufacturer+model), Thread, timestamp, full stack trace.
+- **Fail-safe**: penulisan log dibungkus try-catch penuh; kalau logger
+  sendiri gagal, tidak menutupi crash asli -- handler default sistem tetap
+  SELALU dipanggil lewat blok `finally`.
+- **FIFO retention**: query `MediaStore` untuk file `crash_*.txt` di folder
+  log, urut `DATE_ADDED ASC`, hapus yang tertua kalau total > 50.
+- Belum ada UI viewer di app (di luar scope batch ini) -- untuk debugging,
+  tarik file log langsung dari `Documents/PromptVault/logs/` (file manager
+  atau `adb pull`). Prioritaskan baca file ini sebelum minta Logcat/ADB.
+- **Belum diverifikasi build CI di sesi ini** -- `preflight_check.sh` lolos
+  bersih + review manual, tapi tunggu konfirmasi APK CI sukses.
+
 ## v2.1.1 -- Fix CI (Gradle version mismatch + logging yang gak kepakai)
 - **Root cause build v2.1.0 gagal**: runner GitHub Actions memakai Gradle
   9.6.1 (sangat baru), tidak kompatibel dengan AGP 8.5.2 yang dipakai project

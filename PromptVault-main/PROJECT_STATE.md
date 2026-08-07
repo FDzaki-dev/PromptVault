@@ -655,3 +655,17 @@ Ikuti `MAINTENANCE.md` (fetch README/CHANGELOG/MAINTENANCE dari GitHub raw
 URL dulu sebelum minta user upload ZIP). File ini (`PROJECT_STATE.md`)
 melengkapi `CHANGELOG.md` dengan konteks KEPUTUSAN & INSIDEN yang tidak masuk
 akal ditulis sebagai entri changelog per-versi.
+
+### [2026-08-07] v2.9.0 -- Crash Logger bawaan ditambahkan
+- **Kenapa**: fitur ini sudah lama jadi requirement standar user (lihat
+  instruksi baku sesi), tapi belum pernah diimplementasi di kode -- diaudit
+  sesi ini (`grep -rn crash app/src/main/java` nihil) lalu dibangun dari nol.
+- **Desain**: lihat `util/CrashLogger.kt` (javadoc lengkap di file). Ringkas:
+  `Thread.setDefaultUncaughtExceptionHandler` dipasang di `PromptVaultApp`,
+  tulis ke `MediaStore.Files` (`Documents/PromptVault/logs/`), fail-safe,
+  FIFO 50 file.
+- **Belum ada**: UI in-app untuk browse/lihat log (baru bisa diakses via
+  file manager/adb). Kalau user minta viewer, itu batch terpisah -- jangan
+  gabung ke perubahan lain supaya tetap dalam batas 10 file/1 modul.
+- **State lain masih sama seperti entri di atas**: fix Home screen v2.3.1
+  BELUM ada konfirmasi eksplisit "sudah normal" dari user.
