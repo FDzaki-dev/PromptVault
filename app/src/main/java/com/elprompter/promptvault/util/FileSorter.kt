@@ -489,6 +489,25 @@ class FileSorter(
         }
     }
 
+    /**
+     * MIME type untuk `createFile()` SAF, diturunkan dari EKSTENSI nama file --
+     * BUKAN dipercaya dari `doc.type`/provider sumber. Alasan (kelas bug yang sama
+     * dengan insiden #4/#6 -- kolom metadata provider SAF sering tidak akurat):
+     * kalau provider sumber mengisi MIME_TYPE generik/salah (mis. "application/
+     * octet-stream" untuk file .txt, atau sebaliknya provider tujuan yang justru
+     * MENAMBAH ekstensi sesuai mime saat `createFile()` dipanggil), hasilnya bisa
+     * nama file dobel-ekstensi ("laporan.txt.txt") atau ekstensi salah, TANPA
+     * exception apapun untuk menandainya. Menurunkan dari ekstensi sendiri (yang
+     * sudah kita validasi di [listCandidateFilesSaf]/[isTempOrPartialFile] cuma
+     * "zip"/"txt") jauh lebih bisa diprediksi lintas provider (Google Drive,
+     * SD card, dll).
+     */
+    private fun mimeTypeForFileName(name: String): String = when (name.substringAfterLast('.', "").lowercase()) {
+        "zip" -> "application/zip"
+        "txt" -> "text/plain"
+        else -> "application/octet-stream"
+    }
+
     /** Cari subfolder bernama [name] di [parent]; buat baru kalau belum ada. */
     private fun findOrCreateChildDirSaf(parent: DocumentFile, name: String): DocumentFile? {
         return parent.listFiles().firstOrNull { it.isDirectory && it.name == name } ?: parent.createDirectory(name)
@@ -543,8 +562,17 @@ class FileSorter(
                 }
             }
 
-            val mimeType = doc.type ?: "application/octet-stream"
+            val mimeType = mimeTypeForFileName(targetName)
             val newDoc = destDir.createFile(mimeType, targetName) ?: return MoveOutcome.FAILED
+            if (newDoc.name != null && newDoc.name != targetName) {
+                // Provider tujuan mengubah nama sendiri (mis. tambah/ubah ekstensi
+                // sesuai mime) -- BUKAN bug di sisi kita, tapi user WAJIB tahu nama
+                // aktual di penyimpanan bisa beda dari nama file asli.
+                activityLogRepository.add(
+                    LogLevel.WARNING,
+                    "\"$fileName\" tersimpan sebagai \"${newDoc.name}\" (folder kustom mengubah nama otomatis)."
+                )
+            }
             val copied = copyDocumentBytes(doc.uri, newDoc.uri)
             if (!copied) {
                 runCatching { newDoc.delete() }
@@ -615,7 +643,7 @@ class FileSorter(
                 counter++
             }
 
-            val mimeType = current.type ?: "application/octet-stream"
+            val mimeType = mimeTypeForFileName(targetName)
             val restoreDoc = originalRoot.createFile(mimeType, targetName)
             if (restoreDoc == null) {
                 activityLogRepository.add(LogLevel.ERROR, "Undo gagal untuk \"${entry.fileName}\" (folder kustom).")

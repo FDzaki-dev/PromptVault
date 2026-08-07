@@ -675,3 +675,24 @@ akal ditulis sebagai entri changelog per-versi.
   + tap-to-view AlertDialog). Menutup gap "belum ada UI viewer" yang dicatat
   di entri sebelumnya.
 - CI belum dikonfirmasi hijau untuk versi ini.
+
+### [2026-08-07] v2.10.0 -- Debugging fokus SAF: 2 bug nyata ditemukan & diperbaiki
+- **Bug #1**: `releasePersistableUriPermission()` didokumentasikan tapi TIDAK
+  PERNAH diimplementasi -- izin folder kustom lama menumpuk selamanya tiap
+  ganti/hapus folder. Risiko jangka panjang: kena limit OS (~128 persisted
+  permission/app), fitur folder kustom berhenti berfungsi diam-diam. Fix di
+  `MainViewModel.setSafTreeUri()`/`clearSafTreeUri()`.
+- **Bug #2**: mime type buat `createFile()` SAF dipercaya dari provider
+  SUMBER (`doc.type`), bukan diturunkan dari ekstensi -- berisiko nama
+  dobel-ekstensi di provider tertentu. Fix: `mimeTypeForFileName()` baru
+  (murni dari ekstensi), + verifikasi nama aktual pasca-create, log WARNING
+  kalau provider ubah nama sendiri.
+- **Cara nemuinnya**: grep `takePersistableUriPermission` cross-reference ke
+  `releasePersistableUriPermission` (nihil) -- gap antara komentar/dokumentasi
+  kode dan implementasi aktual. Pelajaran: kalau komentar bilang "dilakukan di
+  X", SELALU verifikasi X benar-benar melakukannya, jangan percaya komentar
+  begitu saja.
+- **Belum diverifikasi nyata**: butuh user test folder kustom di kartu SD/
+  provider selain Downloads, plus build CI sukses, sebelum dianggap matang
+  100%. Kalau CI hijau & user konfirmasi folder kustom jalan normal (pindah,
+  undo, ganti folder berkali-kali tanpa error), SAF bisa dianggap matang.

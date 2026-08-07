@@ -848,6 +848,31 @@ menyusul di batch terpisah (anti "rombak total" sekali jalan).
 - Pencarian APK sekarang dinamis (`find ... -name "*.apk"`), bukan hardcode
   nama file, dan otomatis warning kalau APK yang ketemu tidak bertanda tangan
 
+## v2.10.0 -- Debugging & pematangan SAF (2 bug nyata diperbaiki)
+- **Bug #1 (kebocoran izin persisted, FATAL jangka panjang)**: komentar lama di
+  `clearSafTreeUri()` bilang pelepasan `releasePersistableUriPermission()`
+  "dilakukan di pemanggil (MainActivity)" -- ternyata TIDAK PERNAH benar-benar
+  dipanggil di mana pun. Tiap kali user ganti/hapus folder kustom, izin lama
+  menumpuk selamanya. Android membatasi jumlah persisted URI permission per
+  app (~128) -- kalau limit tercapai, `takePersistableUriPermission()`
+  berikutnya lempar `SecurityException` dan fitur folder kustom berhenti bisa
+  dipakai TANPA pesan error jelas ke user (silently fallback ke Downloads
+  lewat catch block yang sudah ada). **Fix**: `MainViewModel.setSafTreeUri()`
+  & `clearSafTreeUri()` sekarang eksplisit `releasePersistableUriPermission()`
+  ke URI lama sebelum ganti/hapus (best-effort, gagal-pun diabaikan aman).
+- **Bug #2 (mime type tidak reliable, sama kelas insiden #4/#6)**:
+  `moveFileSaf`/`undoSaf` sebelumnya pakai `doc.type`/`current.type` (MIME dari
+  provider SUMBER) buat `createFile()` di TUJUAN. Provider SAF beda-beda
+  (Google Drive, SD card, dll) kadang isi MIME_TYPE generik/salah, dan
+  beberapa provider tujuan menambah/ubah ekstensi otomatis sesuai mime saat
+  `createFile()` -- berisiko nama dobel-ekstensi (`laporan.txt.txt`) TANPA
+  exception apapun. **Fix**: MIME sekarang diturunkan dari ekstensi nama file
+  sendiri (`mimeTypeForFileName()`, zip/txt eksplisit, bukan dipercaya dari
+  provider), plus verifikasi pasca-`createFile()`: kalau nama aktual di
+  storage != nama yang diminta, dicatat WARNING ke Activity Log (bukan
+  di-assume berhasil diam-diam).
+- **Belum diverifikasi build CI di sesi ini.**
+
 ## v2.9.1 -- Viewer crash log di Diagnostik
 - **Fitur baru**: `DiagnosticsScreen` sekarang tampilkan daftar crash log
   tersimpan (10 terbaru, total count di judul), pakai `CrashLogger.listLogs()`
