@@ -192,10 +192,10 @@ fun AddEditRuleScreen(
     if (check != null && rule != null) {
         val message = when (check) {
             is SaveRuleCheck.DuplicatePattern ->
-                // TODO #9: konfirmasi sebelum menimpa pattern yang sama, tidak lagi diam-diam.
+                // Konfirmasi sebelum menimpa pattern yang sama (fitur lengkap).
                 "Pattern \"${rule.pattern}\" sudah dipakai rule \"${check.existing.folderName}\". Timpa rule tersebut?"
             is SaveRuleCheck.OverlapsWithOthers ->
-                // TODO #3: peringatan rule tumpang tindih sebelum disimpan.
+                // Peringatan rule tumpang tindih sebelum disimpan (fitur lengkap).
                 "Pattern ini bisa tumpang tindih dengan: ${check.overlapping.joinToString { it.folderName }}. " +
                     "File yang cocok di keduanya akan memakai rule yang lebih dulu terdaftar. Tetap simpan?"
             SaveRuleCheck.Ok -> ""

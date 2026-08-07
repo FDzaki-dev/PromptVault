@@ -14,8 +14,8 @@ import kotlinx.serialization.json.Json
  */
 sealed class SaveRuleCheck {
     object Ok : SaveRuleCheck()
-    data class DuplicatePattern(val existing: Rule) : SaveRuleCheck()      // TODO #9
-    data class OverlapsWithOthers(val overlapping: List<Rule>) : SaveRuleCheck() // TODO #3
+    data class DuplicatePattern(val existing: Rule) : SaveRuleCheck()      // fitur lengkap, dipakai AddEditRuleScreen
+    data class OverlapsWithOthers(val overlapping: List<Rule>) : SaveRuleCheck() // fitur lengkap, dipakai AddEditRuleScreen
 }
 
 class RuleRepository(private val context: Context) {
@@ -118,7 +118,7 @@ class RuleRepository(private val context: Context) {
         }
     }
 
-    /** Ekspor semua rule sebagai teks JSON (TODO #7 - backup/export). */
+    /** Ekspor semua rule sebagai teks JSON (fitur lengkap -- backup/export via Pengaturan). */
     suspend fun exportAsJson(): String = json.encodeToString(getRules())
 
     /** Impor rule dari teks JSON hasil export. Menggabungkan (merge) berdasarkan id. */

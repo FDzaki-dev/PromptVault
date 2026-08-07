@@ -10,7 +10,7 @@ import com.elprompter.promptvault.data.SettingsRepository
 import java.util.concurrent.TimeUnit
 
 /**
- * TODO #2: interval auto-scan kini bisa diatur dari UI (sebelumnya hardcoded 15 menit).
+ * Interval auto-scan bisa diatur dari UI (fitur lengkap, sebelumnya hardcoded 15 menit).
  * WorkManager PeriodicWorkRequest tidak bisa kurang dari 15 menit, jadi nilai yang
  * diizinkan (lihat SettingsRepository.ALLOWED_INTERVALS) semuanya >= 15.
  */

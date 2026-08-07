@@ -3,9 +3,9 @@ package com.elprompter.promptvault.util
 import com.elprompter.promptvault.data.Rule
 
 /**
- * TODO #3: rule tumpang tindih sebelumnya ditangani diam-diam (ambil rule pertama
- * yang cocok tanpa peringatan). Sekarang kita deteksi & tampilkan peringatan ke user,
- * baik saat menyimpan rule baru maupun saat scan menemukan file yang cocok >1 rule.
+ * Rule tumpang tindih dideteksi & ditampilkan sebagai peringatan ke user (fitur
+ * lengkap), baik saat menyimpan rule baru maupun saat scan menemukan file yang
+ * cocok >1 rule.
  */
 object RuleOverlapChecker {
 

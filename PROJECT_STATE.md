@@ -707,3 +707,14 @@ akal ditulis sebagai entri changelog per-versi.
   fitur bisa sudah selesai tapi komentarnya lupa diupdate. Selalu baca kode
   aktual dulu sebelum asumsi dari nama TODO.
 - CI belum dikonfirmasi hijau untuk versi ini.
+
+### [2026-08-07] v2.11.1 -- Status: semua fitur inti lengkap, siap uji nyata
+- Audit menyeluruh selesai: 3 bug nyata ditemukan & fixed sesi ini (SAF izin
+  bocor, SAF mime type, UNDO hasil palsu). Semua TODO lama di kode ternyata
+  sudah selesai fungsional, tinggal label basi -- sudah dibersihkan.
+- **Satu-satunya item genuinely pending**: verifikasi nyata di perangkat fisik
+  (build CI + install + test manual semua fitur, terutama SAF & Undo). Claude
+  tidak punya akses build/device untuk verifikasi ini sendiri.
+- Kalau sesi depan mulai lagi tanpa temuan bug baru dari user, TIDAK PERLU
+  re-audit kode yang sama dari nol -- cek dulu apakah ada laporan masalah
+  baru dari user/CI sebelum grep ulang seluruh codebase.

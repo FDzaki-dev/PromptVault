@@ -841,7 +841,7 @@ class FileSorter(
         }
     }
 
-    /** TODO #1: UNDO satu entri riwayat pemindahan. */
+    /** UNDO satu entri riwayat pemindahan (fitur lengkap sejak v2.11.0, lihat ActivityLogScreen). */
     suspend fun undo(entry: MoveHistoryEntry): Boolean {
         // Batch §1 Fase 2: destUri berupa content:// URI berarti file
         // dipindah lewat jalur SAF ([moveFileSaf]) -- undo-nya juga wajib

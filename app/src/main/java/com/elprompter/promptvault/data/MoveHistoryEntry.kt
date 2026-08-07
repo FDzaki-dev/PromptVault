@@ -3,7 +3,7 @@ package com.elprompter.promptvault.data
 import kotlinx.serialization.Serializable
 
 /**
- * Merekam satu pemindahan file agar bisa di-UNDO (TODO #1).
+ * Merekam satu pemindahan file agar bisa di-UNDO (fitur lengkap sejak v2.11.0).
  * originalParentUri & destUri disimpan sebagai String URI (SAF / MediaStore).
  */
 @Serializable

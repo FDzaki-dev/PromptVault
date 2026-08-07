@@ -848,6 +848,16 @@ menyusul di batch terpisah (anti "rombak total" sekali jalan).
 - Pencarian APK sekarang dinamis (`find ... -name "*.apk"`), bukan hardcode
   nama file, dan otomatis warning kalau APK yang ketemu tidak bertanda tangan
 
+## v2.11.1 -- Bersihkan label TODO basi (docs-only, no behavior change)
+- Diaudit ulang: TODO #1 (Undo), #2 (interval), #3 (overlap warning), #7
+  (export), #9 (konfirmasi duplikat) SEMUA sudah lengkap fungsional di kode --
+  labelnya cuma lupa dihapus, berisiko menyesatkan sesi Claude berikutnya
+  kalau dikira masih ada kerjaan tersisa. Diganti jadi komentar deskriptif
+  biasa (bukan TODO).
+- TODO #4 & #5 (`DiagnosticsScreen.kt`) DIBIARKAN -- itu memang masih
+  pending nyata: PromptVault belum pernah diuji di HP fisik oleh Claude.
+- Tidak ada perubahan behavior/logic apapun di batch ini.
+
 ## v2.11.0 -- Fix bug UNDO (hasil palsu + pesan hardcode Downloads)
 - **Konteks**: fitur UNDO di tab "Undo Pemindahan" sebenarnya SUDAH lengkap
   fungsional (list, konfirmasi, panggil `FileSorter.undo()`) -- komentar

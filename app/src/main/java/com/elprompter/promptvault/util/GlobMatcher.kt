@@ -40,7 +40,7 @@ object GlobMatcher {
 
     /**
      * True jika dua pattern glob secara teoretis bisa cocok dengan nama file yang sama.
-     * Dipakai untuk deteksi rule tumpang tindih (TODO #3).
+     * Dipakai untuk deteksi rule tumpang tindih (fitur ini sudah lengkap -- lihat RuleOverlapChecker.kt & AddEditRuleScreen.kt).
      * Pendekatan praktis: bandingkan lewat sejumlah nama file sampel yang dihasilkan
      * dari kedua pattern, plus pengecekan literal-vs-literal langsung.
      */
