@@ -216,9 +216,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun undoMove(entry: MoveHistoryEntry) {
-        viewModelScope.launch { fileSorter.undo(entry) }
-    }
+    /**
+     * BUG lama (ditemukan & diperbaiki 2026-08-07): sebelumnya fire-and-forget
+     * (`viewModelScope.launch { fileSorter.undo(entry) }`), jadi caller (UI)
+     * TIDAK PERNAH tahu hasil sebenarnya -- `ActivityLogScreen` menampilkan
+     * snackbar "berhasil" SELALU, walau undo aslinya gagal (mis. file tujuan
+     * sudah tidak ada, folder SAF izin dicabut). Sekarang `suspend` dan
+     * mengembalikan hasil asli dari [FileSorter.undo], supaya UI bisa
+     * menampilkan pesan yang jujur.
+     */
+    suspend fun undoMove(entry: MoveHistoryEntry): Boolean = fileSorter.undo(entry)
 
     suspend fun exportRulesJson(): String = ruleRepository.exportAsJson()
 

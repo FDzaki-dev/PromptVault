@@ -53,11 +53,12 @@ import java.util.Locale
 fun ActivityLogScreen(
     logEntries: List<ActivityLogEntry>,
     undoableHistory: List<MoveHistoryEntry>,
-    onUndo: (MoveHistoryEntry) -> Unit,
+    onUndo: suspend (MoveHistoryEntry) -> Boolean,
     onBack: () -> Unit
 ) {
     var tab by remember { mutableStateOf(0) }
     var pendingUndo by remember { mutableStateOf<MoveHistoryEntry?>(null) }
+    var undoInFlight by remember { mutableStateOf(false) }
     val formatter = remember { SimpleDateFormat("dd MMM HH:mm", Locale("id", "ID")) }
     val logExportFormatter = remember { SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale("id", "ID")) }
     val snackbarHostState = remember { SnackbarHostState() }
@@ -148,7 +149,9 @@ fun ActivityLogScreen(
                 }
             }
         } else {
-            // TODO #1: fitur UNDO — file yang salah pindah kini bisa dikembalikan dari dalam app.
+            // Fitur UNDO: file yang salah pindah bisa dikembalikan dari dalam app,
+            // tanpa perlu file manager manual. Selesai & jalan penuh (bukan lagi TODO) --
+            // lihat blok `pendingUndo` di bawah untuk alur konfirmasi & hasil asli.
             val undoable = undoableHistory.filter { !it.undone }
             Crossfade(targetState = undoable.isEmpty(), label = "undoHistoryEmptyState", animationSpec = tween(220)) { isEmpty ->
                 if (isEmpty) {
@@ -169,7 +172,10 @@ fun ActivityLogScreen(
                                         Text("Ke: PromptVault/${entry.ruleFolderName}/", style = MaterialTheme.typography.labelSmall)
                                         Text(formatter.format(Date(entry.timestampMillis)), style = MaterialTheme.typography.labelSmall)
                                     }
-                                    TextButton(onClick = { pendingUndo = entry }) { Text("Undo") }
+                                    TextButton(
+                                        onClick = { pendingUndo = entry },
+                                        enabled = !undoInFlight
+                                    ) { Text("Undo") }
                                 }
                             }
                         }
@@ -183,12 +189,25 @@ fun ActivityLogScreen(
     pendingUndo?.let { entry ->
         VaultActionSheet(
             title = "Undo pemindahan?",
-            message = "\"${entry.fileName}\" akan dikembalikan ke folder Downloads asal.",
+            message = "\"${entry.fileName}\" akan dikembalikan ke lokasi asalnya.",
             confirmLabel = "Undo",
             onConfirm = {
-                onUndo(entry)
                 pendingUndo = null
-                scope.launch { snackbarHostState.showSnackbar("\"${entry.fileName}\" dikembalikan ke Downloads") }
+                undoInFlight = true
+                scope.launch {
+                    // BUG lama diperbaiki (2026-08-07): sebelumnya snackbar "berhasil"
+                    // SELALU muncul di sini terlepas hasil asli `onUndo` (fire-and-forget),
+                    // dan teksnya hardcode "Downloads" walau tujuan bisa folder SAF
+                    // kustom. Sekarang menunggu hasil ASLI & pesan sesuai kenyataan --
+                    // detail folder tujuan/alasan gagal tetap ada di tab Log kalau user
+                    // butuh tahu lebih spesifik.
+                    val success = onUndo(entry)
+                    undoInFlight = false
+                    snackbarHostState.showSnackbar(
+                        if (success) "\"${entry.fileName}\" berhasil dikembalikan"
+                        else "Undo \"${entry.fileName}\" gagal -- lihat tab Log untuk detail"
+                    )
+                }
             },
             onDismiss = { pendingUndo = null }
         )

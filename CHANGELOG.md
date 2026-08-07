@@ -848,6 +848,23 @@ menyusul di batch terpisah (anti "rombak total" sekali jalan).
 - Pencarian APK sekarang dinamis (`find ... -name "*.apk"`), bukan hardcode
   nama file, dan otomatis warning kalau APK yang ketemu tidak bertanda tangan
 
+## v2.11.0 -- Fix bug UNDO (hasil palsu + pesan hardcode Downloads)
+- **Konteks**: fitur UNDO di tab "Undo Pemindahan" sebenarnya SUDAH lengkap
+  fungsional (list, konfirmasi, panggil `FileSorter.undo()`) -- komentar
+  "TODO #1" di kode sudah basi/tidak akurat, dihapus.
+- **Bug nyata yang ditemukan**: `MainViewModel.undoMove()` sebelumnya
+  fire-and-forget (`viewModelScope.launch { fileSorter.undo(entry) }`, hasil
+  `Boolean` dibuang). `ActivityLogScreen` menampilkan snackbar "berhasil
+  dikembalikan ke Downloads" SELALU, tanpa peduli undo aslinya sukses atau
+  gagal -- dan teksnya hardcode "Downloads" padahal tujuan bisa folder SAF
+  kustom (lihat v2.10.0).
+- **Fix**: `undoMove()` jadi `suspend fun` mengembalikan `Boolean` asli;
+  `ActivityLogScreen.onUndo` diubah jadi `suspend (MoveHistoryEntry) ->
+  Boolean`; snackbar sekarang JUJUR (beda pesan sukses/gagal) dan pesan tidak
+  lagi hardcode "Downloads". Tambah guard `undoInFlight` supaya tombol Undo
+  tidak bisa di-tap dobel selagi proses berjalan.
+- **Belum diverifikasi build CI di sesi ini.**
+
 ## v2.10.0 -- Debugging & pematangan SAF (2 bug nyata diperbaiki)
 - **Bug #1 (kebocoran izin persisted, FATAL jangka panjang)**: komentar lama di
   `clearSafTreeUri()` bilang pelepasan `releasePersistableUriPermission()`

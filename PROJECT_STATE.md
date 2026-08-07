@@ -696,3 +696,14 @@ akal ditulis sebagai entri changelog per-versi.
   provider selain Downloads, plus build CI sukses, sebelum dianggap matang
   100%. Kalau CI hijau & user konfirmasi folder kustom jalan normal (pindah,
   undo, ganti folder berkali-kali tanpa error), SAF bisa dianggap matang.
+
+### [2026-08-07] v2.11.0 -- Fix UNDO: hasil palsu + pesan hardcode
+- Fitur UNDO ternyata sudah 100% fungsional dari sesi sebelumnya (bukan TODO
+  lagi) -- yang jadi bug adalah UI-nya BOHONG soal hasil (selalu bilang
+  sukses) dan pesannya hardcode "Downloads" walau bisa folder SAF kustom.
+- Fix: `undoMove()` suspend + return Boolean asli, snackbar sesuai hasil
+  nyata, guard anti-double-tap.
+- **Pelajaran sesi ini**: TODO comment lama di kode TIDAK SELALU akurat --
+  fitur bisa sudah selesai tapi komentarnya lupa diupdate. Selalu baca kode
+  aktual dulu sebelum asumsi dari nama TODO.
+- CI belum dikonfirmasi hijau untuk versi ini.
