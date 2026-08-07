@@ -669,3 +669,9 @@ akal ditulis sebagai entri changelog per-versi.
   gabung ke perubahan lain supaya tetap dalam batas 10 file/1 modul.
 - **State lain masih sama seperti entri di atas**: fix Home screen v2.3.1
   BELUM ada konfirmasi eksplisit "sudah normal" dari user.
+
+### [2026-08-07] v2.9.1 -- Viewer crash log ditambah di Diagnostik
+- Lanjutan v2.9.0. `DiagnosticsScreen` sekarang punya card "Crash Log" (list
+  + tap-to-view AlertDialog). Menutup gap "belum ada UI viewer" yang dicatat
+  di entri sebelumnya.
+- CI belum dikonfirmasi hijau untuk versi ini.

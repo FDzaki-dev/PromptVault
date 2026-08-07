@@ -117,4 +117,63 @@ object CrashLogger {
             }
         }
     }
+
+    /** Satu entri crash log tersimpan, untuk ditampilkan di Diagnostik. */
+    data class CrashLogEntry(
+        val uri: android.net.Uri,
+        val displayName: String,
+        val dateAddedEpochSeconds: Long,
+        val sizeBytes: Long
+    )
+
+    /** Daftar crash log tersimpan, terbaru dulu. Aman dipanggil dari IO thread. */
+    fun listLogs(context: Context): List<CrashLogEntry> {
+        val resolver = context.contentResolver
+        val collection = MediaStore.Files.getContentUri("external")
+        val projection = arrayOf(
+            MediaStore.MediaColumns._ID,
+            MediaStore.MediaColumns.DISPLAY_NAME,
+            MediaStore.MediaColumns.DATE_ADDED,
+            MediaStore.MediaColumns.SIZE
+        )
+        val selection = "${MediaStore.MediaColumns.RELATIVE_PATH} = ? AND " +
+            "${MediaStore.MediaColumns.DISPLAY_NAME} LIKE ?"
+        val selectionArgs = arrayOf(RELATIVE_DIR, "crash_%.txt")
+        val sortOrder = "${MediaStore.MediaColumns.DATE_ADDED} DESC"
+
+        val results = mutableListOf<CrashLogEntry>()
+        try {
+            resolver.query(collection, projection, selection, selectionArgs, sortOrder)?.use { cursor ->
+                val idCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID)
+                val nameCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DISPLAY_NAME)
+                val dateCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATE_ADDED)
+                val sizeCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.SIZE)
+                while (cursor.moveToNext()) {
+                    val id = cursor.getLong(idCol)
+                    results.add(
+                        CrashLogEntry(
+                            uri = ContentUris.withAppendedId(collection, id),
+                            displayName = cursor.getString(nameCol),
+                            dateAddedEpochSeconds = cursor.getLong(dateCol),
+                            sizeBytes = cursor.getLong(sizeCol)
+                        )
+                    )
+                }
+            }
+        } catch (_: Exception) {
+            // Fail-safe: kalau query gagal (mis. provider tidak siap), tampilkan list kosong
+            // daripada crash layar Diagnostik.
+        }
+        return results
+    }
+
+    /** Baca isi satu crash log sebagai teks. Aman dipanggil dari IO thread. */
+    fun readLog(context: Context, uri: android.net.Uri): String {
+        return try {
+            context.contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) }
+                ?: "(gagal buka file)"
+        } catch (e: Exception) {
+            "(gagal baca file: ${e.message})"
+        }
+    }
 }

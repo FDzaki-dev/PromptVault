@@ -848,6 +848,18 @@ menyusul di batch terpisah (anti "rombak total" sekali jalan).
 - Pencarian APK sekarang dinamis (`find ... -name "*.apk"`), bukan hardcode
   nama file, dan otomatis warning kalau APK yang ketemu tidak bertanda tangan
 
+## v2.9.1 -- Viewer crash log di Diagnostik
+- **Fitur baru**: `DiagnosticsScreen` sekarang tampilkan daftar crash log
+  tersimpan (10 terbaru, total count di judul), pakai `CrashLogger.listLogs()`
+  (baru, query MediaStore) berjalan di `Dispatchers.IO`.
+- Ketuk satu log -> `AlertDialog` isi lengkap stack trace via
+  `CrashLogger.readLog()` (baru), juga di IO thread, fail-safe (query/baca
+  dibungkus try-catch, list kosong kalau gagal -- tidak crash layar sendiri).
+- Selaras `MAINTENANCE.md`/instruksi baku: "prioritaskan baca crash log
+  sebelum minta Logcat/ADB" -- sekarang bisa langsung dari dalam app, tidak
+  perlu file manager/adb pull lagi.
+- **Belum diverifikasi build CI di sesi ini.**
+
 ## v2.9.0 -- Crash Logger bawaan (MediaStore, tanpa permission legacy)
 - **Fitur baru**: `util/CrashLogger.kt` -- uncaught exception handler global,
   dipasang paling awal di `PromptVaultApp.onCreate()` (sebelum apapun lain).
