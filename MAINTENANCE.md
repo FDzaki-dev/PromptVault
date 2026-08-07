@@ -91,6 +91,21 @@ step berikutnya seolah tidak terjadi apa-apa. Setiap kali menambah step baru
 yang pakai `| tee`, SELALU pastikan `set -euo pipefail` ada di baris pertama
 block `run: |` itu.
 
+## Item kategori 7 preflight yang sudah diverifikasi aman (jangan re-cek manual tiap sesi)
+
+- `Navigation.kt:8 addEditRule(...)` -- fungsi murni bikin string route, tidak
+  panggil API Compose apapun. Aman.
+- `MainViewModel.kt` (semua fungsi yang muncul) -- method biasa di dalam
+  `ViewModel` class, bukan lambda/local function di dalam `@Composable`. Aman.
+- `SettingsScreen.kt:61 chipColors(...)` -- SUDAH punya `@Composable` persis
+  di baris sebelumnya (60). Aman, false-positive grep biasa (grep konteksnya
+  hanya lihat baris definisi fungsi, bukan baris anotasi di atasnya).
+
+Kalau daftar fungsi yang muncul di kategori 7 PERSIS sama seperti di atas
+(nama & lokasi baris identik atau bergeser wajar karena edit lain), tidak
+perlu re-review manual satu-satu -- cukup pastikan tidak ada ENTRI BARU yang
+belum ada di daftar ini.
+
 ## Alur kerja standar tiap sesi (ringkasan)
 
 1. Kalau sesi baru: orientasi dulu (lihat bagian "onboarding" di atas).
