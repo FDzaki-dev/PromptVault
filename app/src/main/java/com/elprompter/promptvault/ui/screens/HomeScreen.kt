@@ -44,7 +44,7 @@ import com.elprompter.promptvault.ui.MainViewModel
 import com.elprompter.promptvault.ui.components.GroupedList
 import com.elprompter.promptvault.ui.components.GroupedListRow
 import com.elprompter.promptvault.ui.components.VaultCard
-import com.elprompter.promptvault.ui.components.tactilePress
+import com.elprompter.promptvault.ui.components.pressScale
 import com.elprompter.promptvault.ui.theme.VaultTheme
 
 @Composable
@@ -158,7 +158,7 @@ fun HomeScreen(
                         enabled = !isScanning,
                         onClick = onScanNow
                     )
-                    .tactilePress(scanInteraction, shape = MaterialTheme.shapes.large)
+                    .pressScale(scanInteraction)
                     .padding(vertical = 15.dp),
                 contentAlignment = Alignment.Center
             ) {

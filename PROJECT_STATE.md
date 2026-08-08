@@ -3,7 +3,24 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
-## STATUS PROJECT: v2.14.0 -- Ganti total tema visual ke "AMOLED Glassmorphism Hybrid + Midnight Blue Gradient" -- 2026-08-08
+## STATUS PROJECT: v2.14.1 -- FIX REGRESI: CTA "Scan Sekarang" pucat/glitch akibat shadow tactilePress -- 2026-08-08
+- User laporkan screenshot: tombol CTA gradient stamp->amber punya kotak pucat
+  aneh di tengahnya (bukan shadow halus). Root cause: v2.14.0 mengganti
+  `.pressScale()` polos di CTA jadi `.tactilePress()` yang menambah
+  `Modifier.shadow(elevation=4.dp)` bahkan di state idle (bukan cuma saat
+  ditekan). Di banyak device/skin Android, `Modifier.shadow` di atas
+  Brush.horizontalGradient custom sering fallback render jadi kotak
+  translusen pucat, bukan shadow bertitik gelap yang mulus -- terutama kalau
+  compositing layer-nya tidak match warna background gradient.
+- **Fix**: CTA kembali pakai `.pressScale()` polos (skala saja, tanpa
+  shadow layer tambahan) -- ini juga lebih sesuai bab 7 spesifikasi tema
+  ("Avoid: glossy glass-button appearance; excessive bevel").
+  `tactilePress()` di `PressScale.kt` TETAP ada (tidak dihapus) untuk
+  kontrol lain di masa depan, tapi TIDAK dipakai lagi di CTA Home.
+- 1 file (`ui/screens/HomeScreen.kt`), murni revert 1 modifier + import.
+- versionCode 53->54, versionName 2.14.0->2.14.1.
+
+## STATUS PROJECT SEBELUMNYA: v2.14.0 -- Ganti total tema visual ke "AMOLED Glassmorphism Hybrid + Midnight Blue Gradient" -- 2026-08-08
 - User upload spesifikasi desain (.md) & minta tema default project ditimpa
   sampai bersih, 100% sesuai isi dokumen itu. Palet lama "Manifest Arsip"
   (kraft/pine terang + obsidian gelap terpisah, dua skema) DIHAPUS TOTAL,

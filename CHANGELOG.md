@@ -3,6 +3,13 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.14.1 -- Fix regresi: CTA "Scan Sekarang" pucat/glitch (2026-08-08)
+`tactilePress()` (shadow 4dp saat idle) di CTA Home menyebabkan kotak pucat
+translusen di beberapa device (fallback render shadow di atas gradient
+custom). Revert CTA ke `.pressScale()` polos. Lihat PROJECT_STATE.md.
+- `ui/screens/HomeScreen.kt`: ganti `tactilePress` -> `pressScale`.
+- versionCode 53->54, versionName 2.14.0->2.14.1.
+
 ## v2.14.0 -- Tema visual diganti total: AMOLED Glassmorphism Hybrid + Midnight Blue Gradient (2026-08-08)
 User upload spesifikasi desain dan minta tema default ditimpa sampai bersih,
 100% sesuai isi dokumen. Lihat PROJECT_STATE.md untuk detail & known
