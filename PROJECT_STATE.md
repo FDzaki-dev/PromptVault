@@ -973,3 +973,14 @@ akal ditulis sebagai entri changelog per-versi.
 - Kalau sesi depan mulai lagi tanpa temuan bug baru dari user, TIDAK PERLU
   re-audit kode yang sama dari nol -- cek dulu apakah ada laporan masalah
   baru dari user/CI sebelum grep ulang seluruh codebase.
+
+### [2026-08-09] v2.16.1 -- Hotfix build: `shadowElevation` bukan param ModalBottomSheet
+- CI gagal 2x (v2.16.0 attempt) di `compileDebugKotlin`: `ModalBottomSheet`
+  di `VaultActionSheet.kt` pakai `shadowElevation = 0.dp`, padahal param itu
+  cuma ada di `Surface`, bukan di `ModalBottomSheet` versi material3 1.2.x
+  (compose-bom 2024.06.00) yang dipakai project ini. Fix: ganti jadi
+  `tonalElevation = 0.dp` (efek visual setara -- flat, no Material elevation).
+- **Pelajaran**: kalau nambah param elevation ke composable Material3 baru,
+  SELALU cek signature komposable itu spesifik (ModalBottomSheet != Surface),
+  jangan asumsi semua composable "container" M3 punya param yang sama.
+- Belum diverifikasi CI hijau untuk versi ini -- perlu push & cek Actions.

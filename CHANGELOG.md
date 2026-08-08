@@ -3,6 +3,18 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.16.1 -- Hotfix: build gagal, `shadowElevation` bukan param ModalBottomSheet (2026-08-09)
+CI gagal 2x berturut-turut (attempt sebelumnya) di `compileDebugKotlin`:
+`VaultActionSheet.kt:53: Cannot find a parameter with this name: shadowElevation`.
+Root cause: `ModalBottomSheet` pada `compose-bom = 2024.06.00` (material3 1.2.x)
+TIDAK punya parameter `shadowElevation` -- itu cuma ada di `Surface` (dipakai
+benar di `VaultCard.kt`). Fix: ganti jadi `tonalElevation = 0.dp` di
+`VaultActionSheet.kt` (efek visual sama -- flat, tanpa elevation Material
+default), komentar diperbarui biar sesi depan tidak salah tiru pola ini lagi
+ke composable lain yang bukan `Surface`.
+- File diubah: `VaultActionSheet.kt` (1 baris param), `app/build.gradle.kts`
+  (versionCode 57, versionName 2.16.1).
+
 ## v2.16.0 -- Technical debt audit & atomic closure (2026-08-09)
 User minta daftar SEMUA technical debt kode/fitur (bukan testing) yang belum
 kesampaian sejak awal project, dieksekusi jadi 1 batch atomic. Audit penuh

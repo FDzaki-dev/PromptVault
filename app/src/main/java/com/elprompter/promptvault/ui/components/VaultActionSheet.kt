@@ -47,10 +47,12 @@ fun VaultActionSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = colors.surfaceVariant,
-        // shadowElevation=0 + border rambut manual di bawah (bukan tonal
+        // tonalElevation=0 + border rambut manual di bawah (bukan tonal
         // elevation Material default) -- sheet tetap terbaca sebagai lapisan
         // glass tipis di atas AMOLED (bab 7), bukan panel Material solid.
-        shadowElevation = 0.dp
+        // Catatan: ModalBottomSheet pada material3-bom 2024.06.00 tidak
+        // memiliki parameter shadowElevation (hanya Surface yang punya).
+        tonalElevation = 0.dp
     ) {
         // Highlight rambut tunggal di TOP (bab 8/9: arah cahaya kiri-atas ->
         // kanan-bawah, "reflected light" bukan garis outline penuh) -- satu
