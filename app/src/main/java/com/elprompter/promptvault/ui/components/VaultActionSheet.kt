@@ -1,8 +1,11 @@
 package com.elprompter.promptvault.ui.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -17,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
+import com.elprompter.promptvault.ui.theme.GlassBorder
 
 /**
  * Pengganti AlertDialog kotak di tengah layar -- muncul dari bawah seperti
@@ -42,13 +46,27 @@ fun VaultActionSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = colors.surfaceVariant
+        containerColor = colors.surfaceVariant,
+        // shadowElevation=0 + border rambut manual di bawah (bukan tonal
+        // elevation Material default) -- sheet tetap terbaca sebagai lapisan
+        // glass tipis di atas AMOLED (bab 7), bukan panel Material solid.
+        shadowElevation = 0.dp
     ) {
+        // Highlight rambut tunggal di TOP (bab 8/9: arah cahaya kiri-atas ->
+        // kanan-bawah, "reflected light" bukan garis outline penuh) -- satu
+        // isyarat kecil supaya sheet tetap terbaca sebagai lapisan glass
+        // yang mengambang, bukan panel Material solid tanpa tepi sama sekali.
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(GlassBorder)
+        )
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp)
-                .padding(bottom = 28.dp),
+                .padding(top = 12.dp, bottom = 28.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(title, style = MaterialTheme.typography.titleMedium, color = colors.onSurface)

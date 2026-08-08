@@ -13,8 +13,6 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -75,13 +73,13 @@ fun RuleCard(
                     )
                 }
             }
-            Switch(
+            TactileSwitch(
                 checked = rule.enabled,
                 onCheckedChange = {
                     haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                     onToggleEnabled(it)
                 },
-                colors = SwitchDefaults.colors(checkedTrackColor = colors.primary)
+                accentColor = colors.primary
             )
             IconButton(onClick = onEdit) { Icon(Icons.Filled.Edit, contentDescription = "Edit", tint = colors.onSurfaceVariant) }
             IconButton(onClick = onDelete) { Icon(Icons.Filled.Delete, contentDescription = "Hapus", tint = colors.onSurfaceVariant) }

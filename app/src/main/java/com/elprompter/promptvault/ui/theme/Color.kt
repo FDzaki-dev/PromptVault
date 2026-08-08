@@ -25,8 +25,11 @@ val GlassSurfaceSheet = Color(0xFF141B26)     // lapisan sheet/dialog, satu ting
 val GlassSurfacePressed = Color(0xFF070B11)   // kontrol recessed / pressed
 
 // ---- Lapisan Midnight Blue: HANYA tint ambient, dipakai lewat alpha rendah ----
+// Alpha disamakan PERSIS dengan "MidnightBlueAmbientAlpha" di spesifikasi
+// (bab 6) -- 0.06f, bukan didekati/dibulatkan -- supaya golden rule "user
+// harus melihat AMOLED+glass dulu, biru kedua" tidak pernah terlanggar.
 val MidnightBlueTint = Color(0xFF191970)
-val MidnightBlueGradientAlpha = 0.08f
+val MidnightBlueGradientAlpha = 0.06f
 
 // ---- Aksen interaksi utama (dominan dipakai untuk kontrol/primary) ----
 val MidnightBlueAccent = Color(0xFF6670FF)
@@ -36,6 +39,7 @@ val MidnightBlueAccentOn = Color(0xFF04050C)  // teks/ikon di atas aksen terang
 // ---- Teks ----
 val TextPrimary = Color(0xFFEAF0F8)
 val TextSecondary = Color(0xFFAAB5C4)
+val TextMuted = Color(0xFF737E8C)     // bab 16 -- label tersier/caption paling redup
 
 // ---- Bevel / cahaya simulasi (arah: kiri-atas terang, kanan-bawah gelap) ----
 val GlassHighlight = Color.White.copy(alpha = 0.055f)

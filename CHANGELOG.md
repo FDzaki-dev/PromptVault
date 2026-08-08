@@ -3,6 +3,45 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.15.0 -- Audit kepatuhan 100% ke spesifikasi tema (gap closure) (2026-08-09)
+User minta tema di-override ulang "100% sesuai markdown, jangan ada celah
+setitik pun". Audit ulang file-per-file v2.14.1 vs spesifikasi menemukan 3
+pelanggaran nyata + 2 penyesuaian token nilai persis:
+- **Pelanggaran bab 18 (Glow System) di `GroupedListRow.kt`**: SETIAP baris
+  menu Home (4 ikon sekaligus) pakai `Modifier.shadow()` berwarna tint
+  sebagai glow permanen -- persis masuk daftar "Forbidden: Every icon" di
+  spesifikasi. Diganti kotak ikon glass datar (fill tint alpha rendah +
+  border rambut `GlassBorder`, tanpa shadow berwarna sama sekali).
+- **Pelanggaran bab 12 (Tactile Switch) di `RuleCard.kt`**: toggle enable
+  rule masih `Switch` Material3 polos, bukan kontrol tactile recessed sesuai
+  spesifikasi. Komponen baru `TactileSwitch.kt` dibuat (track recessed saat
+  OFF, terangkat + tint aksen + glow lokal SATU titik di thumb saat ON,
+  posisi thumb sebagai penanda kedua di luar warna/kedalaman -- bab 21
+  Accessibility), dipakai gantikan `Switch` di `RuleCard`.
+- **Gap bab 7/8 (Frosted Glass / Glass Edge) di `VaultActionSheet.kt`**: sheet
+  konfirmasi (hapus/undo) sebelumnya panel flat `surfaceVariant` tanpa tepi
+  glass sama sekali. Ditambah highlight rambut 1dp di top (bukan border
+  penuh -- sesuai arah cahaya bab 9) + `shadowElevation=0` supaya tidak jatuh
+  ke shadow Material default yang tidak sesuai bahasa visual glass.
+- **Presisi token di `Color.kt`**: `MidnightBlueGradientAlpha` 0.08f->0.06f
+  (persis nilai `MidnightBlueAmbientAlpha` di spesifikasi bab 6, bukan
+  didekati). Tambah `TextMuted` (0xFF737E8C) yang sebelumnya belum ada
+  padahal disebut eksplisit di bab 16.
+- **TIDAK diubah** (di luar cakupan lapisan visual/tema, risiko blast-radius
+  lebih besar dari 1 batch tema): opsi "Terang"/"Ikuti Sistem" yang belum
+  fungsional di `SettingsScreen.kt` -- ini keputusan fitur/UX (`ThemeMode`,
+  `SettingsRepository`, wiring `MainActivity`), bukan pelanggaran dokumen
+  desain visual yang jadi acuan batch ini. Tetap tercatat sebagai known
+  limitation di PROJECT_STATE.md, belum dihapus.
+- File diubah (5) + 1 file baru: `ui/theme/Color.kt`,
+  `ui/components/GroupedListRow.kt`, `ui/components/RuleCard.kt`,
+  `ui/components/VaultActionSheet.kt`, `app/build.gradle.kts` (versi), +
+  BARU `ui/components/TactileSwitch.kt`.
+- Nol perubahan logika bisnis/data layer -- murni lapisan visual/komponen,
+  sama seperti batch v2.14.0.
+- versionCode 54->55, versionName 2.14.1->2.15.0.
+- **Belum ada konfirmasi CI/device dari user untuk versi ini.**
+
 ## v2.14.1 -- Fix regresi: CTA "Scan Sekarang" pucat/glitch (2026-08-08)
 `tactilePress()` (shadow 4dp saat idle) di CTA Home menyebabkan kotak pucat
 translusen di beberapa device (fallback render shadow di atas gradient

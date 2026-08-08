@@ -33,6 +33,7 @@ app/src/main/java/com/elprompter/promptvault/ui/components/PressScale.kt
 app/src/main/java/com/elprompter/promptvault/ui/components/RuleCard.kt
 app/src/main/java/com/elprompter/promptvault/ui/components/SegmentedControl.kt
 app/src/main/java/com/elprompter/promptvault/ui/components/SortedStamp.kt
+app/src/main/java/com/elprompter/promptvault/ui/components/TactileSwitch.kt
 app/src/main/java/com/elprompter/promptvault/ui/components/VaultActionSheet.kt
 app/src/main/java/com/elprompter/promptvault/ui/components/VaultCard.kt
 app/src/main/java/com/elprompter/promptvault/ui/components/VaultTopBar.kt

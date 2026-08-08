@@ -15,21 +15,32 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import com.elprompter.promptvault.ui.theme.GlassBorder
 
 /**
  * Satu baris menu ala grouped list iOS Settings: ikon berwarna di kotak
  * membulat, label, chevron di kanan. Dipakai berkelompok di dalam GroupedList.
  * tint = null berarti pakai warna primary tema secara otomatis (theme-aware);
  * boleh dioverride eksplisit (mis. Amber/tertiary) lewat MaterialTheme.colorScheme.
+ *
+ * v3.0.1 -- fix pelanggaran bab 18 spesifikasi tema ("Glow forbidden: Every
+ * icon"): sebelumnya SETIAP baris menu (bukan cuma yang selected/focused)
+ * punya `Modifier.shadow()` berwarna tint yang terlihat sebagai glow
+ * permanen -- 4 glow tampil bersamaan tiap kali Home dibuka, jelas
+ * melanggar golden rule "user notice glass/AMOLED dulu, bukan glow".
+ * Diganti kotak ikon glass datar (bab 4/7/14: tint hanya lewat fill alpha
+ * rendah + border rambut, TANPA shadow berwarna) -- identitas warna per
+ * menu tetap ada lewat isi & border, bukan lewat cahaya yang menyala.
  */
 @Composable
 fun GroupedListRow(icon: ImageVector, label: String, tint: Color? = null, onClick: () -> Unit) {
@@ -46,14 +57,16 @@ fun GroupedListRow(icon: ImageVector, label: String, tint: Color? = null, onClic
         Box(
             modifier = Modifier
                 .size(30.dp)
-                .shadow(elevation = 4.dp, shape = RoundedCornerShape(9.dp), ambientColor = resolvedTint, spotColor = resolvedTint)
                 .background(
-                    Brush.linearGradient(colors = listOf(resolvedTint, resolvedTint.copy(alpha = 0.82f))),
+                    Brush.linearGradient(
+                        colors = listOf(resolvedTint.copy(alpha = 0.22f), resolvedTint.copy(alpha = 0.12f))
+                    ),
                     RoundedCornerShape(9.dp)
-                ),
+                )
+                .border(BorderStroke(1.dp, GlassBorder), RoundedCornerShape(9.dp)),
             contentAlignment = Alignment.Center
         ) {
-            Icon(icon, contentDescription = null, tint = colors.onPrimary, modifier = Modifier.size(18.dp))
+            Icon(icon, contentDescription = null, tint = resolvedTint, modifier = Modifier.size(16.dp))
         }
         Text(
             label,

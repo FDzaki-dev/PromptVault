@@ -3,7 +3,47 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
-## STATUS PROJECT: v2.14.1 -- FIX REGRESI: CTA "Scan Sekarang" pucat/glitch akibat shadow tactilePress -- 2026-08-08
+## STATUS PROJECT: v2.15.0 -- AUDIT KEPATUHAN 100% ke spesifikasi tema (gap closure) -- 2026-08-09
+- User eksplisit minta tema di-override ULANG, "100% disesuaikan dengan
+  instruksi Markdown, jangan menyisakan celah setitik pun" -- bukan laporan
+  bug baru, tapi audit ulang v2.14.0/2.14.1 vs dokumen spesifikasi
+  file-per-file, komponen-per-komponen.
+- **3 pelanggaran nyata ditemukan** (bukan cuma selisih nilai token):
+  1. `GroupedListRow.kt` -- 4 ikon menu Home SEMUANYA pakai
+     `Modifier.shadow()` berwarna tint sebagai glow permanen sejak v2.14.0
+     (bahkan sebelum itu, ini bukan bagian dari perubahan tema kemarin,
+     cuma baru ketahuan sekarang karena audit eksplisit diminta) -- persis
+     masuk daftar "Forbidden" bab 18 spesifikasi ("Every icon"). Fix: kotak
+     ikon jadi glass datar (fill tint alpha rendah + border rambut), TANPA
+     shadow warna.
+  2. `RuleCard.kt` -- toggle enable/disable rule masih `Switch` Material3
+     bawaan, bukan kontrol tactile sesuai bab 12. Fix: komponen baru
+     `TactileSwitch.kt` (track recessed/OFF vs terangkat-tint-glow lokal/ON,
+     posisi thumb sebagai penanda kedua di luar warna -- bab 21).
+  3. `VaultActionSheet.kt` -- sheet konfirmasi (hapus rule, undo, dst) flat
+     tanpa tepi glass sama sekali (gap bab 7/8). Fix: highlight rambut 1dp
+     di top + `shadowElevation=0` (bukan border penuh, sesuai arah cahaya
+     bab 9 -- highlight itu "reflected light", bukan outline kotak).
+- **2 presisi token** di `Color.kt`: `MidnightBlueGradientAlpha` disamakan
+  PERSIS ke 0.06f (spesifikasi bab 6 `MidnightBlueAmbientAlpha`), sebelumnya
+  0.08f (bukan pelanggaran keras -- dokumen bilang nilai boleh disetel --
+  tapi user minta nol celah, jadi disamakan persis). Tambah `TextMuted`
+  (0xFF737E8C) yang disebut eksplisit di bab 16 tapi belum ada di kode.
+- **SENGAJA TIDAK diubah**: opsi "Terang"/"Ikuti Sistem" di
+  `SettingsScreen.kt` (`ThemeMode`) yang sudah tidak fungsional sejak
+  v2.14.0 -- ini keputusan fitur/navigasi/state (`SettingsRepository`,
+  wiring `MainActivity`), BUKAN bagian dari dokumen spesifikasi VISUAL yang
+  jadi acuan audit batch ini. Tetap berlaku known-limitation, silakan minta
+  eksplisit "hapus opsi tema terang di Pengaturan" kalau mau dibersihkan --
+  itu batch terpisah di luar lapisan tema murni.
+- File diubah (5) + 1 baru, murni lapisan visual/komponen, nol logika bisnis
+  disentuh: `ui/theme/Color.kt`, `ui/components/GroupedListRow.kt`,
+  `ui/components/RuleCard.kt`, `ui/components/VaultActionSheet.kt`,
+  `app/build.gradle.kts` (versi), BARU `ui/components/TactileSwitch.kt`.
+- versionCode 54->55, versionName 2.14.1->2.15.0.
+- **Belum ada konfirmasi CI/device dari user untuk versi ini.**
+
+## STATUS PROJECT SEBELUMNYA: v2.14.1 -- FIX REGRESI: CTA "Scan Sekarang" pucat/glitch akibat shadow tactilePress -- 2026-08-08
 - User laporkan screenshot: tombol CTA gradient stamp->amber punya kotak pucat
   aneh di tengahnya (bukan shadow halus). Root cause: v2.14.0 mengganti
   `.pressScale()` polos di CTA jadi `.tactilePress()` yang menambah
