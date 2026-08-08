@@ -3,7 +3,28 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
-## STATUS PROJECT: v2.12.0 COMPILE-FIX terkirim (v2.12.1 label, versi tetap 2.12.0) -- 2026-08-07
+## STATUS PROJECT: v2.13.0 -- SAF DIHAPUS TOTAL ke akar atas permintaan eksplisit user -- 2026-08-08
+- User eksplisit minta hapus SEMUA fitur terkait SAF sampai bersih ke akar,
+  dan HANYA diterapkan kembali kalau Claude sudah tahu letak kesalahan
+  logika fatal yang menyebabkan riwayat panjang bug SAF (insiden #4, #6,
+  plus 2 gagal-build CI v2.6.0-terkait-manifest tidak relevan, tapi v2.8.0
+  gagal build LANGSUNG karena kode SAF). Lihat "Insiden #7" di bawah untuk
+  analisis root-cause lengkap dan kenapa jawabannya SEKARANG adalah TIDAK
+  diterapkan kembali (bukan "belum sempat").
+- Dihapus total: §1 roadmap backend (SAF/Scoped Storage, semua fase v2.7.0-
+  v2.10.0) DAN modul "Zip Sorter" (v2.12.0, SAF-based juga). `FileSorter`
+  kembali single-path java.io.File/Downloads murni, persis seperti sebelum
+  v2.7.0. Detail file-per-file di CHANGELOG v2.13.0.
+- Rule engine utama, Room DB (log/history), worker auto-sort, crash logger,
+  UNDO -- semuanya TIDAK disentuh, nol risiko regresi dari batch ini.
+- versionCode 51->52, versionName 2.12.0->2.13.0.
+- **Belum ada konfirmasi CI/device dari user untuk versi ini** -- tapi ini
+  operasi SUBTRAKSI kode (bukan fitur baru), risiko jauh lebih rendah
+  daripada batch-batch SAF sebelumnya.
+- Status "SELESAI/STABLE" (declared 2026-08-04, lihat bawah) TETAP BERLAKU
+  untuk seluruh rule engine utama.
+
+## STATUS PROJECT SEBELUMNYA: v2.12.0 COMPILE-FIX terkirim (v2.12.1 label, versi tetap 2.12.0) -- 2026-08-07
 - Fix `zipSorterViewModel` Unresolved reference (NavHost ada di fungsi
   top-level `PromptVaultRoot`, bukan di class Activity langsung -- lihat
   CHANGELOG v2.12.1). 1 file (`MainActivity.kt`), murni compile-fix.
@@ -363,16 +384,16 @@
     (`MediaScannerConnection.scanFile()` tiap move/undo + query cleanup
     ghost entry sekali per scan). BELUM diverifikasi runtime -- lihat
     CHANGELOG v2.5.0 untuk detail & yang perlu dikonfirmasi user.
-  - §1 SAF/Scoped Storage abstraction -- **KODE SELESAI, RUNTIME BELUM
-    STABIL (Fase 1+2, v2.7.0-v2.8.3, 2026-08-05/06)**. FileSorter dual-path:
-    DocumentFile kalau SAF aktif & valid, java.io.File/Downloads kalau
-    tidak. 2 bug nyata ketemu lewat testing device asli, SATU KELAS
-    (method boolean DocumentFile tidak bisa dipercaya sbg gerbang):
-    `resolveSafRoot` exists/canRead (fixed v2.8.1) & `listCandidateFilesSaf`
-    isFile (fixed v2.8.3, insiden #6). Kalau muncul gejala serupa lagi
-    (file tidak ke-detect padahal ada), CURIGAI DULU method boolean
-    DocumentFile lain yg belum diaudit (`canWrite`, dst) sebelum cari
-    penyebab lain.
+  - §1 SAF/Scoped Storage abstraction -- **DITUTUP, DIHAPUS TOTAL (v2.13.0,
+    2026-08-08)**. Sempat "kode selesai, runtime belum stabil" di v2.7.0-
+    v2.8.3 (dual-path DocumentFile/java.io.File), lalu diperluas lagi jadi
+    modul "Zip Sorter" terpisah di v2.12.0 (SAF juga) -- riwayat bug
+    berulang di kelas yang sama (boolean DocumentFile gate false-negatif,
+    izin persisted bocor, mime type tidak reliable, 1x gagal build CI).
+    User eksplisit minta hapus total ke akar; TIDAK dianggap "ditunda
+    dengan trigger" seperti 4 item lain, tapi DITUTUP dengan syarat
+    reapply spesifik -- baca Insiden #7 (2026-08-08) SEBELUM menulis kode
+    SAF apapun lagi di project ini.
   - §5 Coroutine lifecycle & Foreground Service -- **SELESAI** (v2.6.0,
     2026-08-05). Audit lifecycle: tidak ada bug (structured concurrency
     sudah cukup). Fix nyata: `AutoSortWorker` promosi ke foreground service
@@ -415,8 +436,8 @@ ui/components/   -- widget bersama (VaultCard, GroupedListRow, RuleCard, dst)
                      ke semua tempat yang pakai (lihat insiden #3 di bawah)
 ui/theme/        -- Color.kt, Theme.kt (ColorScheme + VaultExtraColors utk
                      aksen Slate), Shapes.kt, Type.kt
-util/FileSorter.kt -- logika inti scan & pindah file (java.io.File based,
-                     BELUM SAF -- lihat §1 di atas)
+util/FileSorter.kt -- logika inti scan & pindah file (java.io.File/Downloads
+                     murni -- SAF dihapus total v2.13.0, lihat Insiden #7)
 worker/          -- AutoSortWorker (WorkManager), BootCompletedReceiver,
                      WorkScheduler
 ```
@@ -428,14 +449,14 @@ worker/          -- AutoSortWorker (WorkManager), BootCompletedReceiver,
    Data lama di DataStore TIDAK dimigrasikan ke Room (disepakati: tidak
    kritis, tidak urgent) -- kalau ada user lama upgrade dari <v2.2.0, log &
    riwayat undo mereka reset sekali.
-2. **FileSorter sekarang DUAL-PATH** (per v2.8.0) -- java.io.File/Downloads
-   TETAP jadi mekanisme DEFAULT untuk semua user, TAPI kalau user pilih
-   folder kustom lewat SAF (Pengaturan), scan/move/undo jalan lewat
-   `DocumentFile` di jalur terpisah (`*Saf` functions). Lihat CHANGELOG
-   v2.8.0 untuk detail & keterbatasan sengaja. **BELUM ada konfirmasi
-   runtime untuk jalur SAF ini** -- kalau ada bug dilaporkan user terkait
-   SAF, cek CHANGELOG v2.8.0 dulu (kemungkinan besar salah satu keterbatasan
-   yang sudah didokumentasikan, bukan bug baru).
+2. **FileSorter SINGLE-PATH lagi** (sejak v2.13.0, 2026-08-08) --
+   java.io.File/Downloads adalah SATU-SATUNYA mekanisme, untuk semua user,
+   tanpa pengecualian. Sempat DUAL-PATH (v2.8.0-v2.12.0, opsi folder kustom
+   lewat SAF/`DocumentFile`) tapi dihapus total atas permintaan eksplisit
+   user setelah riwayat bug berulang -- lihat Insiden #7 untuk root-cause
+   analysis lengkap kenapa TIDAK diterapkan kembali untuk sekarang. Kalau
+   fitur folder kustom diminta lagi ke depan, baca syarat di Insiden #7
+   SEBELUM mulai menulis kode SAF baru.
 3. **Sistem warna 4-aksen**: Material3 `primary`(hijau/Pine) `tertiary`(amber)
    `error`(merah/Rust) + aksen kustom ke-4 `VaultTheme.extraColors.slate`
    (biru batu, di luar 4 role Material3 baku, disimpan lewat
@@ -474,6 +495,68 @@ worker/          -- AutoSortWorker (WorkManager), BootCompletedReceiver,
      ikut terpindah setengah jadi/korup, tidak aman dihapus begitu saja.
 
 ## Riwayat insiden kronologis (JANGAN DIHAPUS, tambah entri baru di ATAS)
+
+### [2026-08-08] Insiden #7 -- SAF dihapus total: root-cause analysis kenapa TIDAK diterapkan kembali sekarang
+- **Permintaan user**: hapus semua fitur SAF sampai bersih ke akar, DAN
+  terapkan kembali kalau Claude sudah tahu letak kesalahan logika fatal yang
+  Claude sebabkan sendiri. Ini eksekusi bagian pertama (hapus). Bagian kedua
+  (reapply) dievaluasi di bawah -- kesimpulannya: TIDAK sekarang.
+- **Riwayat SAF di project ini** (2026-08-05 s/d 2026-08-07, v2.7.0-v2.12.0,
+  6 versi berturut-turut): gagal build CI 1x (v2.8.0, coroutineScope receiver
+  hilang), 2 bug runtime nyata dari insiden #4 & #6 (boolean DocumentFile
+  method jadi gerbang trust yang false-negatif -- exists/canRead/isFile),
+  1 bug izin bocor (persisted permission tidak pernah dilepas), 1 bug mime
+  type tidak reliable. SETIAP fix yang dikirim membawa pelajaran "permanen"
+  baru yang TERNYATA tidak otomatis dicegah di kode berikutnya.
+- **Root cause SEBENARNYA (bukan cuma daftar bug individual di atas)**: dua
+  hal struktural yang saling memperkuat --
+  1. **Kode SAF selalu ditulis \"blind\"** -- sandbox Claude di sesi manapun
+     TIDAK PERNAH punya akses Gradle/device asli untuk benar-benar
+     mengompilasi atau menjalankan kode `DocumentFile`/`ContentResolver`
+     sebelum dikirim. Preflight statis (`preflight_check.sh`) tidak bisa
+     menangkap kesalahan tipe/scope Kotlin yang butuh compiler asli (lihat
+     insiden v2.8.0), apalagi perilaku runtime provider SAF yang memang
+     terkenal tidak konsisten antar OEM/kartu SD/app sumber file.
+  2. **Pelajaran dari 1 bug tidak otomatis menular ke kode SAF lain yang
+     ditulis TERPISAH.** Bukti paling jelas: pelajaran "jangan pakai
+     exists()/canRead()/isFile() sbg gerbang" dari insiden #4/#6 SUDAH
+     didokumentasikan sebagai "PELAJARAN PERMANEN" -- tapi begitu modul Zip
+     Sorter (v2.12.0) ditulis SEBAGAI IMPLEMENTASI SAF KEDUA yang independen
+     (`zipsorter/repository/ZipSorterRepository.kt`, bukan reuse dari
+     `FileSorter.kt`), pelajaran itu harus SENGAJA ditulis ulang manual jadi
+     komentar baru di file baru itu supaya tidak terulang -- artinya
+     mekanisme "belajar dari insiden lama" project ini ADALAH komentar kode,
+     bukan sesuatu yang dijamin dipatuhi otomatis oleh sesi Claude
+     berikutnya yang menulis SAF-code baru dari nol.
+  - Kombinasi 2 hal ini = kelas kegagalan yang SIFATNYA BERULANG, bukan bug
+    tunggal yang begitu di-fix otomatis selesai. Fix `isDirectory` vs
+    `isFile` (v2.8.3) itu SENDIRI valid & benar -- tapi itu obat untuk GEJALA
+    (satu instance boolean-gate salah), bukan untuk PENYAKIT (implementasi
+    SAF ditulis tanpa verifikasi nyata, berulang kali, tanpa mekanisme yang
+    mencegah pola yang sama muncul lagi di kode SAF berikutnya).
+- **Kenapa TIDAK diterapkan kembali sekarang**: kondisi yang menyebabkan
+  penyakit di atas TIDAK BERUBAH -- sesi Claude ini juga tidak punya akses
+  Gradle/device asli. Menulis ulang SAF "dengan versi yang sudah benar"
+  sekarang akan mengulang persis kondisi yang sama (kode SAF baru, ditulis
+  blind, tidak ada jaminan lolos compiler asli) yang menghasilkan 6 versi
+  bermasalah sebelumnya. Mengklaim sudah "tahu letak kesalahan fatal" lalu
+  langsung reapply TANPA mengubah kondisi struktural itu hanya akan
+  memindahkan siklus fix-gagal-fix ke versi berikutnya dengan nama file yang
+  beda.
+- **Syarat sebelum SAF boleh diterapkan kembali** (semua harus benar,
+  bukan salah satu): (a) ada sesi dengan akses Gradle/emulator/device asli
+  untuk verifikasi nyata SEBELUM dikirim ke user, ATAU (b) user eksplisit
+  menerima risiko "belum tentu jalan, perlu ronde fix seperti sebelumnya"
+  DAN memberi instruksi scope spesifik (bukan re-run spec lama yang sama),
+  ATAU (c) kalau memang harus blind lagi, implementasi WAJIB reuse 100% path
+  yang sama dengan legacy (tidak ada implementasi SAF kedua yang independen
+  seperti Zip Sorter) supaya pelajaran lama otomatis berlaku, bukan perlu
+  ditulis ulang manual per modul.
+- **Status**: SAF dihapus (lihat CHANGELOG v2.13.0). Roadmap §1 (SAF/Scoped
+  Storage) dan modul Zip Sorter dianggap DITUTUP, bukan "dijeda" -- beda dari
+  status "ditunda dengan trigger eksplisit" di 4 item roadmap backend lain
+  (lihat bagian Roadmap backend di bawah, yang itu SUDAH selesai semua per
+  2026-08-05/06 kecuali §1 ini yang sekarang dicabut).
 
 ### [2026-08-06] v2.8.0 GAGAL BUILD di CI -- `async{}`/`awaitAll()` tanpa CoroutineScope receiver di `scanAndSortSafLocked()`
 - **Gejala**: user upload `build-failure-log-v2_8_0.zip`. `:app:compileDebugKotlin FAILED` -- `Unresolved reference` di `FileSorter.kt:368-369` (`async`, `awaitAll`) dan efek domino di `:376` (`it`).

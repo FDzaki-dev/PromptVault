@@ -4,7 +4,7 @@ import kotlinx.serialization.Serializable
 
 /**
  * Merekam satu pemindahan file agar bisa di-UNDO (fitur lengkap sejak v2.11.0).
- * originalParentUri & destUri disimpan sebagai String URI (SAF / MediaStore).
+ * originalParentUri & destUri disimpan sebagai path java.io.File String.
  */
 @Serializable
 data class MoveHistoryEntry(

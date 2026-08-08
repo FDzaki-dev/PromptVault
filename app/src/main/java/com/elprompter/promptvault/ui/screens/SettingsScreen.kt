@@ -27,7 +27,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import android.net.Uri
 import com.elprompter.promptvault.data.ConflictStrategy
 import com.elprompter.promptvault.data.SettingsRepository
 import com.elprompter.promptvault.data.ThemeMode
@@ -44,9 +43,6 @@ fun SettingsScreen(
     onConflictStrategySelected: (ConflictStrategy) -> Unit,
     currentThemeMode: ThemeMode,
     onThemeModeSelected: (ThemeMode) -> Unit,
-    currentSafTreeUri: String?,
-    onPickSafFolder: () -> Unit,
-    onClearSafFolder: () -> Unit,
     onExportRequested: suspend () -> String,
     onImportRequested: (String, (Int) -> Unit) -> Unit,
     onBack: () -> Unit
@@ -138,37 +134,6 @@ fun SettingsScreen(
                     style = MaterialTheme.typography.bodySmall,
                     color = colors.error
                 )
-            }
-
-            VaultCard(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Folder Kustom (Opsional)", style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        "Secara default PromptVault memindai folder Downloads lewat izin " +
-                            "penyimpanan penuh. Kalau mau pakai folder lain (mis. di kartu SD " +
-                            "atau subfolder khusus), pilih lewat file picker sistem di bawah -- " +
-                            "TIDAK WAJIB, fitur ini murni tambahan opsional.",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    val safLabel = currentSafTreeUri?.let { uri ->
-                        runCatching { Uri.parse(uri).lastPathSegment?.let(Uri::decode) }.getOrNull() ?: uri
-                    }
-                    Text(
-                        if (safLabel != null) "Folder terpilih: $safLabel" else "Belum ada folder kustom dipilih (pakai Downloads).",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (safLabel != null) colors.primary else colors.onSurfaceVariant
-                    )
-                    OutlinedButton(
-                        onClick = onPickSafFolder,
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primary)
-                    ) { Text(if (safLabel != null) "Ganti Folder" else "Pilih Folder") }
-                    if (safLabel != null) {
-                        OutlinedButton(
-                            onClick = onClearSafFolder,
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.error)
-                        ) { Text("Hapus, Kembali ke Downloads") }
-                    }
-                }
             }
 
             VaultCard(modifier = Modifier.fillMaxWidth()) {

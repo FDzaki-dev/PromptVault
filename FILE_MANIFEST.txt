@@ -27,7 +27,6 @@ app/src/main/java/com/elprompter/promptvault/data/db/MoveHistoryDao.kt
 app/src/main/java/com/elprompter/promptvault/data/db/MoveHistoryEntity.kt
 app/src/main/java/com/elprompter/promptvault/ui/MainViewModel.kt
 app/src/main/java/com/elprompter/promptvault/ui/Navigation.kt
-app/src/main/java/com/elprompter/promptvault/ui/ZipSorterViewModel.kt
 app/src/main/java/com/elprompter/promptvault/ui/components/EmptyState.kt
 app/src/main/java/com/elprompter/promptvault/ui/components/GroupedListRow.kt
 app/src/main/java/com/elprompter/promptvault/ui/components/PressScale.kt
@@ -45,7 +44,6 @@ app/src/main/java/com/elprompter/promptvault/ui/screens/OnboardingScreen.kt
 app/src/main/java/com/elprompter/promptvault/ui/screens/RuleListScreen.kt
 app/src/main/java/com/elprompter/promptvault/ui/screens/SettingsScreen.kt
 app/src/main/java/com/elprompter/promptvault/ui/screens/SkippedFilesScreen.kt
-app/src/main/java/com/elprompter/promptvault/ui/screens/ZipSorterScreen.kt
 app/src/main/java/com/elprompter/promptvault/ui/theme/Color.kt
 app/src/main/java/com/elprompter/promptvault/ui/theme/Shapes.kt
 app/src/main/java/com/elprompter/promptvault/ui/theme/Theme.kt
@@ -58,10 +56,6 @@ app/src/main/java/com/elprompter/promptvault/worker/AutoSortNotification.kt
 app/src/main/java/com/elprompter/promptvault/worker/AutoSortWorker.kt
 app/src/main/java/com/elprompter/promptvault/worker/BootCompletedReceiver.kt
 app/src/main/java/com/elprompter/promptvault/worker/WorkScheduler.kt
-app/src/main/java/com/elprompter/promptvault/zipsorter/model/FileSortModels.kt
-app/src/main/java/com/elprompter/promptvault/zipsorter/repository/ZipSorterRepository.kt
-app/src/main/java/com/elprompter/promptvault/zipsorter/util/ZipFileUriHelper.kt
-app/src/main/java/com/elprompter/promptvault/zipsorter/worker/ZipSortWorker.kt
 app/src/main/res/drawable/ic_launcher_foreground.xml
 app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
 app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml

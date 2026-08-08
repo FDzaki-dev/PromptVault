@@ -3,10 +3,8 @@ package com.elprompter.promptvault.util
 import android.content.ContentUris
 import android.content.Context
 import android.media.MediaScannerConnection
-import android.net.Uri
 import android.os.Environment
 import android.provider.MediaStore
-import androidx.documentfile.provider.DocumentFile
 import com.elprompter.promptvault.data.ActivityLogRepository
 import com.elprompter.promptvault.data.ConflictStrategy
 import com.elprompter.promptvault.data.LogLevel
@@ -17,7 +15,6 @@ import com.elprompter.promptvault.data.RuleRepository
 import com.elprompter.promptvault.data.SettingsRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
@@ -69,38 +66,6 @@ class FileSorter(
 
     private val vaultRootDir: File
         get() = File(downloadsDir, "PromptVault")
-
-    /**
-     * Batch §1 Fase 2 (hybrid, opsional, 2026-08-05). Baca URI SAF tersimpan
-     * (diset lewat picker di Pengaturan, Fase 1/v2.7.0) dan validasi masih
-     * bisa dipakai SEKARANG (bukan cuma "tersimpan"). Return null (bukan
-     * exception) untuk SEMUA kegagalan -- URI kosong, parse gagal, izin
-     * sudah dicabut OS/user, folder sudah dihapus/dicabut (mis. kartu SD
-     * dilepas) -- supaya pemanggil SELALU bisa fallback diam-diam ke
-     * Downloads/java.io.File tanpa perlu tahu alasan spesifiknya.
-     */
-    private suspend fun resolveSafRoot(): DocumentFile? {
-        val uriString = settingsRepository.getSafTreeUri() ?: return null
-        return try {
-            val doc = DocumentFile.fromTreeUri(context, Uri.parse(uriString))
-            if (doc == null || !doc.isDirectory) {
-                activityLogRepository.add(LogLevel.ERROR, "Folder kustom tidak valid/tidak ditemukan, fallback ke Downloads.")
-                return null
-            }
-            // SENGAJA tidak pakai doc.exists()/doc.canRead() sebagai gerbang --
-            // keduanya bergantung pada COLUMN_FLAGS yang banyak DocumentProvider
-            // (kartu SD, dll) tidak isi dengan benar, jadi sering FALSE NEGATIVE
-            // walau folder sebenarnya bisa diakses. listFiles() di sini dipakai
-            // sebagai probe akses NYATA -- kalau memang tidak bisa dibaca, ini
-            // akan lempar Exception yang ditangkap di bawah, bukan diam-diam
-            // return array kosong yang salah diartikan "folder kosong".
-            doc.listFiles()
-            doc
-        } catch (e: Exception) {
-            activityLogRepository.add(LogLevel.ERROR, "Folder kustom gagal dibaca (${e.message ?: e.javaClass.simpleName}), fallback ke Downloads.")
-            null
-        }
-    }
 
     private fun listCandidateFiles(): Array<File> {
         return downloadsDir.listFiles { f ->
@@ -214,18 +179,6 @@ class FileSorter(
         val rules = ruleRepository.getRules().filter { it.enabled }
         val conflictStrategy = settingsRepository.getConflictStrategy()
 
-        // Batch §1 Fase 2 (hybrid, 2026-08-05): kalau user sudah pilih folder
-        // kustom via SAF (Pengaturan) DAN izinnya MASIH valid sekarang, scan
-        // jalan di folder ITU lewat DocumentFile -- bukan Downloads. Kalau
-        // tidak ada / sudah tidak valid lagi, [resolveSafRoot] return null dan
-        // kode di bawah lanjut ke jalur Downloads/java.io.File TIDAK BERUBAH
-        // seperti sebelum Fase 2 ada -- fallback otomatis, tidak pernah error
-        // ke user hanya karena SAF gagal (mode ini murni opsional).
-        val safRoot = resolveSafRoot()
-        if (safRoot != null) {
-            return@withContext scanAndSortSafLocked(safRoot, rules, conflictStrategy)
-        }
-
         if (!downloadsDir.exists() || !downloadsDir.canRead()) {
             activityLogRepository.add(LogLevel.ERROR, "Folder Downloads tidak terbaca. Cek izin penyimpanan.")
             return@withContext ScanResult(0, 0, foldersUnreadable = true, overlapWarnings = emptyList())
@@ -289,9 +242,7 @@ class FileSorter(
      * ada app LAIN yang sempat baca/index file itu duluan sebelum dipindah.
      * `MediaStore.Files.FileColumns.DATA` deprecated sejak API 29, tapi TETAP
      * berfungsi untuk app dengan `MANAGE_EXTERNAL_STORAGE` (app ini sudah
-     * pakai izin itu) -- dipilih daripada migrasi total ke SAF/DocumentFile
-     * karena itu §1 yang terpisah & sengaja belum dikerjakan (lihat komentar
-     * di scanAndSort soal §1).
+     * pakai izin itu).
      */
     private suspend fun cleanupGhostMediaStoreEntries() {
         try {
@@ -329,349 +280,6 @@ class FileSorter(
         class Moved(overlapWarning: String?) : CandidateOutcome(overlapWarning)
         class Skipped(val info: SkippedFileInfo, overlapWarning: String? = null) : CandidateOutcome(overlapWarning)
     }
-
-    // ========================================================================
-    // Batch §1 Fase 2 (hybrid SAF, opsional, 2026-08-05) -- SEMUA fungsi di
-    // bawah ini ("*Saf") adalah jalur PARALEL untuk scan/move/undo lewat
-    // DocumentFile, dipanggil HANYA kalau [resolveSafRoot] menemukan URI SAF
-    // valid. SENGAJA duplikat struktur dari versi legacy (java.io.File) di
-    // atas, bukan digabung pakai abstraksi generic -- alasannya BUKAN malas,
-    // tapi supaya: (1) jalur Downloads/java.io.File yang sudah stabil sejak
-    // v2.4.0 TIDAK PERNAH tersentuh sama sekali oleh perubahan ini (nol risiko
-    // regresi ke user yang tidak pakai SAF), dan (2) kalau ada bug di jalur
-    // SAF (yang sama sekali belum bisa diverifikasi runtime di sandbox ini),
-    // gampang diisolasi & di-revert tanpa menyentuh kode yang sudah teruji.
-    //
-    // KETERBATASAN yang sengaja diterima untuk batch ini (bukan bug):
-    // - [previewPatternMatches] & [listDownloadsCandidateFileNames] (dipakai
-    //   layar Tambah/Edit Rule & Diagnostik) TETAP baca Downloads/java.io.File
-    //   walau mode SAF aktif -- keduanya fungsi non-suspend yang dipanggil
-    //   sinkron dari UI, sedangkan baca setting SAF butuh suspend. Digabungkan
-    //   di batch terpisah kalau nanti dibutuhkan, supaya batch ini tetap fokus
-    //   ke scan/move/undo (fungsi inti yang benar-benar jalan di background).
-    // - Dual Stability Guard versi SAF cuma pakai 2 dari 3 sinyal legacy (age +
-    //   size-delta, TANPA file-lock check) -- lihat [isLikelyStillWritingSaf].
-    // - §2 (cleanup ghost MediaStore) tidak dipanggil di jalur SAF -- itu query
-    //   MediaStore berbasis path java.io.File, tidak relevan untuk content://.
-    // - Move & undo pakai copy-lalu-hapus (bukan DocumentsContract.moveDocument)
-    //   -- lebih portable lintas document provider yang dukungannya tidak
-    //   konsisten untuk moveDocument, konsisten dengan strategi
-    //   [copyThenDelete] yang sudah dipakai jalur legacy sebagai fallback.
-    // ========================================================================
-
-    /** Versi SAF dari [scanAndSortLocked] (lihat blok komentar di atas). */
-    private suspend fun scanAndSortSafLocked(
-        safRoot: DocumentFile,
-        rules: List<Rule>,
-        conflictStrategy: ConflictStrategy
-    ): ScanResult = coroutineScope {
-        if (rules.isEmpty()) {
-            activityLogRepository.add(LogLevel.INFO, "Scan dijalankan, tapi belum ada rule aktif.")
-            return@coroutineScope ScanResult(0, 0, foldersUnreadable = false, overlapWarnings = emptyList())
-        }
-
-        val candidateFiles = listCandidateFilesSaf(safRoot)
-
-        if (candidateFiles.isEmpty()) {
-            activityLogRepository.add(LogLevel.INFO, "Scan selesai: tidak ada file ZIP/TXT baru yang cocok.")
-            return@coroutineScope ScanResult(0, 0, foldersUnreadable = false, overlapWarnings = emptyList())
-        }
-
-        val semaphore = Semaphore(SCAN_CONCURRENCY)
-        val results = candidateFiles.map { doc ->
-            async { semaphore.withPermit { processCandidateSaf(doc, safRoot, rules, conflictStrategy) } }
-        }.awaitAll()
-
-        var moved = 0
-        var skipped = 0
-        val overlapWarnings = mutableListOf<String>()
-        val skippedDetails = mutableListOf<SkippedFileInfo>()
-        for (result in results) {
-            result.overlapWarning?.let { overlapWarnings.add(it) }
-            when (result) {
-                is CandidateOutcome.Moved -> moved++
-                is CandidateOutcome.Skipped -> {
-                    skipped++
-                    skippedDetails.add(result.info)
-                }
-            }
-        }
-
-        val summary = if (skipped > 0) {
-            "Scan selesai (folder kustom): $moved file dipindahkan, $skipped dilewati. Buka \"Detail File Dilewati\" untuk lihat nama filenya."
-        } else {
-            "Scan selesai (folder kustom): $moved file dipindahkan, $skipped dilewati."
-        }
-        activityLogRepository.add(LogLevel.SUCCESS, summary)
-
-        return@coroutineScope ScanResult(moved, skipped, foldersUnreadable = false, overlapWarnings = overlapWarnings, skippedDetails = skippedDetails)
-    }
-
-    /** Versi SAF dari [listCandidateFiles]. */
-    private fun listCandidateFilesSaf(safRoot: DocumentFile): List<DocumentFile> {
-        return safRoot.listFiles().filter { doc ->
-            val name = doc.name
-            // SENGAJA pakai !doc.isDirectory, BUKAN doc.isFile. isFile() balik
-            // ke query MIME type provider -- kalau provider tidak isi kolom MIME
-            // dengan benar (umum, tergantung cara file itu nyampe di folder: SD
-            // card, sync app, dll), isFile() FALSE NEGATIF walau file valid,
-            // dan lolos-tidaknya jadi acak per file (persis kelas bug yang sama
-            // dgn resolveSafRoot exists()/canRead(), lihat insiden #4/#6).
-            // isDirectory() cek MIME_TYPE_DIR yang jauh lebih konsisten diisi
-            // provider, jadi dipakai sebagai NEGATIVE check yang bisa dipercaya.
-            !name.isNullOrBlank() && !doc.isDirectory &&
-                (name.substringAfterLast('.', "").equals("zip", true) ||
-                    name.substringAfterLast('.', "").equals("txt", true)) &&
-                !TEMP_FILE_MARKERS.any { name.lowercase().endsWith(it) }
-        }
-    }
-
-    /**
-     * Versi SAF dari [isLikelyStillWriting] -- lihat catatan keterbatasan
-     * "Dual Stability Guard" di blok komentar atas bagian SAF ini.
-     */
-    private suspend fun isLikelyStillWritingSaf(doc: DocumentFile): Boolean {
-        val age = System.currentTimeMillis() - doc.lastModified()
-        if (age in 0 until STABILITY_WINDOW_MS) return true
-
-        val sizeBefore = runCatching { doc.length() }.getOrDefault(-1L)
-        if (sizeBefore < 0) return true
-
-        delay(SIZE_CHECK_DELAY_MS)
-
-        val sizeAfter = runCatching { doc.length() }.getOrDefault(-1L)
-        return sizeAfter < 0 || sizeAfter != sizeBefore
-    }
-
-    /** Versi SAF dari [processCandidate]. */
-    private suspend fun processCandidateSaf(
-        doc: DocumentFile,
-        safRoot: DocumentFile,
-        rules: List<Rule>,
-        conflictStrategy: ConflictStrategy
-    ): CandidateOutcome {
-        val name = doc.name ?: return CandidateOutcome.Skipped(
-            SkippedFileInfo("(tanpa nama)", "Dokumen SAF tanpa nama, dilewati.")
-        )
-        val sizeKb = doc.length() / 1024
-        val matches = RuleOverlapChecker.matchingRules(name, sizeKb, rules)
-        if (matches.isEmpty()) {
-            return CandidateOutcome.Skipped(SkippedFileInfo(name, explainNoMatchByName(name, sizeKb, rules)))
-        }
-
-        if (isLikelyStillWritingSaf(doc)) {
-            return CandidateOutcome.Skipped(
-                SkippedFileInfo(
-                    fileName = name,
-                    reason = "Ditunda: file baru saja berubah, kemungkinan masih ditulis/didownload. Akan dicoba lagi scan berikutnya."
-                )
-            )
-        }
-
-        var overlapWarning: String? = null
-        if (matches.size > 1) {
-            overlapWarning = "\"$name\" cocok dengan ${matches.size} rule (${matches.joinToString { it.folderName }}). " +
-                "Dipindahkan memakai rule prioritas tertinggi: \"${matches.first().folderName}\"."
-            activityLogRepository.add(LogLevel.WARNING, overlapWarning)
-        }
-
-        val rule = matches.first()
-        return when (moveFileSaf(doc, rule, conflictStrategy, safRoot)) {
-            MoveOutcome.MOVED -> CandidateOutcome.Moved(overlapWarning)
-            MoveOutcome.SKIPPED_CONFLICT -> CandidateOutcome.Skipped(
-                SkippedFileInfo(name, "Sudah ada file dengan nama sama di PromptVault/${rule.folderName}/ (strategi konflik: Lewati)"),
-                overlapWarning
-            )
-            MoveOutcome.FAILED -> CandidateOutcome.Skipped(
-                SkippedFileInfo(name, "Gagal dipindahkan (lihat Log untuk detail error)"),
-                overlapWarning
-            )
-        }
-    }
-
-    /**
-     * MIME type untuk `createFile()` SAF, diturunkan dari EKSTENSI nama file --
-     * BUKAN dipercaya dari `doc.type`/provider sumber. Alasan (kelas bug yang sama
-     * dengan insiden #4/#6 -- kolom metadata provider SAF sering tidak akurat):
-     * kalau provider sumber mengisi MIME_TYPE generik/salah (mis. "application/
-     * octet-stream" untuk file .txt, atau sebaliknya provider tujuan yang justru
-     * MENAMBAH ekstensi sesuai mime saat `createFile()` dipanggil), hasilnya bisa
-     * nama file dobel-ekstensi ("laporan.txt.txt") atau ekstensi salah, TANPA
-     * exception apapun untuk menandainya. Menurunkan dari ekstensi sendiri (yang
-     * sudah kita validasi di [listCandidateFilesSaf]/[isTempOrPartialFile] cuma
-     * "zip"/"txt") jauh lebih bisa diprediksi lintas provider (Google Drive,
-     * SD card, dll).
-     */
-    private fun mimeTypeForFileName(name: String): String = when (name.substringAfterLast('.', "").lowercase()) {
-        "zip" -> "application/zip"
-        "txt" -> "text/plain"
-        else -> "application/octet-stream"
-    }
-
-    /** Cari subfolder bernama [name] di [parent]; buat baru kalau belum ada. */
-    private fun findOrCreateChildDirSaf(parent: DocumentFile, name: String): DocumentFile? {
-        return parent.listFiles().firstOrNull { it.isDirectory && it.name == name } ?: parent.createDirectory(name)
-    }
-
-    /** Salin isi byte [src] -> [dest] apa adanya lewat ContentResolver stream. */
-    private fun copyDocumentBytes(src: Uri, dest: Uri): Boolean {
-        return try {
-            context.contentResolver.openInputStream(src)?.use { input ->
-                context.contentResolver.openOutputStream(dest)?.use { output ->
-                    input.copyTo(output)
-                } ?: return false
-            } ?: return false
-            true
-        } catch (e: Exception) {
-            false
-        }
-    }
-
-    /**
-     * Versi SAF dari [moveFile]. Copy-lalu-hapus (lihat catatan di blok
-     * komentar atas), BUKAN `DocumentsContract.moveDocument`.
-     */
-    private suspend fun moveFileSaf(
-        doc: DocumentFile,
-        rule: Rule,
-        conflictStrategy: ConflictStrategy,
-        safRoot: DocumentFile
-    ): MoveOutcome {
-        val fileName = doc.name ?: return MoveOutcome.FAILED
-        return try {
-            val vaultDir = findOrCreateChildDirSaf(safRoot, "PromptVault") ?: return MoveOutcome.FAILED
-            val destDir = findOrCreateChildDirSaf(vaultDir, rule.folderName) ?: return MoveOutcome.FAILED
-
-            var targetName = fileName
-            val existing = destDir.listFiles().firstOrNull { it.name == targetName }
-            if (existing != null) {
-                when (conflictStrategy) {
-                    ConflictStrategy.SKIP -> return MoveOutcome.SKIPPED_CONFLICT
-                    ConflictStrategy.OVERWRITE -> existing.delete()
-                    ConflictStrategy.RENAME -> {
-                        val baseName = fileName.substringBeforeLast('.', fileName)
-                        val ext = fileName.substringAfterLast('.', "")
-                        var counter = 1
-                        var candidate = if (ext.isNotEmpty()) "${baseName}_$counter.$ext" else "${baseName}_$counter"
-                        while (destDir.listFiles().any { it.name == candidate }) {
-                            counter++
-                            candidate = if (ext.isNotEmpty()) "${baseName}_$counter.$ext" else "${baseName}_$counter"
-                        }
-                        targetName = candidate
-                    }
-                }
-            }
-
-            val mimeType = mimeTypeForFileName(targetName)
-            val newDoc = destDir.createFile(mimeType, targetName) ?: return MoveOutcome.FAILED
-            if (newDoc.name != null && newDoc.name != targetName) {
-                // Provider tujuan mengubah nama sendiri (mis. tambah/ubah ekstensi
-                // sesuai mime) -- BUKAN bug di sisi kita, tapi user WAJIB tahu nama
-                // aktual di penyimpanan bisa beda dari nama file asli.
-                activityLogRepository.add(
-                    LogLevel.WARNING,
-                    "\"$fileName\" tersimpan sebagai \"${newDoc.name}\" (folder kustom mengubah nama otomatis)."
-                )
-            }
-            val copied = copyDocumentBytes(doc.uri, newDoc.uri)
-            if (!copied) {
-                runCatching { newDoc.delete() }
-                activityLogRepository.add(LogLevel.ERROR, "Gagal menyalin \"$fileName\" (folder kustom).")
-                return MoveOutcome.FAILED
-            }
-
-            val deleted = doc.delete()
-
-            moveHistoryRepository.record(
-                MoveHistoryEntry(
-                    id = UUID.randomUUID().toString(),
-                    timestampMillis = System.currentTimeMillis(),
-                    fileName = newDoc.name ?: targetName,
-                    originalParentUri = safRoot.uri.toString(),
-                    destUri = newDoc.uri.toString(),
-                    ruleFolderName = rule.folderName
-                )
-            )
-
-            if (!deleted) {
-                // File SUDAH tersalin aman ke tujuan -- tetap dihitung MOVED
-                // (data user tidak hilang), tapi user diberitahu ada
-                // kemungkinan duplikat tertinggal di sumber untuk dihapus manual.
-                activityLogRepository.add(
-                    LogLevel.WARNING,
-                    "\"$fileName\" tersalin ke PromptVault/${rule.folderName}/, tapi file asli di folder kustom gagal dihapus (mungkin ada duplikat)."
-                )
-            } else {
-                activityLogRepository.add(LogLevel.SUCCESS, "\"$fileName\" -> PromptVault/${rule.folderName}/ (folder kustom)")
-            }
-            MoveOutcome.MOVED
-        } catch (e: Exception) {
-            activityLogRepository.add(LogLevel.ERROR, "Error memindahkan \"$fileName\" (folder kustom): ${e.message}")
-            MoveOutcome.FAILED
-        }
-    }
-
-    /** Versi SAF dari [undo]. Dipanggil dari [undo] kalau [MoveHistoryEntry.destUri] berupa content:// URI. */
-    private suspend fun undoSaf(entry: MoveHistoryEntry): Boolean {
-        return try {
-            val current = DocumentFile.fromSingleUri(context, Uri.parse(entry.destUri))
-            // SENGAJA tidak pakai current.exists() sbg gerbang (kelas bug sama
-            // spt insiden #4/#6 -- method boolean DocumentFile false-negatif).
-            // Cukup null-check; kalau memang sudah tidak ada, createFile/copy di
-            // bawah akan gagal natural & ketangkap try-catch luar.
-            if (current == null) {
-                activityLogRepository.add(LogLevel.ERROR, "Undo gagal: \"${entry.fileName}\" sudah tidak ada di tujuan.")
-                return false
-            }
-            val originalRoot = DocumentFile.fromTreeUri(context, Uri.parse(entry.originalParentUri))
-            // Sama: canWrite() dibuang, cukup null-check + isDirectory. Izin
-            // tulis nyata diuji lewat createFile() asli di bawah, bukan heuristik.
-            if (originalRoot == null || !originalRoot.isDirectory) {
-                activityLogRepository.add(
-                    LogLevel.ERROR,
-                    "Undo gagal: folder kustom asal \"${entry.fileName}\" sudah tidak bisa diakses (izin dicabut?)."
-                )
-                return false
-            }
-
-            val baseName = entry.fileName.substringBeforeLast('.', entry.fileName)
-            val ext = entry.fileName.substringAfterLast('.', "")
-            var targetName = entry.fileName
-            var counter = 1
-            while (originalRoot.listFiles().any { it.name == targetName }) {
-                targetName = if (ext.isNotEmpty()) "${baseName}_restored_$counter.$ext" else "${baseName}_restored_$counter"
-                counter++
-            }
-
-            val mimeType = mimeTypeForFileName(targetName)
-            val restoreDoc = originalRoot.createFile(mimeType, targetName)
-            if (restoreDoc == null) {
-                activityLogRepository.add(LogLevel.ERROR, "Undo gagal untuk \"${entry.fileName}\" (folder kustom).")
-                return false
-            }
-            val copied = copyDocumentBytes(current.uri, restoreDoc.uri)
-            if (!copied) {
-                runCatching { restoreDoc.delete() }
-                activityLogRepository.add(LogLevel.ERROR, "Undo gagal untuk \"${entry.fileName}\" (folder kustom).")
-                return false
-            }
-            val deleted = current.delete()
-            moveHistoryRepository.markUndone(entry.id)
-            if (!deleted) {
-                activityLogRepository.add(
-                    LogLevel.WARNING,
-                    "Undo \"${entry.fileName}\" tersalin balik, tapi salinan di PromptVault gagal dihapus (mungkin ada duplikat)."
-                )
-            } else {
-                activityLogRepository.add(LogLevel.SUCCESS, "Undo berhasil: \"${entry.fileName}\" dikembalikan ke folder kustom.")
-            }
-            true
-        } catch (e: Exception) {
-            activityLogRepository.add(LogLevel.ERROR, "Error saat undo \"${entry.fileName}\" (folder kustom): ${e.message}")
-            false
-        }
-    }
-    // ==================== akhir blok Batch §1 Fase 2 (SAF) ====================
 
     /**
      * Cek rule match (murah) SEBELUM stability check (mahal: delay + buka file
@@ -720,12 +328,7 @@ class FileSorter(
     private fun explainNoMatch(file: File, sizeKb: Long, rules: List<Rule>): String =
         explainNoMatchByName(file.name, sizeKb, rules)
 
-    /**
-     * Diekstrak dari [explainNoMatch] (Batch §1 Fase 2) supaya bisa dipakai
-     * ulang oleh jalur SAF ([processCandidateSaf]) tanpa butuh `java.io.File`
-     * -- logikanya sendiri sudah generic terhadap nama file, tidak pernah
-     * menyentuh API File spesifik.
-     */
+    /** Versi berbasis nama-file dari [explainNoMatch], dipisah supaya generic terhadap nama saja. */
     private fun explainNoMatchByName(name: String, sizeKb: Long, rules: List<Rule>): String {
         val excludedBy = rules.firstOrNull {
             GlobMatcher.matchesAny(name, it.pattern) && RuleOverlapChecker.isExcluded(name, it)
@@ -797,7 +400,7 @@ class FileSorter(
 
             if (success) {
                 // §2 roadmap backend -- Ghost/stale MediaStore entry: app pindah file
-                // lewat java.io.File langsung (bukan SAF/MediaStore API), jadi index
+                // lewat java.io.File langsung (bukan MediaStore API), jadi index
                 // MediaStore TIDAK otomatis update. Tanpa scanFile ini, file manager
                 // bawaan/app lain yang baca lewat MediaStore (bukan lewat FS langsung)
                 // bisa masih nunjukkin file di lokasi LAMA (sudah tidak ada / "ghost"),
@@ -843,17 +446,6 @@ class FileSorter(
 
     /** UNDO satu entri riwayat pemindahan (fitur lengkap sejak v2.11.0, lihat ActivityLogScreen). */
     suspend fun undo(entry: MoveHistoryEntry): Boolean {
-        // Batch §1 Fase 2: destUri berupa content:// URI berarti file
-        // dipindah lewat jalur SAF ([moveFileSaf]) -- undo-nya juga wajib
-        // lewat DocumentFile, bukan java.io.File (Uri content:// tidak bisa
-        // dibuka lewat java.io.File sama sekali).
-        if (entry.destUri.startsWith("content://")) {
-            return undoSaf(entry)
-        }
-        return undoLegacy(entry)
-    }
-
-    private suspend fun undoLegacy(entry: MoveHistoryEntry): Boolean {
         return try {
             val current = File(entry.destUri)
             if (!current.exists()) {

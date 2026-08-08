@@ -72,14 +72,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             state.asStateFlow()
         }
 
-    /** Batch §1 Fase 1/2 (hybrid SAF, opsional) -- null berarti masih pakai Downloads/java.io.File biasa. */
-    val safTreeUri: StateFlow<String?> = settingsRepository.safTreeUriFlow
-        .let { flow ->
-            val state = MutableStateFlow<String?>(null)
-            viewModelScope.launch { flow.collect { state.value = it } }
-            state.asStateFlow()
-        }
-
     private val _isScanning = MutableStateFlow(false)
     val isScanning: StateFlow<Boolean> = _isScanning.asStateFlow()
 
@@ -165,65 +157,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
-     * Dipanggil MainActivity SETELAH takePersistableUriPermission() sukses -- URI mentah,
-     * sudah persistable. Kalau sebelumnya sudah ada folder kustom lain tersimpan, lepas
-     * dulu izin persisted-nya (lihat catatan bug di [clearSafTreeUri]) sebelum menyimpan
-     * yang baru -- ganti folder berkali-kali TIDAK BOLEH menumpuk izin lama yang sudah
-     * tidak dipakai.
-     */
-    fun setSafTreeUri(uriString: String) {
-        viewModelScope.launch {
-            val previous = settingsRepository.getSafTreeUri()
-            if (previous != null && previous != uriString) {
-                releaseSafPermission(previous)
-            }
-            settingsRepository.setSafTreeUri(uriString)
-        }
-    }
-
-    /**
-     * Lepas SAF & kembali ke Downloads/java.io.File.
-     *
-     * BUG lama (ditemukan & diperbaiki 2026-08-07): komentar di sini sebelumnya bilang
-     * "pelepasan persisted permission dilakukan di pemanggil (MainActivity)", tapi
-     * MainActivity TIDAK PERNAH benar-benar memanggilnya -- izin persisted menumpuk
-     * selamanya tiap kali user ganti/lepas folder kustom. Android membatasi jumlah
-     * persisted URI permission per app (~128, riwayat resmi Android); kalau limit
-     * tercapai, `takePersistableUriPermission()` berikutnya lempar SecurityException
-     * dan fitur folder kustom berhenti bisa dipakai sama sekali tanpa pesan jelas ke
-     * user. Sekarang dilepas EKSPLISIT di sini, sebelum state dibersihkan.
-     */
-    fun clearSafTreeUri() {
-        viewModelScope.launch {
-            val current = settingsRepository.getSafTreeUri()
-            if (current != null) {
-                releaseSafPermission(current)
-            }
-            settingsRepository.setSafTreeUri(null)
-        }
-    }
-
-    /** Best-effort: kegagalan lepas izin (URI sudah invalid/dicabut OS) tidak boleh menghalangi ganti/hapus folder. */
-    private fun releaseSafPermission(uriString: String) {
-        try {
-            val uri = android.net.Uri.parse(uriString)
-            getApplication<Application>().contentResolver.releasePersistableUriPermission(
-                uri,
-                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-            )
-        } catch (_: SecurityException) {
-            // Izin memang sudah tidak ada/sudah dicabut duluan -- aman diabaikan.
-        }
-    }
-
-    /**
      * BUG lama (ditemukan & diperbaiki 2026-08-07): sebelumnya fire-and-forget
      * (`viewModelScope.launch { fileSorter.undo(entry) }`), jadi caller (UI)
      * TIDAK PERNAH tahu hasil sebenarnya -- `ActivityLogScreen` menampilkan
      * snackbar "berhasil" SELALU, walau undo aslinya gagal (mis. file tujuan
-     * sudah tidak ada, folder SAF izin dicabut). Sekarang `suspend` dan
-     * mengembalikan hasil asli dari [FileSorter.undo], supaya UI bisa
-     * menampilkan pesan yang jujur.
+     * sudah tidak ada). Sekarang `suspend` dan mengembalikan hasil asli dari
+     * [FileSorter.undo], supaya UI bisa menampilkan pesan yang jujur.
      */
     suspend fun undoMove(entry: MoveHistoryEntry): Boolean = fileSorter.undo(entry)
 

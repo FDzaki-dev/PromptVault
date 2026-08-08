@@ -3,6 +3,49 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.13.0 -- SAF dihapus total ke akar, atas permintaan eksplisit user (2026-08-08)
+User minta: hapus SEMUA fitur terkait SAF sampai bersih ke akarnya, dan HANYA
+diterapkan kembali kalau root cause kesalahan fatal sudah benar-benar
+dipahami. Lihat PROJECT_STATE.md bagian "Insiden #7" untuk analisis lengkap
+kenapa jawabannya, untuk sekarang, TIDAK diterapkan kembali.
+- **Dihapus total** (§1 roadmap backend "SAF/Scoped Storage" + modul "Zip
+  Sorter" v2.12.0, keduanya berbasis SAF/`DocumentFile`):
+  - `util/FileSorter.kt`: `resolveSafRoot`, `scanAndSortSafLocked`,
+    `listCandidateFilesSaf`, `isLikelyStillWritingSaf`, `processCandidateSaf`,
+    `mimeTypeForFileName`, `findOrCreateChildDirSaf`, `copyDocumentBytes`,
+    `moveFileSaf`, `undoSaf` -- `scanAndSortLocked()`/`undo()` kembali ke
+    jalur java.io.File/Downloads murni, sama seperti sebelum v2.7.0.
+  - `data/SettingsRepository.kt`: `safTreeUriKey`/`safTreeUriFlow`/get-set.
+  - `ui/MainViewModel.kt`: `safTreeUri`, `setSafTreeUri`, `clearSafTreeUri`,
+    `releaseSafPermission`.
+  - `MainActivity.kt`: `safTreePickerLauncher`, `zipSorterViewModel`, param
+    `onPickSafFolder`, route `Routes.ZIP_SORTER` + composable-nya.
+  - `ui/screens/SettingsScreen.kt`: card UI "Folder Kustom (Opsional)" +
+    3 parameter terkait.
+  - `ui/screens/DiagnosticsScreen.kt`: card "Zip Sorter (modul terpisah)" +
+    param `onOpenZipSorter`.
+  - File dihapus utuh: `ui/ZipSorterViewModel.kt`,
+    `ui/screens/ZipSorterScreen.kt`, seluruh folder `zipsorter/` (model,
+    repository, util, worker -- 4 file).
+  - `app/build.gradle.kts`: dependency `androidx.documentfile:documentfile`
+    dibuang (sudah tidak dipakai kode manapun).
+- **TIDAK dihapus/berubah**: rule engine utama (`data/Rule*`, UI Kelola
+  Rule), Room DB (log & history), worker auto-sort, crash logger, tema. Semua
+  ini 100% independen dari SAF, nol risiko regresi dari batch ini.
+- **Perilaku user-facing setelah update**: aplikasi HANYA memindai/memindah
+  file di Downloads (java.io.File + `MANAGE_EXTERNAL_STORAGE`), persis
+  seperti v2.6.0 ke bawah. Tidak ada lagi opsi "Folder Kustom" di Pengaturan,
+  tidak ada lagi menu "Zip Sorter" di Diagnostik. Kalau ada user yang sempat
+  set folder kustom, settingnya otomatis diabaikan (key dihapus dari
+  DataStore) -- scan kembali ke Downloads tanpa perlu aksi user apapun.
+- versionCode 51->52, versionName 2.12.0->2.13.0 (perubahan perilaku runtime
+  nyata, bukan cuma compile-fix -- wajib bump per kebijakan CHANGELOG v2.8.1).
+- **Belum diverifikasi CI/device** -- ini murni operasi hapus/subtraksi kode
+  (bukan fitur baru), risiko regresi jalur Downloads/java.io.File rendah
+  karena jalur itu sendiri sudah stabil sejak v2.4.0 dan TIDAK disentuh sama
+  sekali di batch ini (SAF selalu jadi cabang paralel opsional, dihapus
+  cabangnya saja).
+
 ## v2.12.1 -- COMPILE-FIX: `zipSorterViewModel` Unresolved reference di NavHost (2026-08-07)
 User upload `build-failure-log-v2_12_0.zip`. `:app:compileDebugKotlin FAILED`
 -- 4x "Unresolved reference: zipSorterViewModel" di `MainActivity.kt` (baris

@@ -73,7 +73,7 @@ fun ActivityLogScreen(
                 onBack = onBack,
                 actions = {
                     // Batch fix (2026-08-06): user butuh cara cepat ekspor log utk
-                    // analisis SAF/bug lain tanpa ADB/Logcat -- copy SEMUA entri log
+                    // analisis bug tanpa ADB/Logcat -- copy SEMUA entri log
                     // (bukan cuma yg kelihatan di layar) sbg teks plain ke clipboard,
                     // format [timestamp] LEVEL: pesan, urutan terbaru dulu (sama spt
                     // tampilan). Hanya tampil di tab "Log" (tab==0), tidak relevan
@@ -196,11 +196,10 @@ fun ActivityLogScreen(
                 undoInFlight = true
                 scope.launch {
                     // BUG lama diperbaiki (2026-08-07): sebelumnya snackbar "berhasil"
-                    // SELALU muncul di sini terlepas hasil asli `onUndo` (fire-and-forget),
-                    // dan teksnya hardcode "Downloads" walau tujuan bisa folder SAF
-                    // kustom. Sekarang menunggu hasil ASLI & pesan sesuai kenyataan --
-                    // detail folder tujuan/alasan gagal tetap ada di tab Log kalau user
-                    // butuh tahu lebih spesifik.
+                    // SELALU muncul di sini terlepas hasil asli `onUndo` (fire-and-forget).
+                    // Sekarang menunggu hasil ASLI & pesan sesuai kenyataan -- detail
+                    // alasan gagal tetap ada di tab Log kalau user butuh tahu lebih
+                    // spesifik.
                     val success = onUndo(entry)
                     undoInFlight = false
                     snackbarHostState.showSnackbar(

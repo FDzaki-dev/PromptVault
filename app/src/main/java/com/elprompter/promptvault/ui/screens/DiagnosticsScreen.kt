@@ -43,8 +43,7 @@ import java.util.Locale
 @Composable
 fun DiagnosticsScreen(
     downloadsFileNames: List<String>,
-    onBack: () -> Unit,
-    onOpenZipSorter: () -> Unit = {}
+    onBack: () -> Unit
 ) {
     val context = LocalContext.current
     var statusText by remember { mutableStateOf("Memuat status WorkManager…") }
@@ -162,16 +161,6 @@ fun DiagnosticsScreen(
             }
         }
 
-        VaultCard(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Zip Sorter (modul terpisah)", style = MaterialTheme.typography.titleMedium)
-                Text(
-                    "Engine sortir file per kategori + auto-extract ZIP, terpisah dari rule engine utama.",
-                    style = MaterialTheme.typography.bodySmall
-                )
-                androidx.compose.material3.TextButton(onClick = onOpenZipSorter) { Text("Buka Zip Sorter") }
-            }
-        }
     }
     }
 }

@@ -10,5 +10,4 @@ object Routes {
     const val SETTINGS = "settings"
     const val DIAGNOSTICS = "diagnostics"
     const val SKIPPED_FILES = "skipped_files"
-    const val ZIP_SORTER = "zip_sorter"
 }
