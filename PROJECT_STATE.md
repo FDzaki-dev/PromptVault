@@ -3,7 +3,66 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
-## STATUS PROJECT: v2.15.0 -- AUDIT KEPATUHAN 100% ke spesifikasi tema (gap closure) -- 2026-08-09
+## STATUS PROJECT: v2.16.0 -- TECHNICAL DEBT AUDIT & ATOMIC CLOSURE -- 2026-08-09
+- User minta daftar SEMUA technical debt kode/fitur murni (bukan testing)
+  yang belum kesampaian sejak awal project, dieksekusi jadi 1 batch atomic.
+- **Metodologi audit**: baca ulang PROJECT_STATE.md penuh (semua entri
+  insiden + section "Roadmap backend") + `grep -rn "TODO\|FIXME\|BELUM\|
+  known limitation"` di seluruh `app/src/main/java` + cross-check kode
+  aktual (bukan cuma percaya komentar, sesuai pelajaran Insiden #6: "kalau
+  komentar bilang X, verifikasi X beneran terjadi").
+- **Technical debt yang ditemukan & keputusan per item:**
+  1. **[DIEKSEKUSI]** Opsi tema "Terang"/"Ikuti Sistem" di Pengaturan --
+     dead code sejak v2.14.0 (`Theme.kt` hardcode gelap, `darkTheme` param
+     diabaikan). Dihapus total ke akar (`ThemeMode` enum, flow, UI picker,
+     seluruh wiring) -- BUKAN diimplementasi ulang jadi beneran terang,
+     karena itu kontradiksi langsung spesifikasi desain tema yang sudah
+     ditetapkan ("dark mode adalah satu-satunya mode").
+  2. **[DIEKSEKUSI]** Tombol "Simpan" rule tanpa konfirmasi sukses eksplisit
+     -- gap yang SUDAH ditemukan & DICATAT sejak audit v2.4.3 (2026-08-03),
+     sengaja dibiarkan waktu itu. Ditambahkan `RuleSaveFeedback` one-shot
+     StateFlow (pola sama persis dengan `ScanFeedback` v2.4.4), dikonsumsi
+     di `RuleListScreen` (bukan di form sendiri, karena form di-dispose
+     duluan sebelum Snackbar sempat tampil).
+  3. **[DICATAT, TIDAK DIEKSEKUSI]** Data lama di DataStore (Rules/Settings)
+     dari sebelum migrasi Room v2.2.0 tidak pernah dimigrasikan otomatis.
+     Sudah "disepakati tidak urgent" sejak awal (lihat "Keputusan arsitektur
+     utama" #1) -- TIDAK dieksekusi ulang di batch ini karena: (a) app belum
+     pernah rilis publik luas sejauh riwayat project ini, kemungkinan ada
+     user nyata yang masih di versi >20 rilis lampau (<v2.2.0) mendekati
+     nol; (b) skema DataStore key lama kemungkinan sudah berubah bentuk di
+     beberapa batch berikutnya, menulis migrasi "buta" tanpa data sampel
+     nyata berisiko menciptakan bug baru lebih besar dari manfaatnya. Kalau
+     user based di masa depan benar melaporkan data hilang setelah update
+     dari versi sangat lama, INI baru trigger valid untuk dikerjakan.
+  4. **[DICATAT, TIDAK DIEKSEKUSI]** `SCAN_CONCURRENCY = 6` (FileSorter,
+     v2.4.0) adalah **asumsi teknis AI**, belum divalidasi profiling nyata
+     di device user, dan tidak configurable dari Settings. TIDAK diubah
+     sekarang karena tidak ada data profiling utk pilih angka lain yang
+     lebih benar -- mengubah angka tanpa data cuma ganti tebakan dengan
+     tebakan lain. Trigger valid: user laporkan scan lambat/berat nyata di
+     Downloads berisi ribuan file.
+  5. **[DICATAT, TIDAK DIEKSEKUSI, TERHAMBAT STRUKTURAL]** §6 roadmap
+     backend (CI/CD dependency-lock lanjutan, `./gradlew --write-locks`) --
+     STATUS TIDAK BERUBAH dari catatan lama: sandbox Claude di sesi ini pun
+     masih tanpa akses Gradle/Android SDK/network. Menulis lockfile "buta"
+     berisiko mematikan build CI total (sama kelas risiko dengan kenapa SAF
+     akhirnya dihapus, Insiden #7) -- BUKAN dieksekusi blind.
+  - **Item YANG SUDAH TERTUTUP, bukan debt lagi** (diverifikasi ulang di
+    audit ini, dicatat supaya sesi depan tidak audit ulang dari nol): SAF/
+    Scoped Storage & Zip Sorter (v2.13.0, dihapus total, grep konfirmasi 0
+    sisa kode `documentfile`/`zipsorter`), §2 MediaStore ghost cleanup
+    (v2.5.0, selesai), §5 Coroutine lifecycle & Foreground Service (v2.6.0,
+    selesai), 3 pelanggaran spesifikasi tema (v2.15.0, ditutup sesi
+    sebelumnya).
+- File diubah (6), murni lapisan UI/state -- nol perubahan logika
+  scan/move/undo/DB: `data/SettingsRepository.kt`, `ui/theme/Theme.kt`,
+  `ui/screens/SettingsScreen.kt`, `ui/MainViewModel.kt`, `MainActivity.kt`
+  (Protected Asset, edit parsial), `ui/screens/RuleListScreen.kt`.
+- versionCode 55->56, versionName 2.15.0->2.16.0.
+- **Belum ada konfirmasi CI/device dari user untuk versi ini.**
+
+## STATUS PROJECT SEBELUMNYA: v2.15.0 -- AUDIT KEPATUHAN 100% ke spesifikasi tema (gap closure) -- 2026-08-09
 - User eksplisit minta tema di-override ULANG, "100% disesuaikan dengan
   instruksi Markdown, jangan menyisakan celah setitik pun" -- bukan laporan
   bug baru, tapi audit ulang v2.14.0/2.14.1 vs dokumen spesifikasi

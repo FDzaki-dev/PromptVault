@@ -12,14 +12,13 @@ import androidx.compose.runtime.staticCompositionLocalOf
  * bukan disembunyikan, tapi benar-benar tidak ada lagi jalur kode yang bisa
  * membuat komponen manapun jatuh ke tampilan terang/neumorphic cerah.
  *
- * `darkTheme` tetap diterima sebagai parameter supaya pemanggil lama
- * (MainActivity, yang membaca preferensi ThemeMode user) tidak perlu diubah,
- * tapi nilainya SENGAJA diabaikan -- lihat DoD spesifikasi: "Dark Mode is
- * the mandatory default visual system" & "No component may silently fall
- * back to a bright/light neumorphic appearance". Opsi "Terang"/"Ikuti
- * Sistem" di menu Pengaturan saat ini tidak lagi mengubah tampilan; ini
- * dicatat sebagai known-limitation di PROJECT_STATE.md untuk pembersihan UI
- * lanjutan (bukan bagian dari batch tema ini).
+ * v2.16.0 -- parameter `darkTheme: Boolean` yang SENGAJA diabaikan dihapus
+ * total (technical debt closure, bukan cuma dibiarkan mati): sebelumnya
+ * dipertahankan "supaya pemanggil lama tidak perlu diubah", tapi itu
+ * sendiri jadi bug-in-waiting -- signature fungsi berbohong soal
+ * mengizinkan tema terang padahal tidak. `ThemeMode`/opsi "Terang"/"Ikuti
+ * Sistem" juga sudah dihapus dari `SettingsRepository` & `SettingsScreen`
+ * di batch yang sama; lihat CHANGELOG v2.16.0.
  */
 private val VaultDarkColors = darkColorScheme(
     primary = MidnightBlueAccent,
@@ -78,7 +77,7 @@ object VaultTheme {
 }
 
 @Composable
-fun PromptVaultTheme(darkTheme: Boolean = true, content: @Composable () -> Unit) {
+fun PromptVaultTheme(content: @Composable () -> Unit) {
     CompositionLocalProvider(LocalVaultExtraColors provides VaultExtra) {
         MaterialTheme(
             colorScheme = VaultDarkColors,

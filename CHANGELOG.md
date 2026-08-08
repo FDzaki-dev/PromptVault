@@ -3,6 +3,58 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.16.0 -- Technical debt audit & atomic closure (2026-08-09)
+User minta daftar SEMUA technical debt kode/fitur (bukan testing) yang belum
+kesampaian sejak awal project, dieksekusi jadi 1 batch atomic. Audit penuh
+`PROJECT_STATE.md` (semua insiden & roadmap) + grep TODO/FIXME/known-limitation
+di seluruh kode. Hasil & keputusan per item -- lihat pesan chat untuk tabel
+lengkap "dieksekusi vs tidak + alasan". Yang DIEKSEKUSI di batch ini (2 item,
+saling terkait erat -> 1 atomic change, bukan digabung asal-asalan):
+
+1. **Opsi tema "Terang"/"Ikuti Sistem" DIHAPUS TOTAL** (dead feature sejak
+   v2.14.0 -- `PromptVaultTheme` sudah hardcode 1 skema gelap, opsi di
+   Pengaturan tidak lagi mengubah apapun, UI berbohong ke user). Bukan
+   diimplementasi ulang (kontradiksi spesifikasi desain "dark mode adalah
+   satu-satunya mode"), tapi dicabut sampai akar:
+   - `data/SettingsRepository.kt`: `enum ThemeMode`, `themeModeFlow`,
+     `setThemeMode()`, key DataStore `theme_mode` dihapus.
+   - `ui/theme/Theme.kt`: `PromptVaultTheme(darkTheme: Boolean)` ->
+     `PromptVaultTheme()` (parameter mati dibuang, bukan cuma diabaikan).
+   - `ui/screens/SettingsScreen.kt`: section "Tampilan" (FlowRow 3 FilterChip)
+     dihapus, param `currentThemeMode`/`onThemeModeSelected` dibuang.
+   - `ui/MainViewModel.kt`: `themeMode` StateFlow + `setThemeMode()` dihapus.
+   - `MainActivity.kt`: `effectiveDark`/`isSystemInDarkTheme()`/wiring
+     `ThemeMode` di 2 composable (root theme + Routes.SETTINGS) dihapus.
+2. **Konfirmasi sukses simpan rule ditambahkan** (gap didokumentasikan sejak
+   audit v2.4.3, sengaja dibiarkan waktu itu -- "GAP dicatat, SENGAJA belum
+   difix"). Tombol "Simpan" di AddEditRuleScreen sebelumnya nol sinyal sukses
+   selain navigasi balik implisit.
+   - Pola one-shot SAMA seperti `ScanFeedback` (v2.4.4, eventId bukan isi
+     teks) -- **disimpan di ViewModel, dikonsumsi di RuleListScreen**
+     (layar TUJUAN setelah pop), BUKAN di AddEditRuleScreen sendiri, karena
+     form itu langsung di-dispose sesaat setelah simpan (persis kelas bug
+     Snackbar Home v2.4.4 kalau state-nya lokal ke composable yang dibuang).
+   - `ui/MainViewModel.kt`: `RuleSaveFeedback` data class baru +
+     `ruleSaveFeedback` StateFlow + `consumeRuleSaveFeedback()`. `saveRule()`
+     dapat parameter `announce: Boolean = false` -- default false supaya
+     toggle enable/disable Switch (yang juga lewat `saveRule()`) TIDAK ikut
+     memicu Snackbar "disimpan" tiap digeser (noise, bukan feedback berguna).
+   - `ui/screens/RuleListScreen.kt`: param `ruleSaveFeedback` +
+     `onRuleSaveFeedbackConsumed`, `LaunchedEffect` tampilkan Snackbar
+     `Rule "X" disimpan`.
+   - `MainActivity.kt`: Routes.RULES collect+wire `ruleSaveFeedback`;
+     Routes.ADD_EDIT_RULE panggil `saveRule(rule, id, announce = true)`.
+- File diubah (6): `data/SettingsRepository.kt`, `ui/theme/Theme.kt`,
+  `ui/screens/SettingsScreen.kt`, `ui/MainViewModel.kt`, `MainActivity.kt`,
+  `ui/screens/RuleListScreen.kt`. Tidak ada file baru/dihapus.
+- Item debt YANG TIDAK dieksekusi (dicatat, bukan diabaikan) -- lihat
+  PROJECT_STATE.md bagian "Technical debt audit 2026-08-09" untuk alasan
+  masing-masing: migrasi data DataStore lama pre-v2.2.0 ke Room,
+  `SCAN_CONCURRENCY=6` hardcoded/belum diprofilkan, §6 CI dependency-lock
+  (terhambat struktural, sama seperti sebelumnya).
+- versionCode 55->56, versionName 2.15.0->2.16.0.
+- **Belum ada konfirmasi CI/device dari user untuk versi ini.**
+
 ## v2.15.0 -- Audit kepatuhan 100% ke spesifikasi tema (gap closure) (2026-08-09)
 User minta tema di-override ulang "100% sesuai markdown, jangan ada celah
 setitik pun". Audit ulang file-per-file v2.14.1 vs spesifikasi menemukan 3

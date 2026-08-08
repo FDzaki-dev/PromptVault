@@ -12,7 +12,6 @@ import com.elprompter.promptvault.data.Rule
 import com.elprompter.promptvault.data.RuleRepository
 import com.elprompter.promptvault.data.SaveRuleCheck
 import com.elprompter.promptvault.data.SettingsRepository
-import com.elprompter.promptvault.data.ThemeMode
 import com.elprompter.promptvault.util.FileSorter
 import com.elprompter.promptvault.util.PatternPreviewResult
 import com.elprompter.promptvault.util.SkippedFileInfo
@@ -65,13 +64,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             state.asStateFlow()
         }
 
-    val themeMode: StateFlow<ThemeMode> = settingsRepository.themeModeFlow
-        .let { flow ->
-            val state = MutableStateFlow(SettingsRepository.DEFAULT_THEME_MODE)
-            viewModelScope.launch { flow.collect { state.value = it } }
-            state.asStateFlow()
-        }
-
     private val _isScanning = MutableStateFlow(false)
     val isScanning: StateFlow<Boolean> = _isScanning.asStateFlow()
 
@@ -104,6 +96,28 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _lastSkippedFiles = MutableStateFlow<List<SkippedFileInfo>>(emptyList())
     val lastSkippedFiles: StateFlow<List<SkippedFileInfo>> = _lastSkippedFiles.asStateFlow()
 
+    /**
+     * v2.16.0 -- technical debt closure: tombol "Simpan" di AddEditRuleScreen
+     * sebelumnya TIDAK PERNAH punya konfirmasi sukses eksplisit (gap yang
+     * sudah dicatat sejak audit v2.4.3, sengaja belum difix). Pola one-shot
+     * sama seperti [ScanFeedback] (eventId, BUKAN isi teks, supaya tetap
+     * trigger walau nama folder sama persis dgn save sebelumnya) --
+     * DISIMPAN DI SINI (ViewModel), bukan state lokal AddEditRuleScreen,
+     * karena layar itu langsung di-pop/dispose sesaat setelah simpan
+     * (persis kelas bug yang sama dgn Snackbar Home v2.4.4: composable yang
+     * sudah dibuang tidak bisa lagi menampilkan Snackbar-nya sendiri).
+     * Dikonsumsi oleh RuleListScreen (layar TUJUAN setelah pop back), yang
+     * bertahan hidup lintas navigasi tsb.
+     */
+    data class RuleSaveFeedback(val folderName: String, val eventId: Long)
+
+    private val _ruleSaveFeedback = MutableStateFlow<RuleSaveFeedback?>(null)
+    val ruleSaveFeedback: StateFlow<RuleSaveFeedback?> = _ruleSaveFeedback.asStateFlow()
+
+    fun consumeRuleSaveFeedback() {
+        _ruleSaveFeedback.value = null
+    }
+
     fun runManualScan() {
         viewModelScope.launch {
             _isScanning.value = true
@@ -125,8 +139,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     suspend fun checkBeforeSave(rule: Rule): SaveRuleCheck = ruleRepository.checkBeforeSave(rule)
 
-    fun saveRule(rule: Rule, removeDuplicateRuleId: String? = null) {
-        viewModelScope.launch { ruleRepository.upsertRule(rule, removeDuplicateRuleId) }
+    /**
+     * [announce]=true HANYA dipakai jalur simpan eksplisit dari form
+     * AddEditRuleScreen (lihat [RuleSaveFeedback]) -- default false supaya
+     * toggle enable/disable Switch di RuleCard (yang juga lewat fungsi ini)
+     * TIDAK memicu Snackbar "disimpan" berulang tiap kali digeser, yang
+     * justru jadi noise bukan feedback berguna.
+     */
+    fun saveRule(rule: Rule, removeDuplicateRuleId: String? = null, announce: Boolean = false) {
+        viewModelScope.launch {
+            ruleRepository.upsertRule(rule, removeDuplicateRuleId)
+            if (announce) {
+                _ruleSaveFeedback.value = RuleSaveFeedback(rule.folderName, System.currentTimeMillis())
+            }
+        }
     }
 
     fun deleteRule(ruleId: String) {
@@ -150,10 +176,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setConflictStrategy(strategy: ConflictStrategy) {
         viewModelScope.launch { settingsRepository.setConflictStrategy(strategy) }
-    }
-
-    fun setThemeMode(mode: ThemeMode) {
-        viewModelScope.launch { settingsRepository.setThemeMode(mode) }
     }
 
     /**

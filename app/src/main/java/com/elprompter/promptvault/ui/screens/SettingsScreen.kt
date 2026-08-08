@@ -29,7 +29,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.elprompter.promptvault.data.ConflictStrategy
 import com.elprompter.promptvault.data.SettingsRepository
-import com.elprompter.promptvault.data.ThemeMode
 import com.elprompter.promptvault.ui.components.VaultCard
 import com.elprompter.promptvault.ui.components.VaultTopBar
 import kotlinx.coroutines.launch
@@ -41,8 +40,6 @@ fun SettingsScreen(
     onIntervalSelected: (Int) -> Unit,
     currentConflictStrategy: ConflictStrategy,
     onConflictStrategySelected: (ConflictStrategy) -> Unit,
-    currentThemeMode: ThemeMode,
-    onThemeModeSelected: (ThemeMode) -> Unit,
     onExportRequested: suspend () -> String,
     onImportRequested: (String, (Int) -> Unit) -> Unit,
     onBack: () -> Unit
@@ -70,27 +67,6 @@ fun SettingsScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text("Tampilan", style = MaterialTheme.typography.titleMedium)
-            Text(
-                "Pilih terang, gelap, atau ikuti pengaturan sistem Android kamu.",
-                style = MaterialTheme.typography.bodySmall
-            )
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                val themeLabels = mapOf(
-                    ThemeMode.SYSTEM to "Ikuti Sistem",
-                    ThemeMode.LIGHT to "Terang",
-                    ThemeMode.DARK to "Gelap"
-                )
-                themeLabels.forEach { (mode, label) ->
-                    FilterChip(
-                        selected = mode == currentThemeMode,
-                        onClick = { onThemeModeSelected(mode) },
-                        label = { Text(label) },
-                        colors = chipColors()
-                    )
-                }
-            }
-
             Text("Interval Auto-Scan", style = MaterialTheme.typography.titleMedium)
             Text(
                 "Seberapa sering PromptVault memindai Downloads di latar belakang. " +

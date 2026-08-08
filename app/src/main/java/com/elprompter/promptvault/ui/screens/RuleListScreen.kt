@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import com.elprompter.promptvault.ui.components.EmptyState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -33,6 +34,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.elprompter.promptvault.data.Rule
+import com.elprompter.promptvault.ui.MainViewModel
 import com.elprompter.promptvault.ui.components.VaultActionSheet
 import com.elprompter.promptvault.ui.components.RuleCard
 import com.elprompter.promptvault.ui.components.VaultTopBar
@@ -49,6 +51,8 @@ fun RuleListScreen(
     onEditRule: (Rule) -> Unit,
     onDeleteRule: (Rule) -> Unit,
     onAddRule: () -> Unit,
+    ruleSaveFeedback: MainViewModel.RuleSaveFeedback?,
+    onRuleSaveFeedbackConsumed: () -> Unit,
     onBack: () -> Unit
 ) {
     var query by remember { mutableStateOf("") }
@@ -56,6 +60,16 @@ fun RuleListScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val colors = MaterialTheme.colorScheme
+
+    // v2.16.0 -- technical debt closure: konfirmasi sukses simpan rule (baru
+    // ATAU edit) dari AddEditRuleScreen. Dikonsumsi di SINI (bukan di layar
+    // form itu sendiri) karena form sudah di-pop dari back stack sebelum
+    // Snackbar sempat tampil -- lihat javadoc MainViewModel.RuleSaveFeedback.
+    LaunchedEffect(ruleSaveFeedback?.eventId) {
+        val feedback = ruleSaveFeedback ?: return@LaunchedEffect
+        onRuleSaveFeedbackConsumed()
+        snackbarHostState.showSnackbar("Rule \"${feedback.folderName}\" disimpan")
+    }
 
     val filtered = remember(rules, query) {
         if (query.isBlank()) rules

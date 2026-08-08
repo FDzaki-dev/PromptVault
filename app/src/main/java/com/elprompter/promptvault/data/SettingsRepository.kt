@@ -15,26 +15,28 @@ enum class ConflictStrategy {
     OVERWRITE   // timpa file yang ada di tujuan (destruktif, tidak bisa di-undo file lamanya)
 }
 
-/** Preferensi tampilan terang/gelap. SYSTEM = ikuti pengaturan Android. */
-enum class ThemeMode {
-    SYSTEM, LIGHT, DARK
-}
-
 /**
- * Menyimpan interval auto-scan, strategi konflik nama file, dan preferensi
- * tema terang/gelap.
+ * Menyimpan interval auto-scan dan strategi konflik nama file.
+ *
+ * v2.16.0 -- `ThemeMode` (SYSTEM/LIGHT/DARK) DIHAPUS TOTAL (technical debt
+ * closure). Sejak tema di-override ke AMOLED Glassmorphism Hybrid (v2.14.0),
+ * `PromptVaultTheme` sudah HARDCODE satu skema gelap -- `darkTheme` di sana
+ * cuma parameter mati yang selalu diabaikan. Opsi "Terang"/"Ikuti Sistem" di
+ * Pengaturan TIDAK PERNAH benar-benar mengubah tampilan sejak saat itu (known
+ * limitation yang tercatat di PROJECT_STATE.md). Daripada terus dibiarkan
+ * sebagai UI yang berbohong ke user, opsinya dihapus sampai ke akar -- kalau
+ * suatu saat mode terang beneran diminta lagi, itu FITUR BARU (implementasi
+ * ulang dari nol di Theme.kt + Color.kt), bukan "mengaktifkan lagi" kode ini.
  */
 class SettingsRepository(private val context: Context) {
 
     private val intervalKey = intPreferencesKey("auto_scan_interval_minutes")
     private val conflictKey = stringPreferencesKey("conflict_strategy")
-    private val themeModeKey = stringPreferencesKey("theme_mode")
 
     companion object {
         const val DEFAULT_INTERVAL_MINUTES = 15
         val ALLOWED_INTERVALS = listOf(15, 30, 60, 120, 240)
         val DEFAULT_CONFLICT_STRATEGY = ConflictStrategy.RENAME
-        val DEFAULT_THEME_MODE = ThemeMode.SYSTEM
     }
 
     val intervalMinutesFlow: Flow<Int> = context.promptVaultDataStore.data.map { prefs ->
@@ -56,13 +58,5 @@ class SettingsRepository(private val context: Context) {
 
     suspend fun setConflictStrategy(strategy: ConflictStrategy) {
         context.promptVaultDataStore.edit { prefs -> prefs[conflictKey] = strategy.name }
-    }
-
-    val themeModeFlow: Flow<ThemeMode> = context.promptVaultDataStore.data.map { prefs ->
-        runCatching { ThemeMode.valueOf(prefs[themeModeKey] ?: "") }.getOrDefault(DEFAULT_THEME_MODE)
-    }
-
-    suspend fun setThemeMode(mode: ThemeMode) {
-        context.promptVaultDataStore.edit { prefs -> prefs[themeModeKey] = mode.name }
     }
 }

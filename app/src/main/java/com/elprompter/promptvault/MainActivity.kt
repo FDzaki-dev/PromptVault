@@ -21,7 +21,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -66,7 +65,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.elprompter.promptvault.data.ThemeMode
 import com.elprompter.promptvault.data.promptVaultDataStore
 import com.elprompter.promptvault.ui.MainViewModel
 import com.elprompter.promptvault.ui.Routes
@@ -116,15 +114,10 @@ class MainActivity : ComponentActivity() {
         )
 
         setContent {
-            val viewModelForTheme = viewModel
-            val themeMode by viewModelForTheme.themeMode.collectAsStateWithLifecycle()
-            val systemDark = isSystemInDarkTheme()
-            val effectiveDark = when (themeMode) {
-                ThemeMode.SYSTEM -> systemDark
-                ThemeMode.LIGHT -> false
-                ThemeMode.DARK -> true
-            }
-            PromptVaultTheme(darkTheme = effectiveDark) {
+            // v2.16.0 -- ThemeMode (Terang/Sistem/Gelap) dihapus total, lihat
+            // SettingsRepository & Theme.kt. PromptVaultTheme sekarang tanpa
+            // parameter -- selalu AMOLED gelap, sesuai spesifikasi desain.
+            PromptVaultTheme {
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     PromptVaultRoot(
                         viewModel = viewModel,
@@ -261,6 +254,7 @@ private fun PromptVaultRoot(
             LaunchedEffect(rules) {
                 overlapIds = viewModel.findAllOverlaps().keys.map { it.id }.toSet()
             }
+            val ruleSaveFeedback by viewModel.ruleSaveFeedback.collectAsStateWithLifecycle()
             RuleListScreen(
                 rules = rules,
                 overlappingRuleIds = overlapIds,
@@ -270,6 +264,8 @@ private fun PromptVaultRoot(
                 onEditRule = { rule -> navController.navigate(Routes.addEditRule(rule.id)) },
                 onDeleteRule = { rule -> viewModel.deleteRule(rule.id) },
                 onAddRule = { navController.navigate(Routes.addEditRule(null)) },
+                ruleSaveFeedback = ruleSaveFeedback,
+                onRuleSaveFeedbackConsumed = { viewModel.consumeRuleSaveFeedback() },
                 onBack = { navController.popBackStack() }
             )
         }
@@ -285,7 +281,10 @@ private fun PromptVaultRoot(
                 onCheckBeforeSave = { rule -> viewModel.checkBeforeSave(rule) },
                 onPreviewPattern = { pattern, excludePattern -> viewModel.previewPattern(pattern, excludePattern) },
                 onSave = { rule, removeDuplicateRuleId ->
-                    viewModel.saveRule(rule, removeDuplicateRuleId)
+                    // announce=true: technical debt closure v2.16.0, lihat
+                    // MainViewModel.RuleSaveFeedback -- Snackbar konfirmasi
+                    // muncul di RuleListScreen setelah pop kembali ke sana.
+                    viewModel.saveRule(rule, removeDuplicateRuleId, announce = true)
                     navController.popBackStack()
                 },
                 onCancel = { navController.popBackStack() }
@@ -304,14 +303,11 @@ private fun PromptVaultRoot(
         composable(Routes.SETTINGS) {
             val interval by viewModel.intervalMinutes.collectAsStateWithLifecycle()
             val conflictStrategy by viewModel.conflictStrategy.collectAsStateWithLifecycle()
-            val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
             SettingsScreen(
                 currentIntervalMinutes = interval,
                 onIntervalSelected = { viewModel.setIntervalMinutes(it) },
                 currentConflictStrategy = conflictStrategy,
                 onConflictStrategySelected = { viewModel.setConflictStrategy(it) },
-                currentThemeMode = themeMode,
-                onThemeModeSelected = { viewModel.setThemeMode(it) },
                 onExportRequested = { viewModel.exportRulesJson() },
                 onImportRequested = { text, cb -> viewModel.importRulesJson(text, cb) },
                 onBack = { navController.popBackStack() }
