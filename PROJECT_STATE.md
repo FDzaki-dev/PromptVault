@@ -3,7 +3,43 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
-## STATUS PROJECT: v2.13.0 -- SAF DIHAPUS TOTAL ke akar atas permintaan eksplisit user -- 2026-08-08
+## STATUS PROJECT: v2.14.0 -- Ganti total tema visual ke "AMOLED Glassmorphism Hybrid + Midnight Blue Gradient" -- 2026-08-08
+- User upload spesifikasi desain (.md) & minta tema default project ditimpa
+  sampai bersih, 100% sesuai isi dokumen itu. Palet lama "Manifest Arsip"
+  (kraft/pine terang + obsidian gelap terpisah, dua skema) DIHAPUS TOTAL,
+  diganti SATU skema: AMOLED near-black + frosted glass (dominan) + tint
+  Midnight Blue ambient alpha-rendah (restrained, bukan warna dominan).
+- **Dark mode sekarang WAJIB & satu-satunya** -- `PromptVaultTheme` tidak lagi
+  punya `lightColorScheme`; parameter `darkTheme` diabaikan (dipertahankan di
+  signature supaya `MainActivity` tidak perlu diubah strukturnya).
+  KNOWN LIMITATION: opsi "Terang"/"Ikuti Sistem" di menu Pengaturan
+  (`SettingsScreen.kt`, `ThemeMode`) masih ada di UI tapi SEKARANG TIDAK
+  BERFUNGSI lagi (tampilan selalu AMOLED gelap). Sengaja TIDAK dibersihkan
+  di batch ini untuk menjaga batch tetap ketat di lapisan tema; hapus UI
+  picker itu di batch berikutnya kalau user minta "beres-beres" lanjutan.
+- File diubah/ditambah (9, murni lapisan tema + 1 titik tactile-press CTA):
+  `ui/theme/Color.kt` (rewrite total token AMOLED/glass/Midnight Blue),
+  `ui/theme/Theme.kt` (rewrite, satu darkColorScheme, forced),
+  `ui/theme/TactileTokens.kt` (BARU -- konstanta elevasi/skala tactile
+  terpusat sesuai bab 12 spesifikasi), `ui/components/VaultCard.kt`
+  (gradient glass + tint Midnight Blue + border rambut, ganti gradient
+  kraft lama), `ui/components/PressScale.kt` (tambah `tactilePress()`:
+  skala + elevasi turun ke 0 saat ditekan, sesuai bab 6), `ui/screens/
+  HomeScreen.kt` (CTA "Scan Sekarang" pakai `tactilePress` bukan
+  `pressScale` polos), `app/src/main/res/values/colors.xml` +
+  `themes.xml` (splash & parent theme non-light), `mipmap-anydpi-v26/
+  ic_launcher(.xml/_round.xml)` (background ikon ganti dari pv_pine ke
+  AMOLED), `MainActivity.kt` (partial: splash/status-bar scrim gelap
+  permanen, bukan lagi `SystemBarStyle.auto`).
+- Semua komponen lain (`GroupedListRow`, `RuleCard`, `SegmentedControl`,
+  `VaultActionSheet`, `VaultTopBar`, `EmptyState`, `SortedStamp`, seluruh
+  layar) TIDAK diubah -- semuanya sudah 100% theme-aware lewat
+  `MaterialTheme.colorScheme`/`VaultTheme.extraColors`, jadi otomatis
+  mewarisi palet baru tanpa perlu disentuh. Nol risiko regresi logika.
+- versionCode 52->53, versionName 2.13.0->2.14.0.
+- **Belum ada konfirmasi CI/device dari user untuk versi ini.**
+
+## STATUS PROJECT SEBELUMNYA: v2.13.0 -- SAF DIHAPUS TOTAL ke akar atas permintaan eksplisit user -- 2026-08-08
 - User eksplisit minta hapus SEMUA fitur terkait SAF sampai bersih ke akar,
   dan HANYA diterapkan kembali kalau Claude sudah tahu letak kesalahan
   logika fatal yang menyebabkan riwayat panjang bug SAF (insiden #4, #6,

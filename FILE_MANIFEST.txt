@@ -46,6 +46,7 @@ app/src/main/java/com/elprompter/promptvault/ui/screens/SettingsScreen.kt
 app/src/main/java/com/elprompter/promptvault/ui/screens/SkippedFilesScreen.kt
 app/src/main/java/com/elprompter/promptvault/ui/theme/Color.kt
 app/src/main/java/com/elprompter/promptvault/ui/theme/Shapes.kt
+app/src/main/java/com/elprompter/promptvault/ui/theme/TactileTokens.kt
 app/src/main/java/com/elprompter/promptvault/ui/theme/Theme.kt
 app/src/main/java/com/elprompter/promptvault/ui/theme/Type.kt
 app/src/main/java/com/elprompter/promptvault/util/CrashLogger.kt

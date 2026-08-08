@@ -2,101 +2,75 @@ package com.elprompter.promptvault.ui.theme
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 
-private val LightColors = lightColorScheme(
-    primary = Pine,
-    onPrimary = CardPaper,
-    primaryContainer = PineContainer,
-    onPrimaryContainer = Pine,
-    secondary = Stamp,
-    onSecondary = CardPaper,
-    secondaryContainer = StampContainer,
-    onSecondaryContainer = Stamp,
-    tertiary = Amber,
-    onTertiary = CardPaper,
-    tertiaryContainer = AmberContainer,
-    onTertiaryContainer = Amber,
-    background = Kraft,
-    onBackground = Ink,
-    surface = CardPaper,
-    onSurface = Ink,
-    surfaceVariant = Kraft,
-    onSurfaceVariant = InkFaint,
-    error = Rust,
-    onError = CardPaper,
-    errorContainer = StampContainer,
-    onErrorContainer = Rust,
-    outline = HairlineInk,
-    outlineVariant = HairlineInk,
-    inverseSurface = Ink,
-    inverseOnSurface = CardPaper,
-    inversePrimary = PineLight,
-    scrim = Ink
-)
-
 /**
- * Skema gelap "ultra premium": tiga lapisan permukaan (background < surface <
- * surfaceVariant sebagai "raised") supaya kartu/sheet terasa mengambang, bukan
- * menyatu jadi hitam polos. Semua aksen dicerahkan (PineGlow/StampGlow/AmberGlow)
- * biar tetap hidup & kontras di atas dasar nyaris-hitam, alih-alih warna terang
- * yang justru pudar/kusam kalau ditaruh apa adanya di dark mode.
+ * v3.0.0 — Dark mode adalah SATU-SATUNYA skema yang ada (AMOLED Glassmorphism
+ * Hybrid + Midnight Blue gradient tint). Skema terang lama DIHAPUS TOTAL --
+ * bukan disembunyikan, tapi benar-benar tidak ada lagi jalur kode yang bisa
+ * membuat komponen manapun jatuh ke tampilan terang/neumorphic cerah.
  *
- * v2.3.0: primaryContainer/secondaryContainer/tertiaryContainer sebelumnya TIDAK
- * pernah diisi eksplisit -> Compose diam-diam memakai default ungu Material
- * bawaan untuk peran itu. Sekarang semua diisi dari palet brand sendiri, supaya
- * komponen manapun yang memakai peran "container" tetap konsisten dengan tema
- * arsip/premium, bukan bocor jadi ungu generik.
+ * `darkTheme` tetap diterima sebagai parameter supaya pemanggil lama
+ * (MainActivity, yang membaca preferensi ThemeMode user) tidak perlu diubah,
+ * tapi nilainya SENGAJA diabaikan -- lihat DoD spesifikasi: "Dark Mode is
+ * the mandatory default visual system" & "No component may silently fall
+ * back to a bright/light neumorphic appearance". Opsi "Terang"/"Ikuti
+ * Sistem" di menu Pengaturan saat ini tidak lagi mengubah tampilan; ini
+ * dicatat sebagai known-limitation di PROJECT_STATE.md untuk pembersihan UI
+ * lanjutan (bukan bagian dari batch tema ini).
  */
-private val DarkColors = darkColorScheme(
-    primary = PineGlow,
-    onPrimary = ObsidianBase,
-    primaryContainer = PineGlowContainer,
-    onPrimaryContainer = PineGlow,
+private val VaultDarkColors = darkColorScheme(
+    primary = MidnightBlueAccent,
+    onPrimary = MidnightBlueAccentOn,
+    primaryContainer = MidnightBlueAccentContainer,
+    onPrimaryContainer = MidnightBlueAccent,
     secondary = StampGlow,
-    onSecondary = ObsidianBase,
+    onSecondary = MidnightBlueAccentOn,
     secondaryContainer = StampGlowContainer,
     onSecondaryContainer = StampGlow,
     tertiary = AmberGlow,
-    onTertiary = ObsidianBase,
+    onTertiary = MidnightBlueAccentOn,
     tertiaryContainer = AmberGlowContainer,
     onTertiaryContainer = AmberGlow,
-    background = ObsidianBase,
-    onBackground = IvoryText,
-    surface = ObsidianSurface,
-    onSurface = IvoryText,
-    surfaceVariant = ObsidianSurfaceRaised,
-    onSurfaceVariant = IvoryTextFaint,
+    background = AmoledBackground,
+    onBackground = TextPrimary,
+    surface = GlassSurface,
+    onSurface = TextPrimary,
+    surfaceVariant = GlassSurfaceElevated,
+    onSurfaceVariant = TextSecondary,
+    surfaceContainer = GlassSurface,
+    surfaceContainerHigh = GlassSurfaceElevated,
+    surfaceContainerHighest = GlassSurfaceSheet,
+    surfaceContainerLow = AmoledBackground,
+    surfaceContainerLowest = AmoledBackground,
+    inverseSurface = TextPrimary,
+    inverseOnSurface = AmoledBackground,
+    inversePrimary = MidnightBlueAccent,
     error = RustGlow,
-    onError = ObsidianBase,
-    errorContainer = StampGlowContainer,
+    onError = MidnightBlueAccentOn,
+    errorContainer = RustGlowContainer,
     onErrorContainer = RustGlow,
-    outline = HairlineIvory,
-    outlineVariant = HairlineIvory,
-    inverseSurface = IvoryText,
-    inverseOnSurface = ObsidianBase,
-    inversePrimary = Pine,
-    scrim = ObsidianBase
+    outline = HairlineGlass,
+    outlineVariant = HairlineGlass,
+    scrim = GlassShadow
 )
 
 /**
- * Aksen ke-4 di luar peran Material3 baku (primary/secondary/tertiary/error) --
- * dipakai khusus untuk "Pengaturan" supaya menu grouped-list punya 4 warna
- * berbeda, bukan cuma 2-3 warna diulang. Theme-aware lewat CompositionLocal
- * yang sama seperti MaterialTheme.colorScheme, jadi otomatis ikut terang/gelap
- * tanpa perlu parameter tambahan di tiap composable pemanggil.
+ * Aksen ke-4 di luar peran Material3 baku, dipakai khusus untuk "Pengaturan"
+ * supaya grouped-list tetap punya identitas warna berbeda per menu. Tidak
+ * lagi punya varian terang -- theme-aware lewat CompositionLocal yang sama,
+ * tapi isinya konstan mengikuti satu-satunya skema gelap yang ada.
  */
 data class VaultExtraColors(
     val slate: androidx.compose.ui.graphics.Color,
     val slateContainer: androidx.compose.ui.graphics.Color
 )
 
-private val LightExtraColors = VaultExtraColors(slate = Slate, slateContainer = SlateContainer)
-private val DarkExtraColors = VaultExtraColors(slate = SlateGlow, slateContainer = SlateGlowContainer)
+private val VaultExtra = VaultExtraColors(slate = SlateGlow, slateContainer = SlateGlowContainer)
 
-val LocalVaultExtraColors = staticCompositionLocalOf { LightExtraColors }
+val LocalVaultExtraColors = staticCompositionLocalOf { VaultExtra }
 
 object VaultTheme {
     val extraColors: VaultExtraColors
@@ -104,10 +78,13 @@ object VaultTheme {
 }
 
 @Composable
-fun PromptVaultTheme(darkTheme: Boolean = false, content: @Composable () -> Unit) {
-    val colors = if (darkTheme) DarkColors else LightColors
-    val extraColors = if (darkTheme) DarkExtraColors else LightExtraColors
-    androidx.compose.runtime.CompositionLocalProvider(LocalVaultExtraColors provides extraColors) {
-        MaterialTheme(colorScheme = colors, typography = PromptVaultTypography, shapes = PromptVaultShapes, content = content)
+fun PromptVaultTheme(darkTheme: Boolean = true, content: @Composable () -> Unit) {
+    CompositionLocalProvider(LocalVaultExtraColors provides VaultExtra) {
+        MaterialTheme(
+            colorScheme = VaultDarkColors,
+            typography = PromptVaultTypography,
+            shapes = PromptVaultShapes,
+            content = content
+        )
     }
 }

@@ -78,8 +78,7 @@ import com.elprompter.promptvault.ui.screens.OnboardingScreen
 import com.elprompter.promptvault.ui.screens.RuleListScreen
 import com.elprompter.promptvault.ui.screens.SettingsScreen
 import com.elprompter.promptvault.ui.screens.SkippedFilesScreen
-import com.elprompter.promptvault.ui.theme.Kraft
-import com.elprompter.promptvault.ui.theme.ObsidianBase
+import com.elprompter.promptvault.ui.theme.AmoledBackground
 import com.elprompter.promptvault.ui.theme.PromptVaultTheme
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -101,19 +100,19 @@ class MainActivity : ComponentActivity() {
     ) { _ -> legacyPermissionRecheckTrigger++ }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Splash brand-in (Pine) sebelum konten Compose siap -- kesan pertama
+        // Splash brand-in AMOLED sebelum konten Compose siap -- kesan pertama
         // yang konsisten, bukan layar putih kosong khas app "belum jadi".
         installSplashScreen()
         super.onCreate(savedInstanceState)
 
-        // Edge-to-edge dengan status bar & nav bar otomatis ikut terang/gelap
-        // sistem (SystemBarStyle.auto). Kalau user override manual "Selalu
-        // Gelap"/"Selalu Terang" di Pengaturan, area konten tetap benar lewat
-        // PromptVaultTheme -- cuma chrome status bar yang mungkin tidak 100%
-        // sinkron di kasus override manual itu (batasan kecil yang wajar).
+        // v3.0.0: dark mode adalah satu-satunya mode aplikasi (lihat
+        // PromptVaultTheme) -- status bar & nav bar SELALU pakai scrim gelap
+        // (ikon terang), bukan lagi SystemBarStyle.auto yang ikut terang di
+        // sistem terang. Ini mencegah chrome sistem "bocor" jadi terang saat
+        // konten di baliknya sudah pasti AMOLED gelap.
         enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.auto(Kraft.toArgb(), ObsidianBase.toArgb()),
-            navigationBarStyle = SystemBarStyle.auto(Kraft.toArgb(), ObsidianBase.toArgb())
+            statusBarStyle = SystemBarStyle.dark(AmoledBackground.toArgb()),
+            navigationBarStyle = SystemBarStyle.dark(AmoledBackground.toArgb())
         )
 
         setContent {

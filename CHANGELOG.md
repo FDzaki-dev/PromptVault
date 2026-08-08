@@ -3,6 +3,31 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.14.0 -- Tema visual diganti total: AMOLED Glassmorphism Hybrid + Midnight Blue Gradient (2026-08-08)
+User upload spesifikasi desain dan minta tema default ditimpa sampai bersih,
+100% sesuai isi dokumen. Lihat PROJECT_STATE.md untuk detail & known
+limitation (toggle "Terang" di Pengaturan kini tidak berfungsi, dark AMOLED
+adalah satu-satunya mode).
+- `ui/theme/Color.kt`: hapus total palet terang & obsidian lama, ganti token
+  baru (`AmoledBackground`, `GlassSurface[Elevated/Sheet/Pressed]`,
+  `MidnightBlueTint`/`MidnightBlueAccent[Container/On]`, `TextPrimary/
+  Secondary`, `GlassHighlight/Border/Shadow`, aksen semantik `StampGlow`/
+  `AmberGlow`/`RustGlow`/`SlateGlow` ditata ulang warnanya).
+- `ui/theme/Theme.kt`: satu `darkColorScheme` saja (tidak ada lagi
+  `lightColorScheme`), `darkTheme` param diabaikan secara sengaja.
+- `ui/theme/TactileTokens.kt` (baru): elevasi/skala/durasi tactile terpusat.
+- `ui/components/VaultCard.kt`: gradient glass 3-stop (Elevated -> tint
+  Midnight Blue alpha 0.08 -> Surface) + border rambut translusen.
+- `ui/components/PressScale.kt`: tambah `tactilePress()` (skala + elevasi
+  turun ke 0 saat ditekan), dipakai di CTA "Scan Sekarang" (`HomeScreen.kt`).
+- `values/colors.xml`, `values/themes.xml`: parent tema non-light, splash
+  screen AMOLED.
+- `mipmap-anydpi-v26/ic_launcher*.xml`: background ikon AMOLED (ganti dari
+  `pv_pine`).
+- `MainActivity.kt` (partial): status/nav bar scrim gelap permanen
+  (`SystemBarStyle.dark`), bukan lagi `SystemBarStyle.auto`.
+- versionCode 52->53, versionName 2.13.0->2.14.0.
+
 ## v2.13.0 -- SAF dihapus total ke akar, atas permintaan eksplisit user (2026-08-08)
 User minta: hapus SEMUA fitur terkait SAF sampai bersih ke akarnya, dan HANYA
 diterapkan kembali kalau root cause kesalahan fatal sudah benar-benar

@@ -9,35 +9,39 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.elprompter.promptvault.ui.theme.GlassBorder
+import com.elprompter.promptvault.ui.theme.GlassSurface
+import com.elprompter.promptvault.ui.theme.GlassSurfaceElevated
+import com.elprompter.promptvault.ui.theme.MidnightBlueGradientAlpha
+import com.elprompter.promptvault.ui.theme.MidnightBlueTint
 
 /**
- * Kartu bersih ala iOS grouped list: radius besar, border rambut tipis.
- *
- * v2.3.0: kartu diberi gradient vertikal halus supaya terasa berlapis, bukan
- * datar (keluhan "monoton").
- * v2.3.1 (FIX REGRESI): implementasi v2.3.0 salah taruh `Modifier.fillMaxSize()`
- * di Box pembungkus gradient. Karena Surface aslinya membungkus tinggi sesuai
- * konten (wrap-content), `fillMaxSize()` di dalamnya justru memaksa kartu ini
- * merebut SISA SELURUH tinggi layar yang tersedia di Column induknya --
- * akibatnya tombol "Scan Sekarang" & menu di bawahnya kedorong keluar area
- * yang terlihat. Sekarang gradient digambar langsung lewat `Modifier.background`
- * pada Surface itu sendiri (tanpa Box/fillMaxSize tambahan), sehingga ukuran
- * kartu kembali mengikuti kontennya seperti semula.
+ * Permukaan glass tactile utama (bab 4 & 2.5 spesifikasi): gradient dari
+ * GlassSurfaceElevated -> tint Midnight Blue tipis (alpha rendah, HANYA
+ * atmosfer, bukan warna dominan) -> GlassSurface, dengan border rambut
+ * translusen. Ini menggantikan gradient "kertas kraft" versi lama secara
+ * total; struktur (wrap-content, tanpa fillMaxSize di dalam) dipertahankan
+ * dari fix regresi v2.3.1 supaya kartu tidak merebut sisa tinggi layar.
  */
 @Composable
 fun VaultCard(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
-    val colors = MaterialTheme.colorScheme
     Surface(
         modifier = modifier.background(
-            brush = Brush.verticalGradient(colors = listOf(colors.surfaceVariant, colors.surface)),
+            brush = Brush.linearGradient(
+                colors = listOf(
+                    GlassSurfaceElevated,
+                    MidnightBlueTint.copy(alpha = MidnightBlueGradientAlpha),
+                    GlassSurface
+                )
+            ),
             shape = MaterialTheme.shapes.medium
         ),
         shape = MaterialTheme.shapes.medium,
         color = Color.Transparent,
-        border = BorderStroke(1.dp, colors.outline),
+        border = BorderStroke(1.dp, GlassBorder),
         tonalElevation = 0.dp,
         shadowElevation = 0.dp
     ) {
