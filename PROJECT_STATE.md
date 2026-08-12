@@ -3,7 +3,65 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
-## STATUS PROJECT: v2.16.0 -- TECHNICAL DEBT AUDIT & ATOMIC CLOSURE -- 2026-08-09
+## STATUS PROJECT: v3.0.0 -- REDESIGN TOTAL: Dark Titanium Neumorphism + Zamrud Accent -- 2026-08-12
+- User minta redesign TOTAL dari tema lama ("AMOLED Glassmorphism + Midnight
+  Blue", v2.14.0-v2.16.1) ke Neumorphism dgn accent Titanium DOMINAN +
+  sedikit sentuhan zamrud (emerald), depth ultra realistic. Ini permintaan
+  identitas visual baru, bukan bug/audit -- eksekusi langsung 1 batch atomic
+  (exception dari batas 10 file/1 modul, sesuai aturan proyek sendiri:
+  redesign tema total historically SELALU 1 batch, lihat v2.14.0 = 9 file).
+- **Keputusan desain kunci**: dark mode TETAP satu-satunya mode (keputusan
+  arsitektur lama #3 di bawah TIDAK berubah) -- yang berubah adalah METODE
+  depth & identitas warna. "Titanium dominan" diterjemahkan: base/permukaan/
+  ikon well/track SEMUA logam titanium abu gelap; "sedikit sentuhan zamrud"
+  diterjemahkan literal: zamrud HANYA di CTA/switch-ON/item terpilih/wash
+  ambient alpha 0.05 -- kalau ragu warna apa dipakai di elemen baru nanti,
+  default ke titanium netral, BUKAN zamrud.
+- **Depth "ultra realistic"**: neumorphism asli (soft-UI) biasanya pakai dua
+  shadow berlawanan arah lewat custom `Paint.setShadowLayer` ganda -- SENGAJA
+  TIDAK dipakai di batch ini karena itu API belum pernah dikompilasi di
+  sandbox Claude (persis kelas risiko yang menyebabkan Insiden #7 SAF dulu:
+  kode "blind" tanpa akses compiler asli). Sebagai gantinya, ilusi dual-shadow
+  disimulasikan lewat 3 lapis API Compose yang SUDAH proven dipakai project
+  ini bertahun-tahun (shadow ambient/spotColor kustom, gradient linear
+  brushed-metal, border gradient) -- lihat `ui/components/Neumorphic.kt`
+  (`neuRaised()`/`neuInset()`) untuk implementasi terpusat. Kalau ke depan
+  user eksplisit minta shadow ganda "asli" (custom Paint.setShadowLayer),
+  syarat yang sama seperti Insiden #7 berlaku: butuh akses Gradle/device
+  nyata dulu sebelum ditulis, jangan blind.
+- File diubah (rewrite penuh): `ui/theme/Color.kt`, `ui/theme/Theme.kt`,
+  `ui/components/VaultCard.kt`, `ui/components/TactileSwitch.kt`. File BARU:
+  `ui/components/Neumorphic.kt`. File diubah (parsial): `ui/components/
+  GroupedListRow.kt`, `ui/components/VaultActionSheet.kt`, `ui/components/
+  SegmentedControl.kt`, `ui/components/PressScale.kt`, `MainActivity.kt`
+  (Protected Asset, 3 baris: import + 2x `SystemBarStyle.dark`). Resource:
+  `colors.xml`, `themes.xml`, `mipmap-anydpi-v26/ic_launcher(.xml/_round.xml)`,
+  `drawable/ic_launcher_foreground.xml` (recolor). `app/build.gradle.kts`
+  versionCode 57->58, versionName 2.16.1->3.0.0 (major, ganti sistem visual
+  total).
+- Semua nama symbol lama yang menyandang identitas tema lama ("AmoledBackground",
+  "GlassSurface*", "MidnightBlue*", "GlassBorder/Highlight/Shadow",
+  "HairlineGlass") DIRENAME total ke istilah Titanium/Neu/Emerald yang
+  sesuai (`TitaniumBase`, `TitaniumSurface*`, `EmeraldAccent*`,
+  `EmeraldAmbientTint/Alpha`, `NeuBorder/Highlight/ShadowDark`) -- verifikasi
+  `grep -rn "MidnightBlue\|AmoledBackground\|GlassSurface\|GlassBorder\|
+  GlassHighlight\|GlassShadow\|HairlineGlass"` di seluruh `app/src/main/java`
+  hasilnya NIHIL setelah batch ini, supaya sesi depan tidak ketemu nama
+  variabel yang bohong soal isinya (pelajaran dari Insiden #10 TODO-basi lama).
+  Aksen semantik ke-4 (`StampGlow`/`AmberGlow`/`RustGlow`/`SlateGlow`) TIDAK
+  direname (masih relevan sbg nama generik), cuma hex-nya diganti jadi
+  keluarga "logam & permata": stamp=zamrud, amber=kuningan/brass,
+  error=tembaga, slate=abu-biru titanium dingin.
+- Nol perubahan logika bisnis/scan/move/undo/DB -- murni lapisan tema/visual.
+- **`scripts/preflight_check.sh` dijalankan ulang sampai bersih** sebelum ZIP
+  dipaket -- sempat menangkap 1 bug nyata: `--` di komentar XML
+  `ic_launcher_foreground.xml` (persis kelas bug yang sama dgn Insiden lama
+  v2.6.0 AndroidManifest.xml, langsung ketahuan & diperbaiki di sesi ini,
+  BUKAN lolos sampai CI gagal seperti dulu -- bukti preflight kategori #10
+  yang ditambahkan pasca-insiden itu sekarang benar-benar berfungsi).
+- **Belum ada konfirmasi CI/device dari user untuk versi ini.**
+
+## STATUS PROJECT SEBELUMNYA: v2.16.0 -- TECHNICAL DEBT AUDIT & ATOMIC CLOSURE -- 2026-08-09
 - User minta daftar SEMUA technical debt kode/fitur murni (bukan testing)
   yang belum kesampaian sejak awal project, dieksekusi jadi 1 batch atomic.
 - **Metodologi audit**: baca ulang PROJECT_STATE.md penuh (semua entri

@@ -3,64 +3,74 @@ package com.elprompter.promptvault.ui.theme
 import androidx.compose.ui.graphics.Color
 
 /**
- * v3.0.0 — GANTI TOTAL palet lama ("Manifest Arsip" kraft/pine terang + obsidian
- * gelap terpisah) dengan SATU sistem visual sesuai spesifikasi:
- * "Skeuomorphism-lite AMOLED Glassmorphism Hybrid + Midnight Blue Gradient".
+ * v4.0.0 — GANTI TOTAL tema visual: "AMOLED Glassmorphism Hybrid + Midnight
+ * Blue" (v3.x) DIHAPUS, diganti "Dark Titanium Neumorphism + Zamrud Accent".
  *
- * Aturan wajib dari spesifikasi (jangan dilanggar saat edit di masa depan):
- * 1. Dark mode adalah SATU-SATUNYA mode. Tidak ada fallback terang.
- * 2. AMOLED near-black + frosted glass = identitas DOMINAN.
- * 3. Midnight Blue HANYA tint/gradient ambient tipis (alpha rendah) di dalam
- *    permukaan glass -- BUKAN warna latar utama. Jangan buat seluruh layar
- *    terasa biru rata.
- * 4. Tidak ada tekstur bitmap berat -- semua kedalaman lewat Brush/gradient/
- *    border/shadow/elevation saja.
+ * Prinsip wajib (jangan dilanggar sesi berikutnya):
+ * 1. Dark mode tetap SATU-SATUNYA mode (keputusan arsitektur lama TIDAK
+ *    berubah) -- tapi base-nya sekarang logam titanium matte gelap
+ *    (netral, sedikit dingin), BUKAN AMOLED near-black biru.
+ * 2. Titanium = warna DOMINAN di seluruh app: root background, permukaan
+ *    kartu, ikon well, track kontrol -- semuanya varian abu-abu titanium.
+ * 3. Zamrud (Emerald) HANYA "sedikit sentuhan" (per instruksi user) --
+ *    dipakai TERBATAS di: CTA utama, switch ON, item terpilih, dan wash
+ *    ambient alpha-rendah di kartu. TIDAK dominan seperti Midnight Blue
+ *    dulu -- kalau ragu, defaultkan ke titanium netral.
+ * 4. Depth "ultra realistic" dicapai lewat KOMBINASI 3 lapis proven-API
+ *    Compose (bukan hack shadow custom yang belum pernah dikompilasi):
+ *    (a) Modifier.shadow beneran dgn ambient/spotColor = NeuShadowDark
+ *    (elevasi asli, bukan dekorasi), (b) gradient brushed-metal diagonal
+ *    terang kiri-atas->gelap kanan-bawah pada fill permukaan, (c) border
+ *    gradient highlight rambut di tepi kiri-atas (reflected light). Lihat
+ *    `ui/components/Neumorphic.kt` untuk implementasi terpusat.
+ *    Elemen recessed/pressed (inset) membalik arah gradient (gelap
+ *    kiri-atas->terang kanan-bawah) TANPA shadow elevasi -- itulah yang
+ *    membuatnya terbaca "tenggelam" bukan "terangkat", inti neumorphism.
  */
 
-// ---- Fondasi AMOLED + permukaan glass (hirarki elevasi) ----
-val AmoledBackground = Color(0xFF030508)      // root background, near-black OLED-safe
-val GlassSurface = Color(0xFF0A0F16)          // panel utama (VaultCard, dsb)
-val GlassSurfaceElevated = Color(0xFF101722)  // panel terangkat / bagian atas gradient kartu
-val GlassSurfaceSheet = Color(0xFF141B26)     // lapisan sheet/dialog, satu tingkat lebih terang
-val GlassSurfacePressed = Color(0xFF070B11)   // kontrol recessed / pressed
+// ---- Fondasi Titanium (hirarki elevasi, brushed-metal dark) ----
+val TitaniumBase = Color(0xFF1E2023)            // root background
+val TitaniumSurface = Color(0xFF2A2D31)         // panel utama (VaultCard, dsb)
+val TitaniumSurfaceRaised = Color(0xFF34373C)   // titik paling terang gradient permukaan terangkat
+val TitaniumSurfaceSheet = Color(0xFF2E3237)    // lapisan sheet/dialog, 1 tingkat lebih terang dari base
+val TitaniumSurfaceRecessed = Color(0xFF17191B) // titik paling gelap gradient permukaan tenggelam/pressed
 
-// ---- Lapisan Midnight Blue: HANYA tint ambient, dipakai lewat alpha rendah ----
-// Alpha disamakan PERSIS dengan "MidnightBlueAmbientAlpha" di spesifikasi
-// (bab 6) -- 0.06f, bukan didekati/dibulatkan -- supaya golden rule "user
-// harus melihat AMOLED+glass dulu, biru kedua" tidak pernah terlanggar.
-val MidnightBlueTint = Color(0xFF191970)
-val MidnightBlueGradientAlpha = 0.06f
+// ---- Ambient wash Zamrud: HANYA tint tipis, "sedikit sentuhan" sesuai instruksi ----
+val EmeraldAmbientTint = Color(0xFF14B889)
+val EmeraldAmbientAlpha = 0.05f
 
-// ---- Aksen interaksi utama (dominan dipakai untuk kontrol/primary) ----
-val MidnightBlueAccent = Color(0xFF6670FF)
-val MidnightBlueAccentContainer = Color(0xFF1B1E3D)
-val MidnightBlueAccentOn = Color(0xFF04050C)  // teks/ikon di atas aksen terang
+// ---- Aksen interaksi utama (dipakai TERBATAS: CTA, switch ON, selected) ----
+val EmeraldAccent = Color(0xFF2ED9A0)
+val EmeraldAccentDeep = Color(0xFF17A374)       // varian ditekan/border aktif
+val EmeraldAccentContainer = Color(0xFF15332A)
+val EmeraldAccentOn = Color(0xFF04140F)         // teks/ikon di atas aksen terang
 
 // ---- Teks ----
-val TextPrimary = Color(0xFFEAF0F8)
-val TextSecondary = Color(0xFFAAB5C4)
-val TextMuted = Color(0xFF737E8C)     // bab 16 -- label tersier/caption paling redup
+val TextPrimary = Color(0xFFEEF1F3)
+val TextSecondary = Color(0xFFA6ACB3)
+val TextMuted = Color(0xFF6C7178)
 
-// ---- Bevel / cahaya simulasi (arah: kiri-atas terang, kanan-bawah gelap) ----
-val GlassHighlight = Color.White.copy(alpha = 0.055f)
-val GlassBorder = Color.White.copy(alpha = 0.035f)
-val GlassShadow = Color.Black.copy(alpha = 0.70f)
+// ---- Lapisan bevel/neu (arah cahaya: kiri-atas terang, kanan-bawah gelap) ----
+val NeuHighlight = Color.White.copy(alpha = 0.16f)   // highlight rambut tepi terangkat
+val NeuBorder = Color.White.copy(alpha = 0.06f)      // hairline netral dasar
+val NeuShadowDark = Color(0xFF000000).copy(alpha = 0.55f) // shadow elevasi asli (ambient/spot)
 
 /**
  * Aksen semantik ke-4 (stamp/sukses, amber/peringatan, rust/error, slate/
- * pengaturan) dipertahankan dari sistem lama supaya menu grouped-list &
- * badge status tetap punya identitas warna berbeda-beda (bukan monokrom
- * biru), tapi seluruhnya ditata ulang supaya "container"-nya duduk tenang
- * di atas dasar AMOLED + glass, dan glow-nya tetap lokal/terbatas sesuai
- * aturan 9 (Glow Rules) -- bukan dipakai di mana-mana.
+ * pengaturan) dipertahankan strukturnya dari sistem lama, tapi ditata ulang
+ * jadi keluarga "logam & permata" senada dgn Titanium+Zamrud: stamp SUKSES
+ * memakai Zamrud (paling logis -- "berhasil disortir" = permata hijau yang
+ * sama dgn aksen utama), amber jadi kuningan/brass hangat, error jadi
+ * tembaga (copper), dan aksen Pengaturan jadi abu-biru titanium dingin.
+ * Glow tetap lokal/terbatas (bab Glow Rules lama) -- bukan dipakai di mana-mana.
  */
-val StampGlow = Color(0xFFFF6E52)             // badge "SORTED" -- satu-satunya tempat
-val StampGlowContainer = Color(0xFF241612)
-val AmberGlow = Color(0xFFE8AC4E)             // auto-scan / peringatan
-val AmberGlowContainer = Color(0xFF231B0F)
-val RustGlow = Color(0xFFFF6B5C)              // error
-val RustGlowContainer = Color(0xFF2A1512)
-val SlateGlow = Color(0xFF7FA8D9)             // aksen "Pengaturan", tetap dalam keluarga biru dingin
-val SlateGlowContainer = Color(0xFF121C28)
+val StampGlow = EmeraldAccent                    // badge "SORTED" -- satu-satunya tempat
+val StampGlowContainer = EmeraldAccentContainer
+val AmberGlow = Color(0xFFD9A452)                // kuningan/brass -- auto-scan / peringatan
+val AmberGlowContainer = Color(0xFF322A16)
+val RustGlow = Color(0xFFE0684F)                 // tembaga/copper -- error
+val RustGlowContainer = Color(0xFF33211A)
+val SlateGlow = Color(0xFF93A6B3)                // abu-biru titanium dingin -- aksen "Pengaturan"
+val SlateGlowContainer = Color(0xFF20272B)
 
-val HairlineGlass = GlassBorder
+val HairlineNeu = NeuBorder

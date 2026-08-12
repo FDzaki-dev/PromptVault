@@ -76,7 +76,7 @@ import com.elprompter.promptvault.ui.screens.OnboardingScreen
 import com.elprompter.promptvault.ui.screens.RuleListScreen
 import com.elprompter.promptvault.ui.screens.SettingsScreen
 import com.elprompter.promptvault.ui.screens.SkippedFilesScreen
-import com.elprompter.promptvault.ui.theme.AmoledBackground
+import com.elprompter.promptvault.ui.theme.TitaniumBase
 import com.elprompter.promptvault.ui.theme.PromptVaultTheme
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -98,19 +98,19 @@ class MainActivity : ComponentActivity() {
     ) { _ -> legacyPermissionRecheckTrigger++ }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Splash brand-in AMOLED sebelum konten Compose siap -- kesan pertama
-        // yang konsisten, bukan layar putih kosong khas app "belum jadi".
+        // Splash brand-in titanium sebelum konten Compose siap -- kesan
+        // pertama yang konsisten, bukan layar putih kosong khas app "belum jadi".
         installSplashScreen()
         super.onCreate(savedInstanceState)
 
         // v3.0.0: dark mode adalah satu-satunya mode aplikasi (lihat
         // PromptVaultTheme) -- status bar & nav bar SELALU pakai scrim gelap
         // (ikon terang), bukan lagi SystemBarStyle.auto yang ikut terang di
-        // sistem terang. Ini mencegah chrome sistem "bocor" jadi terang saat
-        // konten di baliknya sudah pasti AMOLED gelap.
+        // sistem terang. v4.0.0: warna scrim ganti dari AMOLED near-black ke
+        // TitaniumBase (redesign total ke Dark Titanium Neumorphism).
         enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.dark(AmoledBackground.toArgb()),
-            navigationBarStyle = SystemBarStyle.dark(AmoledBackground.toArgb())
+            statusBarStyle = SystemBarStyle.dark(TitaniumBase.toArgb()),
+            navigationBarStyle = SystemBarStyle.dark(TitaniumBase.toArgb())
         )
 
         setContent {

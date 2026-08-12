@@ -24,12 +24,12 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
-import com.elprompter.promptvault.ui.theme.GlassBorder
-import com.elprompter.promptvault.ui.theme.GlassHighlight
-import com.elprompter.promptvault.ui.theme.GlassShadow
-import com.elprompter.promptvault.ui.theme.GlassSurfaceElevated
-import com.elprompter.promptvault.ui.theme.GlassSurfacePressed
+import com.elprompter.promptvault.ui.theme.NeuBorder
+import com.elprompter.promptvault.ui.theme.NeuHighlight
+import com.elprompter.promptvault.ui.theme.NeuShadowDark
 import com.elprompter.promptvault.ui.theme.TactileTokens
+import com.elprompter.promptvault.ui.theme.TitaniumSurfaceRaised
+import com.elprompter.promptvault.ui.theme.TitaniumSurfaceRecessed
 
 private val TrackWidth = 46.dp
 private val TrackHeight = 26.dp
@@ -37,15 +37,14 @@ private val ThumbSize = 20.dp
 private val ThumbTravel = TrackWidth - ThumbSize - 6.dp // 3dp inset tiap sisi
 
 /**
- * Switch tactile bab 12 spesifikasi -- pengganti `Switch` Material3 polos.
+ * Switch tactile -- v4.0.0 recolor total ke "Dark Titanium Neumorphism".
  *
- * OFF: track "tenggelam" ke dalam glass (fill lebih gelap dari `GlassSurface`
- * sekitarnya + TANPA shadow terangkat) -- terasa recessed, bukan cuma abu-abu.
- * ON: track terangkat tipis dengan tint aksen (accentColor, default
- * `colors.primary`/Midnight Blue accent) + glow lokal SATU tempat saja (thumb),
- * sesuai bab 18 (glow untuk selected state itu diizinkan, bukan dekorasi
- * tersebar). ON/OFF tidak bergantung HANYA pada kedalaman -- posisi thumb
- * kiri/kanan + warna track tetap jadi penanda kedua (bab 21 Accessibility).
+ * OFF: track TENGGELAM (fill TitaniumSurfaceRecessed, gelap ke arah kiri-atas
+ * -- kebalikan permukaan terangkat -- persis prinsip inset neumorphism di
+ * `Neumorphic.kt`) -- terasa dicukil ke dalam logam, bukan cuma abu-abu flat.
+ * ON: track terangkat tipis dgn tint accentColor (default Zamrud/primary,
+ * "sedikit sentuhan" sesuai instruksi) + glow lokal SATU tempat (thumb) --
+ * ON/OFF tetap punya penanda kedua di luar warna (posisi thumb kiri/kanan).
  */
 @Composable
 fun TactileSwitch(
@@ -58,7 +57,7 @@ fun TactileSwitch(
     val pressed by interactionSource.collectIsPressedAsState()
 
     val trackColor by animateColorAsState(
-        targetValue = if (checked) accentColor.copy(alpha = 0.9f) else GlassSurfacePressed,
+        targetValue = if (checked) accentColor.copy(alpha = 0.85f) else TitaniumSurfaceRecessed,
         animationSpec = tween(TactileTokens.PressAnimationMillis),
         label = "switchTrack"
     )
@@ -87,9 +86,9 @@ fun TactileSwitch(
             .border(
                 width = 1.dp,
                 // Bevel recessed saat OFF (garis atas lebih gelap dari bawah,
-                // kebalikan highlight normal bab 8) -- saat ON, border tenang
-                // mengikuti hairline glass biasa supaya aksennya tidak dobel.
-                color = if (checked) GlassBorder else GlassShadow.copy(alpha = 0.4f),
+                // kebalikan highlight normal) -- saat ON, border tenang
+                // mengikuti hairline neu biasa supaya aksennya tidak dobel.
+                color = if (checked) NeuBorder else NeuShadowDark.copy(alpha = 0.4f),
                 shape = RoundedCornerShape(50)
             ),
         contentAlignment = Alignment.CenterStart
@@ -104,7 +103,7 @@ fun TactileSwitch(
                     else Modifier
                 )
                 .background(
-                    Brush.radialGradient(colors = listOf(GlassHighlight, GlassSurfaceElevated)),
+                    Brush.radialGradient(colors = listOf(NeuHighlight, TitaniumSurfaceRaised)),
                     RoundedCornerShape(50)
                 )
         )

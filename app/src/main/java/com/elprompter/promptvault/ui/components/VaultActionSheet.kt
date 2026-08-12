@@ -20,7 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
-import com.elprompter.promptvault.ui.theme.GlassBorder
+import com.elprompter.promptvault.ui.theme.NeuBorder
 
 /**
  * Pengganti AlertDialog kotak di tengah layar -- muncul dari bawah seperti
@@ -62,7 +62,7 @@ fun VaultActionSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(1.dp)
-                .background(GlassBorder)
+                .background(NeuBorder)
         )
         Column(
             modifier = Modifier

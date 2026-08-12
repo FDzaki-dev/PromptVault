@@ -25,7 +25,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import com.elprompter.promptvault.ui.theme.GlassBorder
+import com.elprompter.promptvault.ui.theme.NeuBorder
 
 /**
  * Satu baris menu ala grouped list iOS Settings: ikon berwarna di kotak
@@ -38,9 +38,10 @@ import com.elprompter.promptvault.ui.theme.GlassBorder
  * punya `Modifier.shadow()` berwarna tint yang terlihat sebagai glow
  * permanen -- 4 glow tampil bersamaan tiap kali Home dibuka, jelas
  * melanggar golden rule "user notice glass/AMOLED dulu, bukan glow".
- * Diganti kotak ikon glass datar (bab 4/7/14: tint hanya lewat fill alpha
- * rendah + border rambut, TANPA shadow berwarna) -- identitas warna per
- * menu tetap ada lewat isi & border, bukan lewat cahaya yang menyala.
+ * Kotak ikon tetap datar (tint hanya lewat fill alpha rendah + border
+ * rambut, TANPA shadow berwarna) -- identitas warna per menu tetap ada
+ * lewat isi & border, bukan lewat cahaya yang menyala.
+ * v4.0.0: recolor total ke Titanium Neumorphism, border ganti NeuBorder.
  */
 @Composable
 fun GroupedListRow(icon: ImageVector, label: String, tint: Color? = null, onClick: () -> Unit) {
@@ -63,7 +64,7 @@ fun GroupedListRow(icon: ImageVector, label: String, tint: Color? = null, onClic
                     ),
                     RoundedCornerShape(9.dp)
                 )
-                .border(BorderStroke(1.dp, GlassBorder), RoundedCornerShape(9.dp)),
+                .border(BorderStroke(1.dp, NeuBorder), RoundedCornerShape(9.dp)),
             contentAlignment = Alignment.Center
         ) {
             Icon(icon, contentDescription = null, tint = resolvedTint, modifier = Modifier.size(16.dp))

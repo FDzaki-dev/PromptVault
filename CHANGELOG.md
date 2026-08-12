@@ -3,6 +3,57 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v3.0.0 (versionCode 58) -- 2026-08-12 -- Redesign total: Dark Titanium Neumorphism + Zamrud Accent
+User minta redesign total dari tema lama ("AMOLED Glassmorphism + Midnight
+Blue", v2.14.0-v2.16.1) ke Neumorphism dengan accent Titanium dominan +
+sedikit sentuhan zamrud (emerald), depth ultra realistic. Dark mode tetap
+satu-satunya mode (keputusan arsitektur lama tidak berubah) -- yang berubah
+total adalah identitas visual & metode depth.
+- **Palet baru** (`ui/theme/Color.kt`, rewrite total): fondasi Titanium
+  (abu-abu logam matte gelap, 5 tingkat elevasi) jadi warna DOMINAN di
+  seluruh app; Zamrud (`EmeraldAccent`) dipakai TERBATAS (CTA, switch ON,
+  item terpilih, wash ambient alpha 0.05) sesuai instruksi "sedikit
+  sentuhan". Aksen semantik ke-4 (stamp/amber/rust/slate) ditata ulang jadi
+  keluarga "logam & permata": stamp sukses = zamrud, amber = kuningan/brass,
+  error = tembaga, aksen Pengaturan = abu-biru titanium dingin.
+- **File baru `ui/components/Neumorphic.kt`**: `Modifier.neuRaised()` (kartu
+  terangkat: shadow elevasi asli bertone titanium + gradient brushed-metal
+  diagonal + border highlight rambut kiri-atas) dan `Modifier.neuInset()`
+  (permukaan tenggelam: gradient arah terbalik, tanpa shadow elevasi).
+  Sengaja HANYA pakai API Compose proven (shadow ambient/spotColor,
+  Brush.linearGradient, border Brush) -- BUKAN hack Paint.setShadowLayer
+  custom yang belum pernah dikompilasi (lihat Insiden #7 PROJECT_STATE.md).
+- **`VaultCard.kt`** (rewrite): 3 lapis background (wash zamrud radial tipis
+  -> gradient brushed-metal titanium -> highlight rambut) + shadow elevasi
+  6dp asli lewat `Surface`.
+- **`TactileSwitch.kt`** (rewrite): track OFF sekarang benar-benar
+  "tenggelam" (fill `TitaniumSurfaceRecessed`), track ON tint accent
+  (default primary/zamrud) + glow lokal di thumb saja.
+- **`GroupedListRow.kt`, `VaultActionSheet.kt`**: rename `GlassBorder` ->
+  `NeuBorder` (ikut palet baru, isi hex sama posisinya di token hierarchy
+  baru).
+- **`SegmentedControl.kt`**: track pembungkus jadi `neuInset()` (pil
+  terpilih terbaca "duduk di sumur").
+- **`PressScale.kt`**: `tactilePress()` shadow sekarang pakai
+  ambient/spotColor bertone titanium (`NeuShadowDark`), bukan hitam generik
+  default Android.
+- **`MainActivity.kt`** (Protected Asset, edit parsial): import & 2 baris
+  `SystemBarStyle.dark(...)` ganti dari `AmoledBackground` -> `TitaniumBase`.
+- **Resource**: `colors.xml` (`pv_amoled_background`/`pv_midnight_blue_accent`
+  -> `pv_titanium_base`/`pv_emerald_accent`), `themes.xml` (splash bg),
+  `ic_launcher.xml` + `ic_launcher_round.xml` (background color ref), dan
+  `ic_launcher_foreground.xml` direcolor (kartu jadi abu titanium, tab
+  folder jadi zamrud).
+- `app/build.gradle.kts`: versionCode 57->58, versionName 2.16.1->3.0.0
+  (major bump -- ganti sistem visual total, bukan patch).
+- **Nol perubahan logika bisnis/scan/move/undo/DB** -- murni lapisan
+  tema/visual, sama seperti batch redesign tema sebelumnya (v2.14.0/v2.15.0).
+- `scripts/preflight_check.sh` dijalankan ulang setelah tiap perubahan --
+  sempat menangkap `--` di komentar XML `ic_launcher_foreground.xml` (bug
+  kelas yang sama dgn Insiden v2.6.0 lama, langsung terdeteksi & diperbaiki
+  sebelum ZIP dikirim, bukan lolos ke CI).
+- **Belum ada konfirmasi CI/device dari user untuk versi ini.**
+
 ## v2.16.1 -- Hotfix: build gagal, `shadowElevation` bukan param ModalBottomSheet (2026-08-09)
 CI gagal 2x berturut-turut (attempt sebelumnya) di `compileDebugKotlin`:
 `VaultActionSheet.kt:53: Cannot find a parameter with this name: shadowElevation`.
