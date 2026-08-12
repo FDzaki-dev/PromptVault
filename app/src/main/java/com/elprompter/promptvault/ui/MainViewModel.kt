@@ -1,6 +1,8 @@
 package com.elprompter.promptvault.ui
 
 import android.app.Application
+import android.content.Intent
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.elprompter.promptvault.data.ActivityLogEntry
@@ -60,6 +62,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val conflictStrategy: StateFlow<ConflictStrategy> = settingsRepository.conflictStrategyFlow
         .let { flow ->
             val state = MutableStateFlow(SettingsRepository.DEFAULT_CONFLICT_STRATEGY)
+            viewModelScope.launch { flow.collect { state.value = it } }
+            state.asStateFlow()
+        }
+
+    /** [SAF] URI folder kustom aktif (tree URI, `null` = belum diset / pakai Downloads). */
+    val safTreeUri: StateFlow<String?> = settingsRepository.safTreeUriFlow
+        .let { flow ->
+            val state = MutableStateFlow<String?>(null)
             viewModelScope.launch { flow.collect { state.value = it } }
             state.asStateFlow()
         }
@@ -176,6 +186,63 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setConflictStrategy(strategy: ConflictStrategy) {
         viewModelScope.launch { settingsRepository.setConflictStrategy(strategy) }
+    }
+
+    /**
+     * [SAF, syarat (c) Insiden #7] Simpan folder kustom baru dari hasil
+     * `ActivityResultContracts.OpenDocumentTree()` di MainActivity.
+     * `takePersistableUriPermission` WAJIB dipanggil di sini SEBELUM URI
+     * disimpan -- kalau provider menolak (SecurityException), URI TIDAK
+     * disimpan sama sekali, supaya user tidak pernah lihat state "folder
+     * aktif" yang sebenarnya tidak akan bertahan lintas restart app.
+     * Folder LAMA (kalau ada) baru dilepas SETELAH folder baru sukses
+     * tersimpan -- urutan ini sengaja, mencegah window singkat tanpa izin
+     * valid sama sekali kalau app mati di antara dua operasi.
+     */
+    fun setSafTreeUri(uri: Uri) {
+        viewModelScope.launch {
+            val app = getApplication<Application>()
+            val previous = settingsRepository.getSafTreeUri()
+            try {
+                app.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                )
+            } catch (e: SecurityException) {
+                return@launch
+            }
+            settingsRepository.setSafTreeUri(uri.toString())
+            if (previous != null && previous != uri.toString()) {
+                releaseSafPermission(previous)
+            }
+        }
+    }
+
+    /** [SAF] Kembali ke Downloads biasa; lepas persistable permission folder yang sedang aktif. */
+    fun clearSafTreeUri() {
+        viewModelScope.launch {
+            val previous = settingsRepository.getSafTreeUri()
+            settingsRepository.clearSafTreeUri()
+            if (previous != null) releaseSafPermission(previous)
+        }
+    }
+
+    /**
+     * [SAF, fix Bug #1 v2.10.0] Sebelumnya "release" ini terdokumentasi di
+     * komentar tapi TIDAK PERNAH benar-benar dipanggil di kode manapun --
+     * setiap ganti folder kustom membiarkan izin folder lama menumpuk tanpa
+     * batas (leak). Di sini fungsi ini BENAR-BENAR dipanggil dari
+     * [setSafTreeUri] & [clearSafTreeUri], bukan cuma didokumentasikan.
+     */
+    private fun releaseSafPermission(uriString: String) {
+        try {
+            getApplication<Application>().contentResolver.releasePersistableUriPermission(
+                Uri.parse(uriString),
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            )
+        } catch (e: SecurityException) {
+            // Izin memang sudah tidak ada/sudah dilepas sebelumnya -- aman diabaikan.
+        }
     }
 
     /**

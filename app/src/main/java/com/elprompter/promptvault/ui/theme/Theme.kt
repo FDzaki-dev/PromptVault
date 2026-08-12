@@ -7,51 +7,60 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 
 /**
- * v4.0.0 — Dark mode tetap SATU-SATUNYA skema (keputusan arsitektur lama
- * tidak berubah), isinya diganti total ke "Dark Titanium Neumorphism +
- * Zamrud Accent" (lihat Color.kt untuk penjelasan lengkap tiap token).
- * `primary` sekarang Emerald (dipakai TERBATAS sesuai instruksi "sedikit
- * sentuhan zamrud"), seluruh permukaan (`surface*`, `background`) titanium.
+ * v3.0.0 — Dark mode adalah SATU-SATUNYA skema yang ada (AMOLED Glassmorphism
+ * Hybrid + Midnight Blue gradient tint). Skema terang lama DIHAPUS TOTAL --
+ * bukan disembunyikan, tapi benar-benar tidak ada lagi jalur kode yang bisa
+ * membuat komponen manapun jatuh ke tampilan terang/neumorphic cerah.
+ *
+ * v2.16.0 -- parameter `darkTheme: Boolean` yang SENGAJA diabaikan dihapus
+ * total (technical debt closure, bukan cuma dibiarkan mati): sebelumnya
+ * dipertahankan "supaya pemanggil lama tidak perlu diubah", tapi itu
+ * sendiri jadi bug-in-waiting -- signature fungsi berbohong soal
+ * mengizinkan tema terang padahal tidak. `ThemeMode`/opsi "Terang"/"Ikuti
+ * Sistem" juga sudah dihapus dari `SettingsRepository` & `SettingsScreen`
+ * di batch yang sama; lihat CHANGELOG v2.16.0.
  */
 private val VaultDarkColors = darkColorScheme(
-    primary = EmeraldAccent,
-    onPrimary = EmeraldAccentOn,
-    primaryContainer = EmeraldAccentContainer,
-    onPrimaryContainer = EmeraldAccent,
+    primary = MidnightBlueAccent,
+    onPrimary = MidnightBlueAccentOn,
+    primaryContainer = MidnightBlueAccentContainer,
+    onPrimaryContainer = MidnightBlueAccent,
     secondary = StampGlow,
-    onSecondary = EmeraldAccentOn,
+    onSecondary = MidnightBlueAccentOn,
     secondaryContainer = StampGlowContainer,
     onSecondaryContainer = StampGlow,
     tertiary = AmberGlow,
-    onTertiary = EmeraldAccentOn,
+    onTertiary = MidnightBlueAccentOn,
     tertiaryContainer = AmberGlowContainer,
     onTertiaryContainer = AmberGlow,
-    background = TitaniumBase,
+    background = AmoledBackground,
     onBackground = TextPrimary,
-    surface = TitaniumSurface,
+    surface = GlassSurface,
     onSurface = TextPrimary,
-    surfaceVariant = TitaniumSurfaceRaised,
+    surfaceVariant = GlassSurfaceElevated,
     onSurfaceVariant = TextSecondary,
-    surfaceContainer = TitaniumSurface,
-    surfaceContainerHigh = TitaniumSurfaceRaised,
-    surfaceContainerHighest = TitaniumSurfaceSheet,
-    surfaceContainerLow = TitaniumBase,
-    surfaceContainerLowest = TitaniumBase,
+    surfaceContainer = GlassSurface,
+    surfaceContainerHigh = GlassSurfaceElevated,
+    surfaceContainerHighest = GlassSurfaceSheet,
+    surfaceContainerLow = AmoledBackground,
+    surfaceContainerLowest = AmoledBackground,
     inverseSurface = TextPrimary,
-    inverseOnSurface = TitaniumBase,
-    inversePrimary = EmeraldAccent,
+    inverseOnSurface = AmoledBackground,
+    inversePrimary = MidnightBlueAccent,
     error = RustGlow,
-    onError = EmeraldAccentOn,
+    onError = MidnightBlueAccentOn,
     errorContainer = RustGlowContainer,
     onErrorContainer = RustGlow,
-    outline = HairlineNeu,
-    outlineVariant = HairlineNeu,
-    scrim = NeuShadowDark
+    outline = HairlineGlass,
+    outlineVariant = HairlineGlass,
+    scrim = GlassShadow
 )
 
 /**
  * Aksen ke-4 di luar peran Material3 baku, dipakai khusus untuk "Pengaturan"
- * supaya grouped-list tetap punya identitas warna berbeda per menu.
+ * supaya grouped-list tetap punya identitas warna berbeda per menu. Tidak
+ * lagi punya varian terang -- theme-aware lewat CompositionLocal yang sama,
+ * tapi isinya konstan mengikuti satu-satunya skema gelap yang ada.
  */
 data class VaultExtraColors(
     val slate: androidx.compose.ui.graphics.Color,

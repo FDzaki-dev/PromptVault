@@ -76,7 +76,7 @@ import com.elprompter.promptvault.ui.screens.OnboardingScreen
 import com.elprompter.promptvault.ui.screens.RuleListScreen
 import com.elprompter.promptvault.ui.screens.SettingsScreen
 import com.elprompter.promptvault.ui.screens.SkippedFilesScreen
-import com.elprompter.promptvault.ui.theme.TitaniumBase
+import com.elprompter.promptvault.ui.theme.AmoledBackground
 import com.elprompter.promptvault.ui.theme.PromptVaultTheme
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -97,20 +97,27 @@ class MainActivity : ComponentActivity() {
         ActivityResultContracts.RequestMultiplePermissions()
     ) { _ -> legacyPermissionRecheckTrigger++ }
 
+    // [SAF, syarat (c) Insiden #7] Picker folder kustom -- SAF, jadi TIDAK
+    // butuh permission runtime apa pun (beda dengan legacyStoragePermissionLauncher
+    // di atas). `uri == null` berarti user membatalkan dialog picker, aman diabaikan.
+    private val safTreePickerLauncher = registerForActivityResult(
+        ActivityResultContracts.OpenDocumentTree()
+    ) { uri -> uri?.let { viewModel.setSafTreeUri(it) } }
+
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Splash brand-in titanium sebelum konten Compose siap -- kesan
-        // pertama yang konsisten, bukan layar putih kosong khas app "belum jadi".
+        // Splash brand-in AMOLED sebelum konten Compose siap -- kesan pertama
+        // yang konsisten, bukan layar putih kosong khas app "belum jadi".
         installSplashScreen()
         super.onCreate(savedInstanceState)
 
         // v3.0.0: dark mode adalah satu-satunya mode aplikasi (lihat
         // PromptVaultTheme) -- status bar & nav bar SELALU pakai scrim gelap
         // (ikon terang), bukan lagi SystemBarStyle.auto yang ikut terang di
-        // sistem terang. v4.0.0: warna scrim ganti dari AMOLED near-black ke
-        // TitaniumBase (redesign total ke Dark Titanium Neumorphism).
+        // sistem terang. Ini mencegah chrome sistem "bocor" jadi terang saat
+        // konten di baliknya sudah pasti AMOLED gelap.
         enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.dark(TitaniumBase.toArgb()),
-            navigationBarStyle = SystemBarStyle.dark(TitaniumBase.toArgb())
+            statusBarStyle = SystemBarStyle.dark(AmoledBackground.toArgb()),
+            navigationBarStyle = SystemBarStyle.dark(AmoledBackground.toArgb())
         )
 
         setContent {
@@ -129,7 +136,8 @@ class MainActivity : ComponentActivity() {
                                     Manifest.permission.WRITE_EXTERNAL_STORAGE
                                 )
                             )
-                        }
+                        },
+                        onPickSafFolder = { safTreePickerLauncher.launch(null) }
                     )
                 }
             }
@@ -141,7 +149,8 @@ class MainActivity : ComponentActivity() {
 private fun PromptVaultRoot(
     viewModel: MainViewModel,
     legacyPermissionRecheckTrigger: Int,
-    onRequestLegacyStoragePermission: () -> Unit
+    onRequestLegacyStoragePermission: () -> Unit,
+    onPickSafFolder: () -> Unit
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val navController = rememberNavController()
@@ -303,6 +312,7 @@ private fun PromptVaultRoot(
         composable(Routes.SETTINGS) {
             val interval by viewModel.intervalMinutes.collectAsStateWithLifecycle()
             val conflictStrategy by viewModel.conflictStrategy.collectAsStateWithLifecycle()
+            val safTreeUri by viewModel.safTreeUri.collectAsStateWithLifecycle()
             SettingsScreen(
                 currentIntervalMinutes = interval,
                 onIntervalSelected = { viewModel.setIntervalMinutes(it) },
@@ -310,6 +320,9 @@ private fun PromptVaultRoot(
                 onConflictStrategySelected = { viewModel.setConflictStrategy(it) },
                 onExportRequested = { viewModel.exportRulesJson() },
                 onImportRequested = { text, cb -> viewModel.importRulesJson(text, cb) },
+                safTreeUri = safTreeUri,
+                onPickSafFolder = onPickSafFolder,
+                onClearSafFolder = { viewModel.clearSafTreeUri() },
                 onBack = { navController.popBackStack() }
             )
         }

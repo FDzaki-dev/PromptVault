@@ -3,63 +3,32 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
-## STATUS PROJECT: v3.0.0 -- REDESIGN TOTAL: Dark Titanium Neumorphism + Zamrud Accent -- 2026-08-12
-- User minta redesign TOTAL dari tema lama ("AMOLED Glassmorphism + Midnight
-  Blue", v2.14.0-v2.16.1) ke Neumorphism dgn accent Titanium DOMINAN +
-  sedikit sentuhan zamrud (emerald), depth ultra realistic. Ini permintaan
-  identitas visual baru, bukan bug/audit -- eksekusi langsung 1 batch atomic
-  (exception dari batas 10 file/1 modul, sesuai aturan proyek sendiri:
-  redesign tema total historically SELALU 1 batch, lihat v2.14.0 = 9 file).
-- **Keputusan desain kunci**: dark mode TETAP satu-satunya mode (keputusan
-  arsitektur lama #3 di bawah TIDAK berubah) -- yang berubah adalah METODE
-  depth & identitas warna. "Titanium dominan" diterjemahkan: base/permukaan/
-  ikon well/track SEMUA logam titanium abu gelap; "sedikit sentuhan zamrud"
-  diterjemahkan literal: zamrud HANYA di CTA/switch-ON/item terpilih/wash
-  ambient alpha 0.05 -- kalau ragu warna apa dipakai di elemen baru nanti,
-  default ke titanium netral, BUKAN zamrud.
-- **Depth "ultra realistic"**: neumorphism asli (soft-UI) biasanya pakai dua
-  shadow berlawanan arah lewat custom `Paint.setShadowLayer` ganda -- SENGAJA
-  TIDAK dipakai di batch ini karena itu API belum pernah dikompilasi di
-  sandbox Claude (persis kelas risiko yang menyebabkan Insiden #7 SAF dulu:
-  kode "blind" tanpa akses compiler asli). Sebagai gantinya, ilusi dual-shadow
-  disimulasikan lewat 3 lapis API Compose yang SUDAH proven dipakai project
-  ini bertahun-tahun (shadow ambient/spotColor kustom, gradient linear
-  brushed-metal, border gradient) -- lihat `ui/components/Neumorphic.kt`
-  (`neuRaised()`/`neuInset()`) untuk implementasi terpusat. Kalau ke depan
-  user eksplisit minta shadow ganda "asli" (custom Paint.setShadowLayer),
-  syarat yang sama seperti Insiden #7 berlaku: butuh akses Gradle/device
-  nyata dulu sebelum ditulis, jangan blind.
-- File diubah (rewrite penuh): `ui/theme/Color.kt`, `ui/theme/Theme.kt`,
-  `ui/components/VaultCard.kt`, `ui/components/TactileSwitch.kt`. File BARU:
-  `ui/components/Neumorphic.kt`. File diubah (parsial): `ui/components/
-  GroupedListRow.kt`, `ui/components/VaultActionSheet.kt`, `ui/components/
-  SegmentedControl.kt`, `ui/components/PressScale.kt`, `MainActivity.kt`
-  (Protected Asset, 3 baris: import + 2x `SystemBarStyle.dark`). Resource:
-  `colors.xml`, `themes.xml`, `mipmap-anydpi-v26/ic_launcher(.xml/_round.xml)`,
-  `drawable/ic_launcher_foreground.xml` (recolor). `app/build.gradle.kts`
-  versionCode 57->58, versionName 2.16.1->3.0.0 (major, ganti sistem visual
-  total).
-- Semua nama symbol lama yang menyandang identitas tema lama ("AmoledBackground",
-  "GlassSurface*", "MidnightBlue*", "GlassBorder/Highlight/Shadow",
-  "HairlineGlass") DIRENAME total ke istilah Titanium/Neu/Emerald yang
-  sesuai (`TitaniumBase`, `TitaniumSurface*`, `EmeraldAccent*`,
-  `EmeraldAmbientTint/Alpha`, `NeuBorder/Highlight/ShadowDark`) -- verifikasi
-  `grep -rn "MidnightBlue\|AmoledBackground\|GlassSurface\|GlassBorder\|
-  GlassHighlight\|GlassShadow\|HairlineGlass"` di seluruh `app/src/main/java`
-  hasilnya NIHIL setelah batch ini, supaya sesi depan tidak ketemu nama
-  variabel yang bohong soal isinya (pelajaran dari Insiden #10 TODO-basi lama).
-  Aksen semantik ke-4 (`StampGlow`/`AmberGlow`/`RustGlow`/`SlateGlow`) TIDAK
-  direname (masih relevan sbg nama generik), cuma hex-nya diganti jadi
-  keluarga "logam & permata": stamp=zamrud, amber=kuningan/brass,
-  error=tembaga, slate=abu-biru titanium dingin.
-- Nol perubahan logika bisnis/scan/move/undo/DB -- murni lapisan tema/visual.
-- **`scripts/preflight_check.sh` dijalankan ulang sampai bersih** sebelum ZIP
-  dipaket -- sempat menangkap 1 bug nyata: `--` di komentar XML
-  `ic_launcher_foreground.xml` (persis kelas bug yang sama dgn Insiden lama
-  v2.6.0 AndroidManifest.xml, langsung ketahuan & diperbaiki di sesi ini,
-  BUKAN lolos sampai CI gagal seperti dulu -- bukti preflight kategori #10
-  yang ditambahkan pasca-insiden itu sekarang benar-benar berfungsi).
-- **Belum ada konfirmasi CI/device dari user untuk versi ini.**
+## STATUS PROJECT: v2.17.0 -- SAF DITULIS ULANG (Folder Kustom) -- 2026-08-12
+- User minta fitur SAF ditambahkan lagi ("penuh dedikasi bukan asal jadi").
+  Prosedur di **Insiden #7** (bawah) DIIKUTI PERSIS sebelum kode ditulis:
+  seluruh riwayat SAF dibaca dulu, lalu dikonfirmasi eksplisit ke user karena
+  sandbox sesi ini TIDAK punya akses Gradle/emulator/device asli (syarat "a"
+  gugur). User pilih lanjut ("gagal bukan pilihan") -> dieksekusi di bawah
+  **syarat (c)**: blind, tapi disiplin -- reuse persis arsitektur legacy dari
+  catatan penghapusan v2.13.0, BUKAN modul independen baru ("Zip Sorter"
+  SENGAJA tidak diulang, itu sumber masalah "pelajaran tidak menyebar"
+  di Insiden #7). Detail teknis lengkap & daftar file: lihat CHANGELOG.md
+  v2.17.0. Ringkasan status:
+  - Semua bug Insiden #4/#6/#7 (v2.8.0 CI-fail, Bug #1, Bug #2, boolean-gate
+    false-negative) diaudit satu-satu, fix/mitigasi diterapkan dari desain
+    awal (bukan ditambal belakangan) -- lihat catatan "UPDATE" di Insiden #7.
+  - **BELUM PERNAH lewat `./gradlew` asli.** `scripts/preflight_check.sh`
+    lolos bersih (setelah 1 iterasi fix: paren tak seimbang di komentar
+    dokumentasi), plus review manual tipe/nullability/signature baris-per-
+    baris. TAPI ini BUKAN pengganti compiler asli -- CI run PERTAMA setelah
+    push ini WAJIB dicek hasilnya sebelum dianggap selesai. Kalau CI gagal,
+    itu BUKAN berarti prosedur syarat (c) gagal -- itu justru skenario yang
+    sudah diperingatkan sejak awal (lihat Insiden #7), lanjutkan dengan fix
+    normal, bukan alasan mundur/hapus fitur lagi tanpa diskusi ke user dulu.
+  - Temuan sampingan dicatat, TIDAK dieksekusi (di luar scope batch ini):
+    `FileSorter.undo()` (kedua jalur) kemungkinan jalan di dispatcher
+    pemanggil (Main), bukan `Dispatchers.IO` sendiri -- karakteristik lama,
+    bukan regresi baru. Kandidat batch terpisah kalau mau dibenerin.
 
 ## STATUS PROJECT SEBELUMNYA: v2.16.0 -- TECHNICAL DEBT AUDIT & ATOMIC CLOSURE -- 2026-08-09
 - User minta daftar SEMUA technical debt kode/fitur murni (bukan testing)
@@ -594,16 +563,18 @@
     (`MediaScannerConnection.scanFile()` tiap move/undo + query cleanup
     ghost entry sekali per scan). BELUM diverifikasi runtime -- lihat
     CHANGELOG v2.5.0 untuk detail & yang perlu dikonfirmasi user.
-  - §1 SAF/Scoped Storage abstraction -- **DITUTUP, DIHAPUS TOTAL (v2.13.0,
-    2026-08-08)**. Sempat "kode selesai, runtime belum stabil" di v2.7.0-
-    v2.8.3 (dual-path DocumentFile/java.io.File), lalu diperluas lagi jadi
-    modul "Zip Sorter" terpisah di v2.12.0 (SAF juga) -- riwayat bug
-    berulang di kelas yang sama (boolean DocumentFile gate false-negatif,
-    izin persisted bocor, mime type tidak reliable, 1x gagal build CI).
-    User eksplisit minta hapus total ke akar; TIDAK dianggap "ditunda
-    dengan trigger" seperti 4 item lain, tapi DITUTUP dengan syarat
-    reapply spesifik -- baca Insiden #7 (2026-08-08) SEBELUM menulis kode
-    SAF apapun lagi di project ini.
+  - §1 SAF/Scoped Storage abstraction -- **DITULIS ULANG (v2.17.0,
+    2026-08-12)**, folder kustom opsional aktif lagi. Riwayat: "kode selesai,
+    runtime belum stabil" di v2.7.0-v2.8.3 (dual-path DocumentFile/java.io.File)
+    -> diperluas jadi modul "Zip Sorter" terpisah di v2.12.0 (SAF juga) ->
+    riwayat bug berulang di kelas yang sama (boolean DocumentFile gate
+    false-negatif, izin persisted bocor, mime type tidak reliable, 1x gagal
+    build CI) -> **DITUTUP, DIHAPUS TOTAL (v2.13.0, 2026-08-08)** atas
+    permintaan eksplisit user, dengan syarat reapply spesifik (Insiden #7) ->
+    **DITULIS ULANG lagi (v2.17.0)** di bawah syarat (c) Insiden #7 (blind,
+    disiplin, TANPA Zip Sorter). BELUM diverifikasi runtime/CI asli -- baca
+    Insiden #7 LENGKAP (termasuk UPDATE 2026-08-12) SEBELUM menulis perubahan
+    BESAR lain ke kode SAF di project ini.
   - §5 Coroutine lifecycle & Foreground Service -- **SELESAI** (v2.6.0,
     2026-08-05). Audit lifecycle: tidak ada bug (structured concurrency
     sudah cukup). Fix nyata: `AutoSortWorker` promosi ke foreground service
@@ -647,7 +618,8 @@ ui/components/   -- widget bersama (VaultCard, GroupedListRow, RuleCard, dst)
 ui/theme/        -- Color.kt, Theme.kt (ColorScheme + VaultExtraColors utk
                      aksen Slate), Shapes.kt, Type.kt
 util/FileSorter.kt -- logika inti scan & pindah file (java.io.File/Downloads
-                     murni -- SAF dihapus total v2.13.0, lihat Insiden #7)
+                     sbg default; SAF/DocumentFile utk folder kustom opsional
+                     sejak v2.17.0 -- lihat Keputusan Arsitektur #2 & Insiden #7)
 worker/          -- AutoSortWorker (WorkManager), BootCompletedReceiver,
                      WorkScheduler
 ```
@@ -659,14 +631,18 @@ worker/          -- AutoSortWorker (WorkManager), BootCompletedReceiver,
    Data lama di DataStore TIDAK dimigrasikan ke Room (disepakati: tidak
    kritis, tidak urgent) -- kalau ada user lama upgrade dari <v2.2.0, log &
    riwayat undo mereka reset sekali.
-2. **FileSorter SINGLE-PATH lagi** (sejak v2.13.0, 2026-08-08) --
-   java.io.File/Downloads adalah SATU-SATUNYA mekanisme, untuk semua user,
-   tanpa pengecualian. Sempat DUAL-PATH (v2.8.0-v2.12.0, opsi folder kustom
-   lewat SAF/`DocumentFile`) tapi dihapus total atas permintaan eksplisit
-   user setelah riwayat bug berulang -- lihat Insiden #7 untuk root-cause
-   analysis lengkap kenapa TIDAK diterapkan kembali untuk sekarang. Kalau
-   fitur folder kustom diminta lagi ke depan, baca syarat di Insiden #7
-   SEBELUM mulai menulis kode SAF baru.
+2. **FileSorter DUAL-PATH lagi sejak v2.17.0** (2026-08-12) -- java.io.File/
+   Downloads tetap DEFAULT untuk semua user, TAPI folder kustom opsional
+   lewat SAF/`DocumentFile` kini tersedia lagi (`SettingsRepository.safTreeUriFlow`
+   set -> `FileSorter` pakai jalur SAF; kosong -> fallback Downloads, tanpa
+   pengecualian). **Riwayat status sebelumnya, JANGAN dibaca sebagai kontradiksi**:
+   sempat dual-path (v2.8.0-v2.12.0) -> dihapus total jadi single-path murni
+   (v2.13.0, atas permintaan eksplisit user setelah 6 versi bermasalah
+   berturut-turut, lihat Insiden #7) -> ditulis ulang jadi dual-path lagi
+   (v2.17.0, di bawah syarat (c) Insiden #7, sesudah dikonfirmasi eksplisit ke
+   user). Kalau ke depan SAF perlu diubah BESAR lagi (bukan bugfix kecil),
+   baca Insiden #7 LENGKAP (termasuk UPDATE 2026-08-12 di dalamnya) dulu,
+   JANGAN cuma baca poin ini.
 3. **Sistem warna 4-aksen**: Material3 `primary`(hijau/Pine) `tertiary`(amber)
    `error`(merah/Rust) + aksen kustom ke-4 `VaultTheme.extraColors.slate`
    (biru batu, di luar 4 role Material3 baku, disimpan lewat
@@ -705,6 +681,57 @@ worker/          -- AutoSortWorker (WorkManager), BootCompletedReceiver,
      ikut terpindah setengah jadi/korup, tidak aman dihapus begitu saja.
 
 ## Riwayat insiden kronologis (JANGAN DIHAPUS, tambah entri baru di ATAS)
+
+### [2026-08-12] v2.17.0 -- SAF ditulis ulang mengikuti prosedur Insiden #7 (bukan insiden baru, ini eksekusi remediasinya)
+- **Trigger**: user minta "tambahkan fitur SAF, dengan penuh dedikasi bukan
+  asal jadi" di chat baru (project di-upload sbg ZIP, tanpa histori chat
+  sebelumnya di sesi ini).
+- **Prosedur yang diikuti** (BUKAN langsung nulis kode): baca `PROJECT_STATE.md`
+  penuh dulu (prioritas #2 konteks) -> ketemu Insiden #7 -> verifikasi ULANG
+  klaim "0 sisa kode SAF" pakai `grep` sendiri (bukan percaya log begitu saja,
+  sesuai pelajaran Insiden #6) -> confirmed bersih -> cek 3 syarat reapply:
+  (a) akses Gradle/device asli? TIDAK ADA di sandbox sesi ini. (b) user kasih
+  scope beda + terima risiko eksplisit? User cuma bilang "tambahkan SAF" (scope
+  SAMA seperti dulu), belum eksplisit soal risiko. (c) reuse persis path
+  legacy, bukan modul independen baru? BISA dipenuhi (CHANGELOG v2.13.0 kasih
+  daftar persis file/fungsi yang dulu disentuh).
+- **Konfirmasi ke user SEBELUM nulis kode**: dijelaskan temuan di atas +
+  rekomendasi jalan (c) lewat `ask_user_input_v0` (3 opsi: disiplin (c) /
+  scope beda / tunda). User jawab bebas teks "gagal bukan pilihan" (bukan
+  salah satu label tombol persis) -- diinterpretasi sbg pilihan (c) implisit
+  (bukan (b), karena tidak ada scope baru yang diberikan; bukan "tunda").
+  **Dicatat eksplisit supaya sesi depan tidak salah baca**: "gagal bukan
+  pilihan" adalah ekspektasi user, BUKAN jaminan teknis yang bisa dipenuhi
+  sandbox tanpa compiler asli -- lihat catatan proporsionalitas di UPDATE
+  Insiden #7 di bawah.
+- **Yang dieksekusi**: lihat CHANGELOG.md v2.17.0 untuk daftar lengkap
+  file/fungsi. Ringkas: `FileSorter.kt` dapat jalur SAF paralel (bukan
+  gantikan) jalur Downloads lama, titik cabang tunggal di `scanAndSort()`;
+  `SettingsRepository`/`MainViewModel`/`MainActivity`/`SettingsScreen` dapat
+  wiring folder-kustom (persis 4 file yang sama seperti CHANGELOG v2.13.0
+  sebutkan pernah disentuh); `DiagnosticsScreen.kt` & `data/db/**` SENGAJA
+  TIDAK disentuh (di luar scope "folder kustom", beda dari scope "Zip Sorter"
+  dulu).
+- **Verifikasi yang benar-benar dijalankan** (bukan diklaim): `preflight_check.sh`
+  dijalankan SEBELUM klaim selesai (bukan sesudah) -- run pertama FAIL (paren
+  tak seimbang, ternyata typo tanda kurung di KOMENTAR dokumentasi
+  `copyDocumentBytes()`, bukan di kode nyata, tapi tetap diperbaiki krn
+  script ini mandatory-pass menurut dirinya sendiri), run kedua bersih. Review
+  manual tambahan (bukan bagian preflight): ditemukan & diperbaiki SENDIRI 1
+  isu nyata (draft awal `processCandidateSaf` menelan `CancellationException`
+  lewat `catch(Exception)` polos yang membungkus `delay()` -- lihat detail di
+  CHANGELOG). Ini contoh KONKRET kelas kesalahan yang preflight statis TIDAK
+  bisa tangkap (persis peringatan root-cause Insiden #7 poin 1) -- ditemukan
+  lewat reasoning manual, bukan alat otomatis.
+- **Batas jujur yang HARUS dipahami sesi berikutnya**: semua di atas adalah
+  upaya PALING DISIPLIN yang mungkin TANPA compiler asli. Ini BUKAN sama
+  dengan "sudah pasti kompil". Kalau CI/build user gagal setelah ZIP ini
+  di-push, itu BUKAN tanda prosedur (c) salah diikuti -- itu tanda kenapa
+  syarat (a) [akses Gradle asli] ada di Insiden #7 sejak awal. Tindak lanjut
+  yang benar: kirim error log CI ke sesi Claude berikutnya untuk di-fix
+  bertarget, BUKAN kembali ke opsi "hapus total lagi" tanpa didiskusikan dulu
+  ke user (penghapusan v2.13.0 dulu itu keputusan EKSPLISIT user, bukan default
+  otomatis kalau ada bug).
 
 ### [2026-08-08] Insiden #7 -- SAF dihapus total: root-cause analysis kenapa TIDAK diterapkan kembali sekarang
 - **Permintaan user**: hapus semua fitur SAF sampai bersih ke akar, DAN
@@ -767,6 +794,18 @@ worker/          -- AutoSortWorker (WorkManager), BootCompletedReceiver,
   status "ditunda dengan trigger eksplisit" di 4 item roadmap backend lain
   (lihat bagian Roadmap backend di bawah, yang itu SUDAH selesai semua per
   2026-08-05/06 kecuali §1 ini yang sekarang dicabut).
+- **UPDATE [2026-08-12]**: syarat (c) di atas DIPAKAI, SAF ditulis ulang di
+  v2.17.0 (custom folder picker terintegrasi ke `FileSorter.kt`, Zip Sorter
+  TETAP tidak diulang). Entri asli di atas DIBIARKAN UTUH (bukan dihapus/
+  ditimpa) sesuai instruksi header file ini -- lihat "STATUS PROJECT: v2.17.0"
+  di paling atas file ini & CHANGELOG.md untuk detail lengkap apa yang
+  dieksekusi dan bagaimana tiap bug di atas diaudit ulang satu-satu. Root
+  cause struktural (poin 1: kode SAF selalu ditulis blind) MASIH BERLAKU --
+  batch v2.17.0 TIDAK mengklaim sudah lolos compiler asli, cuma preflight
+  statis + review manual. Sesi berikutnya: JANGAN anggap SAF otomatis "aman
+  selamanya" cuma karena sudah ditulis ulang sekali -- kalau ada perubahan
+  BESAR lagi ke kode SAF di masa depan (bukan bugfix kecil), baca ulang
+  seluruh entri Insiden #7 ini dari awal, bukan cuma baca UPDATE ini saja.
 
 ### [2026-08-06] v2.8.0 GAGAL BUILD di CI -- `async{}`/`awaitAll()` tanpa CoroutineScope receiver di `scanAndSortSafLocked()`
 - **Gejala**: user upload `build-failure-log-v2_8_0.zip`. `:app:compileDebugKotlin FAILED` -- `Unresolved reference` di `FileSorter.kt:368-369` (`async`, `awaitAll`) dan efek domino di `:376` (`it`).

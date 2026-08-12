@@ -23,7 +23,7 @@ android {
         minSdk = 26
         targetSdk = 34
         versionCode = 58
-        versionName = "3.0.0"
+        versionName = "2.17.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -89,6 +89,11 @@ dependencies {
 
     implementation("androidx.datastore:datastore-preferences:1.1.1")
     implementation("androidx.work:work-runtime-ktx:2.9.1")
+
+    // [SAF, syarat (c) Insiden #7] Ditambahkan kembali khusus untuk fitur
+    // Folder Kustom (DocumentFile) -- dibuang total di v2.13.0 waktu SAF lama
+    // dihapus, lihat CHANGELOG.md & PROJECT_STATE.md.
+    implementation("androidx.documentfile:documentfile:1.0.1")
 
     // Room: dipakai khusus untuk ActivityLog & MoveHistory (data yang bisa tumbuh
     // ribuan baris). Rules & Settings TETAP di DataStore -- keduanya kecil dan

@@ -3,56 +3,95 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
-## v3.0.0 (versionCode 58) -- 2026-08-12 -- Redesign total: Dark Titanium Neumorphism + Zamrud Accent
-User minta redesign total dari tema lama ("AMOLED Glassmorphism + Midnight
-Blue", v2.14.0-v2.16.1) ke Neumorphism dengan accent Titanium dominan +
-sedikit sentuhan zamrud (emerald), depth ultra realistic. Dark mode tetap
-satu-satunya mode (keputusan arsitektur lama tidak berubah) -- yang berubah
-total adalah identitas visual & metode depth.
-- **Palet baru** (`ui/theme/Color.kt`, rewrite total): fondasi Titanium
-  (abu-abu logam matte gelap, 5 tingkat elevasi) jadi warna DOMINAN di
-  seluruh app; Zamrud (`EmeraldAccent`) dipakai TERBATAS (CTA, switch ON,
-  item terpilih, wash ambient alpha 0.05) sesuai instruksi "sedikit
-  sentuhan". Aksen semantik ke-4 (stamp/amber/rust/slate) ditata ulang jadi
-  keluarga "logam & permata": stamp sukses = zamrud, amber = kuningan/brass,
-  error = tembaga, aksen Pengaturan = abu-biru titanium dingin.
-- **File baru `ui/components/Neumorphic.kt`**: `Modifier.neuRaised()` (kartu
-  terangkat: shadow elevasi asli bertone titanium + gradient brushed-metal
-  diagonal + border highlight rambut kiri-atas) dan `Modifier.neuInset()`
-  (permukaan tenggelam: gradient arah terbalik, tanpa shadow elevasi).
-  Sengaja HANYA pakai API Compose proven (shadow ambient/spotColor,
-  Brush.linearGradient, border Brush) -- BUKAN hack Paint.setShadowLayer
-  custom yang belum pernah dikompilasi (lihat Insiden #7 PROJECT_STATE.md).
-- **`VaultCard.kt`** (rewrite): 3 lapis background (wash zamrud radial tipis
-  -> gradient brushed-metal titanium -> highlight rambut) + shadow elevasi
-  6dp asli lewat `Surface`.
-- **`TactileSwitch.kt`** (rewrite): track OFF sekarang benar-benar
-  "tenggelam" (fill `TitaniumSurfaceRecessed`), track ON tint accent
-  (default primary/zamrud) + glow lokal di thumb saja.
-- **`GroupedListRow.kt`, `VaultActionSheet.kt`**: rename `GlassBorder` ->
-  `NeuBorder` (ikut palet baru, isi hex sama posisinya di token hierarchy
-  baru).
-- **`SegmentedControl.kt`**: track pembungkus jadi `neuInset()` (pil
-  terpilih terbaca "duduk di sumur").
-- **`PressScale.kt`**: `tactilePress()` shadow sekarang pakai
-  ambient/spotColor bertone titanium (`NeuShadowDark`), bukan hitam generik
-  default Android.
-- **`MainActivity.kt`** (Protected Asset, edit parsial): import & 2 baris
-  `SystemBarStyle.dark(...)` ganti dari `AmoledBackground` -> `TitaniumBase`.
-- **Resource**: `colors.xml` (`pv_amoled_background`/`pv_midnight_blue_accent`
-  -> `pv_titanium_base`/`pv_emerald_accent`), `themes.xml` (splash bg),
-  `ic_launcher.xml` + `ic_launcher_round.xml` (background color ref), dan
-  `ic_launcher_foreground.xml` direcolor (kartu jadi abu titanium, tab
-  folder jadi zamrud).
-- `app/build.gradle.kts`: versionCode 57->58, versionName 2.16.1->3.0.0
-  (major bump -- ganti sistem visual total, bukan patch).
-- **Nol perubahan logika bisnis/scan/move/undo/DB** -- murni lapisan
-  tema/visual, sama seperti batch redesign tema sebelumnya (v2.14.0/v2.15.0).
-- `scripts/preflight_check.sh` dijalankan ulang setelah tiap perubahan --
-  sempat menangkap `--` di komentar XML `ic_launcher_foreground.xml` (bug
-  kelas yang sama dgn Insiden v2.6.0 lama, langsung terdeteksi & diperbaiki
-  sebelum ZIP dikirim, bukan lolos ke CI).
-- **Belum ada konfirmasi CI/device dari user untuk versi ini.**
+## v2.17.0 -- SAF ditulis ulang: Folder Kustom (2026-08-12)
+User minta fitur SAF ditambahkan lagi, eksplisit "penuh dedikasi bukan asal
+jadi". SESUAI PROSEDUR yang didokumentasikan sendiri di `PROJECT_STATE.md`
+("Insiden #7"): dibaca dulu SELURUH riwayat SAF sebelum menulis kode apa pun,
+lalu dikonfirmasi ke user karena sandbox sesi ini TIDAK punya akses
+Gradle/emulator/device asli (syarat "a" gugur). User pilih lanjut. Dieksekusi
+di bawah **syarat (c)**: blind (tanpa compiler asli), TAPI disiplin -- reuse
+persis path/arsitektur legacy (v2.7.0-v2.12.0, dari catatan penghapusan
+v2.13.0), BUKAN modul independen baru seperti "Zip Sorter" dulu (scope itu
+SENGAJA tidak diulang batch ini), dan SETIAP bug dari Insiden #4/#6/#7
+diaudit satu-satu supaya tidak terulang dengan cara yang sama:
+
+- **Bug CI v2.8.0** (fungsi SAF suspend polos manggil `async{}` tanpa
+  CoroutineScope receiver): dihindari dari desain awal --
+  `scanAndSortSafLocked()` punya `withContext(Dispatchers.IO){}` MILIKNYA
+  SENDIRI, struktur 1:1 sama dengan `scanAndSortLocked()` yang sudah terbukti
+  kompil, dipanggil dari `scanAndSort()` yang jadi TITIK CABANG TUNGGAL
+  (SAF vs Downloads) -- signature tidak berubah, jadi `AutoSortWorker.kt`
+  otomatis dapat dukungan SAF tanpa disentuh sama sekali.
+- **Bug #2 v2.10.0** (mime type dipercaya dari provider sumber): mime type
+  SEKARANG SELALU dari ekstensi nama file (`mimeTypeForFileName()`, fungsi
+  murni top-level supaya unit-testable TANPA Context Android -- lihat
+  `MimeTypeForFileNameTest.kt`, SATU-SATUNYA bagian fitur ini yang benar-benar
+  tereksekusi, bukan cuma dibaca, sebelum sampai ke CI asli). Nama aktual
+  pasca-`createFile()` diverifikasi, WARNING dicatat kalau provider ubah nama.
+- **Bug #1 v2.10.0** (`releasePersistableUriPermission()` didokumentasikan
+  tapi tidak pernah dipanggil): sekarang BENAR-BENAR dipanggil dari
+  `MainViewModel.setSafTreeUri()` (lepas folder lama SETELAH folder baru
+  sukses tersimpan, urutan sengaja) & `clearSafTreeUri()`.
+- **Insiden #4/#6** (boolean DocumentFile jadi trust-gate tanpa sinyal
+  nyata): Dual Stability Guard versi SAF SENGAJA cuma 2/3 sinyal
+  (`lastModified()` + kestabilan ukuran, TANPA file-lock check -- tidak ada
+  API konsisten untuk itu di `content://` lintas provider/OEM), dicatat
+  eksplisit sebagai known limitation, BUKAN diklaim setara versi Downloads.
+- **DocumentsContract.moveDocument() SENGAJA TIDAK dipakai** (dukungan tidak
+  konsisten antar provider/OEM, alasan sama seperti poin di atas) -- pakai
+  copy-lalu-delete lewat ContentResolver, konsisten dgn `copyThenDelete` lama.
+- **DB Schema/DAO (protected asset) TIDAK disentuh sama sekali** -- URI SAF
+  disimpan di kolom `String` polos yang sudah ada (`originalParentUri`/
+  `destUri` di `MoveHistoryEntry`), dibedakan dari path File biasa lewat
+  prefix `"content://"` saat undo. Nol migrasi Room.
+- **Ditemukan & diperbaiki SELAMA batch ini** (bukan bug lama): draf pertama
+  `processCandidateSaf()` membungkus SELURUH badan (termasuk `delay(1 detik)`
+  di `isLikelyStillWritingSaf`) dalam `catch (e: Exception)` polos -- akan
+  menelan `CancellationException` kalau scan dibatalkan tepat di jendela itu.
+  Diperbaiki: `catch (e: CancellationException) { throw e }` eksplisit
+  sebelum `catch (e: Exception)`.
+
+File diubah/ditambah:
+- `util/FileSorter.kt`: `mimeTypeForFileName()` (top-level baru),
+  `isTempOrPartialName()` (diekstrak dari `isTempOrPartialFile()`, direuse),
+  `resolveSafRoot()`, `scanAndSortSafLocked()`, `listCandidateFilesSaf()`,
+  `isLikelyStillWritingSaf()`, `findOrCreateChildDirSaf()`,
+  `copyDocumentBytes()`, `processCandidateSaf()`, `moveFileSaf()`,
+  `undoSaf()` (baru semua); `scanAndSort()`/`undo()` (cabang baru, minimal).
+- `data/SettingsRepository.kt`: `safTreeUriFlow`/`getSafTreeUri()`/
+  `setSafTreeUri()`/`clearSafTreeUri()` (DataStore key baru, tanpa skema DB).
+- `ui/MainViewModel.kt`: `safTreeUri` StateFlow, `setSafTreeUri()`,
+  `clearSafTreeUri()`, `releaseSafPermission()`.
+- `MainActivity.kt` (protected, edit parsial): `safTreePickerLauncher`
+  (`ActivityResultContracts.OpenDocumentTree`), param `onPickSafFolder`
+  di-thread lewat `PromptVaultRoot` -> `Routes.SETTINGS`.
+- `ui/screens/SettingsScreen.kt`: card "Folder Kustom (Opsional)" + 3 param
+  (`safTreeUri`, `onPickSafFolder`, `onClearSafFolder`) + `friendlySafFolderLabel()`.
+- `app/build.gradle.kts` (protected, edit parsial): dependency
+  `androidx.documentfile:documentfile:1.0.1` ditambah balik; versionCode 58,
+  versionName 2.17.0.
+- `app/src/test/java/.../MimeTypeForFileNameTest.kt` (baru, 5 test case).
+- **SENGAJA TIDAK disentuh**: `ui/screens/DiagnosticsScreen.kt` (card "Zip
+  Sorter" dulu HANYA untuk modul Zip Sorter yang independen -- di luar scope
+  batch ini by design, lihat syarat (c) di atas), `data/db/**` (lihat poin DB
+  Schema di atas), `AndroidManifest.xml` (SAF tidak butuh permission apa pun
+  di manifest -- justru itu alasan utama SAF ada).
+
+Verifikasi yang BENAR-BENAR dijalankan sebelum ZIP ini dikirim (bukan cuma
+diklaim): `scripts/preflight_check.sh` -- awalnya FAIL (1 paren tak seimbang,
+typo di komentar dokumentasi `copyDocumentBytes()`, sudah diperbaiki), lolos
+bersih di run kedua. Ditambah review manual baris-per-baris untuk tipe/
+nullability/signature (kelas kesalahan yang preflight TIDAK bisa deteksi,
+sesuai catatan root-cause Insiden #7) -- lihat detail di section "STATUS SAF"
+di bawah. **BELUM PERNAH lewat `./gradlew` asli** -- confidence report ada di
+pesan chat, JANGAN dianggap 100% pasti kompil di percobaan pertama.
+
+Temuan sampingan (DICATAT, TIDAK DIEKSEKUSI -- di luar scope "tambah fitur
+SAF"): `FileSorter.undo()` (kedua jalur, File maupun SAF) tidak punya
+`withContext(Dispatchers.IO)` sendiri, kemungkinan berjalan di dispatcher
+pemanggil (Main, lewat `rememberCoroutineScope()` di `ActivityLogScreen`) --
+karakteristik ini SUDAH ADA sebelum batch ini (bukan regresi baru), sengaja
+TIDAK diperbaiki di sini supaya tetap 1 scope per batch.
 
 ## v2.16.1 -- Hotfix: build gagal, `shadowElevation` bukan param ModalBottomSheet (2026-08-09)
 CI gagal 2x berturut-turut (attempt sebelumnya) di `compileDebugKotlin`:

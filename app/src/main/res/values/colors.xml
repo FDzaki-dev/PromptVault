@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- v4.0.0: Dark Titanium Neumorphism + Zamrud Accent. Hanya token yang
-         dibutuhkan resource sistem (splash screen, adaptive icon) yang ada
+    <!-- v3.0.0: palet kraft/pine terang lama dihapus total. Hanya token
+         AMOLED yang dibutuhkan resource sistem (splash screen) yang tersisa
          di sini; sumber kebenaran warna tetap ui/theme/Color.kt (Compose). -->
-    <color name="pv_titanium_base">#1E2023</color>
-    <color name="pv_emerald_accent">#2ED9A0</color>
+    <color name="pv_amoled_background">#030508</color>
+    <color name="pv_midnight_blue_accent">#6670FF</color>
 </resources>

@@ -1,5 +1,6 @@
 package com.elprompter.promptvault.ui.screens
 
+import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -42,6 +43,9 @@ fun SettingsScreen(
     onConflictStrategySelected: (ConflictStrategy) -> Unit,
     onExportRequested: suspend () -> String,
     onImportRequested: (String, (Int) -> Unit) -> Unit,
+    safTreeUri: String?,
+    onPickSafFolder: () -> Unit,
+    onClearSafFolder: () -> Unit,
     onBack: () -> Unit
 ) {
     var exportedText by remember { mutableStateOf<String?>(null) }
@@ -114,6 +118,40 @@ fun SettingsScreen(
 
             VaultCard(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Folder Kustom (Opsional)", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "Pindai folder pilihanmu sendiri lewat Storage Access Framework, bukan cuma " +
+                            "Downloads -- cocok untuk folder di kartu SD atau folder khusus lain. " +
+                            "Kosongkan lagi untuk kembali memindai Downloads.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    if (safTreeUri != null) {
+                        Text(
+                            "Folder aktif: ${friendlySafFolderLabel(safTreeUri)}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = colors.primary
+                        )
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(
+                                onClick = onPickSafFolder,
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primary)
+                            ) { Text("Ganti Folder") }
+                            OutlinedButton(
+                                onClick = onClearSafFolder,
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.error)
+                            ) { Text("Kembali ke Downloads") }
+                        }
+                    } else {
+                        OutlinedButton(
+                            onClick = onPickSafFolder,
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primary)
+                        ) { Text("Pilih Folder") }
+                    }
+                }
+            }
+
+            VaultCard(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Backup / Export Rule", style = MaterialTheme.typography.titleMedium)
                     Text(
                         "Simpan semua rule kamu sebagai teks, biar bisa dipulihkan lagi kalau app di-uninstall.",
@@ -166,4 +204,18 @@ fun SettingsScreen(
             }
         }
     }
+}
+
+/**
+ * [SAF] URI tree SAF berbentuk mis. "content://.../tree/primary%3ADownload%2FFoo"
+ * -- tidak informatif ditampilkan mentah ke user non-teknis. Decode dulu lalu
+ * ambil bagian setelah ':' TERAKHIR (format authority provider umumnya
+ * "root:path/relatif"), supaya tampil ringkas mis. "Download/Foo". Fungsi
+ * murni & private -- kalau decode gagal/format tidak dikenali, tampilkan hasil
+ * decode apa adanya daripada crash layar Pengaturan.
+ */
+private fun friendlySafFolderLabel(treeUri: String): String {
+    val decoded = runCatching { Uri.decode(treeUri) }.getOrDefault(treeUri)
+    val afterColon = decoded.substringAfterLast(':')
+    return afterColon.ifBlank { decoded }
 }

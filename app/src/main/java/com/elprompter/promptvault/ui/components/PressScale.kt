@@ -13,7 +13,6 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Dp
-import com.elprompter.promptvault.ui.theme.NeuShadowDark
 import com.elprompter.promptvault.ui.theme.TactileTokens
 
 /**
@@ -55,5 +54,5 @@ fun Modifier.tactilePress(
     )
     return this
         .scale(scale)
-        .shadow(elevation = elevation, shape = shape, ambientColor = NeuShadowDark, spotColor = NeuShadowDark)
+        .shadow(elevation = elevation, shape = shape)
 }

@@ -1,19 +1,16 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp" android:height="108dp"
     android:viewportWidth="108" android:viewportHeight="108">
-    <!-- v4.0.0: recolor ikon ke Dark Titanium Neumorphism, sentuhan Zamrud
-         (kartu index/manifest jadi abu titanium, tab folder jadi zamrud
-         sebagai sedikit sentuhan sesuai instruksi, bukan dominan). -->
     <!-- kartu index/manifest -->
     <path
-        android:fillColor="#C7CCD1"
+        android:fillColor="#F7F1E2"
         android:pathData="M30,26 h48 a4,4 0 0 1 4,4 v48 a4,4 0 0 1 -4,4 h-48 a4,4 0 0 1 -4,-4 v-48 a4,4 0 0 1 4,-4 z" />
     <!-- tab folder -->
     <path
-        android:fillColor="#2ED9A0"
+        android:fillColor="#B1432E"
         android:pathData="M30,26 h20 v8 a4,4 0 0 1 -4,4 h-16 z" />
     <!-- garis manifest -->
     <path
-        android:fillColor="#2A2D31"
+        android:fillColor="#26302A"
         android:pathData="M38,50 h32 v4 h-32 z M38,60 h32 v4 h-32 z M38,70 h20 v4 h-20 z" />
 </vector>

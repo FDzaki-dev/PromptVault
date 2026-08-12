@@ -32,6 +32,7 @@ class SettingsRepository(private val context: Context) {
 
     private val intervalKey = intPreferencesKey("auto_scan_interval_minutes")
     private val conflictKey = stringPreferencesKey("conflict_strategy")
+    private val safTreeUriKey = stringPreferencesKey("saf_tree_uri")
 
     companion object {
         const val DEFAULT_INTERVAL_MINUTES = 15
@@ -58,5 +59,24 @@ class SettingsRepository(private val context: Context) {
 
     suspend fun setConflictStrategy(strategy: ConflictStrategy) {
         context.promptVaultDataStore.edit { prefs -> prefs[conflictKey] = strategy.name }
+    }
+
+    /**
+     * [SAF, syarat (c) Insiden #7] URI folder kustom (tree URI dari
+     * ACTION_OPEN_DOCUMENT_TREE), disimpan sebagai String biar reuse
+     * DataStore yang sama seperti setting lain -- tidak butuh tabel/skema
+     * baru. `null` = belum pernah diset ATAU sudah dikosongkan user
+     * ([clearSafTreeUri]) -> [FileSorter] fallback ke Downloads biasa.
+     */
+    val safTreeUriFlow: Flow<String?> = context.promptVaultDataStore.data.map { prefs -> prefs[safTreeUriKey] }
+
+    suspend fun getSafTreeUri(): String? = safTreeUriFlow.first()
+
+    suspend fun setSafTreeUri(uri: String) {
+        context.promptVaultDataStore.edit { prefs -> prefs[safTreeUriKey] = uri }
+    }
+
+    suspend fun clearSafTreeUri() {
+        context.promptVaultDataStore.edit { prefs -> prefs.remove(safTreeUriKey) }
     }
 }

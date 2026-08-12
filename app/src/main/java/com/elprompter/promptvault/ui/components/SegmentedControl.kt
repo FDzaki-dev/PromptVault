@@ -22,9 +22,6 @@ import androidx.compose.ui.unit.dp
  * Segmented control ala iOS (pil berisi, bukan garis bawah Material) --
  * lebih jelas mana yang aktif, dan terasa lebih "sentuh" di layar sempit.
  * Semua warna theme-aware supaya kontrasnya tetap benar di dark mode.
- * v4.0.0: track pembungkus jadi neumorphic inset (tenggelam) supaya pil
- * yang terpilih terbaca "duduk di dalam sumur" -- prinsip Titanium
- * Neumorphism yang sama dengan track TactileSwitch.
  */
 @Composable
 fun SegmentedControl(options: List<String>, selectedIndex: Int, onSelect: (Int) -> Unit) {
@@ -32,7 +29,7 @@ fun SegmentedControl(options: List<String>, selectedIndex: Int, onSelect: (Int) 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .neuInset(shape = RoundedCornerShape(12.dp))
+            .background(colors.surfaceVariant, RoundedCornerShape(12.dp))
             .padding(3.dp)
     ) {
         options.forEachIndexed { index, label ->
