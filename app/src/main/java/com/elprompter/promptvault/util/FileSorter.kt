@@ -136,12 +136,23 @@ class FileSorter(
      * dicek. `isTempOrPartialFile` & pengecualian folder `PromptVault` sendiri
      * TETAP jalan (aturan itu tidak terkait ekstensi, tetap relevan untuk
      * ekstensi apa pun).
+     *
+     * [Fix bug nyata, 2026-08-13, laporan user: file/apk bernama persis
+     * "PromptVault" (atau apa pun yang DIAWALI teks itu, mis. "PromptVault.apk")
+     * tidak pernah terdeteksi] Root cause: pengecualian folder output sendiri
+     * di bawah memakai `absolutePath.startsWith(vaultRootDir.absolutePath)`
+     * TANPA separator -- itu string-prefix match, bukan path-containment
+     * check. "Downloads/PromptVault.apk".startsWith("Downloads/PromptVault")
+     * bernilai true walau file itu SIBLING folder PromptVault, bukan isinya --
+     * jadi ikut ter-exclude dari kandidat scan. Fix: tambah `File.separator`
+     * di akhir prefix pembanding, supaya hanya path yang BENAR-BENAR di dalam
+     * folder (mis. "Downloads/PromptVault/x.txt") yang cocok.
      */
     private fun listCandidateFiles(): Array<File> {
         return downloadsDir.listFiles { f ->
             f.isFile &&
                 !isTempOrPartialFile(f) &&
-                !f.absolutePath.startsWith(vaultRootDir.absolutePath)
+                !f.absolutePath.startsWith(vaultRootDir.absolutePath + File.separator)
         } ?: emptyArray()
     }
 
@@ -785,7 +796,7 @@ class FileSorter(
             val collection = MediaStore.Files.getContentUri("external")
             val projection = arrayOf(MediaStore.Files.FileColumns._ID, MediaStore.Files.FileColumns.DATA)
             val selection = "${MediaStore.Files.FileColumns.DATA} LIKE ?"
-            val selectionArgs = arrayOf("${vaultRootDir.absolutePath}%")
+            val selectionArgs = arrayOf("${vaultRootDir.absolutePath}${File.separator}%")
             var removedCount = 0
 
             resolver.query(collection, projection, selection, selectionArgs, null)?.use { cursor ->

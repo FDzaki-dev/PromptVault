@@ -3,6 +3,37 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.19.3 -- Fix bug NYATA: file/apk bernama diawali "PromptVault" tidak pernah terdeteksi scan (2026-08-13)
+User laporkan: file/apk dengan nama persis "PromptVault" (atau apa pun yang
+DIAWALI teks itu, mis. "PromptVault.apk", "PromptVault-release.apk") yang
+ditaruh langsung di Downloads tidak pernah ke-detect sebagai kandidat scan,
+walau rule/pattern-nya cocok.
+
+**Root cause**: `listCandidateFiles()` mengecualikan folder output app
+sendiri lewat `f.absolutePath.startsWith(vaultRootDir.absolutePath)` --
+ini STRING-PREFIX match, bukan path-containment check. Karena
+`vaultRootDir.absolutePath` = ".../Downloads/PromptVault" (tanpa separator
+akhir), path file SIBLING seperti ".../Downloads/PromptVault.apk" juga
+lolos `startsWith(...)` itu (string "PromptVault.apk" diawali "PromptVault"),
+padahal file itu bukan isi folder "PromptVault", cuma kebetulan namanya
+diawali teks yang sama -- jadi ikut ter-exclude dari kandidat scan tanpa
+alasan valid. Bug kelas sama juga ditemukan di `cleanupGhostMediaStoreEntries()`
+(query `LIKE '<path>%'` punya masalah prefix-match identik).
+
+**Fix**: tambah `File.separator` di akhir prefix pembanding pada kedua
+tempat (`listCandidateFiles` & `cleanupGhostMediaStoreEntries`), supaya
+hanya path yang BENAR-BENAR di dalam folder "PromptVault/" yang cocok,
+bukan sekadar diawali string yang sama.
+
+1 file diubah: `util/FileSorter.kt` (2 titik fix + doc), `app/build.gradle.kts`
+(versi). `scripts/preflight_check.sh` lolos bersih. **BELUM PERNAH lewat
+`./gradlew` asli** -- konsisten seluruh riwayat project (sandbox tanpa
+Gradle/device asli). User DIMINTA konfirmasi di HP asli: taruh file/apk
+bernama diawali "PromptVault" di Downloads, buat rule yang cocok, scan,
+pastikan file itu SEKARANG terdeteksi & terpindah normal.
+
+versionCode 64->65, versionName 2.19.2->2.19.3.
+
 ## v2.19.2 -- Fix bug NYATA: folder "PromptVault" terduplikat (1)/(2)/(3) di tujuan SAF (2026-08-13)
 User laporkan screenshot: folder tujuan kustom berisi 4 folder --
 "PromptVault", "PromptVault (1)", "PromptVault (2)", "PromptVault (3)",

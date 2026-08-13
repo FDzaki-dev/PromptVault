@@ -3,7 +3,36 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
-## STATUS PROJECT: v2.19.2 -- FIX BUG NYATA (laporan user + screenshot): folder "PromptVault" terduplikat (1)/(2)/(3) di tujuan SAF -- 2026-08-13
+## STATUS PROJECT: v2.19.3 -- FIX BUG NYATA (laporan user): file/apk bernama diawali "PromptVault" tidak terdeteksi scan -- 2026-08-13
+- **User laporkan**: file/apk bernama persis "PromptVault" (atau apa pun yang
+  DIAWALI teks itu, mis. "PromptVault.apk") ditaruh di Downloads, tidak
+  pernah terdeteksi sebagai kandidat scan walau rule/pattern cocok.
+- **Root cause (ditemukan lewat baca `listCandidateFiles()` di FileSorter.kt)**:
+  pengecualian folder output app sendiri pakai `f.absolutePath.startsWith(
+  vaultRootDir.absolutePath)` -- STRING-PREFIX match, bukan path-containment.
+  `vaultRootDir.absolutePath` = ".../Downloads/PromptVault" TANPA separator
+  akhir, jadi path SIBLING file seperti ".../Downloads/PromptVault.apk" juga
+  `startsWith(...)` true (nama file "PromptVault.apk" diawali teks
+  "PromptVault") walau file itu BUKAN isi folder "PromptVault", cuma
+  kebetulan nama depannya sama -- ikut ter-exclude tanpa alasan valid. Bug
+  kelas sama ditemukan juga di `cleanupGhostMediaStoreEntries()` (query SQL
+  `LIKE '<path>%'`, prefix-match identik).
+- **Fix**: tambah `File.separator` di akhir prefix pembanding di KEDUA
+  tempat, supaya hanya path yang benar-benar path-DI-DALAM folder
+  "PromptVault/" yang cocok, bukan sekadar string yang diawali sama.
+- **Pelajaran dicatat**: `String.startsWith(otherPath)` untuk cek
+  "apakah path A ada di dalam folder B" SELALU rawan false-positive kalau
+  tidak diberi separator akhir eksplisit -- nama file/folder sibling yang
+  kebetulan jadi prefix nama folder lain akan ikut ke-match. Cek pola serupa
+  (`startsWith` dipakai buat containment path) kalau ada laporan gejala
+  "file X tidak terdeteksi" lagi di masa depan.
+- File diubah (1 modul): `util/FileSorter.kt` (2 titik fix + doc),
+  `app/build.gradle.kts` (versi). `scripts/preflight_check.sh` lolos bersih.
+  **BELUM PERNAH lewat `./gradlew` asli**. User DIMINTA konfirmasi di HP
+  asli: taruh file/apk bernama diawali "PromptVault" di Downloads, scan,
+  pastikan sekarang terdeteksi & terpindah normal sesuai rule.
+
+## STATUS PROJECT SEBELUMNYA: v2.19.2 -- FIX BUG NYATA (laporan user + screenshot): folder "PromptVault" terduplikat (1)/(2)/(3) di tujuan SAF -- 2026-08-13
 - User laporkan screenshot file manager: 4 folder di folder tujuan kustom --
   "PromptVault", "PromptVault (1)", "PromptVault (2)", "PromptVault (3)",
   MASING-MASING isi "1 item", tanggal sama. Folder kustom yang dipilih malah
