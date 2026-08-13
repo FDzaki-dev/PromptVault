@@ -67,9 +67,39 @@ data class PatternPreviewResult(
  * Fungsi murni & top-level (bukan method [FileSorter]) SUPAYA unit-testable
  * tanpa Context Android -- lihat MimeTypeForFileNameTest.
  */
+/**
+ * [Feature, dukung SEMUA ekstensi -- 2026-08-13, permintaan user] Sebelumnya
+ * hanya zip/txt terdaftar eksplisit, `else` genap balik `application/octet-
+ * stream`. `octet-stream` tetap fallback AMAN untuk ekstensi apa pun yang
+ * tidak ada di tabel ini -- SAF `createFile()` tetap sukses, cuma tanpa
+ * asosiasi MIME spesifik (nama+ekstensi file tetap utuh, aplikasi lain
+ * biasanya tetap kenali dari ekstensi). Tabel di bawah cuma memperkaya
+ * fidelity untuk tipe umum, BUKAN syarat supaya ekstensi lain "didukung" --
+ * dukungan ekstensi lain sudah didapat dari [listCandidateFiles] &
+ * [listCandidateFilesSaf] tidak lagi memfilter ekstensi sama sekali (lihat
+ * catatan di situ). TIDAK memakai `android.webkit.MimeTypeMap` di sini
+ * SENGAJA -- fungsi ini top-level pure Kotlin biar tetap unit-testable
+ * tanpa Context/Robolectric (lihat MimeTypeForFileNameTest), sedangkan
+ * MimeTypeMap butuh runtime Android asli.
+ */
 fun mimeTypeForFileName(name: String): String = when (name.substringAfterLast('.', "").lowercase()) {
     "zip" -> "application/zip"
     "txt" -> "text/plain"
+    "pdf" -> "application/pdf"
+    "jpg", "jpeg" -> "image/jpeg"
+    "png" -> "image/png"
+    "gif" -> "image/gif"
+    "webp" -> "image/webp"
+    "mp4" -> "video/mp4"
+    "mp3" -> "audio/mpeg"
+    "json" -> "application/json"
+    "xml" -> "application/xml"
+    "md" -> "text/markdown"
+    "csv" -> "text/csv"
+    "apk" -> "application/vnd.android.package-archive"
+    "doc" -> "application/msword"
+    "docx" -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    "kt", "java", "gradle", "kts", "py", "js", "html", "css" -> "text/plain"
     else -> "application/octet-stream"
 }
 
@@ -95,9 +125,19 @@ class FileSorter(
     private val vaultRootDir: File
         get() = File(downloadsDir, "PromptVault")
 
+    /**
+     * [Feature, dukung SEMUA ekstensi -- 2026-08-13, permintaan user] SEBELUMNYA
+     * hanya file `.zip`/`.txt` pernah jadi kandidat -- filter ekstensi itu
+     * DIHAPUS TOTAL di sini. Rule/[GlobMatcher] (pattern glob, mis. `*.kt`,
+     * `*` untuk semua) sekarang SATU-SATUNYA penentu file mana yang cocok --
+     * bukan lagi whitelist ekstensi hardcode duluan sebelum pattern sempat
+     * dicek. `isTempOrPartialFile` & pengecualian folder `PromptVault` sendiri
+     * TETAP jalan (aturan itu tidak terkait ekstensi, tetap relevan untuk
+     * ekstensi apa pun).
+     */
     private fun listCandidateFiles(): Array<File> {
         return downloadsDir.listFiles { f ->
-            f.isFile && (f.extension.equals("zip", true) || f.extension.equals("txt", true)) &&
+            f.isFile &&
                 !isTempOrPartialFile(f) &&
                 !f.absolutePath.startsWith(vaultRootDir.absolutePath)
         } ?: emptyArray()
@@ -106,7 +146,7 @@ class FileSorter(
     /**
      * File sementara dari browser/downloader (belum selesai diunduh) tidak boleh
      * pernah masuk sebagai kandidat sama sekali -- bukan cuma "ditunda" seperti
-     * [isLikelyStillWriting], tapi memang belum jadi file ZIP/TXT yang valid.
+     * [isLikelyStillWriting], tapi memang belum selesai ditulis/diunduh sepenuhnya.
      * Daftar ini sengaja dicek terhadap NAMA LENGKAP (bukan cuma `.extension`
      * Kotlin) karena marker sering muncul sebagai akhiran ganda, mis.
      * "prompt.zip.crdownload".
@@ -312,7 +352,7 @@ class FileSorter(
         val candidateFiles = listCandidateFiles()
 
         if (candidateFiles.isEmpty()) {
-            activityLogRepository.add(LogLevel.INFO, "Scan selesai: tidak ada file ZIP/TXT baru yang cocok.")
+            activityLogRepository.add(LogLevel.INFO, "Scan selesai: tidak ada file baru yang cocok pattern rule manapun.")
             return@withContext ScanResult(0, 0, foldersUnreadable = false, overlapWarnings = emptyList())
         }
 
@@ -387,7 +427,7 @@ class FileSorter(
         val candidateFiles = listCandidateFilesSaf(root, vaultRootDoc)
 
         if (candidateFiles.isEmpty()) {
-            activityLogRepository.add(LogLevel.INFO, "Scan selesai: tidak ada file ZIP/TXT baru yang cocok di folder kustom.")
+            activityLogRepository.add(LogLevel.INFO, "Scan selesai: tidak ada file baru yang cocok pattern rule manapun di folder kustom.")
             return@withContext ScanResult(0, 0, foldersUnreadable = false, overlapWarnings = emptyList())
         }
 
@@ -438,13 +478,23 @@ class FileSorter(
      * sendiri (harusnya sudah otomatis kefilter oleh `isFile`, tapi dicek
      * eksplisit untuk paritas dengan pengecekan `vaultRootDir` di versi lama).
      */
+    /**
+     * [SAF] Analog [listCandidateFiles] untuk folder kustom: hanya level
+     * TERATAS folder pilihan user (non-rekursif, sama seperti Downloads asli),
+     * buang file sementara/partial (reuse [isTempOrPartialName] -- BUKAN
+     * salinan kedua, lihat syarat (c) Insiden #7), dan buang defensif kalau
+     * kebetulan match folder "PromptVault" itu sendiri (harusnya sudah
+     * otomatis kefilter oleh `isFile`, tapi dicek eksplisit untuk paritas
+     * dengan pengecekan `vaultRootDir` di versi lama). [Feature, dukung SEMUA
+     * ekstensi -- 2026-08-13] Filter ekstensi zip/txt DIHAPUS TOTAL, sama
+     * seperti [listCandidateFiles] -- lihat catatan di situ, alasan sama
+     * persis berlaku di jalur SAF.
+     */
     private fun listCandidateFilesSaf(root: DocumentFile, vaultRootDoc: DocumentFile): List<DocumentFile> {
         return try {
             root.listFiles().filter { doc ->
                 val name = doc.name
                 name != null && doc.isFile && doc.uri != vaultRootDoc.uri &&
-                    (name.substringAfterLast('.', "").equals("zip", true) ||
-                        name.substringAfterLast('.', "").equals("txt", true)) &&
                     !isTempOrPartialName(name)
             }
         } catch (e: Exception) {
@@ -873,7 +923,7 @@ class FileSorter(
         return PatternPreviewResult(candidates.size, matched)
     }
 
-    /** Daftar nama file ZIP/TXT asli di Downloads, dipakai layar Diagnostik agar user tahu format nama file sebenarnya. */
+    /** Daftar nama file asli (SEMUA ekstensi, sejak fix 2026-08-13) di Downloads, dipakai layar Diagnostik agar user tahu format nama file sebenarnya. */
     fun listDownloadsCandidateFileNames(limit: Int = 100): List<String> {
         if (!downloadsDir.exists() || !downloadsDir.canRead()) return emptyList()
         return listCandidateFiles().map { it.name }.sorted().take(limit)

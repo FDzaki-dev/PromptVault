@@ -103,7 +103,7 @@ fun DiagnosticsScreen(
                     style = MaterialTheme.typography.bodySmall
                 )
                 if (downloadsFileNames.isEmpty()) {
-                    Text("Tidak ada file ZIP/TXT di Downloads saat ini.", style = MaterialTheme.typography.bodySmall)
+                    Text("Tidak ada file di Downloads saat ini.", style = MaterialTheme.typography.bodySmall)
                 } else {
                     downloadsFileNames.take(20).forEach { name ->
                         Text("• $name", style = MaterialTheme.typography.bodySmall)
@@ -153,7 +153,7 @@ fun DiagnosticsScreen(
         VaultCard(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text("Cara verifikasi manual", style = MaterialTheme.typography.titleMedium)
-                Text("1. Buat rule, taruh file ZIP/TXT contoh di Downloads.")
+                Text("1. Buat rule, taruh file contoh (ekstensi apa saja) di Downloads.")
                 Text("2. Tekan \"Scan Sekarang\" di Home, cek file benar-benar pindah.")
                 Text("3. Restart HP, jangan buka app secara manual.")
                 Text("4. Tunggu sesuai interval, lalu cek lagi apakah file baru ikut terpindah.")

@@ -139,7 +139,7 @@ fun AddEditRuleScreen(
                 VaultCard(modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(12.dp)) {
                         Text(
-                            "${p.matchedFileNames.size} dari ${p.totalCandidateFiles} file ZIP/TXT di Downloads cocok pattern ini",
+                            "${p.matchedFileNames.size} dari ${p.totalCandidateFiles} file di Downloads cocok pattern ini",
                             style = MaterialTheme.typography.titleSmall
                         )
                         if (p.matchedFileNames.isEmpty() && p.totalCandidateFiles > 0) {

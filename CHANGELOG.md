@@ -3,6 +3,50 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.18.0 -- Dukung SEMUA ekstensi file, bukan cuma ZIP/TXT (2026-08-13)
+User laporan "sudah pilih folder custom untuk pindahkan file project, tapi
+selalu 'tidak ada file cocok'" -- root cause: scanner HARDCODE hanya terima
+`.zip`/`.txt` sejak awal project, sementara file project user "campuran"
+(bukan zip/txt). Dikonfirmasi ke user: mau app diperluas dukung SEMUA
+ekstensi (bukan whitelist tertentu) -- dieksekusi sebagai 1 batch atomic.
+
+**Perubahan inti** (`util/FileSorter.kt`): `listCandidateFiles()` (Downloads)
+dan `listCandidateFilesSaf()` (folder kustom) SEBELUMNYA filter ekstensi
+`.zip`/`.txt` duluan sebelum pattern rule sempat dicek sama sekali -- filter
+itu DIHAPUS TOTAL. Sekarang [GlobMatcher] (pattern glob per Rule, mis.
+`*.kt`, `*` untuk semua) SATU-SATUNYA penentu file mana yang cocok. Guard
+lain (file sementara/partial, exclude folder `PromptVault` sendiri,
+non-rekursif top-level-only) TIDAK berubah -- tidak terkait ekstensi.
+
+**`mimeTypeForFileName()` diperluas**: dari 2 entri (zip/txt) jadi ~15 tipe
+umum (pdf, jpg/png/gif/webp, mp4, mp3, json, xml, md, csv, apk, doc/docx,
+kt/java/gradle/kts/py/js/html/css -> text/plain). `application/octet-stream`
+TETAP fallback untuk ekstensi apa pun di luar tabel -- SAF `createFile()`
+tetap sukses untuk ekstensi manapun, tabel ini cuma soal fidelity MIME,
+BUKAN syarat "ekstensi itu didukung". Test `MimeTypeForFileNameTest`
+diupdate (assertion lama `.pdf -> octet-stream` sudah tidak berlaku,
+diganti ekstensi genuinely-tidak-terdaftar `.xyz123` + test baru untuk tipe
+yang baru ditambah).
+
+**String UI** ("ZIP/TXT", "ZIP & TXT") digenerickan di 5 layar/file supaya
+tidak lagi menyesatkan: `HomeScreen.kt`, `OnboardingScreen.kt`,
+`DiagnosticsScreen.kt`, `AddEditRuleScreen.kt`, `MainActivity.kt` (teks izin
+storage), plus 2 pesan log di `FileSorter.kt`.
+
+**Batasan yang SENGAJA tidak diubah** (di luar scope user, dicatat supaya
+tidak dianggap lupa): scan tetap non-rekursif (cuma level teratas folder,
+sama seperti sebelumnya) -- kalau file project ada di sub-folder, tetap
+tidak ke-scan. Kalau ini juga perlu, itu batch terpisah (perubahan lebih
+besar: rekursi + risiko match folder itu sendiri).
+
+File diubah (9, 1 modul "matching engine"): `util/FileSorter.kt`,
+`ui/MainViewModel.kt`, `ui/screens/HomeScreen.kt`,
+`ui/screens/OnboardingScreen.kt`, `ui/screens/DiagnosticsScreen.kt`,
+`ui/screens/AddEditRuleScreen.kt`, `MainActivity.kt`,
+`test/.../MimeTypeForFileNameTest.kt`. `scripts/preflight_check.sh` lolos
+bersih. **BELUM PERNAH lewat `./gradlew` asli** -- CI run berikutnya WAJIB
+dicek (pola sama seperti v2.17.0/v2.17.1).
+
 ## v2.17.1 -- Fix 2 bug P0 fatal SAF (audit eksternal) (2026-08-13)
 User upload `SAF_FINAL_LOGIC_AUDIT.md` (audit eksternal atas SAF v2.17.0):
 2 P0 fatal + 6 P1 + 3 P2. Batch ini HANYA eksekusi 2 P0 (atomic change, scope

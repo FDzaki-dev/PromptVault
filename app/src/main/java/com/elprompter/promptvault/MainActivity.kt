@@ -369,7 +369,7 @@ private fun PermissionGate(
             }
             Text("Izin Diperlukan", style = MaterialTheme.typography.headlineSmall, color = colors.onBackground)
             Text(
-                "PromptVault butuh akses ke semua file supaya bisa memindahkan ZIP & TXT " +
+                "PromptVault butuh akses ke semua file supaya bisa memindahkan file " +
                     "di Downloads ke folder yang kamu tentukan. Tanpa izin ini, app tidak bisa bekerja.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = colors.onBackground

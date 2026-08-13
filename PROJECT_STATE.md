@@ -3,7 +3,26 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
-## STATUS PROJECT: v2.17.1 -- FIX 2 BUG P0 FATAL SAF (AUDIT EKSTERNAL) -- 2026-08-13
+## STATUS PROJECT: v2.18.0 -- DUKUNG SEMUA EKSTENSI FILE -- 2026-08-13
+- User laporan bug pakai (bukan audit): pilih folder custom, isi "campuran"
+  ekstensi, rule sudah aktif, tapi selalu "tidak ada file cocok". Root cause
+  DITEMUKAN via tanya-jawab terarah (bukan tebak langsung): app dari awal
+  project HARDCODE hanya scan `.zip`/`.txt` -- keputusan arsitektur inti,
+  BUKAN bug, tapi tidak sesuai ekspektasi user pakai app ini buat "pindahkan
+  file project" (general-purpose).
+- Dikonfirmasi eksplisit ke user SEBELUM eksekusi (bukan asumsi diam-diam,
+  karena ini scope-shift besar, nyentuh 8+ file termasuk data model) --
+  user pilih "dukung SEMUA ekstensi", bukan whitelist tertentu.
+- Detail teknis lengkap: CHANGELOG.md v2.18.0. Ringkasan: filter ekstensi di
+  `listCandidateFiles`/`listCandidateFilesSaf` dihapus total, Rule/GlobMatcher
+  jadi satu-satunya penentu match; `mimeTypeForFileName` diperluas ~15 tipe
+  (fallback octet-stream tetap ada utk sisanya); string UI "ZIP/TXT"
+  digenerickan di 5 layar. Scan TETAP non-rekursif (sengaja, di luar scope
+  batch ini -- dicatat, bukan lupa).
+- `scripts/preflight_check.sh` lolos bersih. **BELUM PERNAH lewat
+  `./gradlew` asli** -- CI run berikutnya WAJIB dicek.
+
+## STATUS PROJECT SEBELUMNYA: v2.17.1 -- FIX 2 BUG P0 FATAL SAF (AUDIT EKSTERNAL) -- 2026-08-13
 - User upload `SAF_FINAL_LOGIC_AUDIT.md` (audit eksternal SAF v2.17.0 dari
   sesi/tool lain) via chat lain di conversation yang sama: 2 P0 fatal, 6 P1,
   3 P2. User pilih scope "Fix P0 saja, atomic change" -- BUKAN P1/P2 (masih

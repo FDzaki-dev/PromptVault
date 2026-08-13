@@ -38,7 +38,7 @@ import androidx.compose.ui.unit.dp
 private data class OnboardingStep(val icon: ImageVector, val title: String, val body: String)
 
 private val steps = listOf(
-    OnboardingStep(Icons.Filled.Archive, "Selamat datang di PromptVault", "App ini merapikan otomatis file ZIP & TXT di folder Downloads kamu."),
+    OnboardingStep(Icons.Filled.Archive, "Selamat datang di PromptVault", "App ini merapikan otomatis file (ekstensi apa saja) di folder Downloads kamu, sesuai rule yang kamu buat."),
     OnboardingStep(Icons.Filled.Folder, "Buat rule", "Rule menentukan pattern nama file (mis. *.txt) dan folder tujuan di dalam Downloads/PromptVault/."),
     OnboardingStep(Icons.Filled.Lock, "Izin penyimpanan", "PromptVault perlu izin akses semua file agar bisa memindahkan file di Downloads."),
     OnboardingStep(Icons.Filled.Schedule, "Auto-sort berjalan sendiri", "Setelah rule dibuat, app akan memindai secara berkala sesuai interval yang kamu atur.")

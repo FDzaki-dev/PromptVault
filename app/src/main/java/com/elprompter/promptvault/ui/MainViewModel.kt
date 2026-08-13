@@ -302,6 +302,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun previewPattern(pattern: String, excludePattern: String = ""): PatternPreviewResult =
         fileSorter.previewPatternMatches(pattern, excludePattern)
 
-    /** Nama file ZIP/TXT asli di Downloads, untuk layar Diagnostik. */
+    /** Nama file asli (semua ekstensi, sejak fix 2026-08-13) di Downloads, untuk layar Diagnostik. */
     fun listDownloadsFileNames(): List<String> = fileSorter.listDownloadsCandidateFileNames()
 }

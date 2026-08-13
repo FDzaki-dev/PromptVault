@@ -28,8 +28,24 @@ class MimeTypeForFileNameTest {
 
     @Test
     fun `unknown or missing extension falls back to octet stream`() {
+        // [update 2026-08-13, dukung SEMUA ekstensi] "berkas.pdf" DIHAPUS dari
+        // sini -- pdf sekarang ADA di tabel (lihat test di bawah). Extension
+        // yang genuinely tidak terdaftar dipakai sebagai gantinya, supaya
+        // assertion ini tetap benar-benar menguji jalur fallback, bukan
+        // kebetulan match tabel yang sudah diperluas.
         assertEquals("application/octet-stream", mimeTypeForFileName("tanpa_ekstensi"))
-        assertEquals("application/octet-stream", mimeTypeForFileName("berkas.pdf"))
+        assertEquals("application/octet-stream", mimeTypeForFileName("berkas.xyz123"))
+    }
+
+    @Test
+    fun `common extensions added 2026-08-13 map to their real mime type`() {
+        // [Feature, dukung SEMUA ekstensi -- permintaan user 2026-08-13] Tabel
+        // diperluas dari cuma zip/txt supaya file project (mixed extension)
+        // dapat MIME yang lebih akurat, bukan cuma octet-stream generik.
+        assertEquals("application/pdf", mimeTypeForFileName("dokumen.pdf"))
+        assertEquals("image/jpeg", mimeTypeForFileName("foto.jpg"))
+        assertEquals("text/plain", mimeTypeForFileName("Main.kt"))
+        assertEquals("application/json", mimeTypeForFileName("data.json"))
     }
 
     @Test
