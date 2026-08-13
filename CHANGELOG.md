@@ -3,6 +3,50 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.17.1 -- Fix 2 bug P0 fatal SAF (audit eksternal) (2026-08-13)
+User upload `SAF_FINAL_LOGIC_AUDIT.md` (audit eksternal atas SAF v2.17.0):
+2 P0 fatal + 6 P1 + 3 P2. Batch ini HANYA eksekusi 2 P0 (atomic change, scope
+sengaja dipersempit -- P1/P2 belum dikerjakan, lihat PROJECT_STATE.md).
+
+**P0 #1 -- "validasi permission saat startup" belum ada**: akuisisi
+`takePersistableUriPermission` di `MainViewModel.setSafTreeUri()` sendiri
+sudah benar (dicek ulang, tidak ada bug di situ), tapi TIDAK ADA validasi
+proaktif -- akses hilang (dicabut dari luar app, folder dihapus/dipindah)
+baru ketahuan diam-diam saat scan berikutnya gagal. Fix: `FileSorter`
+expose `checkSafAccessLost(): Boolean` (I/O check tanpa scan), dipanggil
+`MainViewModel` reaktif setiap kali `safTreeUri` berubah (StateFlow replay
+nilai terakhir ke collector baru = otomatis mencakup startup, tanpa init
+block terpisah yang gampang lupa dipanggil). `SettingsScreen` tampilkan
+warning merah langsung di kartu "Folder Kustom" kalau `safAccessLost=true`.
+
+**P0 #2 -- silent fallback ke Downloads saat SAF rusak**: `resolveSafRoot()`
+lama collapse "belum diset" DAN "sudah diset tapi rusak/izin dicabut" jadi
+`DocumentFile?` yang sama-sama `null` -> scan fallback diam-diam ke
+Downloads di KEDUA kasus. User bisa mengira file masuk folder kustom
+padahal sebenarnya masuk Downloads (atau sebaliknya, salah kira gagal
+padahal cuma pindah jalur). Fix: `resolveSafRoot()` return sealed class
+`SafRootResolution` (`Active` / `NotConfigured` / `AccessLost(reason)`).
+`scanAndSort()` HANYA fallback ke Downloads kalau `NotConfigured`;
+`AccessLost` menghentikan scan + log `LogLevel.ERROR` eksplisit +
+`ScanResult.safAccessLost=true` (field baru, default `false` -- tidak
+mengubah signature caller lain seperti `AutoSortWorker`). `MainViewModel.
+runManualScan()` prioritaskan pesan `safAccessLost` di atas pesan Downloads
+generik.
+
+File diubah (4, 1 modul "SAF"): `util/FileSorter.kt`, `ui/MainViewModel.kt`,
+`ui/screens/SettingsScreen.kt`, `MainActivity.kt` (thread param baru).
+`scripts/preflight_check.sh` lolos bersih. **BELUM PERNAH lewat `./gradlew`
+asli** -- sama seperti v2.17.0, CI run pertama WAJIB dicek.
+
+Sisa scope audit (6 P1 + 3 P2, BELUM dieksekusi, kandidat batch terpisah):
+P1 -- race re-entrancy folder ganti saat scan jalan, tidak ada retry/backoff
+saat provider transient error, `DocumentFile.findFile()` linear-scan tiap
+file (potensi lambat di folder besar), copy-then-verify tidak cek ukuran
+byte-exact, tidak ada UI loading state saat validasi SAF jalan, nama file
+hasil `createFile()` SAF tidak divalidasi ulang match rule (celah rename
+provider). P2 -- 3 item kosmetik/minor, lihat `SAF_FINAL_LOGIC_AUDIT.md`
+asli (tidak disalin ke repo, hanya referensi upload user) untuk detail.
+
 ## v2.17.0 -- SAF ditulis ulang: Folder Kustom (2026-08-12)
 User minta fitur SAF ditambahkan lagi, eksplisit "penuh dedikasi bukan asal
 jadi". SESUAI PROSEDUR yang didokumentasikan sendiri di `PROJECT_STATE.md`

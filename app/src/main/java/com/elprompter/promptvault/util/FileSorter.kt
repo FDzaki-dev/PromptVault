@@ -39,7 +39,16 @@ data class ScanResult(
     val filesSkippedNoMatch: Int,
     val foldersUnreadable: Boolean,
     val overlapWarnings: List<String>,
-    val skippedDetails: List<SkippedFileInfo> = emptyList()
+    val skippedDetails: List<SkippedFileInfo> = emptyList(),
+    /**
+     * [SAF, fix audit P0 #2 -- SAF_FINAL_LOGIC_AUDIT.md 2026-08-12] `true` HANYA
+     * kalau folder kustom SUDAH DIKONFIGURASI tapi tidak bisa diakses lagi
+     * (dihapus, dipindah, izin dicabut dari luar app, dst). Sengaja field
+     * TERPISAH dari [foldersUnreadable] (yang berarti Downloads legacy tidak
+     * terbaca) -- dua kegagalan ini butuh pesan & tindakan pemulihan yang
+     * beda buat user (fix izin storage vs pilih ulang folder kustom).
+     */
+    val safAccessLost: Boolean = false
 )
 
 /** Hasil uji-coba pattern terhadap isi Downloads saat ini, dipakai di layar Tambah/Edit Rule. */
@@ -180,25 +189,83 @@ class FileSorter(
         // apa pun di kedua caller itu, karena signature scanAndSort() TIDAK
         // berubah. scanMutex yang sama tetap menaungi kedua jalur (race-fix
         // lama, lihat komentar di companion object, berlaku sama untuk SAF).
-        val safRoot = resolveSafRoot()
-        if (safRoot != null) scanAndSortSafLocked(safRoot) else scanAndSortLocked()
+        //
+        // [fix audit P0 #2, 2026-08-12] SEBELUMNYA resolveSafRoot() collapse
+        // "belum diset" DAN "sudah diset tapi rusak/akses hilang" jadi satu
+        // `null` yang sama-sama fallback diam-diam ke Downloads -- scan
+        // TERLIHAT sukses padahal user mengira file masuk folder kustom.
+        // Sekarang dua kondisi itu dibedakan eksplisit lewat
+        // [SafRootResolution]: hanya NotConfigured yang boleh fallback ke
+        // Downloads; AccessLost WAJIB berhenti + lapor error, TIDAK PERNAH
+        // diam-diam pindah jalur.
+        when (val resolution = resolveSafRoot()) {
+            is SafRootResolution.Active -> scanAndSortSafLocked(resolution.root)
+            SafRootResolution.NotConfigured -> scanAndSortLocked()
+            is SafRootResolution.AccessLost -> {
+                activityLogRepository.add(
+                    LogLevel.ERROR,
+                    "Folder kustom tidak bisa diakses (${resolution.reason}). Scan DIHENTIKAN, " +
+                        "TIDAK fallback ke Downloads supaya file tidak salah tersortir ke tempat " +
+                        "yang tidak kamu duga. Pilih ulang folder atau kembali ke Downloads lewat Pengaturan."
+                )
+                ScanResult(0, 0, foldersUnreadable = false, safAccessLost = true, overlapWarnings = emptyList())
+            }
+        }
+    }
+
+    /**
+     * [SAF, fix audit P0 #2 -- SAF_FINAL_LOGIC_AUDIT.md 2026-08-12] State
+     * eksplisit hasil resolusi folder kustom, GANTI TOTAL versi lama yang
+     * cuma `DocumentFile?` (null berarti dua hal berbeda sekaligus: "belum
+     * diset" DAN "rusak/akses hilang" -- audit menandai ini P0 fatal karena
+     * scanner lalu fallback diam-diam ke Downloads di kedua kasus, jadi SAF
+     * bisa gagal total tapi app terlihat seolah berhasil scan lokasi lain).
+     */
+    private sealed class SafRootResolution {
+        data class Active(val root: DocumentFile) : SafRootResolution()
+        data object NotConfigured : SafRootResolution()
+        data class AccessLost(val reason: String) : SafRootResolution()
     }
 
     /**
      * [SAF] Resolusi root folder kustom dari URI tersimpan di
-     * [SettingsRepository]. `null` (dan HANYA null, tidak pernah throw) kalau:
-     * belum pernah diset, URI rusak, atau folder sudah tidak ada/izin
-     * dicabut user dari luar app -- semua kasus itu HARUS fallback diam-diam
-     * ke Downloads biasa, bukan bikin scan gagal total.
+     * [SettingsRepository]. Tiga hasil eksplisit (lihat [SafRootResolution])
+     * -- BUKAN lagi `DocumentFile?` polos -- supaya caller ([scanAndSort] &
+     * [checkSafAccessLost]) tidak pernah salah memperlakukan "akses hilang"
+     * sebagai "memang belum diset".
      */
-    private suspend fun resolveSafRoot(): DocumentFile? {
-        val uriString = settingsRepository.getSafTreeUri() ?: return null
+    private suspend fun resolveSafRoot(): SafRootResolution {
+        val uriString = settingsRepository.getSafTreeUri() ?: return SafRootResolution.NotConfigured
         return try {
             val doc = DocumentFile.fromTreeUri(context, Uri.parse(uriString))
-            if (doc != null && doc.exists() && doc.isDirectory) doc else null
+            when {
+                doc == null -> SafRootResolution.AccessLost("tree URI tidak valid")
+                !doc.exists() -> SafRootResolution.AccessLost("folder tidak ditemukan -- mungkin dihapus/dipindah")
+                !doc.isDirectory -> SafRootResolution.AccessLost("target bukan folder")
+                else -> SafRootResolution.Active(doc)
+            }
+        } catch (e: SecurityException) {
+            // [fix audit P0 #1, bagian "validasi permission"] Ini persis kasus
+            // izin persistable dicabut dari luar app (mis. user cabut manual
+            // lewat Pengaturan Android, atau OS reclaim saat limit provider
+            // tercapai) -- SEBELUMNYA ditelan jadi `null`/fallback diam-diam.
+            SafRootResolution.AccessLost("izin akses dicabut")
         } catch (e: Exception) {
-            null
+            SafRootResolution.AccessLost("error tak terduga: ${e.message ?: e::class.simpleName}")
         }
+    }
+
+    /**
+     * [SAF, fix audit P0 #1 -- "validasi permission saat startup"] Cek status
+     * akses folder kustom TANPA menjalankan scan apa pun -- dipanggil
+     * [MainViewModel] saat startup & setiap kali URI folder kustom berubah,
+     * supaya user diberi tahu akses sudah hilang SEBELUM scan berikutnya
+     * (manual atau AutoSortWorker latar belakang) diam-diam gagal/fallback.
+     * Return `false` kalau belum diset SAMA SEKALI (bukan error, memang
+     * pakai Downloads) ATAU kalau folder aktif & sehat.
+     */
+    suspend fun checkSafAccessLost(): Boolean = withContext(Dispatchers.IO) {
+        resolveSafRoot() is SafRootResolution.AccessLost
     }
 
     /**

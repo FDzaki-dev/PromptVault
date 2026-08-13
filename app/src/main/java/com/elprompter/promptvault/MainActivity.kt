@@ -313,6 +313,7 @@ private fun PromptVaultRoot(
             val interval by viewModel.intervalMinutes.collectAsStateWithLifecycle()
             val conflictStrategy by viewModel.conflictStrategy.collectAsStateWithLifecycle()
             val safTreeUri by viewModel.safTreeUri.collectAsStateWithLifecycle()
+            val safAccessLost by viewModel.safAccessLost.collectAsStateWithLifecycle()
             SettingsScreen(
                 currentIntervalMinutes = interval,
                 onIntervalSelected = { viewModel.setIntervalMinutes(it) },
@@ -321,6 +322,7 @@ private fun PromptVaultRoot(
                 onExportRequested = { viewModel.exportRulesJson() },
                 onImportRequested = { text, cb -> viewModel.importRulesJson(text, cb) },
                 safTreeUri = safTreeUri,
+                safAccessLost = safAccessLost,
                 onPickSafFolder = onPickSafFolder,
                 onClearSafFolder = { viewModel.clearSafTreeUri() },
                 onBack = { navController.popBackStack() }

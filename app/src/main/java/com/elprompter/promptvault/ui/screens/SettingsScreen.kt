@@ -44,6 +44,7 @@ fun SettingsScreen(
     onExportRequested: suspend () -> String,
     onImportRequested: (String, (Int) -> Unit) -> Unit,
     safTreeUri: String?,
+    safAccessLost: Boolean,
     onPickSafFolder: () -> Unit,
     onClearSafFolder: () -> Unit,
     onBack: () -> Unit
@@ -131,6 +132,20 @@ fun SettingsScreen(
                             style = MaterialTheme.typography.bodySmall,
                             color = colors.primary
                         )
+                        // [fix audit P0 #1/#2, 2026-08-12] Sebelumnya akses hilang
+                        // cuma ketahuan diam-diam lewat Log setelah scan gagal --
+                        // sekarang ditampilkan LANGSUNG di kartu ini (dicek reaktif
+                        // di MainViewModel setiap URI berubah, termasuk saat app
+                        // baru dibuka) supaya user tahu SEBELUM scan berikutnya.
+                        if (safAccessLost) {
+                            Text(
+                                "⚠ Folder ini sudah tidak bisa diakses (mungkin dihapus/dipindah/izin " +
+                                    "dicabut). Scan TIDAK akan fallback diam-diam ke Downloads -- pilih " +
+                                    "ulang folder atau kembali ke Downloads.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = colors.error
+                            )
+                        }
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedButton(
                                 onClick = onPickSafFolder,

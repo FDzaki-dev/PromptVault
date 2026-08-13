@@ -18,10 +18,12 @@ import com.elprompter.promptvault.util.FileSorter
 import com.elprompter.promptvault.util.PatternPreviewResult
 import com.elprompter.promptvault.util.SkippedFileInfo
 import com.elprompter.promptvault.worker.WorkScheduler
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -71,6 +73,32 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         .let { flow ->
             val state = MutableStateFlow<String?>(null)
             viewModelScope.launch { flow.collect { state.value = it } }
+            state.asStateFlow()
+        }
+
+    /**
+     * [SAF, fix audit P0 #1 -- "validasi permission saat startup",
+     * SAF_FINAL_LOGIC_AUDIT.md 2026-08-12] `true` kalau folder kustom SUDAH
+     * DIKONFIGURASI tapi tidak bisa diakses lagi. Dicek ULANG setiap kali
+     * [safTreeUri] berubah nilainya -- termasuk emisi PERTAMA saat app baru
+     * dibuka (StateFlow selalu replay nilai terakhir ke collector baru),
+     * jadi ini otomatis mencakup "validasi saat startup" TANPA butuh init
+     * block terpisah yang gampang lupa dipanggil. `false` kalau memang
+     * belum pernah diset (bukan error) atau folder aktif & sehat --
+     * SettingsScreen HANYA menampilkan warning saat benar-benar `true`.
+     */
+    val safAccessLost: StateFlow<Boolean> = safTreeUri
+        .let { flow ->
+            val state = MutableStateFlow(false)
+            viewModelScope.launch {
+                flow.collect { uri ->
+                    state.value = if (uri == null) {
+                        false
+                    } else {
+                        withContext(Dispatchers.IO) { fileSorter.checkSafAccessLost() }
+                    }
+                }
+            }
             state.asStateFlow()
         }
 
@@ -132,8 +160,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _isScanning.value = true
             val result = fileSorter.scanAndSort()
-            val isError = result.foldersUnreadable
+            // [fix audit P0 #2] safAccessLost dicek PALING AWAL -- dua kegagalan
+            // ini butuh pesan beda (fix izin storage vs pilih ulang folder kustom
+            // di Pengaturan), jangan sampai tertutup pesan Downloads generik.
+            val isError = result.foldersUnreadable || result.safAccessLost
             val summary = when {
+                result.safAccessLost -> "Folder kustom tidak bisa diakses. Pilih ulang folder atau kembali ke Downloads lewat Pengaturan."
                 result.foldersUnreadable -> "Folder Downloads tidak terbaca. Cek izin penyimpanan."
                 result.filesMoved == 0 && result.filesSkippedNoMatch == 0 -> "Tidak ada file cocok yang ditemukan."
                 else -> "${result.filesMoved} file dipindahkan, ${result.filesSkippedNoMatch} dilewati."

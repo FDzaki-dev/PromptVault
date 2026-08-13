@@ -3,7 +3,25 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
-## STATUS PROJECT: v2.17.0 -- SAF DITULIS ULANG (Folder Kustom) -- 2026-08-12
+## STATUS PROJECT: v2.17.1 -- FIX 2 BUG P0 FATAL SAF (AUDIT EKSTERNAL) -- 2026-08-13
+- User upload `SAF_FINAL_LOGIC_AUDIT.md` (audit eksternal SAF v2.17.0 dari
+  sesi/tool lain) via chat lain di conversation yang sama: 2 P0 fatal, 6 P1,
+  3 P2. User pilih scope "Fix P0 saja, atomic change" -- BUKAN P1/P2 (masih
+  pending, lihat CHANGELOG.md v2.17.1 untuk daftar lengkap sisa temuan).
+- **Catatan penting proses**: batch ini dikerjakan di atas ZIP `__2_`
+  (v2.17.0, sesi SAF terpisah), BUKAN base v2.16.1 yang sedang dikerjakan
+  paralel di chat yang sama untuk task "Redesign Neumorphism" (v4.0.0,
+  belum selesai -- lihat catatan di bawah, JANGAN tertukar/di-merge
+  serampangan, dua base itu SENGAJA divergen sampai user putuskan urutan
+  gabung). File log CI (`logs_85697644000.zip`) yang ikut ter-upload di
+  waktu yang sama TERNYATA bukan repo ini (`Video-resizer`/
+  `com.example.videoresizer`) -- diabaikan total, tidak dipakai debug.
+- P0 #1 (validasi permission saat startup) & P0 #2 (silent fallback ke
+  Downloads saat SAF rusak) -- detail teknis lengkap di CHANGELOG.md v2.17.1.
+  `scripts/preflight_check.sh` lolos bersih. **BELUM PERNAH lewat
+  `./gradlew` asli** -- CI run pertama WAJIB dicek sebelum dianggap selesai.
+
+## STATUS PROJECT SEBELUMNYA: v2.17.0 -- SAF DITULIS ULANG (Folder Kustom) -- 2026-08-12
 - User minta fitur SAF ditambahkan lagi ("penuh dedikasi bukan asal jadi").
   Prosedur di **Insiden #7** (bawah) DIIKUTI PERSIS sebelum kode ditulis:
   seluruh riwayat SAF dibaca dulu, lalu dikonfirmasi eksplisit ke user karena
