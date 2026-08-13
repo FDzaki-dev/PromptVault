@@ -3,6 +3,43 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.19.2 -- Fix bug NYATA: folder "PromptVault" terduplikat (1)/(2)/(3) di tujuan SAF (2026-08-13)
+User laporkan screenshot: folder tujuan kustom berisi 4 folder --
+"PromptVault", "PromptVault (1)", "PromptVault (2)", "PromptVault (3)",
+masing-masing cuma 1 item, tanggal sama.
+
+**Root cause**: `findOrCreateChildDirSaf(destinationRoot, "PromptVault")`
+dipanggil terpisah PER-FILE, di dalam tiap coroutine paralel
+(`scanAndSortToDestination` memproses file kandidat lewat `async` +
+`Semaphore(SCAN_CONCURRENCY=6)`, arsitektur performa sejak v2.4.0).
+`DocumentFile.createDirectory()` tidak atomik/idempoten seperti
+`File.mkdirs()` -- 2+ coroutine bisa sama-sama melihat "folder belum ada"
+sebelum salah satu selesai membuatnya, lalu keduanya createDirectory() ->
+provider SAF tidak menolak, malah auto-suffix nama biar tetap unik -> N
+folder terpisah, masing-masing cuma kebagian file dari coroutine yang
+menciptakannya duluan. Classic TOCTOU race; `scanMutex` yang sudah ada TIDAK
+mencegah ini (cuma menyerialkan antar scan, bukan antar file dalam satu
+scan yang sengaja diparalelkan).
+
+**Fix struktural**: folder tujuan SAF (root "PromptVault" + subfolder tiap
+rule aktif) sekarang di-resolve SEKALI, SERIAL, lewat fungsi baru
+`resolveSafRuleDestinations()` -- dipanggil SEBELUM `async{}` mana pun
+dimulai. Hasilnya (`Map<namaFolderRule, DocumentFile?>`) dibagikan ke semua
+coroutine paralel sebagai data baca-saja, jadi tidak ada lagi 2 coroutine
+yang bisa balapan menciptakan folder yang sama. `moveFileToSafDestination()`
+& `processCandidate()` disesuaikan untuk menerima folder yang sudah
+di-resolve, bukan resolve sendiri lagi.
+
+**Folder duplikat yang SUDAH ada** (dari sebelum fix ini) TIDAK dibereskan
+otomatis -- perlu digabung manual oleh user lewat file manager kalau mau
+rapi. Scan berikutnya SUDAH konsisten pakai satu folder "PromptVault" saja.
+
+2 file diubah: `util/FileSorter.kt`, `app/build.gradle.kts`.
+`scripts/preflight_check.sh` lolos bersih. **BELUM PERNAH lewat `./gradlew`
+asli.**
+
+versionCode 63->64, versionName 2.19.1->2.19.2.
+
 ## v2.19.1 -- Debug+polish SAF: overwrite ke folder kustom sekarang verifikasi delete() (2026-08-13)
 User minta audit umum "debugging+polish feature SAF". Audit manual menyeluruh
 seluruh kode SAF (bukan cuma cek dead-code) -- arsitektur v2.19.0 terverifikasi

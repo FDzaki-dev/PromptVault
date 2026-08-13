@@ -3,7 +3,61 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
-## STATUS PROJECT: v2.19.1 -- DEBUG+POLISH SAF: OVERWRITE tidak lagi asumsi delete() SAF berhasil -- 2026-08-13
+## STATUS PROJECT: v2.19.2 -- FIX BUG NYATA (laporan user + screenshot): folder "PromptVault" terduplikat (1)/(2)/(3) di tujuan SAF -- 2026-08-13
+- User laporkan screenshot file manager: 4 folder di folder tujuan kustom --
+  "PromptVault", "PromptVault (1)", "PromptVault (2)", "PromptVault (3)",
+  MASING-MASING isi "1 item", tanggal sama. Folder kustom yang dipilih malah
+  "ditimpa" (secara efektif: hasil sortir tersebar ke banyak folder
+  duplikat alih-alih satu folder "PromptVault" konsisten).
+- **Root cause (ditemukan lewat baca ulang [FileSorter.moveFileToSafDestination]
+  + [findOrCreateChildDirSaf] setelah audit v2.19.1 SEBELUMNYA MELEWATKAN ini)**:
+  `findOrCreateChildDirSaf(destinationRoot, "PromptVault")` dipanggil TERPISAH
+  PER-FILE, DI DALAM tiap coroutine paralel (`scanAndSortToDestination` proses
+  file kandidat lewat `async` + `Semaphore(SCAN_CONCURRENCY=6)`, arsitektur
+  sejak v2.4.0 -- lihat Keputusan Arsitektur #6). `DocumentFile.
+  createDirectory()` TIDAK atomik/idempoten seperti `File.mkdirs()` -- kalau
+  2+ coroutine memanggil `parent.findFile("PromptVault")` SEBELUM salah satu
+  sempat selesai `createDirectory()`, KEDUANYA melihat "belum ada" lalu
+  KEDUANYA createDirectory() -> provider TIDAK menolak, malah auto-suffix
+  nama biar unik -> hasil PERSIS gejala di screenshot: N folder terpisah,
+  masing-masing cuma kebagian file dari coroutine yang menciptakannya
+  duluan. Classic TOCTOU race -- `scanMutex` yang sudah ada di [scanAndSort]
+  TIDAK mencegah ini (mutex itu cuma menyerialkan ANTAR scan, bukan antar
+  file DALAM satu scan yang sengaja diparalelkan).
+- **Kenapa lolos audit v2.19.1 sebelumnya**: audit sesi itu baca kode
+  `moveFileToSafDestination` baris-per-baris tapi fokus ke *korektnes logika
+  per-file* (conflict strategy, verifikasi nama pasca-create, dst) -- TIDAK
+  mempertimbangkan bahwa fungsi ini dipanggil PARALEL dari `async{}` di
+  caller-nya. Pelajaran: audit SAF ke depan WAJIB eksplisit cek "apakah
+  fungsi ini bisa dipanggil concurrent, dan kalau ya, adakah shared-state
+  I/O (termasuk pembuatan folder/file baru) yang TOCTOU-race?" -- bukan cuma
+  benar secara sekuensial/single-thread.
+- **Fix STRUKTURAL (bukan tambal Mutex di titik race)**: folder tujuan SAF
+  (root "PromptVault" + subfolder tiap rule aktif) sekarang di-resolve SEKALI,
+  SERIAL, di fungsi baru `resolveSafRuleDestinations()` -- dipanggil SEBELUM
+  `async{}` mana pun dimulai di `scanAndSortToDestination`. Hasil (`Map<nama
+  folder rule, DocumentFile?>`) dibagikan ke semua coroutine paralel sebagai
+  data BACA-SAJA. `moveFileToSafDestination()` tidak lagi menerima
+  `destinationRoot` mentah dan resolve sendiri -- sekarang menerima `destDir`
+  yang SUDAH jadi. `processCandidate()` dapat parameter baru
+  `safRuleDestinations`, skip file dengan pesan jelas kalau resolusi folder
+  untuk rule terkait gagal (dicek sekali di awal, bukan berulang per file).
+- **Efek pada folder duplikat yang SUDAH terlanjur ada** (dari sebelum fix
+  ini): TIDAK dibereskan otomatis oleh app -- app tidak (dan sengaja tidak)
+  menghapus/menggabung folder yang sudah ada di penyimpanan user tanpa izin
+  eksplisit. User perlu gabung manual isi folder "PromptVault (1)/(2)/(3)"
+  ke "PromptVault" lewat file manager kalau mau rapi, ATAU biarkan (scan
+  berikutnya otomatis konsisten pakai SATU folder "PromptVault" saja berkat
+  fix ini, tidak menciptakan folder baru lagi).
+- File diubah (2): `util/FileSorter.kt` (fix + fungsi baru
+  `resolveSafRuleDestinations`), `app/build.gradle.kts` (versi).
+  `scripts/preflight_check.sh` lolos bersih. **BELUM PERNAH lewat `./gradlew`
+  asli** -- konsisten seluruh riwayat SAF (Insiden #7 syarat (a) masih belum
+  terpenuhi di sandbox ini). User DIMINTA konfirmasi di HP asli: scan lagi ke
+  folder kustom yang SAMA, pastikan HANYA "PromptVault" (tanpa akhiran angka)
+  yang bertambah isi, tidak ada folder "(4)" baru muncul.
+
+## STATUS PROJECT SEBELUMNYA: v2.19.1 -- DEBUG+POLISH SAF: OVERWRITE tidak lagi asumsi delete() SAF berhasil -- 2026-08-13
 - User minta "debugging+polish feature SAF" (audit umum, bukan laporan gejala
   spesifik). Audit manual baris-per-baris SELURUH kode SAF (FileSorter.kt penuh
   + SettingsRepository/MainViewModel/MainActivity/SettingsScreen bagian SAF)

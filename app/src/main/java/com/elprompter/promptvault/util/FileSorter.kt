@@ -393,9 +393,17 @@ class FileSorter(
             return@withContext ScanResult(0, 0, foldersUnreadable = false, overlapWarnings = emptyList())
         }
 
+        // [SAF, race-fix 2026-08-13 -- lihat dokumentasi lengkap di
+        // resolveSafRuleDestinations()] Folder tujuan SAF (root "PromptVault" +
+        // subfolder tiap rule) di-resolve SEKALI DI SINI, SERIAL, SEBELUM file
+        // diproses paralel di bawah -- BUKAN lagi per-file di dalam
+        // moveFileToSafDestination() seperti sebelumnya (sumber duplikat folder).
+        val safRuleDestinations: Map<String, DocumentFile?> =
+            if (destinationRoot != null) resolveSafRuleDestinations(destinationRoot, rules) else emptyMap()
+
         val semaphore = Semaphore(SCAN_CONCURRENCY)
         val results = candidateFiles.map { file ->
-            async { semaphore.withPermit { processCandidate(file, rules, conflictStrategy, destinationRoot) } }
+            async { semaphore.withPermit { processCandidate(file, rules, conflictStrategy, destinationRoot, safRuleDestinations) } }
         }.awaitAll()
 
         var moved = 0
@@ -445,6 +453,56 @@ class FileSorter(
     }
 
     /**
+     * [SAF, race-fix -- 2026-08-13, laporan user: screenshot 4x folder
+     * "PromptVault"/"PromptVault (1)"/"(2)"/"(3)" masing-masing isi 1 item,
+     * tanggal sama] Resolusi folder tujuan SAF (root "PromptVault" + subfolder
+     * TIAP rule aktif) SEKALI, SERIAL, DI SINI -- SEBELUM file kandidat
+     * diproses paralel di [scanAndSortToDestination]. BUKAN lagi per-file DI
+     * DALAM [moveFileToSafDestination] seperti sebelumnya.
+     *
+     * **ROOT CAUSE bug**: [findOrCreateChildDirSaf] sebelumnya dipanggil
+     * terpisah per-file, DI DALAM tiap coroutine paralel (s/d [SCAN_CONCURRENCY]
+     * = 6 file bersamaan, lihat Keputusan Arsitektur #6 di PROJECT_STATE.md).
+     * `DocumentFile.createDirectory()` TIDAK atomik/tidak idempoten seperti
+     * `File.mkdirs()` -- kalau 2+ coroutine SAMA-SAMA memanggil
+     * `parent.findFile("PromptVault")` SEBELUM salah satu sempat selesai
+     * `createDirectory("PromptVault")`, KEDUANYA melihat "belum ada" -> KEDUANYA
+     * memanggil createDirectory() -> provider SAF tidak menolak/gagal, malah
+     * auto-suffix nama biar tetap unik -> hasilnya 2+ folder terpisah bernama
+     * "PromptVault", "PromptVault (1)", dst, masing-masing cuma kebagian file
+     * dari coroutine yang kebetulan menciptakannya duluan (persis gejala
+     * "1 item" di tiap folder pada laporan user). Classic TOCTOU race --
+     * [scanMutex] di [scanAndSort] TIDAK mencegah ini: mutex itu cuma
+     * menyerialkan ANTAR scan (manual vs AutoSortWorker), bukan antar file
+     * DALAM satu scan yang SENGAJA diparalelkan sejak v2.4.0.
+     *
+     * **Fix STRUKTURAL** (bukan tambal Mutex tepat di titik race): folder
+     * dibuat/ditemukan SEKALI di sini secara serial, SEBELUM `async{}` mana pun
+     * dimulai. Hasil (`Map<namaFolderRule, DocumentFile?>`) dibagikan ke semua
+     * coroutine paralel sebagai data BACA-SAJA setelah fungsi ini selesai --
+     * secara struktural tidak mungkin lagi 2 coroutine saling balapan
+     * menciptakan folder yang sama, bukan cuma "lebih jarang" kena race.
+     * Beberapa rule bisa berbagi `folderName` yang sama -- `distinctBy` supaya
+     * folder itu cuma di-resolve sekali, bukan sekali per rule.
+     */
+    private suspend fun resolveSafRuleDestinations(destinationRoot: DocumentFile, rules: List<Rule>): Map<String, DocumentFile?> {
+        val vaultRootDoc = findOrCreateChildDirSaf(destinationRoot, "PromptVault")
+        if (vaultRootDoc == null) {
+            activityLogRepository.add(LogLevel.ERROR, "Gagal membuat/membuka folder \"PromptVault\" di folder tujuan kustom.")
+            return rules.associate { it.folderName to null }
+        }
+        val resolved = mutableMapOf<String, DocumentFile?>()
+        for (rule in rules.distinctBy { it.folderName }) {
+            val dir = findOrCreateChildDirSaf(vaultRootDoc, rule.folderName)
+            if (dir == null) {
+                activityLogRepository.add(LogLevel.ERROR, "Gagal membuat/membuka folder tujuan \"${rule.folderName}\" di folder kustom.")
+            }
+            resolved[rule.folderName] = dir
+        }
+        return resolved
+    }
+
+    /**
      * [SAF] Salin byte lewat ContentResolver -- SATU-SATUNYA cara yang
      * reliable lintas provider. `DocumentsContract.moveDocument()` SENGAJA
      * tidak dipakai walau lebih hemat I/O, karena dukungannya tidak konsisten
@@ -479,25 +537,20 @@ class FileSorter(
      * sama sekali. Verifikasi nama aktual pasca-`createFile()` tetap
      * dipertahankan -- pelajaran langsung Bug #2 (v2.10.0): provider TIDAK
      * SELALU memakai nama persis yang diminta.
+     *
+     * [SAF, race-fix 2026-08-13] `destDir` SEKARANG parameter yang SUDAH
+     * di-resolve (folder `<tujuan kustom>/PromptVault/<rule.folderName>/`),
+     * BUKAN lagi `destinationRoot` mentah yang di-resolve ULANG per-file di
+     * sini -- lihat [resolveSafRuleDestinations] untuk root cause & fix
+     * lengkap kelas bug "folder PromptVault terduplikat (1)/(2)/(3)".
      */
     private suspend fun moveFileToSafDestination(
         file: File,
         rule: Rule,
         conflictStrategy: ConflictStrategy,
-        destinationRoot: DocumentFile
+        destDir: DocumentFile
     ): MoveOutcome {
         return try {
-            val vaultRootDoc = findOrCreateChildDirSaf(destinationRoot, "PromptVault")
-            if (vaultRootDoc == null) {
-                activityLogRepository.add(LogLevel.ERROR, "Gagal membuat/membuka folder \"PromptVault\" di folder tujuan kustom.")
-                return MoveOutcome.FAILED
-            }
-            val destDir = findOrCreateChildDirSaf(vaultRootDoc, rule.folderName)
-            if (destDir == null) {
-                activityLogRepository.add(LogLevel.ERROR, "Gagal membuat/membuka folder tujuan \"${rule.folderName}\" di folder kustom.")
-                return MoveOutcome.FAILED
-            }
-
             var targetName = file.name
             val existingAtTarget = destDir.findFile(targetName)
             if (existingAtTarget != null) {
@@ -775,12 +828,19 @@ class FileSorter(
      * kustom SAF (`file`, sumbernya, SELALU java.io.File dari Downloads,
      * tidak pernah lagi DocumentFile -- lihat catatan arsitektur di
      * [scanAndSort]).
+     *
+     * [SAF, race-fix 2026-08-13] `safRuleDestinations` BARU -- folder tujuan
+     * SAF per-rule yang SUDAH di-resolve SEKALI, SERIAL, sebelum pemrosesan
+     * paralel ini dimulai (lihat [resolveSafRuleDestinations]). Fungsi ini
+     * TIDAK LAGI memanggil resolusi folder apa pun sendiri -- cuma baca dari
+     * Map yang sudah jadi, aman dipanggil concurrent tanpa race.
      */
     private suspend fun processCandidate(
         file: File,
         rules: List<Rule>,
         conflictStrategy: ConflictStrategy,
-        destinationRoot: DocumentFile?
+        destinationRoot: DocumentFile?,
+        safRuleDestinations: Map<String, DocumentFile?>
     ): CandidateOutcome {
         val sizeKb = file.sizeKb()
         val matches = RuleOverlapChecker.matchingRules(file.name, sizeKb, rules)
@@ -806,7 +866,17 @@ class FileSorter(
 
         val rule = matches.first()
         val outcome = if (destinationRoot != null) {
-            moveFileToSafDestination(file, rule, conflictStrategy, destinationRoot)
+            val ruleDestDir = safRuleDestinations[rule.folderName]
+            if (ruleDestDir == null) {
+                // Resolusi folder GAGAL saat pre-resolve di awal scan (lihat
+                // resolveSafRuleDestinations) -- sudah dilog SEKALI di sana,
+                // di sini cukup skip file ini tanpa log error duplikat.
+                return CandidateOutcome.Skipped(
+                    SkippedFileInfo(file.name, "Folder tujuan \"${rule.folderName}\" di folder kustom gagal dibuat/dibuka (lihat Log)."),
+                    overlapWarning
+                )
+            }
+            moveFileToSafDestination(file, rule, conflictStrategy, ruleDestDir)
         } else {
             moveFile(file, rule, conflictStrategy)
         }
