@@ -312,6 +312,7 @@ private fun PromptVaultRoot(
         composable(Routes.SETTINGS) {
             val interval by viewModel.intervalMinutes.collectAsStateWithLifecycle()
             val conflictStrategy by viewModel.conflictStrategy.collectAsStateWithLifecycle()
+            val scanConcurrency by viewModel.scanConcurrency.collectAsStateWithLifecycle()
             val safTreeUri by viewModel.safTreeUri.collectAsStateWithLifecycle()
             val safAccessLost by viewModel.safAccessLost.collectAsStateWithLifecycle()
             SettingsScreen(
@@ -319,6 +320,8 @@ private fun PromptVaultRoot(
                 onIntervalSelected = { viewModel.setIntervalMinutes(it) },
                 currentConflictStrategy = conflictStrategy,
                 onConflictStrategySelected = { viewModel.setConflictStrategy(it) },
+                currentScanConcurrency = scanConcurrency,
+                onScanConcurrencySelected = { viewModel.setScanConcurrency(it) },
                 onExportRequested = { viewModel.exportRulesJson() },
                 onImportRequested = { text, cb -> viewModel.importRulesJson(text, cb) },
                 safTreeUri = safTreeUri,

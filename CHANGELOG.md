@@ -3,6 +3,63 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.20.2 -- Eksekusi 2 technical debt tercatat: SCAN_CONCURRENCY configurable + migrasi best-effort DataStore lama (2026-08-13)
+User minta lanjutkan 2 item pending spesifik (bukan testing), atas instruksi
+eksplisit "kerjakan tanpa regresi".
+
+**1. `SCAN_CONCURRENCY` configurable** (`SettingsRepository.kt`,
+`FileSorter.kt`, `SettingsScreen.kt`, `MainViewModel.kt`, `MainActivity.kt`):
+konstanta hardcode `6` (v2.4.0, "asumsi teknis AI belum divalidasi
+profiling") sekarang bisa diatur dari kartu baru "Kecepatan Scan (Lanjutan)"
+di Pengaturan, pilihan `[2, 4, 6, 8, 12]`. Default TETAP 6 -- nol dampak
+untuk siapa pun yang tidak membuka setting ini. Pola FilterChip meniru
+persis interval auto-scan yang sudah ada, rentang 2..12 dipilih berdasar
+alasan teknis (di bawah 2 nyaris menghilangkan manfaat paralelisme; di atas
+12 berisiko terlalu banyak file handle bersamaan di HP kelas bawah), bukan
+data profiling baru (memang belum ada, tidak diklaim ada).
+
+**2. Migrasi best-effort DataStore lama -> Room** (`LegacyDataMigration.kt`,
+baru; dipanggil sekali dari `PromptVaultApp.onCreate()`): item ini SEBELUMNYA
+sengaja tidak dieksekusi karena berisiko jadi "migrasi buta" (lihat catatan
+lama di PROJECT_STATE.md). Setelah diperiksa ulang: `ActivityLogEntry`/
+`MoveHistoryEntry` (domain model) sudah `@Serializable` sejak awal dengan
+bentuk field IDENTIK ke entity Room sekarang -- jadi BENTUK JSON kemungkinan
+besar benar. Yang TIDAK bisa diverifikasi: nama key literal DataStore era
+pre-v2.2.0 (kode lamanya sudah terhapus total sejak migrasi Room, snapshot
+project ini juga tanpa riwayat git). Key yang dipakai (`"activity_log_json"`,
+`"move_history_json"`) adalah INFERENSI dari konvensi penamaan konsisten
+project ini (pola `{noun}_json`, lihat `RuleRepository` -- `"rules_json"`),
+BUKAN nilai terkonfirmasi. **Didesain aman walau tebakan key salah**: kalau
+key tidak ketemu/JSON tidak valid, hasilnya nol baris termigrasi (no-op),
+persis situasi status quo sejak v2.2.0 -- BUKAN crash atau data korup.
+Guard flag di DataStore memastikan proses ini jalan sekali seumur install,
+di-set `true` di blok `finally` APAPUN hasilnya (termasuk gagal) supaya
+tidak retry-loop tiap app dibuka kalau data memang tidak kompatibel.
+Dibungkus try-catch total (fail-safe, non-kritis).
+
+**Observasi TIDAK dieksekusi (di luar scope 2 item ini)**: `RuleRepository.kt`
+memanggil `json.decodeFromString<List<Rule>>(...)` tapi hanya mengimpor
+`kotlinx.serialization.encodeToString`/`Json`, TANPA impor
+`kotlinx.serialization.decodeFromString` -- fungsi generic reified itu
+biasanya butuh impor eksplisit itu utk resolve. Berpotensi compile error
+laten yang belum pernah ketahuan karena project ini belum pernah lewat
+`./gradlew` asli di sandbox manapun. TIDAK diperbaiki di batch ini (di luar
+2 item yang diminta) -- dicatat di sini + PROJECT_STATE.md supaya tidak
+lupa, valid dicek/dikerjakan kalau build CI berikutnya gagal di titik ini
+atau user eksplisit minta.
+
+File diubah (8): `SettingsRepository.kt`, `FileSorter.kt`,
+`SettingsScreen.kt`, `MainViewModel.kt`, `MainActivity.kt`,
+`PromptVaultApp.kt`, `LegacyDataMigration.kt` (baru), `app/build.gradle.kts`
+(versi). Preflight lolos bersih. **BELUM PERNAH lewat `./gradlew` asli** --
+user WAJIB verifikasi: (1) kartu "Kecepatan Scan" di Pengaturan tersimpan &
+scan tetap jalan normal di tiap pilihan, (2) tab Log/Undo setelah update --
+kalau user ini memang punya riwayat sangat lama, cek apakah data lama
+muncul lagi (indikasi tebakan key BENAR) atau tetap kosong (indikasi
+tebakan key salah, laporkan balik supaya bisa dikoreksi dgn data nyata).
+
+versionCode 67->68, versionName 2.20.1->2.20.2.
+
 ## v2.20.1 -- Fix technical debt: undo() jalan di Main thread, bukan IO (2026-08-13)
 User minta lanjutkan item pending tercatat (bukan testing). Ditemukan 2
 kandidat di `PROJECT_STATE.md`: dispatcher `undo()` & snackbar "Simpan".

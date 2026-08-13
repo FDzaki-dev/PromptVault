@@ -3,7 +3,47 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
-## STATUS PROJECT: v2.20.1 -- FIX TECHNICAL DEBT: undo() jalan di Main thread, bukan IO -- 2026-08-13
+## STATUS PROJECT: v2.20.2 -- Eksekusi 2 technical debt tercatat: SCAN_CONCURRENCY configurable + migrasi best-effort DataStore lama -- 2026-08-13
+- **User minta lanjutkan 2 item pending spesifik** (sudah teridentifikasi
+  sesi sebelumnya sbg technical debt #3 & #4 di bawah): migrasi DataStore
+  lama -> Room, dan `SCAN_CONCURRENCY` configurable. Instruksi eksplisit
+  "kerjakan tanpa regresi".
+- **`SCAN_CONCURRENCY`**: konstanta hardcode `FileSorter.SCAN_CONCURRENCY`
+  DIHAPUS, sekarang `settingsRepository.getScanConcurrency()` (default TETAP
+  6). UI baru "Kecepatan Scan (Lanjutan)" di SettingsScreen, pola FilterChip
+  identik interval auto-scan. Rentang `[2,4,6,8,12]` dipilih berdasar alasan
+  teknis (bukan profiling nyata, tetap belum ada) -- nol regresi utk user
+  yang tidak buka setting ini.
+- **Migrasi legacy DataStore->Room** (`LegacyDataMigration.kt`, baru,
+  dipanggil sekali dari `PromptVaultApp.onCreate()`, fire-and-forget IO):
+  **PENTING untuk sesi berikutnya** -- key literal DataStore era pre-v2.2.0
+  (`"activity_log_json"`, `"move_history_json"`) adalah INFERENSI dari
+  konvensi penamaan project (pola `{noun}_json`, dicontohkan `RuleRepository`
+  `"rules_json"`), BUKAN dikonfirmasi dari source asli (sudah terhapus total
+  sejak v2.2.0, snapshot ini tanpa git history). Didesain aman-walau-salah:
+  key tidak ketemu = no-op murni, BUKAN korup/crash. Guard flag DataStore
+  (`legacy_datastore_migration_done`) + try-catch total + `finally` selalu
+  set flag `true` (anti retry-loop). Kalau user melaporkan tab Log/Undo
+  TETAP kosong padahal yakin pernah pakai versi sangat lama (>v2.2.0), itu
+  sinyal key-nya perlu dikoreksi -- HANYA bisa dipastikan lewat sampel data
+  nyata dari user tsb (mis. minta backup/export lama kalau masih ada),
+  jangan ditebak ulang tanpa data lagi.
+- **Observasi (TIDAK dieksekusi, di luar scope 2 item ini)**: `RuleRepository.kt`
+  memanggil `json.decodeFromString<List<Rule>>(...)` tapi TIDAK mengimpor
+  `kotlinx.serialization.decodeFromString` (cuma impor `encodeToString` &
+  `Json`) -- fungsi generic reified itu biasanya perlu impor eksplisit utk
+  resolve, berpotensi compile error laten yang belum ketahuan karena project
+  ini belum pernah lewat `./gradlew` asli. Trigger valid: build CI gagal di
+  titik ini, atau user eksplisit minta dicek/diperbaiki.
+- File diubah (8): `SettingsRepository.kt`, `FileSorter.kt`,
+  `SettingsScreen.kt`, `MainViewModel.kt`, `MainActivity.kt`,
+  `PromptVaultApp.kt`, `LegacyDataMigration.kt` (baru), `app/build.gradle.kts`.
+  `scripts/preflight_check.sh` lolos bersih. **BELUM PERNAH lewat
+  `./gradlew` asli**. User WAJIB verifikasi: kartu Kecepatan Scan tersimpan
+  & scan tetap normal di semua pilihan; tab Log/Undo setelah update (cek
+  apakah data lama muncul lagi atau tetap kosong, laporkan balik hasilnya).
+
+## STATUS PROJECT SEBELUMNYA: v2.20.1 -- FIX TECHNICAL DEBT: undo() jalan di Main thread, bukan IO -- 2026-08-13
 - **Konteks**: user minta lanjutkan item "pending tercatat" (bukan testing).
   Audit `PROJECT_STATE.md` menemukan 2 kandidat: (a) `FileSorter.undo()`
   kemungkinan jalan di dispatcher Main (dicatat sejak v2.17.0), (b) tombol
@@ -337,24 +377,29 @@
      StateFlow (pola sama persis dengan `ScanFeedback` v2.4.4), dikonsumsi
      di `RuleListScreen` (bukan di form sendiri, karena form di-dispose
      duluan sebelum Snackbar sempat tampil).
-  3. **[DICATAT, TIDAK DIEKSEKUSI]** Data lama di DataStore (Rules/Settings)
-     dari sebelum migrasi Room v2.2.0 tidak pernah dimigrasikan otomatis.
-     Sudah "disepakati tidak urgent" sejak awal (lihat "Keputusan arsitektur
-     utama" #1) -- TIDAK dieksekusi ulang di batch ini karena: (a) app belum
-     pernah rilis publik luas sejauh riwayat project ini, kemungkinan ada
-     user nyata yang masih di versi >20 rilis lampau (<v2.2.0) mendekati
-     nol; (b) skema DataStore key lama kemungkinan sudah berubah bentuk di
-     beberapa batch berikutnya, menulis migrasi "buta" tanpa data sampel
-     nyata berisiko menciptakan bug baru lebih besar dari manfaatnya. Kalau
-     user based di masa depan benar melaporkan data hilang setelah update
-     dari versi sangat lama, INI baru trigger valid untuk dikerjakan.
-  4. **[DICATAT, TIDAK DIEKSEKUSI]** `SCAN_CONCURRENCY = 6` (FileSorter,
-     v2.4.0) adalah **asumsi teknis AI**, belum divalidasi profiling nyata
-     di device user, dan tidak configurable dari Settings. TIDAK diubah
-     sekarang karena tidak ada data profiling utk pilih angka lain yang
-     lebih benar -- mengubah angka tanpa data cuma ganti tebakan dengan
-     tebakan lain. Trigger valid: user laporkan scan lambat/berat nyata di
-     Downloads berisi ribuan file.
+  3. **[DIEKSEKUSI di v2.20.2, 2026-08-13]** Data lama di DataStore
+     (ActivityLog/MoveHistory) dari sebelum migrasi Room v2.2.0 -- sebelumnya
+     "disepakati tidak urgent" (lihat "Keputusan arsitektur utama" #1) dan
+     TIDAK dieksekusi di batch v2.16.0 ini karena alasan (a)/(b) di bawah
+     masih berlaku saat itu. Dieksekusi ulang di v2.20.2 atas instruksi
+     eksplisit user "kerjakan tanpa regresi" -- BUKAN karena alasan (b) sudah
+     terselesaikan (key literal DataStore lama TETAP tidak terverifikasi,
+     tidak ada git history di snapshot ini), tapi karena didesain aman-walau-
+     tebakan-salah (no-op murni kalau key tidak cocok, bukan migrasi
+     destruktif). Lihat `LegacyDataMigration.kt` + CHANGELOG v2.20.2 untuk
+     detail lengkap & peringatan soal ketidakpastian nama key.
+     ~~(a) app belum pernah rilis publik luas...~~
+     ~~(b) skema DataStore key lama kemungkinan sudah berubah bentuk...~~
+     ~~Kalau user based di masa depan benar melaporkan data hilang...~~
+  4. **[DIEKSEKUSI di v2.20.2, 2026-08-13]** `SCAN_CONCURRENCY = 6`
+     (FileSorter, v2.4.0) sekarang configurable dari kartu "Kecepatan Scan
+     (Lanjutan)" di Pengaturan (`SettingsRepository.ALLOWED_SCAN_CONCURRENCY`
+     = `[2,4,6,8,12]`, default TETAP 6). Dieksekusi atas instruksi eksplisit
+     user, BUKAN karena data profiling nyata akhirnya tersedia (memang belum
+     ada, tidak diklaim ada) -- yang berubah cuma "tidak configurable" jadi
+     "configurable", jadi kalau nanti trigger asli (user laporkan scan
+     lambat) benar terjadi, user bisa coba sendiri tanpa nunggu rilis baru.
+     ~~TIDAK diubah sekarang karena tidak ada data profiling...~~
   5. **[DICATAT, TIDAK DIEKSEKUSI, TERHAMBAT STRUKTURAL]** §6 roadmap
      backend (CI/CD dependency-lock lanjutan, `./gradlew --write-locks`) --
      STATUS TIDAK BERUBAH dari catatan lama: sandbox Claude di sesi ini pun

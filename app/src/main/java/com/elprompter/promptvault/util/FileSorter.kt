@@ -361,11 +361,12 @@ class FileSorter(
      *    kandidat termasuk yang TIDAK PERNAH akan dipindah karena tidak cocok
      *    rule manapun. Sekarang pengecekan rule (murah, in-memory) jalan dulu;
      *    stability check hanya untuk file yang benar-benar akan dipindah.
-     * 3. **Diproses paralel dengan batas [SCAN_CONCURRENCY]**: dulunya
-     *    `for (file in candidateFiles)` sekuensial -- 300 file yang semuanya
+     * 3. **Diproses paralel dengan batas konkurensi (default 6, configurable
+     *    lewat Pengaturan sejak 2026-08-13 -- lihat [SettingsRepository.getScanConcurrency])**:
+     *    dulunya `for (file in candidateFiles)` sekuensial -- 300 file yang semuanya
      *    lolos ke stability check berarti ~300 detik (delay 1 detik/file
      *    berturutan). Sekarang tiap kandidat diproses lewat `async` dengan
-     *    [Semaphore] agar wall-time mendekati (jumlah file / SCAN_CONCURRENCY)
+     *    [Semaphore] agar wall-time mendekati (jumlah file / konkurensi)
      *    detik, bukan (jumlah file) detik, tanpa membuka terlalu banyak file
      *    handle bersamaan.
      *
@@ -412,7 +413,12 @@ class FileSorter(
         val safRuleDestinations: Map<String, DocumentFile?> =
             if (destinationRoot != null) resolveSafRuleDestinations(destinationRoot, rules) else emptyMap()
 
-        val semaphore = Semaphore(SCAN_CONCURRENCY)
+        // [Technical debt #4, dieksekusi 2026-08-13] Dulu Semaphore(SCAN_CONCURRENCY)
+        // dengan konstanta hardcode 6 (v2.4.0). Sekarang dibaca dari SettingsRepository
+        // (getScanConcurrency() -- default TETAP 6, lihat dokumentasi lengkap di
+        // SettingsRepository.DEFAULT_SCAN_CONCURRENCY): perilaku default TIDAK
+        // BERUBAH, user yang mau bisa menaikkan/menurunkan sendiri dari Pengaturan.
+        val semaphore = Semaphore(settingsRepository.getScanConcurrency())
         val results = candidateFiles.map { file ->
             async { semaphore.withPermit { processCandidate(file, rules, conflictStrategy, destinationRoot, safRuleDestinations) } }
         }.awaitAll()
@@ -472,9 +478,9 @@ class FileSorter(
      * DALAM [moveFileToSafDestination] seperti sebelumnya.
      *
      * **ROOT CAUSE bug**: [findOrCreateChildDirSaf] sebelumnya dipanggil
-     * terpisah per-file, DI DALAM tiap coroutine paralel (s/d [SCAN_CONCURRENCY]
-     * = 6 file bersamaan, lihat Keputusan Arsitektur #6 di PROJECT_STATE.md).
-     * `DocumentFile.createDirectory()` TIDAK atomik/tidak idempoten seperti
+     * terpisah per-file, DI DALAM tiap coroutine paralel (s/d 6 file
+     * bersamaan secara default -- kini configurable, lihat Keputusan
+     * Arsitektur #6 di PROJECT_STATE.md). `DocumentFile.createDirectory()` TIDAK atomik/tidak idempoten seperti
      * `File.mkdirs()` -- kalau 2+ coroutine SAMA-SAMA memanggil
      * `parent.findFile("PromptVault")` SEBELUM salah satu sempat selesai
      * `createDirectory("PromptVault")`, KEDUANYA melihat "belum ada" -> KEDUANYA
@@ -1117,19 +1123,6 @@ class FileSorter(
 
         /** Jeda pengecekan ukuran file untuk Dual Stability Guard (§4). */
         private const val SIZE_CHECK_DELAY_MS = 1_000L
-
-        /**
-         * [perf-overhaul v2.4.0] Batas jumlah file yang diproses BERSAMAAN saat
-         * scan (lihat [processCandidate]). Nilai ini ASUMSI TEKNIS AI (dicatat
-         * di PROJECT_STATE.md): 6 dipilih sebagai titik tengah -- cukup tinggi
-         * untuk memangkas wall-time stability-check (delay 1 detik/file) secara
-         * signifikan, cukup rendah untuk tidak membuka terlalu banyak file
-         * handle/RandomAccessFile bersamaan di HP kelas menengah-bawah. Kalau
-         * ke depan user punya HP dengan Downloads berisi ribuan file dan masih
-         * terasa berat, ini kandidat pertama untuk di-tuning (naikkan concurrency
-         * atau buat konfigurable), bukan trigger untuk redesain ulang.
-         */
-        private const val SCAN_CONCURRENCY = 6
 
         /** Akhiran nama file dari browser/downloader yang menandakan unduhan belum selesai. */
         private val TEMP_FILE_MARKERS = listOf(

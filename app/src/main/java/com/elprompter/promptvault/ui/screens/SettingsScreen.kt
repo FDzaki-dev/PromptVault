@@ -41,6 +41,8 @@ fun SettingsScreen(
     onIntervalSelected: (Int) -> Unit,
     currentConflictStrategy: ConflictStrategy,
     onConflictStrategySelected: (ConflictStrategy) -> Unit,
+    currentScanConcurrency: Int,
+    onScanConcurrencySelected: (Int) -> Unit,
     onExportRequested: suspend () -> String,
     onImportRequested: (String, (Int) -> Unit) -> Unit,
     safTreeUri: String?,
@@ -115,6 +117,29 @@ fun SettingsScreen(
                     style = MaterialTheme.typography.bodySmall,
                     color = colors.error
                 )
+            }
+
+            // [Technical debt #4, dieksekusi 2026-08-13] Dulu SCAN_CONCURRENCY
+            // hardcode 6 di FileSorter.kt, tidak bisa diubah user. Sekarang
+            // configurable di sini -- default tetap 6 (SettingsRepository.
+            // DEFAULT_SCAN_CONCURRENCY), jadi user yang tidak pernah membuka
+            // kartu ini tidak terdampak sama sekali.
+            Text("Kecepatan Scan (Lanjutan)", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "Jumlah file yang diproses BERSAMAAN saat scan. Lebih tinggi = scan lebih " +
+                    "cepat di Downloads berisi banyak file, tapi lebih berat di HP kelas bawah. " +
+                    "6 adalah nilai default yang aman untuk kebanyakan HP.",
+                style = MaterialTheme.typography.bodySmall
+            )
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                SettingsRepository.ALLOWED_SCAN_CONCURRENCY.forEach { value ->
+                    FilterChip(
+                        selected = value == currentScanConcurrency,
+                        onClick = { onScanConcurrencySelected(value) },
+                        label = { Text(if (value == SettingsRepository.DEFAULT_SCAN_CONCURRENCY) "$value (default)" else "$value") },
+                        colors = chipColors()
+                    )
+                }
             }
 
             VaultCard(modifier = Modifier.fillMaxWidth()) {

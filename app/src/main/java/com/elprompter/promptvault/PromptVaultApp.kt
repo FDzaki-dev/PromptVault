@@ -1,6 +1,7 @@
 package com.elprompter.promptvault
 
 import android.app.Application
+import com.elprompter.promptvault.data.LegacyDataMigration
 import com.elprompter.promptvault.util.CrashLogger
 import com.elprompter.promptvault.worker.AutoSortNotification
 import com.elprompter.promptvault.worker.WorkScheduler
@@ -20,6 +21,15 @@ class PromptVaultApp : Application() {
         // sekali di awal proses app -- idempoten, murah, dan memastikan channel
         // sudah ada SEBELUM worker pertama kali butuh setForeground().
         AutoSortNotification.ensureChannel(this)
+        // [Technical debt #3, dieksekusi 2026-08-13] Migrasi best-effort SEKALI
+        // SEUMUR INSTALL dari data lama pre-Room v2.2.0 (kalau ada) -- lihat
+        // dokumentasi lengkap soal batasan & keamanannya di LegacyDataMigration.kt.
+        // Fire-and-forget aman sama seperti reschedule di bawah: idempoten
+        // (guard flag), murah (no-op instan setelah kali pertama), dan proses
+        // app ini sudah pasti hidup selama onCreate() dan seterusnya.
+        CoroutineScope(Dispatchers.IO).launch {
+            LegacyDataMigration.runIfNeeded(this@PromptVaultApp)
+        }
         // Pastikan auto-sort terjadwal ulang setiap kali proses app dibuat,
         // memakai interval tersimpan (fitur lengkap). Aman fire-and-forget di
         // sini (beda dari BootCompletedReceiver) karena proses app ini sudah

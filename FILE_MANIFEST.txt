@@ -14,6 +14,7 @@ app/src/main/java/com/elprompter/promptvault/PromptVaultApp.kt
 app/src/main/java/com/elprompter/promptvault/data/ActivityLogEntry.kt
 app/src/main/java/com/elprompter/promptvault/data/ActivityLogRepository.kt
 app/src/main/java/com/elprompter/promptvault/data/DataStoreProvider.kt
+app/src/main/java/com/elprompter/promptvault/data/LegacyDataMigration.kt
 app/src/main/java/com/elprompter/promptvault/data/MoveHistoryEntry.kt
 app/src/main/java/com/elprompter/promptvault/data/MoveHistoryRepository.kt
 app/src/main/java/com/elprompter/promptvault/data/Rule.kt

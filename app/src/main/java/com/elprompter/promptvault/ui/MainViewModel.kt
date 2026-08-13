@@ -68,6 +68,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             state.asStateFlow()
         }
 
+    /** [Technical debt #4] Lihat dokumentasi lengkap di SettingsRepository.DEFAULT_SCAN_CONCURRENCY. */
+    val scanConcurrency: StateFlow<Int> = settingsRepository.scanConcurrencyFlow
+        .let { flow ->
+            val state = MutableStateFlow(SettingsRepository.DEFAULT_SCAN_CONCURRENCY)
+            viewModelScope.launch { flow.collect { state.value = it } }
+            state.asStateFlow()
+        }
+
     /** [SAF] URI folder TUJUAN kustom aktif (tree URI, `null` = belum diset / tujuan tetap Downloads/PromptVault). Sumber scan SELALU Downloads, lihat FileSorter.scanAndSort. */
     val safTreeUri: StateFlow<String?> = settingsRepository.safTreeUriFlow
         .let { flow ->
@@ -218,6 +226,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setConflictStrategy(strategy: ConflictStrategy) {
         viewModelScope.launch { settingsRepository.setConflictStrategy(strategy) }
+    }
+
+    /** [Technical debt #4] Lihat dokumentasi lengkap di SettingsRepository.setScanConcurrency. */
+    fun setScanConcurrency(value: Int) {
+        viewModelScope.launch { settingsRepository.setScanConcurrency(value) }
     }
 
     /**

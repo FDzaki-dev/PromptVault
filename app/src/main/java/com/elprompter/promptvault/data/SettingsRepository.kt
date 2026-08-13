@@ -33,11 +33,41 @@ class SettingsRepository(private val context: Context) {
     private val intervalKey = intPreferencesKey("auto_scan_interval_minutes")
     private val conflictKey = stringPreferencesKey("conflict_strategy")
     private val safTreeUriKey = stringPreferencesKey("saf_tree_uri")
+    private val scanConcurrencyKey = intPreferencesKey("scan_concurrency")
 
     companion object {
         const val DEFAULT_INTERVAL_MINUTES = 15
         val ALLOWED_INTERVALS = listOf(15, 30, 60, 120, 240)
         val DEFAULT_CONFLICT_STRATEGY = ConflictStrategy.RENAME
+
+        /**
+         * [Technical debt #4 di PROJECT_STATE.md, dieksekusi 2026-08-13 atas
+         * instruksi eksplisit user] `SCAN_CONCURRENCY` dulunya konstanta mati
+         * `private const val SCAN_CONCURRENCY = 6` di FileSorter.kt (v2.4.0),
+         * DICATAT sebagai "asumsi teknis AI, belum divalidasi profiling nyata,
+         * belum configurable" -- sengaja TIDAK diubah waktu itu karena tidak
+         * ada data profiling utk pilih angka lain yang lebih benar (ganti
+         * tebakan dengan tebakan lain = tidak ada gunanya).
+         *
+         * Fix ini TIDAK mengklaim akhirnya ada data profiling (tetap tidak
+         * ada) -- yang berubah HANYA "belum configurable" jadi "configurable".
+         * `DEFAULT_SCAN_CONCURRENCY` tetap 6 (nilai lama, PERILAKU DEFAULT
+         * TIDAK BERUBAH utk siapa pun yang tidak pernah membuka setting ini --
+         * nol regresi utk mayoritas user). User yang device-nya kelas
+         * atas/Downloads-nya berisi ribuan file sekarang BISA menaikkan
+         * sendiri tanpa perlu rilis baru; yang device-nya lemah bisa
+         * menurunkan kalau scan terasa berat. `ALLOWED_SCAN_CONCURRENCY`
+         * dibatasi 2..12 (bukan bebas/unbounded): di bawah 2 nyaris
+         * menghilangkan manfaat paralelisme yang jadi alasan fitur ini ada
+         * (v2.4.0), di atas 12 berisiko membuka terlalu banyak file handle/
+         * RandomAccessFile bersamaan di HP kelas bawah (alasan asli angka 6
+         * dipilih, lihat komentar lama di FileSorter.kt) -- rentang ini
+         * MEMBATASI risiko tanpa perlu data profiling utk menentukan batas
+         * amannya (batas atas & bawah masuk akal secara teknis, bukan cuma
+         * tebakan sembarang).
+         */
+        const val DEFAULT_SCAN_CONCURRENCY = 6
+        val ALLOWED_SCAN_CONCURRENCY = listOf(2, 4, 6, 8, 12)
     }
 
     val intervalMinutesFlow: Flow<Int> = context.promptVaultDataStore.data.map { prefs ->
@@ -82,5 +112,18 @@ class SettingsRepository(private val context: Context) {
 
     suspend fun clearSafTreeUri() {
         context.promptVaultDataStore.edit { prefs -> prefs.remove(safTreeUriKey) }
+    }
+
+    /** Lihat dokumentasi lengkap di [DEFAULT_SCAN_CONCURRENCY]/[ALLOWED_SCAN_CONCURRENCY]. */
+    val scanConcurrencyFlow: Flow<Int> = context.promptVaultDataStore.data.map { prefs ->
+        prefs[scanConcurrencyKey]?.takeIf { it in ALLOWED_SCAN_CONCURRENCY } ?: DEFAULT_SCAN_CONCURRENCY
+    }
+
+    suspend fun getScanConcurrency(): Int = scanConcurrencyFlow.first()
+
+    /** Nilai di luar [ALLOWED_SCAN_CONCURRENCY] diam-diam jatuh ke default -- pola sama seperti [setIntervalMinutes]. */
+    suspend fun setScanConcurrency(value: Int) {
+        val safe = if (value in ALLOWED_SCAN_CONCURRENCY) value else DEFAULT_SCAN_CONCURRENCY
+        context.promptVaultDataStore.edit { prefs -> prefs[scanConcurrencyKey] = safe }
     }
 }
