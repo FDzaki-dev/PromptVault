@@ -62,11 +62,15 @@ class SettingsRepository(private val context: Context) {
     }
 
     /**
-     * [SAF, syarat (c) Insiden #7] URI folder kustom (tree URI dari
+     * [SAF, syarat (c) Insiden #7] URI folder TUJUAN kustom (tree URI dari
      * ACTION_OPEN_DOCUMENT_TREE), disimpan sebagai String biar reuse
      * DataStore yang sama seperti setting lain -- tidak butuh tabel/skema
-     * baru. `null` = belum pernah diset ATAU sudah dikosongkan user
-     * ([clearSafTreeUri]) -> [FileSorter] fallback ke Downloads biasa.
+     * baru. [Klarifikasi peran, 2026-08-13, SAF_FINAL_VERDICT_FIX.txt] URI
+     * ini HANYA menentukan KE MANA hasil sortir ditulis -- SUMBER scan tetap
+     * SELALU Downloads, tidak pernah folder ini (lihat [FileSorter.scanAndSort]).
+     * `null` = belum pernah diset ATAU sudah dikosongkan user
+     * ([clearSafTreeUri]) -> [FileSorter] pakai Downloads/PromptVault biasa
+     * sebagai tujuan.
      */
     val safTreeUriFlow: Flow<String?> = context.promptVaultDataStore.data.map { prefs -> prefs[safTreeUriKey] }
 

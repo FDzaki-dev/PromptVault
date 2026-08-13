@@ -3,7 +3,54 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
-## STATUS PROJECT: v2.18.1 -- FIX BUG NYATA: PREVIEW vs SCAN LIHAT FOLDER BEDA -- 2026-08-13
+## STATUS PROJECT: v2.19.0 -- SAF DIRESTRUKTURISASI: TUJUAN, BUKAN SUMBER SCAN -- 2026-08-13
+- User upload `SAF_FINAL_VERDICT_FIX.txt` (spec/verdict eksternal): ROOT CAUSE
+  seluruh siklus SAF v2.17.0-v2.18.1 adalah **salah menafsirkan requirement**,
+  bukan sekadar bug API. SAF yang benar = mekanisme akses ke folder TUJUAN
+  kustom yang dipilih user, BUKAN sumber scan alternatif. Instruksi user:
+  "folder scan file untuk dipindahkan tetap hardcode 'download'" -- menegaskan
+  sumber scan harus SELALU Downloads, sesuai spec.
+- **Restrukturisasi (bukan tambal)**: `scanAndSort()` sekarang SATU sumber
+  scan ([listCandidateFiles], Downloads, tidak berubah dari awal project) +
+  cabang TUJUAN tunggal (Downloads/PromptVault/ lokal ATAU folder kustom SAF/
+  PromptVault/ lewat DocumentFile). Dihapus total: `scanAndSortSafLocked()`,
+  `listCandidateFilesSaf()`, `processCandidateSaf()`, `isLikelyStillWritingSaf()`
+  -- semua sisa arsitektur "SAF sebagai scanner" yang salah. `SafRootResolution`
+  -> `SafDestinationResolution`, `resolveSafRoot()` -> `resolveSafDestinationRoot()`
+  (rename, bukan cuma kosmetik -- linimasa insiden ini AKAR masalahnya adalah
+  penamaan/konsep yang ambigu). `moveFileSaf()` -> `moveFileToSafDestination()`
+  (sumber jadi `File` lokal, bukan lagi `DocumentFile`).
+- **Efek samping positif**: `previewPatternMatches()` (sumber bug v2.18.1)
+  disederhanakan total -- tidak ada lagi cabang SAF sama sekali, karena sumber
+  scan sekarang SELALU satu-satunya (Downloads). Kelas bug "preview vs scan
+  lihat folder beda" jadi STRUKTURAL tidak mungkin terulang, bukan cuma
+  ditambal ulang.
+- **Kompatibilitas mundur riwayat undo**: entri `MoveHistoryEntry` LAMA (dibuat
+  sebelum restrukturisasi ini, format sumber+tujuan sama-sama `content://`)
+  TETAP bisa di-undo lewat `undoSaf()` (logika lama, tidak diubah). Entri BARU
+  (tujuan `content://`, sumber path lokal) lewat `undoSafDestination()` baru.
+  Dispatcher `undo()` membedakan lewat `originalParentUri`, bukan skema DB baru.
+- UI `SettingsScreen.kt` ("Folder Kustom" -> "Folder Tujuan Kustom") & doc
+  comment `SettingsRepository`/`MainViewModel` diperbaiki -- sebelumnya
+  eksplisit menyebut "pindai folder pilihanmu sendiri" (bahasa SUMBER),
+  sekarang "file tetap dipindai dari Downloads, folder ini cuma tujuan".
+  `MainActivity.kt` (picker wiring) TIDAK disentuh -- murni pilih-URI, tidak
+  peduli peran sumber/tujuan.
+- File diubah (5): `util/FileSorter.kt` (restrukturisasi inti),
+  `ui/screens/SettingsScreen.kt`, `data/SettingsRepository.kt` (doc),
+  `ui/MainViewModel.kt` (doc), `app/build.gradle.kts` (versi).
+- `scripts/preflight_check.sh` lolos bersih (2 iterasi -- iterasi 1 masih
+  menyisakan import `CancellationException` tak terpakai setelah
+  `processCandidateSaf` dihapus, dibersihkan di iterasi 2). **BELUM PERNAH
+  lewat `./gradlew` asli** -- CI run berikutnya WAJIB dicek, konsisten dengan
+  seluruh riwayat SAF sebelumnya (Insiden #7 syarat (c): blind tapi disiplin).
+- **Pelajaran proses dicatat**: ini SIKLUS KEDUA "misinterpretasi requirement"
+  untuk SAF di project ini (yang pertama: Insiden #7 lama, arsitektur "Zip
+  Sorter" independen). Kalau SAF diminta lagi di masa depan dan sesi itu ragu
+  soal peran (sumber vs tujuan vs lainnya), TANYA eksplisit ke user SEBELUM
+  nulis kode -- jangan asumsikan dari nama fitur ("SAF") saja.
+
+## STATUS PROJECT SEBELUMNYA: v2.18.1 -- FIX BUG NYATA: PREVIEW vs SCAN LIHAT FOLDER BEDA -- 2026-08-13
 - User klarifikasi laporan v2.18.0: preview di layar Tambah/Edit Rule MUNCUL
   cocok, tapi scan asli tetap bilang "tidak ada file cocok". Digali lewat
   tanya-jawab (bukan tebak) -- ternyata bug terpisah, BUKAN soal ekstensi.

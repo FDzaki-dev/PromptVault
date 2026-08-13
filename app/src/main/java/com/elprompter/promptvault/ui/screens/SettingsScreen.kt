@@ -119,11 +119,12 @@ fun SettingsScreen(
 
             VaultCard(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Folder Kustom (Opsional)", style = MaterialTheme.typography.titleMedium)
+                    Text("Folder Tujuan Kustom (Opsional)", style = MaterialTheme.typography.titleMedium)
                     Text(
-                        "Pindai folder pilihanmu sendiri lewat Storage Access Framework, bukan cuma " +
-                            "Downloads -- cocok untuk folder di kartu SD atau folder khusus lain. " +
-                            "Kosongkan lagi untuk kembali memindai Downloads.",
+                        "File tetap DIPINDAI dari Downloads seperti biasa. Folder ini cuma menentukan " +
+                            "KE MANA hasil sortir disimpan (lewat Storage Access Framework) -- cocok " +
+                            "untuk folder di kartu SD atau folder khusus lain. Kosongkan lagi untuk " +
+                            "kembali menyimpan hasil sortir ke Downloads/PromptVault.",
                         style = MaterialTheme.typography.bodySmall
                     )
                     if (safTreeUri != null) {

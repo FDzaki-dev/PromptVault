@@ -3,6 +3,71 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.19.0 -- SAF direstrukturisasi total: folder kustom = TUJUAN, bukan sumber scan (2026-08-13)
+User upload `SAF_FINAL_VERDICT_FIX.txt` -- spec/verdict yang menyimpulkan
+seluruh siklus SAF v2.17.0-v2.18.1 salah menafsirkan requirement dari awal.
+Instruksi user singkat "folder scan file untuk dipindahkan tetap hardcode
+'download'" menegaskan bagian yang benar dari spec itu: sumber scan harus
+SELALU Downloads.
+
+**Root cause (dari dokumen)**: SAF = mekanisme akses ke folder TUJUAN
+penyimpanan kustom yang dipilih user, BUKAN sumber scan alternatif. Implementasi
+sejak v2.17.0 memperlakukan folder kustom sebagai scanner mandiri (dipindai
+SENDIRI, terpisah dari Downloads) -- arsitektur yang salah dari awal, bukan
+bug detail yang bisa ditambal.
+
+**Restrukturisasi** (`util/FileSorter.kt`):
+- `scanAndSort()` sekarang SATU sumber scan ([listCandidateFiles], Downloads,
+  tidak pernah berubah sejak awal project) + SATU cabang TUJUAN (lokal atau
+  SAF), bukan lagi dua scanner independen.
+- **Dihapus total**: `scanAndSortSafLocked()`, `listCandidateFilesSaf()`,
+  `processCandidateSaf()`, `isLikelyStillWritingSaf()` -- semua fungsi yang
+  memperlakukan DocumentFile/folder kustom sebagai SUMBER kandidat scan.
+- **Rename** (bukan kosmetik -- akar masalah adalah konsep yang ambigu):
+  `SafRootResolution` -> `SafDestinationResolution`, `resolveSafRoot()` ->
+  `resolveSafDestinationRoot()`. Perilaku/validasi (persistable permission,
+  cek exists/isDirectory, SecurityException) TIDAK berubah -- itu sudah benar.
+- **Baru**: `moveFileToSafDestination(file: File, ...)` menggantikan
+  `moveFileSaf(doc: DocumentFile, ...)` -- sumbernya sekarang SELALU
+  `java.io.File` lokal, disalin ke `DocumentFile` tujuan lewat
+  ContentResolver (bukan lagi DocumentFile-ke-DocumentFile).
+- `processCandidate()` dapat parameter baru `destinationRoot: DocumentFile?`
+  -- satu-satunya titik cabang tersisa antara tujuan lokal ([moveFile]) vs
+  tujuan SAF ([moveFileToSafDestination]); sumbernya (`file: File`, dari
+  Downloads) sama untuk keduanya.
+- `previewPatternMatches()` disederhanakan drastis: TIDAK ADA LAGI cabang SAF
+  sama sekali (sumber scan cuma satu sekarang). Ini efek samping positif --
+  kelas bug "preview vs scan lihat folder beda" (v2.18.1) jadi STRUKTURAL
+  tidak mungkin terulang, bukan cuma disinkronkan ulang.
+
+**Kompatibilitas mundur untuk undo**: `MoveHistoryEntry` yang SUDAH tersimpan
+di Room dari SEBELUM update ini (format lama: sumber & tujuan sama-sama URI
+`content://`) tetap bisa di-undo lewat `undoSaf()` (logika lama, tidak
+disentuh sama sekali). Entri BARU (tujuan `content://`, sumber path lokal
+biasa) lewat `undoSafDestination()` yang baru ditambahkan. `undo()` membedakan
+dua format ini lewat `originalParentUri` (bukan skema/kolom DB baru).
+
+**UI**: `SettingsScreen.kt` -- "Folder Kustom (Opsional)" jadi "Folder Tujuan
+Kustom (Opsional)", teks deskripsi diubah dari "Pindai folder pilihanmu
+sendiri..." (bahasa SUMBER, salah) jadi "File tetap DIPINDAI dari Downloads
+seperti biasa. Folder ini cuma menentukan KE MANA hasil sortir disimpan..."
+(bahasa TUJUAN, benar). Doc comment `SettingsRepository.safTreeUriFlow` &
+`MainViewModel.safTreeUri`/`clearSafTreeUri` diperjelas senada. `MainActivity.kt`
+(picker wiring, `ActivityResultContracts.OpenDocumentTree()`) TIDAK disentuh
+sama sekali -- murni memilih URI, tidak peduli peran sumber/tujuan.
+
+`scripts/preflight_check.sh` lolos bersih (2 iterasi -- iterasi 1 sempat
+menyisakan import `CancellationException` tak terpakai setelah
+`processCandidateSaf` dihapus, karena fungsi itu dulu satu-satunya pemakai
+guard cancellation-safe; dibersihkan di iterasi 2 setelah dikonfirmasi jalur
+baru tidak butuh guard yang sama -- lihat komentar `isTempOrPartialName` &
+komentar di atas `processCandidate`). **BELUM PERNAH lewat `./gradlew` asli**
+-- CI run berikutnya WAJIB dicek, konsisten dengan seluruh riwayat SAF
+sebelumnya (Insiden #7 syarat (c): blind tapi disiplin, bukan berarti prosedur
+gagal kalau CI merah -- lanjutkan dengan fix normal).
+
+versionCode 61->62, versionName 2.18.1->2.19.0.
+
 ## v2.18.1 -- Fix bug NYATA: preview Rule cek Downloads, scan cek folder kustom (2026-08-13)
 User klarifikasi laporan sebelumnya: "saat bikin rule semua file yang cocok
 MUNCUL di preview, tapi saat discan malah 'tidak ada file cocok'." Ini BUKAN

@@ -68,7 +68,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             state.asStateFlow()
         }
 
-    /** [SAF] URI folder kustom aktif (tree URI, `null` = belum diset / pakai Downloads). */
+    /** [SAF] URI folder TUJUAN kustom aktif (tree URI, `null` = belum diset / tujuan tetap Downloads/PromptVault). Sumber scan SELALU Downloads, lihat FileSorter.scanAndSort. */
     val safTreeUri: StateFlow<String?> = settingsRepository.safTreeUriFlow
         .let { flow ->
             val state = MutableStateFlow<String?>(null)
@@ -250,7 +250,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /** [SAF] Kembali ke Downloads biasa; lepas persistable permission folder yang sedang aktif. */
+    /** [SAF] Kembali menyimpan hasil sortir ke Downloads/PromptVault biasa; lepas persistable permission folder tujuan yang sedang aktif. */
     fun clearSafTreeUri() {
         viewModelScope.launch {
             val previous = settingsRepository.getSafTreeUri()
