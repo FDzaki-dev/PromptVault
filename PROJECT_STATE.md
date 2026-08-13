@@ -3,7 +3,40 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
-## STATUS PROJECT: v2.19.0 -- SAF DIRESTRUKTURISASI: TUJUAN, BUKAN SUMBER SCAN -- 2026-08-13
+## STATUS PROJECT: v2.19.1 -- DEBUG+POLISH SAF: OVERWRITE tidak lagi asumsi delete() SAF berhasil -- 2026-08-13
+- User minta "debugging+polish feature SAF" (audit umum, bukan laporan gejala
+  spesifik). Audit manual baris-per-baris SELURUH kode SAF (FileSorter.kt penuh
+  + SettingsRepository/MainViewModel/MainActivity/SettingsScreen bagian SAF)
+  dilakukan -- BUKAN cuma grep dead-code seperti sesi v2.19.0. Hasil: arsitektur
+  v2.19.0 (folder kustom = tujuan, bukan sumber scan) TERVERIFIKASI konsisten
+  di semua titik wiring (dispatcher `undo()`, `SafDestinationResolution` 3-state,
+  `checkSafAccessLost` reaktif, `@OptIn(ExperimentalLayoutApi::class)` untuk
+  `FlowRow` di `SettingsScreen` SUDAH benar sejak awal -- bukan bug baru).
+  **1 bug nyata ditemukan** (bukan cuma kosmetik):
+- **Bug**: `moveFileToSafDestination()` -- `ConflictStrategy.OVERWRITE` manggil
+  `existingAtTarget.delete()` TANPA verifikasi hasil, lalu `createFile()`
+  lanjut dengan nama yang sama seolah delete pasti sukses. Provider SAF
+  (beda dari `java.io.File` biasa) TERKENAL tidak reliable di riwayat project
+  ini (lihat Insiden #4/#6/#7) -- kalau `delete()` diam-diam gagal, provider
+  sering auto-suffix nama file baru ("target (1).ext") alih-alih menimpa:
+  user pikir sudah "Overwrite", padahal file lama MASIH ADA + file baru
+  bernama beda dari yang diminta rule.
+- **Fix**: cek hasil `delete()` eksplisit -- gagal -> log ERROR + `MoveOutcome.
+  FAILED` (bukan lanjut diam-diam dengan asumsi sukses). Konsisten dengan pola
+  "jangan percaya boolean provider begitu saja" yang sudah jadi PELAJARAN
+  PERMANEN project ini sejak Insiden #6.
+- **SENGAJA TIDAK disentuh**: `moveFile()` (jalur lokal java.io.File) punya
+  gap yang SAMA PERSIS (`destFile.delete()` juga tidak diverifikasi) -- TIDAK
+  difix di batch ini karena scope eksplisit user adalah "feature SAF", dan
+  risiko delete() gagal jauh lebih rendah di filesystem lokal milik app
+  sendiri drpd provider SAF pihak ketiga/OEM. Dicatat sebagai kandidat batch
+  terpisah kalau user minta audit jalur lokal juga.
+- 2 file diubah: `util/FileSorter.kt` (fix), `app/build.gradle.kts` (versi).
+  `scripts/preflight_check.sh` lolos bersih. **BELUM PERNAH lewat `./gradlew`
+  asli** (konsisten dengan seluruh riwayat SAF -- Insiden #7 syarat (a) masih
+  belum terpenuhi di sandbox ini).
+
+## STATUS PROJECT SEBELUMNYA: v2.19.0 -- SAF DIRESTRUKTURISASI: TUJUAN, BUKAN SUMBER SCAN -- 2026-08-13
 - User upload `SAF_FINAL_VERDICT_FIX.txt` (spec/verdict eksternal): ROOT CAUSE
   seluruh siklus SAF v2.17.0-v2.18.1 adalah **salah menafsirkan requirement**,
   bukan sekadar bug API. SAF yang benar = mekanisme akses ke folder TUJUAN

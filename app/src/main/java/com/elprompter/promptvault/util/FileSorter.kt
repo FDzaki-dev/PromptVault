@@ -503,7 +503,24 @@ class FileSorter(
             if (existingAtTarget != null) {
                 when (conflictStrategy) {
                     ConflictStrategy.SKIP -> return MoveOutcome.SKIPPED_CONFLICT
-                    ConflictStrategy.OVERWRITE -> existingAtTarget.delete()
+                    ConflictStrategy.OVERWRITE -> {
+                        // [SAF debug/polish 2026-08-13] `delete()` TIDAK diverifikasi
+                        // sebelumnya -- kalau provider SAF diam-diam gagal hapus (lebih
+                        // umum di jalur SAF drpd java.io.File biasa, konsisten dengan
+                        // seluruh riwayat provider SAF tidak reliable di project ini),
+                        // `createFile()` di bawah tetap jalan dengan nama yang SAMA ->
+                        // provider sering auto-suffix jadi nama baru ("target (1).ext")
+                        // alih-alih benar-benar menimpa -- user pikir sudah overwrite,
+                        // padahal file lama MASIH ADA + file baru bernama beda. Sekarang
+                        // gagal eksplisit + log, TIDAK lanjut dengan asumsi overwrite berhasil.
+                        if (!existingAtTarget.delete()) {
+                            activityLogRepository.add(
+                                LogLevel.ERROR,
+                                "Gagal menimpa \"$targetName\" di folder tujuan kustom (hapus file lama gagal, provider menolak)."
+                            )
+                            return MoveOutcome.FAILED
+                        }
+                    }
                     ConflictStrategy.RENAME -> {
                         val base = file.nameWithoutExtension
                         val ext = file.extension

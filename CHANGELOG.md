@@ -3,6 +3,38 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.19.1 -- Debug+polish SAF: overwrite ke folder kustom sekarang verifikasi delete() (2026-08-13)
+User minta audit umum "debugging+polish feature SAF". Audit manual menyeluruh
+seluruh kode SAF (bukan cuma cek dead-code) -- arsitektur v2.19.0 terverifikasi
+konsisten, semua wiring (dispatcher undo, resolusi 3-state, opt-in Compose
+experimental) sudah benar. 1 bug nyata ditemukan & diperbaiki:
+
+**Bug**: `FileSorter.moveFileToSafDestination()` -- strategi konflik OVERWRITE
+memanggil `existingAtTarget.delete()` tanpa cek hasil, lalu langsung lanjut
+`createFile()` dengan nama sama seolah pasti berhasil dihapus. Provider SAF
+kalau delete diam-diam gagal, umumnya auto-suffix nama file baru ("target
+(1).ext") alih-alih menimpa -- hasil: file lama tetap ada, file baru bernama
+beda dari yang diminta rule, tapi app melaporkan sukses seolah overwrite
+normal.
+
+**Fix**: hasil `delete()` sekarang dicek eksplisit. Gagal -> log
+`LogLevel.ERROR` + return `MoveOutcome.FAILED`, tidak lagi diam-diam lanjut.
+Pola ini konsisten dengan pelajaran permanen project ini (Insiden #6): jangan
+percaya method boolean provider DocumentFile tanpa verifikasi.
+
+**Di luar scope (dicatat, tidak dieksekusi)**: `moveFile()` (jalur lokal
+java.io.File, strategi OVERWRITE) punya gap identik (`destFile.delete()`
+juga tidak diverifikasi) -- tidak diubah karena user secara eksplisit minta
+scope "feature SAF", dan risiko delete() gagal jauh lebih rendah di
+filesystem lokal milik app sendiri dibanding provider SAF pihak ketiga.
+
+1 file logika (`util/FileSorter.kt`) + `app/build.gradle.kts` (versi).
+`scripts/preflight_check.sh` lolos bersih. **BELUM PERNAH lewat `./gradlew`
+asli** -- sandbox sesi ini tetap tanpa akses Gradle/device asli (Insiden #7
+syarat (a) belum terpenuhi).
+
+versionCode 62->63, versionName 2.19.0->2.19.1.
+
 ## v2.19.0 -- SAF direstrukturisasi total: folder kustom = TUJUAN, bukan sumber scan (2026-08-13)
 User upload `SAF_FINAL_VERDICT_FIX.txt` -- spec/verdict yang menyimpulkan
 seluruh siklus SAF v2.17.0-v2.18.1 salah menafsirkan requirement dari awal.
