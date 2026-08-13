@@ -3,6 +3,27 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.20.1 -- Fix technical debt: undo() jalan di Main thread, bukan IO (2026-08-13)
+User minta lanjutkan item pending tercatat (bukan testing). Ditemukan 2
+kandidat di `PROJECT_STATE.md`: dispatcher `undo()` & snackbar "Simpan".
+
+**Snackbar "Simpan"**: dicek ulang ke kode aktual -- TERNYATA sudah
+diimplementasi sejak v2.16.0 (`RuleSaveFeedback` + `RuleListScreen`).
+Catatan lama yang bilang ini masih gap sudah usang, tidak dieksekusi ulang.
+
+**Dispatcher `undo()` (yang genuinely dieksekusi)**: `MainViewModel.undoMove()`
+dibungkus `withContext(Dispatchers.IO) { fileSorter.undo(entry) }` -- pola
+identik `checkSafAccessLost()` di file yang sama. Sebelumnya, karena caller
+(`ActivityLogScreen` via `rememberCoroutineScope()`) default ke
+`Dispatchers.Main`, seluruh I/O undo (baca/tulis file lokal maupun
+`DocumentFile`/`ContentResolver` untuk folder kustom SAF) jalan di main
+thread -- berisiko ANR di file besar/provider SAF lambat. Fix di 1 titik
+(ViewModel), `FileSorter.kt` (3 fungsi undo di dalamnya) TIDAK disentuh.
+
+File diubah (2): `ui/MainViewModel.kt`, `app/build.gradle.kts` (versi).
+`scripts/preflight_check.sh` lolos bersih. **BELUM PERNAH lewat `./gradlew`
+asli** -- perlu verifikasi CI + undo manual di HP asli (lokal & SAF).
+
 ## v2.20.0 -- Rebrand palet total "Midnight Blue" -> "Transformative Teal" + sistem depth/3D ultra immersive (2026-08-13)
 Permintaan eksplisit user: ganti seluruh palet warna lama + tambah efek
 depth/3D immersive. Ini Atomic Change (9 file, di luar batas normal 10

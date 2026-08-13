@@ -284,8 +284,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      * snackbar "berhasil" SELALU, walau undo aslinya gagal (mis. file tujuan
      * sudah tidak ada). Sekarang `suspend` dan mengembalikan hasil asli dari
      * [FileSorter.undo], supaya UI bisa menampilkan pesan yang jujur.
+     *
+     * [Dispatcher fix, sesi ini] `FileSorter.undo()` (dan kedua turunan SAF-nya,
+     * `undoSaf`/`undoSafDestination`) TIDAK punya `withContext` sendiri --
+     * catatan lama di PROJECT_STATE.md soal ini SENGAJA tidak diubah di
+     * [FileSorter] biar tidak menyentuh 3 fungsi sekaligus (batas file/modul).
+     * Caller di `MainActivity.kt` (`onUndo = { entry -> viewModel.undoMove(entry) }`)
+     * dipanggil dari `rememberCoroutineScope()` Compose -- scope itu default ke
+     * `Dispatchers.Main`, jadi tanpa pembungkus ini SEMUA I/O undo (baca/tulis
+     * file lokal, atau `DocumentFile`/`ContentResolver` utk SAF) jalan di
+     * main thread. Sama pola & alasan dgn [checkSafAccessLost] di atas: bungkus
+     * di titik pemanggilan (ViewModel), bukan ubah signature [FileSorter.undo].
      */
-    suspend fun undoMove(entry: MoveHistoryEntry): Boolean = fileSorter.undo(entry)
+    suspend fun undoMove(entry: MoveHistoryEntry): Boolean =
+        withContext(Dispatchers.IO) { fileSorter.undo(entry) }
 
     suspend fun exportRulesJson(): String = ruleRepository.exportAsJson()
 

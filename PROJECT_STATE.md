@@ -3,7 +3,37 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
-## STATUS PROJECT: v2.20.0 -- REBRAND PALET "Midnight Blue"->"Transformative Teal" + sistem depth/3D ultra immersive -- 2026-08-13
+## STATUS PROJECT: v2.20.1 -- FIX TECHNICAL DEBT: undo() jalan di Main thread, bukan IO -- 2026-08-13
+- **Konteks**: user minta lanjutkan item "pending tercatat" (bukan testing).
+  Audit `PROJECT_STATE.md` menemukan 2 kandidat: (a) `FileSorter.undo()`
+  kemungkinan jalan di dispatcher Main (dicatat sejak v2.17.0), (b) tombol
+  "Simpan" tanpa snackbar konfirmasi (dicatat sejak v2.4.3/audit awal).
+- **Item (b) TERNYATA SUDAH TERTUTUP** -- diverifikasi lewat baca kode
+  aktual (bukan percaya catatan lama begitu saja, sesuai pelajaran Insiden
+  #6): `RuleSaveFeedback` StateFlow + `LaunchedEffect` di `RuleListScreen.kt`
+  SUDAH ada & jalan (ditutup di v2.16.0, komentar `MainActivity.kt` baris
+  ~294 juga sudah bilang ini). Entri lama baris ~707 PROJECT_STATE.md soal
+  gap ini sudah usang/superseded, TIDAK dieksekusi ulang di batch ini.
+- **Item (a) DIEKSEKUSI**: `MainViewModel.undoMove()` sekarang
+  `withContext(Dispatchers.IO) { fileSorter.undo(entry) }` -- pola identik
+  dgn `checkSafAccessLost()` yang sudah ada di file yang sama. Caller
+  (`MainActivity.kt` -> `ActivityLogScreen` -> `rememberCoroutineScope()`)
+  default `Dispatchers.Main`, jadi tanpa fix ini SEMUA I/O undo (baca/tulis
+  file lokal ATAU `DocumentFile`/`ContentResolver` utk jalur SAF) jalan di
+  main thread -- berisiko ANR kalau file besar/provider SAF lambat.
+- **Kenapa fix di ViewModel, bukan di `FileSorter.undo()`/`undoSaf()`/
+  `undoSafDestination()` langsung**: 1 titik pembungkus di caller cukup
+  (identik pola `checkSafAccessLost`), tidak perlu ubah 3 fungsi sekaligus
+  di `FileSorter.kt` (Batch Limit: 1 modul, minim invasif). `FileSorter.kt`
+  TIDAK disentuh sama sekali di batch ini.
+- File diubah (2): `ui/MainViewModel.kt` (1 fungsi), `app/build.gradle.kts`
+  (versi). `scripts/preflight_check.sh` lolos bersih. **BELUM PERNAH lewat
+  `./gradlew` asli**. User WAJIB verifikasi di HP asli: undo dari
+  ActivityLogScreen (baik jalur lokal maupun folder kustom SAF kalau
+  dipakai) tetap sukses & UI tidak freeze/lag saat undo file besar.
+- versionCode 66->67, versionName 2.20.0->2.20.1.
+
+## STATUS PROJECT SEBELUMNYA: v2.20.0 -- REBRAND PALET "Midnight Blue"->"Transformative Teal" + sistem depth/3D ultra immersive -- 2026-08-13
 - **Permintaan user**: ganti palet warna lama -> "Transformative Teal
   (Biru-Hijau Gelap)" + tambah efek depth/3D ultra immersive.
 - **Atomic Change (9 file)**: `Color.kt` (repalette total, rename
