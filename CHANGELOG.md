@@ -3,6 +3,47 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.18.1 -- Fix bug NYATA: preview Rule cek Downloads, scan cek folder kustom (2026-08-13)
+User klarifikasi laporan sebelumnya: "saat bikin rule semua file yang cocok
+MUNCUL di preview, tapi saat discan malah 'tidak ada file cocok'." Ini BUKAN
+salah paham user, BUKAN juga soal ekstensi (sudah dibenerin di v2.18.0) --
+ini **bug nyata terpisah**, baru ketahuan lewat testing asli user (tidak
+kena di audit eksternal maupun review kode sebelumnya).
+
+**Root cause**: `FileSorter.previewPatternMatches()` (dipanggil layar
+Tambah/Edit Rule, live tiap 400ms debounce ketik pattern) HARDCODE selalu
+cek `downloadsDir` (java.io.File biasa) -- SAMA SEKALI TIDAK PEDULI folder
+kustom SAF sudah dipilih user atau belum. Sementara `scanAndSort()` yang
+sesungguhnya SUDAH BENAR (sejak fix P0 audit SAF v2.17.1) mengarah ke folder
+kustom kalau dikonfigurasi. Akibatnya: preview & scan mengecek DUA folder
+BERBEDA TOTAL -- preview "cocok" (dari isi Downloads, mungkin file lama/tak
+relevan yang kebetulan cocok pattern luas), scan asli "tidak ada" (dari
+folder kustom yang sungguhan berisi file user, tapi preview tidak pernah
+melihatnya).
+
+**Fix**: `previewPatternMatches()` diubah jadi `suspend fun`, reuse
+`resolveSafRoot()` PERSIS SAMA seperti `scanAndSort()` -- satu logika
+pemilihan sumber untuk preview & scan sungguhan, supaya kelas bug ini tidak
+bisa terulang lewat cabang logika kedua yang independen. Folder
+"PromptVault" di jalur SAF preview dicari lewat `findFile()` (baca-saja,
+TIDAK dibuat) -- preview tidak boleh bikin folder muncul sebagai efek
+samping ngetik pattern sebelum rule disimpan. `listCandidateFilesSaf()`
+parameter `vaultRootDoc` jadi nullable untuk mendukung ini (scan
+sungguhan tetap pakai versi yang sudah dibuat lewat
+`findOrCreateChildDirSaf`, tidak berubah perilakunya).
+
+**Rantai perubahan signature** (suspend menjalar ke atas, WAJIB semua
+diubah bersamaan supaya kompil): `FileSorter.previewPatternMatches` ->
+`MainViewModel.previewPattern` -> parameter `onPreviewPattern` di
+`AddEditRuleScreen` (tipe lambda `suspend (String,String)->...`).
+Pemanggilnya sudah di dalam `LaunchedEffect` (coroutine), jadi tidak perlu
+ubah titik panggil di UI.
+
+File diubah (3, 1 modul "preview/scan parity"): `util/FileSorter.kt`,
+`ui/MainViewModel.kt`, `ui/screens/AddEditRuleScreen.kt`.
+`scripts/preflight_check.sh` lolos bersih. **BELUM PERNAH lewat `./gradlew`
+asli** -- CI run berikutnya WAJIB dicek.
+
 ## v2.18.0 -- Dukung SEMUA ekstensi file, bukan cuma ZIP/TXT (2026-08-13)
 User laporan "sudah pilih folder custom untuk pindahkan file project, tapi
 selalu 'tidak ada file cocok'" -- root cause: scanner HARDCODE hanya terima

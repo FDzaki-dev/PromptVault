@@ -3,7 +3,29 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
-## STATUS PROJECT: v2.18.0 -- DUKUNG SEMUA EKSTENSI FILE -- 2026-08-13
+## STATUS PROJECT: v2.18.1 -- FIX BUG NYATA: PREVIEW vs SCAN LIHAT FOLDER BEDA -- 2026-08-13
+- User klarifikasi laporan v2.18.0: preview di layar Tambah/Edit Rule MUNCUL
+  cocok, tapi scan asli tetap bilang "tidak ada file cocok". Digali lewat
+  tanya-jawab (bukan tebak) -- ternyata bug terpisah, BUKAN soal ekstensi.
+- Root cause: `previewPatternMatches()` hardcode selalu cek `downloadsDir`,
+  buta total terhadap folder kustom SAF yang sudah dikonfigurasi -- padahal
+  `scanAndSort()` sungguhan SUDAH benar mengarah ke folder kustom. Preview
+  & scan cek folder BERBEDA. Detail lengkap: CHANGELOG.md v2.18.1.
+- Fix: preview reuse `resolveSafRoot()` yang sama persis dengan scan asli
+  (satu logika sumber, bukan 2 cabang independen -- pelajaran sama dengan
+  syarat (c) Insiden #7). Signature `suspend` menjalar ke
+  `MainViewModel.previewPattern` & param `onPreviewPattern` di
+  `AddEditRuleScreen`.
+- `scripts/preflight_check.sh` lolos bersih. **BELUM PERNAH lewat
+  `./gradlew` asli** -- CI run berikutnya WAJIB dicek.
+- **Pelajaran proses dicatat**: 3 laporan user berturut-turut ("tidak ada
+  file cocok" -> "campuran ekstensi" -> "preview cocok tapi scan tidak")
+  ternyata 2 bug BERBEDA (ekstensi v2.18.0 + preview/scan-mismatch v2.18.1)
+  yang KEBETULAN bergejala mirip di awal. Pelajaran: jangan berhenti gali
+  setelah fix pertama kalau user masih lapor gejala serupa -- tanya detail
+  konkret ("preview vs scan beda?") sebelum asumsi "sudah kelar".
+
+## STATUS PROJECT SEBELUMNYA: v2.18.0 -- DUKUNG SEMUA EKSTENSI FILE -- 2026-08-13
 - User laporan bug pakai (bukan audit): pilih folder custom, isi "campuran"
   ekstensi, rule sudah aktif, tapi selalu "tidak ada file cocok". Root cause
   DITEMUKAN via tanya-jawab terarah (bukan tebak langsung): app dari awal

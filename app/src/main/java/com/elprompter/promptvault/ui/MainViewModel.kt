@@ -299,7 +299,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     suspend fun findAllOverlaps() = ruleRepository.findAllOverlaps()
 
     /** Uji pattern include+exclude langsung terhadap isi Downloads saat ini (belum tersimpan sebagai rule). */
-    fun previewPattern(pattern: String, excludePattern: String = ""): PatternPreviewResult =
+    suspend fun previewPattern(pattern: String, excludePattern: String = ""): PatternPreviewResult =
         fileSorter.previewPatternMatches(pattern, excludePattern)
 
     /** Nama file asli (semua ekstensi, sejak fix 2026-08-13) di Downloads, untuk layar Diagnostik. */

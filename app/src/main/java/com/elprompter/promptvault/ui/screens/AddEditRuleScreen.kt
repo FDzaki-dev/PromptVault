@@ -42,7 +42,7 @@ import java.util.UUID
 fun AddEditRuleScreen(
     existingRule: Rule?,
     onCheckBeforeSave: suspend (Rule) -> SaveRuleCheck,
-    onPreviewPattern: (String, String) -> PatternPreviewResult,
+    onPreviewPattern: suspend (String, String) -> PatternPreviewResult,
     onSave: (Rule, removeDuplicateRuleId: String?) -> Unit,
     onCancel: () -> Unit
 ) {

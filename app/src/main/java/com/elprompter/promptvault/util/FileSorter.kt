@@ -483,18 +483,23 @@ class FileSorter(
      * TERATAS folder pilihan user (non-rekursif, sama seperti Downloads asli),
      * buang file sementara/partial (reuse [isTempOrPartialName] -- BUKAN
      * salinan kedua, lihat syarat (c) Insiden #7), dan buang defensif kalau
-     * kebetulan match folder "PromptVault" itu sendiri (harusnya sudah
-     * otomatis kefilter oleh `isFile`, tapi dicek eksplisit untuk paritas
-     * dengan pengecekan `vaultRootDir` di versi lama). [Feature, dukung SEMUA
+     * kebetulan match folder "PromptVault" itu sendiri. [Feature, dukung SEMUA
      * ekstensi -- 2026-08-13] Filter ekstensi zip/txt DIHAPUS TOTAL, sama
      * seperti [listCandidateFiles] -- lihat catatan di situ, alasan sama
      * persis berlaku di jalur SAF.
+     *
+     * [fix preview/scan-mismatch, 2026-08-13] `vaultRootDoc` sekarang NULLABLE
+     * -- dipakai bersama dari SCAN sungguhan (dibuat lebih dulu lewat
+     * `findOrCreateChildDirSaf`, tidak pernah null di jalur itu) MAUPUN
+     * PREVIEW (dicari lewat `findFile()` read-only, `null` kalau folder belum
+     * pernah dibuat -- tetap valid, artinya tidak ada apa pun untuk
+     * dikecualikan).
      */
-    private fun listCandidateFilesSaf(root: DocumentFile, vaultRootDoc: DocumentFile): List<DocumentFile> {
+    private fun listCandidateFilesSaf(root: DocumentFile, vaultRootDoc: DocumentFile?): List<DocumentFile> {
         return try {
             root.listFiles().filter { doc ->
                 val name = doc.name
-                name != null && doc.isFile && doc.uri != vaultRootDoc.uri &&
+                name != null && doc.isFile && doc.uri != vaultRootDoc?.uri &&
                     !isTempOrPartialName(name)
             }
         } catch (e: Exception) {
@@ -908,19 +913,60 @@ class FileSorter(
 
     /**
      * Uji pattern include+exclude (belum tentu tersimpan sebagai rule) terhadap
-     * isi Downloads saat ini. Dipakai di layar Tambah/Edit Rule supaya user lihat
-     * langsung dampak pattern-nya SEBELUM menyimpan rule. Mendukung multi-pattern CSV.
+     * isi folder sumber AKTIF SAAT INI. Dipakai di layar Tambah/Edit Rule supaya
+     * user lihat langsung dampak pattern-nya SEBELUM menyimpan rule. Mendukung
+     * multi-pattern CSV.
+     *
+     * [fix bug real -- 2026-08-13, laporan user "preview cocok tapi scan bilang
+     * tidak ada"] SEBELUMNYA fungsi ini HARDCODE selalu cek [downloadsDir]
+     * (java.io.File biasa) TIDAK PEDULI folder kustom SAF sudah dipilih atau
+     * belum -- preview & scan sesungguhnya ([scanAndSort]) bisa mengecek DUA
+     * folder yang BERBEDA TOTAL. User yang taruh file di folder kustom lihat
+     * preview "cocok!" (dari isi Downloads, bukan folder kustomnya), lalu scan
+     * asli (yang benar mengarah ke folder kustom sejak fix P0 audit SAF)
+     * melapor "tidak ada file cocok" -- keduanya BENAR menurut sumbernya
+     * masing-masing, tapi user cuma lihat satu sumber yang salah.
+     *
+     * Sekarang preview reuse [resolveSafRoot] PERSIS sama seperti [scanAndSort]
+     * -- SATU logika pemilihan sumber untuk preview & scan sungguhan, supaya
+     * kelas bug "preview vs scan lihat folder beda" tidak bisa terulang lewat
+     * cabang logika kedua yang independen (pelajaran sama dgn syarat (c)
+     * Insiden #7: satu implementasi, bukan disalin/didekati ulang).
+     *
+     * Folder "PromptVault" di jalur SAF dicari lewat `findFile()` (BACA SAJA,
+     * TIDAK dibuat) -- preview jalan tiap 400ms debounce ketikan, TIDAK boleh
+     * bikin folder muncul sebagai efek samping ketik pattern sebelum rule
+     * disimpan. Kalau folder itu belum ada, `null` aman -- artinya memang belum
+     * ada apa pun untuk dikecualikan dari daftar kandidat.
      */
-    fun previewPatternMatches(pattern: String, excludePattern: String = ""): PatternPreviewResult {
-        if (pattern.isBlank() || !downloadsDir.exists() || !downloadsDir.canRead()) {
-            return PatternPreviewResult(0, emptyList())
+    suspend fun previewPatternMatches(pattern: String, excludePattern: String = ""): PatternPreviewResult =
+        withContext(Dispatchers.IO) {
+            if (pattern.isBlank()) return@withContext PatternPreviewResult(0, emptyList())
+            when (val resolution = resolveSafRoot()) {
+                is SafRootResolution.Active -> {
+                    val vaultRootDoc = resolution.root.findFile("PromptVault")
+                    val names = listCandidateFilesSaf(resolution.root, vaultRootDoc).mapNotNull { it.name }
+                    buildPreviewResult(names, pattern, excludePattern)
+                }
+                SafRootResolution.NotConfigured -> {
+                    if (!downloadsDir.exists() || !downloadsDir.canRead()) {
+                        return@withContext PatternPreviewResult(0, emptyList())
+                    }
+                    val names = listCandidateFiles().map { it.name }
+                    buildPreviewResult(names, pattern, excludePattern)
+                }
+                // Akses folder kustom hilang -- preview TIDAK boleh diam-diam
+                // balik ke Downloads (itu persis P0 #2 lama), jujur kosong saja,
+                // konsisten dengan [scanAndSort] yang juga berhenti di kondisi ini.
+                is SafRootResolution.AccessLost -> PatternPreviewResult(0, emptyList())
+            }
         }
-        val candidates = listCandidateFiles()
-        val matched = candidates
-            .filter { GlobMatcher.matchesAny(it.name, pattern) }
-            .filterNot { excludePattern.isNotBlank() && GlobMatcher.matchesAny(it.name, excludePattern) }
-            .map { it.name }
-        return PatternPreviewResult(candidates.size, matched)
+
+    private fun buildPreviewResult(candidateNames: List<String>, pattern: String, excludePattern: String): PatternPreviewResult {
+        val matched = candidateNames
+            .filter { GlobMatcher.matchesAny(it, pattern) }
+            .filterNot { excludePattern.isNotBlank() && GlobMatcher.matchesAny(it, excludePattern) }
+        return PatternPreviewResult(candidateNames.size, matched)
     }
 
     /** Daftar nama file asli (SEMUA ekstensi, sejak fix 2026-08-13) di Downloads, dipakai layar Diagnostik agar user tahu format nama file sebenarnya. */
