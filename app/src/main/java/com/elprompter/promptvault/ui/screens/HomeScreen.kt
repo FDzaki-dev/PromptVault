@@ -1,8 +1,11 @@
 package com.elprompter.promptvault.ui.screens
 
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,6 +28,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -35,7 +39,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -44,7 +48,7 @@ import com.elprompter.promptvault.ui.MainViewModel
 import com.elprompter.promptvault.ui.components.GroupedList
 import com.elprompter.promptvault.ui.components.GroupedListRow
 import com.elprompter.promptvault.ui.components.VaultCard
-import com.elprompter.promptvault.ui.components.pressScale
+import com.elprompter.promptvault.ui.theme.TactileTokens
 import com.elprompter.promptvault.ui.theme.VaultTheme
 
 @Composable
@@ -141,31 +145,54 @@ fun HomeScreen(
                 }
             }
 
+            // v4.0.0 -- CTA "ultra immersive depth/3D" (permintaan eksplisit user).
+            // TIDAK memakai `Modifier.shadow(...).background(brush)` langsung --
+            // itu PERSIS kombinasi yang bikin regresi v2.14.0 (kotak pucat/glitch
+            // di banyak GPU/skin, di-fix v2.14.1 dengan MELEPAS shadow total).
+            // Pola aman: `Surface(onClick=..., shadowElevation=...)` dengan
+            // `color` SOLID sbg dasar shadow (bukan Transparent+brush), gradient
+            // hangat (Stamp->Amber) ditumpuk sebagai overlay Box terpisah DI
+            // DALAM konten Surface -- shadow & brush tidak pernah 1 node yang sama.
             val scanInteraction = remember { MutableInteractionSource() }
-            Box(
+            val scanPressed by scanInteraction.collectIsPressedAsState()
+            val ctaElevation by animateDpAsState(
+                targetValue = if (scanPressed) TactileTokens.ElevationCtaPressed else TactileTokens.ElevationCta,
+                animationSpec = tween(TactileTokens.PressAnimationMillis),
+                label = "ctaElevation"
+            )
+            val ctaScale by animateFloatAsState(
+                targetValue = if (scanPressed) TactileTokens.PressScale else 1f,
+                animationSpec = tween(TactileTokens.PressAnimationMillis),
+                label = "ctaScale"
+            )
+            Surface(
+                onClick = onScanNow,
+                enabled = !isScanning,
+                interactionSource = scanInteraction,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(MaterialTheme.shapes.large)
-                    .background(
-                        // CTA utama sekarang gradient hangat (Stamp -> Amber),
-                        // bukan blok warna solid tunggal, supaya jadi titik
-                        // fokus visual yang jelas dan lebih "hidup".
-                        Brush.horizontalGradient(colors = listOf(colors.secondary, colors.tertiary))
-                    )
-                    .clickable(
-                        interactionSource = scanInteraction,
-                        indication = null,
-                        enabled = !isScanning,
-                        onClick = onScanNow
-                    )
-                    .pressScale(scanInteraction)
-                    .padding(vertical = 15.dp),
-                contentAlignment = Alignment.Center
+                    .scale(ctaScale),
+                shape = MaterialTheme.shapes.large,
+                color = colors.secondary,
+                shadowElevation = ctaElevation
             ) {
-                if (isScanning) {
-                    CircularProgressIndicator(modifier = Modifier.size(18.dp), color = colors.onSecondary)
-                } else {
-                    Text("Scan Sekarang", color = colors.onSecondary, style = MaterialTheme.typography.titleMedium)
+                Box(
+                    modifier = Modifier
+                        .background(
+                            // CTA utama gradient hangat (Stamp -> Amber), bukan blok
+                            // warna solid tunggal, supaya jadi titik fokus visual
+                            // yang jelas dan lebih "hidup" -- kini murni layer
+                            // dekoratif di atas dasar solid, bukan pemilik shadow.
+                            Brush.horizontalGradient(colors = listOf(colors.secondary, colors.tertiary))
+                        )
+                        .padding(vertical = 15.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (isScanning) {
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), color = colors.onSecondary)
+                    } else {
+                        Text("Scan Sekarang", color = colors.onSecondary, style = MaterialTheme.typography.titleMedium)
+                    }
                 }
             }
 

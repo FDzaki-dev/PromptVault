@@ -3,7 +3,41 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
-## STATUS PROJECT: v2.19.3 -- FIX BUG NYATA (laporan user): file/apk bernama diawali "PromptVault" tidak terdeteksi scan -- 2026-08-13
+## STATUS PROJECT: v2.20.0 -- REBRAND PALET "Midnight Blue"->"Transformative Teal" + sistem depth/3D ultra immersive -- 2026-08-13
+- **Permintaan user**: ganti palet warna lama -> "Transformative Teal
+  (Biru-Hijau Gelap)" + tambah efek depth/3D ultra immersive.
+- **Atomic Change (9 file)**: `Color.kt` (repalette total, rename
+  `MidnightBlue*`->`Teal*`), `Theme.kt` (wiring colorScheme), `TactileTokens.kt`
+  (token elevasi baru: ElevationCard/Cta/CtaPressed/Icon/Thumb), `VaultCard.kt`,
+  `HomeScreen.kt` (CTA), `GroupedListRow.kt` (icon box), `TactileSwitch.kt`
+  (thumb ON), `colors.xml` (retint splash/launcher-bg + rename accent token),
+  `app/build.gradle.kts` (versi). `ic_launcher_foreground.xml` SENGAJA
+  tidak disentuh (asumsi: "palet lama" = skema UI Compose, bukan artwork
+  ikon launcher yang sudah krem sejak v2.14.0 dan itu keputusan terpisah).
+- **PELAJARAN PALING PENTING buat sesi berikutnya**: elevasi/shadow NYATA
+  di komponen ber-gradient WAJIB pakai pola "solid-base lalu overlay brush
+  terpisah" (Surface/`.background()` solid dulu utk shadow, gradient/tint
+  ditumpuk sbg Box terpisah di atas) -- JANGAN PERNAH `Modifier.shadow(...)
+  .background(brush)` langsung dirantai ke node yang sama. Itu PERSIS
+  penyebab regresi nyata v2.14.0 (CTA Home jadi kotak pucat/glitch di
+  banyak GPU/skin), yang waktu itu di-fix dengan MELEPAS shadow total
+  (v2.14.1). Sekarang shadow dihidupkan lagi tapi dengan pola aman ini di
+  4 tempat sekaligus (VaultCard, CTA, icon GroupedListRow, thumb switch).
+  Kalau nanti ada laporan "kotak pucat/putih aneh muncul pas [X]", cek
+  DULU apakah [X] melanggar pola ini sebelum menduga penyebab lain.
+- **GroupedListRow icon shadow**: keputusan v3.0.1 ("no permanent glow per
+  icon") DIGANTI sebagian -- sekarang icon box boleh punya shadow NETRAL
+  kecil (bukan `spotColor` berwarna) krn user minta depth eksplisit; bab 18
+  (glow BERWARNA dilarang) masih dihormati krn shadow ini netral/abu-abu,
+  bukan cahaya menyala berwarna.
+- File diubah (9, di luar batas normal 10/modul TAPI ini 1 modul visual
+  atomik, precedent sama v2.14.0). `scripts/preflight_check.sh` lolos
+  bersih. **BELUM PERNAH lewat `./gradlew` asli / device asli**. User WAJIB
+  verifikasi visual di HP asli: CTA "Scan Sekarang" idle & ditekan (paling
+  berisiko historis), VaultCard & GroupedListRow saat scroll (tidak boleh
+  flicker/pucat), kontras teks di atas TealAccent baru.
+
+## STATUS PROJECT SEBELUMNYA: v2.19.3 -- FIX BUG NYATA (laporan user): file/apk bernama diawali "PromptVault" tidak terdeteksi scan -- 2026-08-13
 - **User laporkan**: file/apk bernama persis "PromptVault" (atau apa pun yang
   DIAWALI teks itu, mis. "PromptVault.apk") ditaruh di Downloads, tidak
   pernah terdeteksi sebagai kandidat scan walau rule/pattern cocok.

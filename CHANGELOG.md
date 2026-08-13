@@ -3,6 +3,65 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.20.0 -- Rebrand palet total "Midnight Blue" -> "Transformative Teal" + sistem depth/3D ultra immersive (2026-08-13)
+Permintaan eksplisit user: ganti seluruh palet warna lama + tambah efek
+depth/3D immersive. Ini Atomic Change (9 file, di luar batas normal 10
+file/1 modul, tapi 1 layer visual yang saling terkait -- sama persis
+precedent v2.14.0 yang juga menyentuh 9 file untuk redesign total).
+
+**Palet** (`Color.kt`): seluruh token `MidnightBlue*` (indigo dingin)
+di-rename + di-re-hex jadi `Teal*` (biru-hijau). `TealGradientAlpha`
+dinaikkan dari 0.06f -> 0.10f (permintaan "ultra immersive" butuh tint
+lebih terasa, tetap ambient bukan warna dominan). `SlateGlow` (aksen
+"Pengaturan") digeser dari keluarga biru murni ke indigo-periwinkle
+supaya tidak mirip lagi dengan TealAccent baru (jaga Keputusan Arsitektur
+#3: 4 aksen menu harus beda hue). `AmoledBackground`/`pv_amoled_background`
+(colors.xml, dipakai splash + launcher icon background) ikut di-retint;
+`pv_midnight_blue_accent` -> `pv_teal_accent`. `ic_launcher_foreground.xml`
+(vektor "kartu index/manifest" krem/rust) SENGAJA TIDAK disentuh -- itu
+keputusan desain terpisah dari v2.14.0 (ikon tetap krem di atas background
+AMOLED), bukan bagian dari sistem token warna UI ini; asumsi diambil kalau
+user MAKSUD "palet warna lama" itu skema UI Compose yang sudah beberapa
+kali diiterasi (Midnight Blue), bukan artwork launcher icon.
+
+**Depth/3D** (token baru `TactileTokens.ElevationCard/Cta/CtaPressed/Icon/
+Thumb`): `VaultCard`, CTA "Scan Sekarang" (`HomeScreen.kt`), kotak ikon
+`GroupedListRow`, dan thumb `TactileSwitch` (saat ON) sekarang punya
+elevasi bayangan NYATA (v3.0.0 semua flat, `shadowElevation=0.dp`).
+
+**Kenapa BUKAN sekadar `Modifier.shadow(...).background(brush)` langsung**
+(ini bagian paling penting untuk sesi berikutnya): kombinasi itu PERSIS
+yang menyebabkan regresi nyata di v2.14.0 (CTA Home jadi kotak pucat/
+glitch di banyak GPU/skin), yang di-fix v2.14.1 dengan MELEPAS shadow
+total dari CTA. Supaya elevasi nyata bisa dihidupkan lagi TANPA mengulang
+bug yang sama, dipakai pola baru konsisten di semua 4 tempat: `Surface`
+(atau `Modifier.shadow` untuk thumb switch yang bukan Surface) dengan
+`color`/`.background()` dasar SOLID (bukan `Color.Transparent` + brush
+langsung di node yang sama) -- shadow RenderNode menggambar bayangan dari
+warna solid yang aman, lalu gradient/tint (Teal ambient, Stamp->Amber,
+radial highlight) ditumpuk sebagai layer Box TERPISAH di atas/di dalam,
+tidak pernah di-chain ke node yang sama dengan shadow. Kalau di masa
+depan mau tambah elevasi ke komponen ber-gradient lain, WAJIB pakai pola
+solid-base-lalu-overlay ini, jangan `Modifier.shadow` langsung ke Brush.
+
+GroupedListRow icon box: v3.0.1 sebelumnya SENGAJA melarang shadow
+berwarna tint di situ (dianggap "glow permanen", pelanggaran bab 18).
+v4.0.0 ini MENGGANTI keputusan itu -- ikon sekarang dapat shadow NETRAL
+kecil (`ElevationIcon = 3.dp`, warna default Material3, bukan `spotColor`
+tint) supaya secara semantik ini "bayangan terangkat", bukan "cahaya
+menyala" -- jadi tidak melanggar semangat bab 18 (glow BERWARNA dilarang,
+shadow netral kecil untuk depth diizinkan berdasarkan instruksi baru).
+
+1 file diubah: `app/build.gradle.kts` (versi). Preflight lolos bersih.
+**BELUM PERNAH lewat `./gradlew` asli / device asli** -- konsisten seluruh
+riwayat project. User WAJIB verifikasi visual di HP asli sebelum anggap
+selesai, terutama: (1) CTA "Scan Sekarang" idle & saat ditekan (paling
+berisiko -- riwayat regresi persis di titik ini), (2) VaultCard & icon
+GroupedListRow tidak flicker/pucat saat scroll, (3) kontras teks di atas
+TealAccent baru masih terbaca jelas.
+
+versionCode 65->66, versionName 2.19.3->2.20.0.
+
 ## v2.19.3 -- Fix bug NYATA: file/apk bernama diawali "PromptVault" tidak pernah terdeteksi scan (2026-08-13)
 User laporkan: file/apk dengan nama persis "PromptVault" (atau apa pun yang
 DIAWALI teks itu, mis. "PromptVault.apk", "PromptVault-release.apk") yang

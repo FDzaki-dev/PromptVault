@@ -14,9 +14,9 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.border
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -26,6 +26,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.elprompter.promptvault.ui.theme.GlassBorder
+import com.elprompter.promptvault.ui.theme.GlassSurfaceElevated
+import com.elprompter.promptvault.ui.theme.TactileTokens
 
 /**
  * Satu baris menu ala grouped list iOS Settings: ikon berwarna di kotak
@@ -41,6 +43,17 @@ import com.elprompter.promptvault.ui.theme.GlassBorder
  * Diganti kotak ikon glass datar (bab 4/7/14: tint hanya lewat fill alpha
  * rendah + border rambut, TANPA shadow berwarna) -- identitas warna per
  * menu tetap ada lewat isi & border, bukan lewat cahaya yang menyala.
+ *
+ * v4.0.0 -- "ultra immersive depth/3D" (permintaan eksplisit user, MENGGANTI
+ * keputusan v3.0.1 di atas soal shadow): kotak ikon sekarang dapat elevasi
+ * NYATA tapi kecil & NETRAL ([TactileTokens.ElevationIcon], shadow bawaan
+ * Material3 -- bukan `spotColor` berwarna tint) supaya tetap beda dari "glow"
+ * yang dilarang bab 18 (glow = cahaya BERWARNA menyala; ini cuma bayangan
+ * abu-abu netral kecil, sinyal "terangkat", bukan "menyala"). Base `Surface`
+ * pakai `color` SOLID (`GlassSurfaceElevated`, bukan brush langsung) supaya
+ * shadow aman -- pola sama dengan `VaultCard.kt` (lihat dokumentasi lengkap
+ * di sana soal kenapa `Modifier.shadow`+brush langsung rawan glitch); tint
+ * gradient tetap ada sebagai overlay Box terpisah DI DALAM Surface.
  */
 @Composable
 fun GroupedListRow(icon: ImageVector, label: String, tint: Color? = null, onClick: () -> Unit) {
@@ -54,19 +67,24 @@ fun GroupedListRow(icon: ImageVector, label: String, tint: Color? = null, onClic
             .padding(horizontal = 16.dp, vertical = 13.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier
-                .size(30.dp)
-                .background(
+        Surface(
+            modifier = Modifier.size(30.dp),
+            shape = RoundedCornerShape(9.dp),
+            color = GlassSurfaceElevated,
+            border = BorderStroke(1.dp, GlassBorder),
+            tonalElevation = 0.dp,
+            shadowElevation = TactileTokens.ElevationIcon
+        ) {
+            Box(
+                modifier = Modifier.background(
                     Brush.linearGradient(
                         colors = listOf(resolvedTint.copy(alpha = 0.22f), resolvedTint.copy(alpha = 0.12f))
-                    ),
-                    RoundedCornerShape(9.dp)
-                )
-                .border(BorderStroke(1.dp, GlassBorder), RoundedCornerShape(9.dp)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(icon, contentDescription = null, tint = resolvedTint, modifier = Modifier.size(16.dp))
+                    )
+                ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, contentDescription = null, tint = resolvedTint, modifier = Modifier.size(16.dp))
+            }
         }
         Text(
             label,

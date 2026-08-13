@@ -42,7 +42,7 @@ private val ThumbTravel = TrackWidth - ThumbSize - 6.dp // 3dp inset tiap sisi
  * OFF: track "tenggelam" ke dalam glass (fill lebih gelap dari `GlassSurface`
  * sekitarnya + TANPA shadow terangkat) -- terasa recessed, bukan cuma abu-abu.
  * ON: track terangkat tipis dengan tint aksen (accentColor, default
- * `colors.primary`/Midnight Blue accent) + glow lokal SATU tempat saja (thumb),
+ * `colors.primary`/Teal accent) + glow lokal SATU tempat saja (thumb),
  * sesuai bab 18 (glow untuk selected state itu diizinkan, bukan dekorasi
  * tersebar). ON/OFF tidak bergantung HANYA pada kedalaman -- posisi thumb
  * kiri/kanan + warna track tetap jadi penanda kedua (bab 21 Accessibility).
@@ -94,19 +94,32 @@ fun TactileSwitch(
             ),
         contentAlignment = Alignment.CenterStart
     ) {
+        // v4.0.0 -- shadow thumb ON direstrukturisasi ke pola aman: `Modifier.
+        // shadow(spotColor=...)` sekarang di-chain ke `.background(SOLID color)`
+        // (GlassSurfaceElevated polos), BUKAN langsung ke Brush.radialGradient
+        // seperti sebelumnya -- kombinasi shadow+Brush custom itu golongan bug
+        // yang sama dengan regresi CTA Home v2.14.0 (lihat dokumentasi lengkap
+        // di VaultCard.kt). Gradient radial tetap ada, ditumpuk sbg overlay Box
+        // terpisah DI ATAS, jadi bukan bagian dari node yang sama dengan shadow.
         Box(
             modifier = Modifier
                 .offset(x = 3.dp + thumbOffset)
                 .size(ThumbSize)
                 .scale(thumbScale)
                 .then(
-                    if (checked) Modifier.shadow(3.dp, RoundedCornerShape(50), spotColor = accentColor)
+                    if (checked) Modifier.shadow(TactileTokens.ElevationThumb, RoundedCornerShape(50), spotColor = accentColor)
                     else Modifier
                 )
-                .background(
-                    Brush.radialGradient(colors = listOf(GlassHighlight, GlassSurfaceElevated)),
-                    RoundedCornerShape(50)
-                )
-        )
+                .background(GlassSurfaceElevated, RoundedCornerShape(50))
+        ) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(
+                        Brush.radialGradient(colors = listOf(GlassHighlight, GlassSurfaceElevated)),
+                        RoundedCornerShape(50)
+                    )
+            )
+        }
     }
 }

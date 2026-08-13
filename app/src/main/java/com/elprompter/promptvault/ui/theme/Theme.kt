@@ -8,9 +8,9 @@ import androidx.compose.runtime.staticCompositionLocalOf
 
 /**
  * v3.0.0 — Dark mode adalah SATU-SATUNYA skema yang ada (AMOLED Glassmorphism
- * Hybrid + Midnight Blue gradient tint). Skema terang lama DIHAPUS TOTAL --
- * bukan disembunyikan, tapi benar-benar tidak ada lagi jalur kode yang bisa
- * membuat komponen manapun jatuh ke tampilan terang/neumorphic cerah.
+ * Hybrid). Skema terang lama DIHAPUS TOTAL -- bukan disembunyikan, tapi
+ * benar-benar tidak ada lagi jalur kode yang bisa membuat komponen manapun
+ * jatuh ke tampilan terang/neumorphic cerah.
  *
  * v2.16.0 -- parameter `darkTheme: Boolean` yang SENGAJA diabaikan dihapus
  * total (technical debt closure, bukan cuma dibiarkan mati): sebelumnya
@@ -19,18 +19,22 @@ import androidx.compose.runtime.staticCompositionLocalOf
  * mengizinkan tema terang padahal tidak. `ThemeMode`/opsi "Terang"/"Ikuti
  * Sistem" juga sudah dihapus dari `SettingsRepository` & `SettingsScreen`
  * di batch yang sama; lihat CHANGELOG v2.16.0.
+ *
+ * v4.0.0 -- gradient tint "Midnight Blue" diganti "Transformative Teal"
+ * (biru-hijau gelap), token `MidnightBlueAccent*` -> `TealAccent*` di
+ * Color.kt (rename + re-hex, bukan cuma rename kosong). Lihat CHANGELOG.
  */
 private val VaultDarkColors = darkColorScheme(
-    primary = MidnightBlueAccent,
-    onPrimary = MidnightBlueAccentOn,
-    primaryContainer = MidnightBlueAccentContainer,
-    onPrimaryContainer = MidnightBlueAccent,
+    primary = TealAccent,
+    onPrimary = TealAccentOn,
+    primaryContainer = TealAccentContainer,
+    onPrimaryContainer = TealAccent,
     secondary = StampGlow,
-    onSecondary = MidnightBlueAccentOn,
+    onSecondary = TealAccentOn,
     secondaryContainer = StampGlowContainer,
     onSecondaryContainer = StampGlow,
     tertiary = AmberGlow,
-    onTertiary = MidnightBlueAccentOn,
+    onTertiary = TealAccentOn,
     tertiaryContainer = AmberGlowContainer,
     onTertiaryContainer = AmberGlow,
     background = AmoledBackground,
@@ -46,9 +50,9 @@ private val VaultDarkColors = darkColorScheme(
     surfaceContainerLowest = AmoledBackground,
     inverseSurface = TextPrimary,
     inverseOnSurface = AmoledBackground,
-    inversePrimary = MidnightBlueAccent,
+    inversePrimary = TealAccent,
     error = RustGlow,
-    onError = MidnightBlueAccentOn,
+    onError = TealAccentOn,
     errorContainer = RustGlowContainer,
     onErrorContainer = RustGlow,
     outline = HairlineGlass,
