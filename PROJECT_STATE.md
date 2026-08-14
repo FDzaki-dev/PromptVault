@@ -3,7 +3,37 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
-## STATUS PROJECT: v2.20.2 -- Eksekusi 2 technical debt tercatat: SCAN_CONCURRENCY configurable + migrasi best-effort DataStore lama -- 2026-08-13
+## STATUS PROJECT: v2.20.3 -- FIX bug compile laten: RuleRepository.kt decodeFromString tanpa import -- 2026-08-14
+- **User minta "lanjutkan penyempurnaan secara bertahap"** (bukan item spesifik
+  disebut namanya). Diinterpretasi sbg: eksekusi item pending yang SUDAH
+  tercatat eksplisit di sesi v2.20.2 sbg "Observasi TIDAK dieksekusi, di luar
+  scope 2 item ini" -- itu satu-satunya technical debt/bug konkret yang sudah
+  teridentifikasi & menunggu, jadi ini pembacaan paling wajar dari instruksi
+  "lanjutkan" tanpa menebak-nebak fitur baru yang tidak diminta.
+- **Bug**: `RuleRepository.kt` (`rulesFlow` & `importFromJson`) manggil
+  `json.decodeFromString<List<Rule>>(...)` tapi import cuma `encodeToString`
+  & `Json` -- fungsi generic reified `decodeFromString<T>()` butuh
+  `import kotlinx.serialization.decodeFromString` eksplisit terpisah per
+  file, TIDAK otomatis ikut dari `import ...json.Json`. Berpotensi
+  `Unresolved reference` compiler asli, belum ketahuan krn project ini
+  belum pernah lewat `./gradlew` asli.
+- **Fix**: tambah 1 baris import. Nol perubahan logika.
+- **Preflight diperkuat (kategori #11, baru)**: grep semua pemakaian
+  `.decodeFromString<` di seluruh `app/src/main/java`, pastikan tiap file
+  yang makai itu juga punya import pasangannya -- supaya KELAS bug ini (bukan
+  cuma titik ini) tertangkap otomatis di masa depan, konsisten pola project
+  (tiap insiden nambah kategori preflight, lihat riwayat kategori #8/#9/#10).
+- File diubah (3): `data/RuleRepository.kt` (1 baris),
+  `scripts/preflight_check.sh` (kategori #11 baru), `app/build.gradle.kts`
+  (versi). `scripts/preflight_check.sh` lolos bersih 11/11 (kategori baru
+  ikut lolos juga). **BELUM PERNAH lewat `./gradlew` asli.** Risiko regresi:
+  SANGAT RENDAH -- murni tambah 1 baris import, tidak ada logika/behavior
+  yang berubah sama sekali. User TIDAK perlu verifikasi manual khusus di HP
+  (tidak ada perubahan UI/behavior), tapi tetap kandidat pertama yang lolos
+  kalau CI akhirnya jalan (`./gradlew` asli pertama kali di project ini).
+- versionCode 68->69, versionName 2.20.2->2.20.3.
+
+## STATUS PROJECT SEBELUMNYA: v2.20.2 -- Eksekusi 2 technical debt tercatat: SCAN_CONCURRENCY configurable + migrasi best-effort DataStore lama -- 2026-08-13
 - **User minta lanjutkan 2 item pending spesifik** (sudah teridentifikasi
   sesi sebelumnya sbg technical debt #3 & #4 di bawah): migrasi DataStore
   lama -> Room, dan `SCAN_CONCURRENCY` configurable. Instruksi eksplisit

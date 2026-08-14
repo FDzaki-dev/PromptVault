@@ -114,6 +114,21 @@ done
 [ "$XML_ISSUE" -eq 0 ] && ok "Semua XML well-formed"
 
 echo ""
+echo "== 11. decodeFromString<T> reified tanpa import eksplisit =="
+# [ditambahkan 2026-08-13, fix RuleRepository.kt v2.20.3] json.decodeFromString<T>()
+# adalah extension function generic reified -- perlu
+# 'import kotlinx.serialization.decodeFromString' eksplisit per file, TIDAK
+# otomatis ikut dari 'import kotlinx.serialization.json.Json'. Lolos preflight
+# lama karena tidak ada kategori yang cek pasangan pemakaian/import ini.
+DECODE_ISSUE=0
+for f in $(grep -rl "\.decodeFromString<" "$KT_DIR" 2>/dev/null); do
+  if ! grep -q "^import kotlinx.serialization.decodeFromString$" "$f"; then
+    fail "MISSING import kotlinx.serialization.decodeFromString: $f"; DECODE_ISSUE=1
+  fi
+done
+[ "$DECODE_ISSUE" -eq 0 ] && ok "Semua decodeFromString<T> punya import lengkap"
+
+echo ""
 if [ "$FAIL" -eq 0 ]; then
   echo "🟢 SEMUA AMAN -- boleh lanjut package ZIP."
 else

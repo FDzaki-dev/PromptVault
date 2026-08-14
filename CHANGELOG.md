@@ -3,6 +3,33 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.20.3 -- FIX bug compile laten nyata: `RuleRepository.kt` decodeFromString tanpa import (2026-08-14)
+Eksekusi item yang sebelumnya dicatat sbg "Observasi TIDAK dieksekusi" di
+v2.20.2 -- user minta lanjutkan penyempurnaan bertahap (trigger valid sesuai
+catatan lama: instruksi eksplisit lanjut, bukan tebakan proaktif).
+
+**Bug**: `RuleRepository.kt` memanggil `json.decodeFromString<List<Rule>>(...)`
+(2 titik: `rulesFlow` & `importFromJson`) tapi cuma mengimpor
+`kotlinx.serialization.encodeToString` & `kotlinx.serialization.json.Json` --
+`decodeFromString<T>()` reified generic BUTUH import eksplisit terpisah
+(`kotlinx.serialization.decodeFromString`), tidak otomatis ikut dari import
+`Json`. Berpotensi `Unresolved reference` di compiler asli -- belum pernah
+ketahuan krn project ini belum pernah lewat `./gradlew` asli.
+
+**Fix**: tambah 1 baris import di `RuleRepository.kt`. Tidak ada perubahan
+logika lain.
+
+**Preflight ditambah kategori #11** (`scripts/preflight_check.sh`): grep semua
+file yang pakai `.decodeFromString<` lalu pastikan pasangan importnya ada --
+supaya kelas bug ini (generic reified tanpa import) tidak lolos lagi ke kode
+manapun di masa depan, bukan cuma fix titik ini.
+
+File diubah (2): `data/RuleRepository.kt` (1 baris import),
+`scripts/preflight_check.sh` (kategori #11 baru), `app/build.gradle.kts`
+(versi). `scripts/preflight_check.sh` lolos bersih (11/11). **BELUM PERNAH
+lewat `./gradlew` asli.** Risiko regresi: sangat rendah (murni tambah import,
+tidak ada logika disentuh).
+
 ## v2.20.2 -- Eksekusi 2 technical debt tercatat: SCAN_CONCURRENCY configurable + migrasi best-effort DataStore lama (2026-08-13)
 User minta lanjutkan 2 item pending spesifik (bukan testing), atas instruksi
 eksplisit "kerjakan tanpa regresi".
