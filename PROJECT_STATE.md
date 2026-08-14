@@ -3,7 +3,46 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
-## STATUS PROJECT: v2.21.1 -- Merge 3-way cabang v2.21.0 (Neumorphism) + v2.20.3 (fix teknis), TANPA regresi -- 2026-08-14
+## STATUS PROJECT: v2.22.0 -- Fix 10 temuan P1 audit statis UI v2.21.1 (batch 1/2) -- 2026-08-15
+- **User upload** `PromptVault_v2_21_1_UI_Audit.txt` (audit statis eksternal,
+  scope UI/UX + Compose logic + accessibility + responsiveness, 10 P1 + 9 P2,
+  0 P0) + minta "debugging UI secara bertahap" -- dibaca sebagai: eksekusi
+  SEMUA P1 dulu dalam 1 batch (7 file unik, di dalam Batch Limit 10 file),
+  P2 (polish/hardening) DISENGAJAKAN ditunda ke batch berikutnya sesuai
+  rekomendasi eksplisit audit ("sebaiknya masuk batch berikutnya").
+- **7 file P1 diubah** + `MainActivity.kt` (Protected Asset, edit parsial --
+  1 titik teruskan parameter baru) + `app/build.gradle.kts` (versi). Detail
+  teknis lengkap tiap 10 temuan: lihat CHANGELOG.md v2.22.0.
+- **1 bug NYATA ditemukan & diperbaiki SENDIRI sebelum ZIP dikirim** (bukan
+  lolos ke user): draf awal batch ini menambahkan
+  `import androidx.compose.foundation.layout.weight` di 3 file (`RuleCard.kt`,
+  `DiagnosticsScreen.kt`, `OnboardingScreen.kt`) -- `preflight_check.sh`
+  kategori #2 menangkapnya. Root cause: `weight()` adalah member extension
+  `RowScope`/`ColumnScope` (otomatis tersedia tanpa import di dalam lambda
+  `Row{}`/`Column{}`), BUKAN top-level function seperti `size()`/`padding()`
+  -- PERSIS kelas kesalahan yang sama dgn insiden `animateItemPlacement`
+  v2.3.7 lama (member scope vs top-level, lihat riwayat insiden di bawah).
+  Import salah dihapus, `preflight_check.sh` lolos bersih 11/11 setelah itu.
+  **Pelajaran ditambahkan eksplisit**: kalau menulis `Modifier.weight(...)`
+  (atau method scope lain: `align`, `matchParentSize`, `animateItemPlacement`)
+  di dalam lambda scope yang sesuai, JANGAN tambah import top-level untuk
+  method itu -- cek dulu apakah itu member scope (biasanya iya utk API
+  layout Compose semacam ini) sebelum menambah import.
+- `scripts/preflight_check.sh` lolos bersih 11/11 (setelah 1 iterasi fix di
+  atas). **BELUM PERNAH lewat `./gradlew` asli.** User WAJIB verifikasi
+  visual di HP asli: Home & Onboarding scroll normal (terutama di font
+  scale besar), RuleCard 2-baris tidak pecah/terlalu tinggi di device
+  sempit, TactileSwitch tetap terasa sama posisi/ukuran visualnya tapi area
+  ketuk lebih nyaman, GroupedListRow & baris crash log Diagnostik sekarang
+  ada ripple saat ditekan, SkippedFilesScreen menampilkan pesan beda kalau
+  belum pernah scan vs sudah scan 0 skipped.
+- versionCode 70->71, versionName 2.21.1->2.22.0.
+- **Sisa 9 temuan P2** (copy JSON export, status import lebih eksplisit,
+  friendlySafFolderLabel, dll) BELUM dieksekusi -- kandidat batch berikutnya,
+  lihat daftar lengkap di `PromptVault_v2_21_1_UI_Audit.txt` bagian P2 atau
+  CHANGELOG.md v2.22.0.
+
+## STATUS PROJECT SEBELUMNYA: v2.21.1 -- Merge 3-way cabang v2.21.0 (Neumorphism) + v2.20.3 (fix teknis), TANPA regresi -- 2026-08-14
 - **User minta merge paket ZIP `v2_21_0` -> `v2_20_3` tanpa regresi.** Root
   cause: 2 paket = 2 cabang independen yang sama-sama lanjut dari v2.20.1
   (versionCode 67) lalu divergen -- `v2_21_0` (code 68) lompat ke redesign

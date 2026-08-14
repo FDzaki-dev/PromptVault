@@ -1,17 +1,23 @@
 package com.elprompter.promptvault.ui.screens
 
 import android.content.Context
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import com.elprompter.promptvault.ui.components.VaultCard
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -21,6 +27,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -134,14 +141,33 @@ fun DiagnosticsScreen(
                     Text("Belum ada crash tercatat. Bagus.", style = MaterialTheme.typography.bodySmall)
                 } else {
                     val fmt = remember { SimpleDateFormat("dd MMM yyyy HH:mm", Locale("id", "ID")) }
+                    // UI-08 & UI-15 fix: sebelumnya clickable dipasang langsung
+                    // ke Text tanpa indication & tanpa touch target eksplisit --
+                    // tinggi baris cuma ikut intrinsic text, terasa seperti teks
+                    // biasa. Sekarang dibungkus Row min-height 48dp + padding +
+                    // indication default (ripple) + chevron sebagai affordance
+                    // jelas bahwa baris ini bisa diketuk.
                     crashLogs.take(10).forEach { entry ->
-                        Text(
-                            "• ${entry.displayName} — ${fmt.format(Date(entry.dateAddedEpochSeconds * 1000))} (${entry.sizeBytes} B)",
-                            style = MaterialTheme.typography.bodySmall,
+                        Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { selectedLog = entry }
-                        )
+                                .sizeIn(minHeight = 48.dp)
+                                .clickable(indication = LocalIndication.current, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) { selectedLog = entry }
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "${entry.displayName} — ${fmt.format(Date(entry.dateAddedEpochSeconds * 1000))} (${entry.sizeBytes} B)",
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Icon(
+                                Icons.Filled.ChevronRight,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.sizeIn(minWidth = 20.dp, minHeight = 20.dp)
+                            )
+                        }
                     }
                     if (crashLogs.size > 10) {
                         Text("+ ${crashLogs.size - 10} log lainnya (lihat file manager)", style = MaterialTheme.typography.labelSmall)

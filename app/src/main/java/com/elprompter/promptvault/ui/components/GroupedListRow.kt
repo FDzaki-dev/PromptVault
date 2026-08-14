@@ -1,13 +1,14 @@
 package com.elprompter.promptvault.ui.components
 
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.HorizontalDivider
@@ -63,10 +64,15 @@ fun GroupedListRow(icon: ImageVector, label: String, tint: Color? = null, onClic
     val colors = MaterialTheme.colorScheme
     val resolvedTint = tint ?: colors.primary
     val interactionSource = remember { MutableInteractionSource() }
+    // UI-05 fix: sebelumnya `selectable(..., indication = null)` -- tidak
+    // ada ripple/visual pressed state sama sekali, row terlihat statis
+    // walau clickable. Sekarang pakai `clickable` + `LocalIndication.current`
+    // (indication default platform, otomatis theme-aware) supaya tap selalu
+    // punya sinyal visual jelas selain berpindah layar.
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .selectable(selected = false, interactionSource = interactionSource, indication = null, onClick = onClick)
+            .clickable(interactionSource = interactionSource, indication = LocalIndication.current, onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 13.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

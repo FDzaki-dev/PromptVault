@@ -10,6 +10,7 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -74,13 +75,16 @@ fun TactileSwitch(
         label = "switchThumbScale"
     )
 
-    // Track: NeumorphicSurface `pressed = true` permanen -- track SELALU
-    // terbaca sbg "wadah cekung" (baik ON maupun OFF), warna isi (trackColor)
-    // yang berubah utk sinyal status, bukan kedalamannya (konsisten dgn desain
-    // neumorphism umum: track selalu inset, thumb yang mengapung di atasnya).
-    NeumorphicSurface(
+    // UI-04 fix: hitbox (toggleable) sekarang TERPISAH dari ukuran visual
+    // track (46x26dp). Sebelumnya toggleable dipasang LANGSUNG di
+    // NeumorphicSurface bertrack 46x26dp -- area sentuh fisik/logis jadi
+    // lebih kecil dari touch target Android yang nyaman. Sekarang wrapper
+    // Box luar diberi minimum 48dp x 48dp, toggleable dipasang di wrapper
+    // itu, track visual TETAP 46x26dp (tidak berubah tampilannya) di-center
+    // di dalam wrapper.
+    Box(
         modifier = modifier
-            .size(width = TrackWidth, height = TrackHeight)
+            .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
             .toggleable(
                 value = checked,
                 interactionSource = interactionSource,
@@ -88,33 +92,43 @@ fun TactileSwitch(
                 role = Role.Switch,
                 onValueChange = onCheckedChange
             ),
-        shape = RoundedCornerShape(50),
-        color = trackColor,
-        pressed = true
+        contentAlignment = Alignment.Center
     ) {
-        Box(contentAlignment = Alignment.CenterStart) {
-            // Thumb: NeumorphicSurface timbul kecil saat ON (dual-shadow),
-            // flat tanpa shadow saat OFF (thumb "diam" di dasar cekungan,
-            // belum "terangkat" -- shadow ganda cuma relevan kalau ada tint
-            // aksen utk dipantulkan).
-            NeumorphicSurface(
-                modifier = Modifier
-                    .offset(x = 3.dp + thumbOffset)
-                    .size(ThumbSize)
-                    .scale(thumbScale),
-                shape = RoundedCornerShape(50),
-                color = GlassSurfaceElevated,
-                baseColor = trackColor,
-                elevation = if (checked) TactileTokens.NeuElevationThumb else 0.dp,
-                shadowOffset = TactileTokens.NeuOffsetThumb
-            ) {
-                Box(
+        // Track: NeumorphicSurface `pressed = true` permanen -- track SELALU
+        // terbaca sbg "wadah cekung" (baik ON maupun OFF), warna isi
+        // (trackColor) yang berubah utk sinyal status, bukan kedalamannya
+        // (konsisten dgn desain neumorphism umum: track selalu inset, thumb
+        // yang mengapung di atasnya).
+        NeumorphicSurface(
+            modifier = Modifier.size(width = TrackWidth, height = TrackHeight),
+            shape = RoundedCornerShape(50),
+            color = trackColor,
+            pressed = true
+        ) {
+            Box(contentAlignment = Alignment.CenterStart) {
+                // Thumb: NeumorphicSurface timbul kecil saat ON (dual-shadow),
+                // flat tanpa shadow saat OFF (thumb "diam" di dasar cekungan,
+                // belum "terangkat" -- shadow ganda cuma relevan kalau ada tint
+                // aksen utk dipantulkan).
+                NeumorphicSurface(
                     modifier = Modifier
-                        .background(
-                            Brush.radialGradient(colors = listOf(NeuHighlight, Color.Transparent)),
-                            RoundedCornerShape(50)
-                        )
-                )
+                        .offset(x = 3.dp + thumbOffset)
+                        .size(ThumbSize)
+                        .scale(thumbScale),
+                    shape = RoundedCornerShape(50),
+                    color = GlassSurfaceElevated,
+                    baseColor = trackColor,
+                    elevation = if (checked) TactileTokens.NeuElevationThumb else 0.dp,
+                    shadowOffset = TactileTokens.NeuOffsetThumb
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .background(
+                                Brush.radialGradient(colors = listOf(NeuHighlight, Color.Transparent)),
+                                RoundedCornerShape(50)
+                            )
+                    )
+                }
             }
         }
     }

@@ -13,6 +13,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.ErrorOutline
@@ -111,18 +114,27 @@ fun HomeScreen(
                     // Wash gradient halus di latar, supaya layar tidak terasa
                     // datar rata satu warna dari atas sampai bawah (keluhan
                     // "monoton") -- tetap subtil, bukan warna-warni mencolok.
+                    // UI-10 fix: endY TIDAK di-hardcode ke pixel absolut lagi --
+                    // dibiarkan default (Float.POSITIVE_INFINITY) supaya Compose
+                    // resolve otomatis ke tinggi area gambar sesungguhnya saat
+                    // draw, jadi proporsional di semua ukuran/densitas layar.
                     Brush.verticalGradient(
-                        colors = listOf(colors.surfaceVariant.copy(alpha = 0.55f), colors.background),
-                        endY = 900f
+                        colors = listOf(colors.surfaceVariant.copy(alpha = 0.55f), colors.background)
                     )
                 )
         ) {
+        // UI-01 fix: Column body Home sekarang scrollable (verticalScroll).
+        // Sebelumnya fillMaxSize() tanpa scroll -- di layar pendek/landscape/
+        // font scale besar, menu bawah bisa terdorong keluar viewport. CTA &
+        // grouped menu tetap sebagai item normal di dalam Column yang sama,
+        // hirarki visual tidak berubah.
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .padding(horizontal = 16.dp)
-                .padding(top = 12.dp, bottom = 16.dp),
+                .padding(top = 12.dp, bottom = 16.dp)
+                .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text("PromptVault", style = MaterialTheme.typography.headlineMedium, color = colors.onBackground)
@@ -212,10 +224,21 @@ fun HomeScreen(
 
 @Composable
 private fun ManifestRow(icon: androidx.compose.ui.graphics.vector.ImageVector, tint: androidx.compose.ui.graphics.Color, label: String, value: String) {
+    // UI-16 fix: alignment label/value sebelumnya mengandalkan spasi literal
+    // di dalam string ("  $label   $value") -- rawan tidak konsisten lintas
+    // font/locale/rendering. Sekarang pakai Row + Spacer eksplisit berbasis
+    // layout, bukan whitespace.
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(16.dp))
+        androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(8.dp))
         Text(
-            "  $label   $value",
+            label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(6.dp))
+        Text(
+            value,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

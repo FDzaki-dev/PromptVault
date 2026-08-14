@@ -3,6 +3,71 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.22.0 -- Fix 10 temuan P1 dari audit statis UI v2.21.1 (batch 1/2, semua P1) (2026-08-15)
+User upload `PromptVault_v2_21_1_UI_Audit.txt` (audit statis UI eksternal,
+10 temuan P1 + 9 P2, 0 P0). Batch ini menuntaskan SEMUA 10 P1 (P2 menyusul
+batch terpisah sesuai catatan audit "sebaiknya masuk batch berikutnya").
+
+- **#UI-01 (HomeScreen.kt)**: Column body Home sekarang `verticalScroll` --
+  sebelumnya `fillMaxSize()` tanpa scroll berisiko menu bawah terdorong
+  keluar viewport di layar pendek/landscape/font scale besar.
+- **#UI-02 (OnboardingScreen.kt)**: area konten step (`ProgressDots` +
+  ikon+teks) dipisah dari area tombol lewat `Modifier.weight(1f, fill =
+  false).verticalScroll(...)` -- tombol tetap di area aman bawah, konten
+  scroll kalau diperlukan.
+- **#UI-03 (RuleCard.kt)**: redesign 2-baris -- metadata (nama folder/
+  pattern/exclude/warning) di baris atas dgn `maxLines`+`TextOverflow.
+  Ellipsis` terencana, kontrol aksi (reorder/switch/edit/delete) di baris
+  bawah, masing-masing `sizeIn(minWidth/minHeight = 48.dp)`. Sebelumnya
+  semua kontrol dipaksa dalam 1 Row sempit.
+- **#UI-04 (TactileSwitch.kt)**: hitbox `toggleable` dipindah ke `Box`
+  pembungkus `sizeIn(minWidth/minHeight = 48.dp)`, track visual TETAP
+  46x26dp (tampilan tidak berubah) di-center di dalamnya -- sebelumnya
+  toggleable dipasang langsung di track 46x26dp, area sentuh lebih kecil
+  dari target nyaman.
+- **#UI-05 (GroupedListRow.kt)**: `selectable(..., indication = null)`
+  diganti `clickable(indication = LocalIndication.current, ...)` -- row
+  sekarang punya ripple/pressed state, sebelumnya tap tidak memberi sinyal
+  visual sama sekali.
+- **#UI-06 & #UI-07 (OnboardingScreen.kt)**: teks step "Buat rule" sekarang
+  eksplisit menyebut default Downloads/PromptVault/ DAN opsi folder tujuan
+  kustom SAF (sebelumnya cuma menyebut Downloads/PromptVault/, membentuk
+  ekspektasi salah pasca fitur SAF diperluas). Teks step "Izin penyimpanan"
+  diganti jadi generik ("izin penyimpanan yang sesuai versi Android kamu"),
+  sebelumnya klaim "izin akses semua file" tidak akurat untuk semua API yang
+  didukung (minSdk 26 dgn cabang izin API lama).
+- **#UI-08 & #UI-15 (DiagnosticsScreen.kt)**: entry crash log dibungkus
+  `Row` `sizeIn(minHeight = 48.dp)` + `clickable(indication = LocalIndication.
+  current, ...)` + ikon chevron sbg affordance -- sebelumnya `clickable`
+  langsung di `Text` tanpa indication & tanpa touch target eksplisit.
+- **#UI-09 (SkippedFilesScreen.kt)**: parameter baru `hasScannedBefore:
+  Boolean` (diisi caller dari `lastScanSummary != null` di `MainActivity.
+  kt`) -- empty state sekarang beda pesan untuk "belum pernah scan" vs
+  "sudah scan, 0 skipped", sebelumnya digabung jadi 1 pesan ambigu.
+- **#UI-10 (HomeScreen.kt)**: `Brush.verticalGradient(..., endY = 900f)`
+  hardcode pixel absolut dihapus, dibiarkan default (`Float.
+  POSITIVE_INFINITY`, resolve otomatis ke tinggi area gambar sesungguhnya
+  saat draw) -- sebelumnya distribusi gradient tidak proporsional lintas
+  device/densitas berbeda.
+- **Sekalian (P2 ringan, co-located, tidak menambah file)**: #UI-14
+  (`RuleCard.kt`, `rule.folderName.uppercase()` dihapus, casing asli
+  dipertahankan) & #UI-16 (`HomeScreen.kt` `ManifestRow`, alignment
+  berbasis whitespace string diganti `Row`+`Spacer` eksplisit).
+
+File diubah (8): `ui/screens/{HomeScreen,OnboardingScreen,
+DiagnosticsScreen,SkippedFilesScreen}.kt`, `ui/components/{RuleCard,
+TactileSwitch,GroupedListRow}.kt`, `MainActivity.kt` (Protected Asset, edit
+parsial -- 1 titik: teruskan `hasScannedBefore` ke `SkippedFilesScreen`),
+`app/build.gradle.kts` (versi). `scripts/preflight_check.sh` lolos bersih
+11/11 (1 iterasi fix: `import androidx.compose.foundation.layout.weight`
+sempat ditambahkan salah di 3 file -- `weight()` itu member extension
+`RowScope`/`ColumnScope`, BUKAN top-level function, tidak butuh import
+eksplisit di dalam lambda `Row{}`/`Column{}` -- persis kelas bug yang sama
+dgn insiden `animateItemPlacement` v2.3.7 lama; dikoreksi sebelum ZIP
+di-package, bukan lolos ke user). **BELUM PERNAH lewat `./gradlew` asli.**
+Sisa 9 temuan P2 dari audit (copy JSON export, status import lebih
+eksplisit, dll) BELUM dieksekusi di batch ini -- kandidat batch berikutnya.
+
 ## v2.21.1 -- Merge 3-way: redesign Neumorphism (cabang v2.21.0) + fix teknis (cabang v2.20.3), TANPA regresi (2026-08-14)
 User minta merge hasil & dokumentasi dari paket `v2_21_0` ke `v2_20_3` tanpa
 regresi. Root cause: kedua paket ZIP adalah 2 cabang independen yang sama-sama

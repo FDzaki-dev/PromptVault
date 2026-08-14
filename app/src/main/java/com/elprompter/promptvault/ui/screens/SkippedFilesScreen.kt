@@ -28,7 +28,17 @@ import com.elprompter.promptvault.util.SkippedFileInfo
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun SkippedFilesScreen(skipped: List<SkippedFileInfo>, onBack: () -> Unit) {
+fun SkippedFilesScreen(
+    skipped: List<SkippedFileInfo>,
+    // UI-09 fix: parameter baru, WAJIB diisi caller -- sebelumnya empty
+    // state "Semua file cocok" & "belum pernah scan" digabung jadi 1 pesan
+    // ambigu, user tidak bisa bedakan apakah sistem sudah bekerja atau
+    // memang belum pernah dijalankan sama sekali. Sumber sinyal: caller
+    // (MainActivity) sudah punya `lastScanSummary` (null == belum pernah
+    // scan), diteruskan ke sini sebagai Boolean murni.
+    hasScannedBefore: Boolean,
+    onBack: () -> Unit
+) {
     val colors = MaterialTheme.colorScheme
     androidx.compose.material3.Scaffold(
         topBar = { com.elprompter.promptvault.ui.components.VaultTopBar(title = "Detail File Dilewati", onBack = onBack) }
@@ -41,10 +51,15 @@ fun SkippedFilesScreen(skipped: List<SkippedFileInfo>, onBack: () -> Unit) {
 
         Crossfade(targetState = skipped.isEmpty(), label = "skippedFilesEmptyState", animationSpec = tween(220)) { isEmpty ->
             if (isEmpty) {
+                // UI-09 fix: 2 pesan eksplisit berbeda, bukan 1 pesan gabungan.
                 EmptyState(
                     icon = Icons.Filled.TaskAlt,
-                    title = "Tidak ada file yang dilewati",
-                    message = "Semua file cocok dengan rule pada scan terakhir (atau belum pernah scan).",
+                    title = if (hasScannedBefore) "Tidak ada file yang dilewati" else "Belum pernah scan",
+                    message = if (hasScannedBefore) {
+                        "Semua file cocok dengan rule pada scan terakhir."
+                    } else {
+                        "Jalankan \"Scan Sekarang\" dari Home dulu untuk melihat file yang dilewati di sini."
+                    },
                     accentColor = colors.secondary,
                     accentContainerColor = colors.secondaryContainer
                 )

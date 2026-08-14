@@ -13,7 +13,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Folder
@@ -39,8 +41,8 @@ private data class OnboardingStep(val icon: ImageVector, val title: String, val 
 
 private val steps = listOf(
     OnboardingStep(Icons.Filled.Archive, "Selamat datang di PromptVault", "App ini merapikan otomatis file (ekstensi apa saja) di folder Downloads kamu, sesuai rule yang kamu buat."),
-    OnboardingStep(Icons.Filled.Folder, "Buat rule", "Rule menentukan pattern nama file (mis. *.txt) dan folder tujuan di dalam Downloads/PromptVault/."),
-    OnboardingStep(Icons.Filled.Lock, "Izin penyimpanan", "PromptVault perlu izin akses semua file agar bisa memindahkan file di Downloads."),
+    OnboardingStep(Icons.Filled.Folder, "Buat rule", "Rule menentukan pattern nama file (mis. *.txt) dan folder tujuan. Secara default file dipindahkan ke Downloads/PromptVault/, tapi kamu juga bisa memilih folder tujuan kustom (termasuk SD card) lewat Pengaturan."),
+    OnboardingStep(Icons.Filled.Lock, "Izin penyimpanan", "PromptVault memerlukan izin penyimpanan yang sesuai versi Android kamu agar bisa memindahkan file di Downloads."),
     OnboardingStep(Icons.Filled.Schedule, "Auto-sort berjalan sendiri", "Setelah rule dibuat, app akan memindai secara berkala sesuai interval yang kamu atur.")
 )
 
@@ -55,7 +57,16 @@ fun OnboardingScreen(onFinished: () -> Unit) {
             .padding(24.dp),
         verticalArrangement = Arrangement.SpaceBetween
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
+        // UI-02 fix: area konten dipisah dari area tombol & diberi
+        // verticalScroll + weight(1f) -- di font scale/display size besar
+        // atau device layar pendek, konten sekarang scroll, tombol bawah
+        // tetap di area aman, tidak lagi bertabrakan/terpotong.
+        Column(
+            modifier = Modifier
+                .weight(1f, fill = false)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
             ProgressDots(total = steps.size, current = index)
 
             Crossfade(targetState = index, label = "onboardingStep", animationSpec = tween(220)) { stepIndex ->

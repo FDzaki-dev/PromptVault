@@ -341,7 +341,15 @@ private fun PromptVaultRoot(
         }
         composable(Routes.SKIPPED_FILES) {
             val skipped by viewModel.lastSkippedFiles.collectAsStateWithLifecycle()
-            SkippedFilesScreen(skipped = skipped, onBack = { navController.popBackStack() })
+            // UI-09 fix: lastScanSummary null == belum pernah scan sekalipun
+            // sekali sejak app dibuka -- diteruskan sbg sinyal eksplisit ke
+            // SkippedFilesScreen supaya empty state tidak lagi ambigu.
+            val summary by viewModel.lastScanSummary.collectAsStateWithLifecycle()
+            SkippedFilesScreen(
+                skipped = skipped,
+                hasScannedBefore = summary != null,
+                onBack = { navController.popBackStack() }
+            )
         }
     }
 }
