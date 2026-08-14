@@ -3,6 +3,52 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.21.1 -- Merge 3-way: redesign Neumorphism (cabang v2.21.0) + fix teknis (cabang v2.20.3), TANPA regresi (2026-08-14)
+User minta merge hasil & dokumentasi dari paket `v2_21_0` ke `v2_20_3` tanpa
+regresi. Root cause: kedua paket ZIP adalah 2 cabang independen yang sama-sama
+lanjut dari v2.20.1 (versionCode 67) tapi divergen --
+`v2_21_0` (versionCode 68) lompat langsung ke redesign Neumorphism TANPA
+melewati v2.20.2/v2.20.3, sedangkan `v2_20_3` (versionCode 69) berisi 2 fix
+teknis (`SCAN_CONCURRENCY` configurable + migrasi legacy DataStore + fix
+import `decodeFromString`) tapi TIDAK punya redesign Neumorphism.
+
+**Verifikasi sebelum merge** (`diff -rq` penuh + grep silang): dipastikan 9
+file redesign Neumorphism (`VaultCard`, `GroupedListRow`, `TactileSwitch`,
+`VaultActionSheet`, `EmptyState`, `SegmentedControl`, `HomeScreen`, `Color.kt`,
+`TactileTokens.kt`) + 1 file baru (`Neumorphic.kt`) MURNI perubahan visual --
+tidak menyentuh/menghapus apa pun yang berkaitan dengan `SCAN_CONCURRENCY`
+atau `LegacyDataMigration`. Token lama `TactileTokens.Elevation{Card,Cta,
+CtaPressed,Icon,Thumb}` DIHAPUS & diganti `Neu*` di batch Neumorphism --
+dicek tidak ada file lain (`SettingsScreen.kt`, dll) yang masih memakai nama
+token lama sebelum merge (aman, tidak ada dangling reference).
+
+**Strategi merge**: base diambil dari `v2_20_3` (punya seluruh fix teknis
+terbaru), lalu 10 file redesign Neumorphism di atas di-copy utuh dari
+`v2_21_0` menimpa versi lama. 9 file lain yang tadinya SAMA-SAMA berubah di
+kedua cabang (`PromptVaultApp.kt`, `RuleRepository.kt`,
+`SettingsRepository.kt`, `MainViewModel.kt`, `MainActivity.kt`,
+`FileSorter.kt`, `SettingsScreen.kt`, `scripts/preflight_check.sh`,
+`app/build.gradle.kts`) TETAP pakai versi `v2_20_3` (base) karena
+`v2_21_0` untuk file-file itu justru versi LEBIH LAMA (pre-2.20.2) --
+mengambilnya akan jadi regresi (hilang `LegacyDataMigration`, hilang
+`SCAN_CONCURRENCY` configurable, hilang import `decodeFromString`).
+
+File diubah (10, semua neumorphism, dari cabang `v2_21_0`):
+`ui/components/{VaultCard,GroupedListRow,TactileSwitch,VaultActionSheet,
+EmptyState,SegmentedControl,Neumorphic(baru)}.kt`, `ui/screens/HomeScreen.kt`,
+`ui/theme/{Color,TactileTokens}.kt`. File dipertahankan dari `v2_20_3` (9,
+supaya nol regresi): `PromptVaultApp.kt`, `data/{RuleRepository,
+SettingsRepository,LegacyDataMigration}.kt`, `ui/MainViewModel.kt`,
+`MainActivity.kt`, `util/FileSorter.kt`, `ui/screens/SettingsScreen.kt`,
+`scripts/preflight_check.sh`. `scripts/preflight_check.sh` lolos bersih
+(11/11) setelah merge. **BELUM PERNAH lewat `./gradlew` asli** -- WAJIB
+verifikasi CI + smoke test manual (redesign Neumorphism + migrasi legacy +
+scan concurrency setting) di HP asli sebelum rilis produksi.
+
+versionCode 69->70, versionName 2.20.3->2.21.1 (2.21.x krn base fitur
+Neumorphism v2.21.0 + patch merge; bukan 2.20.4 krn perubahan visual besar,
+bukan cuma technical debt).
+
 ## v2.20.3 -- FIX bug compile laten nyata: `RuleRepository.kt` decodeFromString tanpa import (2026-08-14)
 Eksekusi item yang sebelumnya dicatat sbg "Observasi TIDAK dieksekusi" di
 v2.20.2 -- user minta lanjutkan penyempurnaan bertahap (trigger valid sesuai

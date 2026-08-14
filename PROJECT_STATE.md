@@ -3,7 +3,44 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
-## STATUS PROJECT: v2.20.3 -- FIX bug compile laten: RuleRepository.kt decodeFromString tanpa import -- 2026-08-14
+## STATUS PROJECT: v2.21.1 -- Merge 3-way cabang v2.21.0 (Neumorphism) + v2.20.3 (fix teknis), TANPA regresi -- 2026-08-14
+- **User minta merge paket ZIP `v2_21_0` -> `v2_20_3` tanpa regresi.** Root
+  cause: 2 paket = 2 cabang independen yang sama-sama lanjut dari v2.20.1
+  (versionCode 67) lalu divergen -- `v2_21_0` (code 68) lompat ke redesign
+  Neumorphism TANPA lewat v2.20.2/v2.20.3; `v2_20_3` (code 69) punya fix
+  teknis (`SCAN_CONCURRENCY` configurable, migrasi legacy DataStore, fix
+  import `decodeFromString`) TAPI TIDAK punya redesign Neumorphism.
+- **Cara deteksi**: `diff -rq` penuh kedua paket + grep silang token/simbol
+  (`LegacyDataMigration`, `scanConcurrency`, `ElevationCard` dkk) sebelum
+  memutuskan strategi merge -- BUKAN asumsi "yang lebih baru menang".
+- **Strategi**: base = `v2_20_3` (fix teknis terbaru dipertahankan penuh).
+  10 file redesign Neumorphism murni (tidak overlap dgn fix teknis manapun,
+  diverifikasi via diff) di-copy utuh dari `v2_21_0`: `ui/components/
+  {VaultCard,GroupedListRow,TactileSwitch,VaultActionSheet,EmptyState,
+  SegmentedControl}.kt`, `ui/components/Neumorphic.kt` (file baru),
+  `ui/screens/HomeScreen.kt`, `ui/theme/{Color,TactileTokens}.kt`. 9 file
+  yang overlap (berubah di KEDUA cabang) TETAP pakai versi `v2_20_3` krn versi
+  `v2_21_0`-nya justru pre-2.20.2 (lebih lama) -- mengambilnya = regresi:
+  `PromptVaultApp.kt`, `data/{RuleRepository,SettingsRepository,
+  LegacyDataMigration}.kt`, `ui/MainViewModel.kt`, `MainActivity.kt`,
+  `util/FileSorter.kt`, `ui/screens/SettingsScreen.kt`,
+  `scripts/preflight_check.sh`, `app/build.gradle.kts`.
+- **Token lama dihapus di batch Neumorphism** (`TactileTokens.Elevation
+  {Card,Cta,CtaPressed,Icon,Thumb}` -> `Neu*`) -- dicek dgn grep bahwa TIDAK
+  ADA file lain di luar 10 file Neumorphism yang masih memakai nama token
+  lama sebelum merge dieksekusi (nol dangling reference).
+- `scripts/preflight_check.sh` dijalankan ulang setelah merge: **11/11
+  lolos bersih** (termasuk kategori #11 decodeFromString yang berasal dari
+  cabang `v2_20_3`).
+- versionCode 69->70, versionName 2.20.3->2.21.1. **BELUM PERNAH lewat
+  `./gradlew` asli** -- WAJIB verifikasi CI + smoke test manual (visual
+  Neumorphism di semua komponen redesign + migrasi legacy DataStore +
+  setting scan concurrency) sebelum rilis produksi. Risiko regresi: RENDAH
+  (merge file-level, bukan merge baris-per-baris/line merge -- tiap file
+  utuh dari 1 sumber, tidak ada campur logic 2 sumber dalam 1 file), tapi
+  BELUM divalidasi compile asli.
+
+## STATUS SEBELUMNYA: v2.20.3 -- FIX bug compile laten: RuleRepository.kt decodeFromString tanpa import -- 2026-08-14
 - **User minta "lanjutkan penyempurnaan secara bertahap"** (bukan item spesifik
   disebut namanya). Diinterpretasi sbg: eksekusi item pending yang SUDAH
   tercatat eksplisit di sesi v2.20.2 sbg "Observasi TIDAK dieksekusi, di luar

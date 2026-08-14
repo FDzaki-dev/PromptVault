@@ -1,6 +1,5 @@
 package com.elprompter.promptvault.ui.screens
 
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -28,7 +27,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -47,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import com.elprompter.promptvault.ui.MainViewModel
 import com.elprompter.promptvault.ui.components.GroupedList
 import com.elprompter.promptvault.ui.components.GroupedListRow
+import com.elprompter.promptvault.ui.components.NeumorphicSurface
 import com.elprompter.promptvault.ui.components.VaultCard
 import com.elprompter.promptvault.ui.theme.TactileTokens
 import com.elprompter.promptvault.ui.theme.VaultTheme
@@ -145,27 +144,26 @@ fun HomeScreen(
                 }
             }
 
-            // v4.0.0 -- CTA "ultra immersive depth/3D" (permintaan eksplisit user).
-            // TIDAK memakai `Modifier.shadow(...).background(brush)` langsung --
-            // itu PERSIS kombinasi yang bikin regresi v2.14.0 (kotak pucat/glitch
-            // di banyak GPU/skin, di-fix v2.14.1 dengan MELEPAS shadow total).
-            // Pola aman: `Surface(onClick=..., shadowElevation=...)` dengan
-            // `color` SOLID sbg dasar shadow (bukan Transparent+brush), gradient
-            // hangat (Stamp->Amber) ditumpuk sebagai overlay Box terpisah DI
-            // DALAM konten Surface -- shadow & brush tidak pernah 1 node yang sama.
+            // v5.0.0 -- Redesign Glassmorphism -> Neumorphism (permintaan
+            // eksplisit user, titik fokus utama layar): `NeumorphicSurface`
+            // dgn shadow ganda ([TactileTokens.NeuElevationCta]/[NeuOffsetCta])
+            // saat idle -- terasa "timbul" nyata dari AMOLED, bukan flat.
+            // Saat ditekan (`pressed = scanPressed`), shadow ganda LENYAP
+            // total & diganti overlay cekung (lihat `Neumorphic.kt`) -- CTA
+            // terasa benar-benar "tertekan masuk", bukan cuma elevasi turun
+            // seperti sistem glass lama. Gradient hangat (Stamp -> Amber)
+            // TETAP SAMA PERSIS (tidak diubah warnanya), tetap ditumpuk sbg
+            // overlay Box terpisah DI DALAM `NeumorphicSurface` (pola aman
+            // "shadow tidak pernah 1 node dgn brush" tetap dihormati -- lihat
+            // dokumentasi lengkap di `Neumorphic.kt`).
             val scanInteraction = remember { MutableInteractionSource() }
             val scanPressed by scanInteraction.collectIsPressedAsState()
-            val ctaElevation by animateDpAsState(
-                targetValue = if (scanPressed) TactileTokens.ElevationCtaPressed else TactileTokens.ElevationCta,
-                animationSpec = tween(TactileTokens.PressAnimationMillis),
-                label = "ctaElevation"
-            )
             val ctaScale by animateFloatAsState(
                 targetValue = if (scanPressed) TactileTokens.PressScale else 1f,
                 animationSpec = tween(TactileTokens.PressAnimationMillis),
                 label = "ctaScale"
             )
-            Surface(
+            NeumorphicSurface(
                 onClick = onScanNow,
                 enabled = !isScanning,
                 interactionSource = scanInteraction,
@@ -174,7 +172,9 @@ fun HomeScreen(
                     .scale(ctaScale),
                 shape = MaterialTheme.shapes.large,
                 color = colors.secondary,
-                shadowElevation = ctaElevation
+                elevation = TactileTokens.NeuElevationCta,
+                shadowOffset = TactileTokens.NeuOffsetCta,
+                pressed = scanPressed
             ) {
                 Box(
                     modifier = Modifier

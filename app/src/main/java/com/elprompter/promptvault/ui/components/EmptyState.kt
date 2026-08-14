@@ -14,10 +14,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.elprompter.promptvault.ui.theme.TactileTokens
 
 /**
  * Empty state bersama, dipakai di semua layar list (Kelola Rule, Riwayat
@@ -30,6 +32,13 @@ import androidx.compose.ui.unit.dp
  * standar (lihat PROJECT_STATE.md) -- judul singkat, dan pesan pendukung.
  * Dipanggil lewat Crossfade di tiap layar supaya transisi kosong<->berisi
  * halus, bukan potongan tiba-tiba.
+ *
+ * v5.0.0 -- Redesign Glassmorphism -> Neumorphism: lingkaran ikon (dulu fill
+ * flat `accentContainerColor` polos tanpa depth) sekarang [NeumorphicSurface]
+ * timbul kecil ([TactileTokens.NeuElevationControl]/[NeuOffsetControl]),
+ * konsisten dengan kotak ikon `GroupedListRow` & thumb `TactileSwitch` --
+ * satu bahasa visual "shadow ganda" di semua elemen bulat/kotak kecil app.
+ * Warna aksen per layar (`accentColor`/`accentContainerColor`) TIDAK berubah.
  */
 @Composable
 fun EmptyState(
@@ -47,13 +56,23 @@ fun EmptyState(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Box(
-            modifier = Modifier
-                .size(56.dp)
-                .background(accentContainerColor, RoundedCornerShape(16.dp)),
-            contentAlignment = Alignment.Center
+        NeumorphicSurface(
+            modifier = Modifier.size(56.dp),
+            shape = RoundedCornerShape(16.dp),
+            color = accentContainerColor,
+            elevation = TactileTokens.NeuElevationControl,
+            shadowOffset = TactileTokens.NeuOffsetControl
         ) {
-            Icon(icon, contentDescription = null, tint = accentColor, modifier = Modifier.size(28.dp))
+            Box(
+                modifier = Modifier.background(
+                    Brush.linearGradient(
+                        colors = listOf(accentColor.copy(alpha = 0.20f), accentColor.copy(alpha = 0.08f))
+                    )
+                ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, contentDescription = null, tint = accentColor, modifier = Modifier.size(28.dp))
+            }
         }
         Text(
             title,

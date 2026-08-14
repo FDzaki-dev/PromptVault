@@ -5,7 +5,6 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
@@ -19,16 +18,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
-import com.elprompter.promptvault.ui.theme.GlassBorder
-import com.elprompter.promptvault.ui.theme.GlassHighlight
-import com.elprompter.promptvault.ui.theme.GlassShadow
 import com.elprompter.promptvault.ui.theme.GlassSurfaceElevated
 import com.elprompter.promptvault.ui.theme.GlassSurfacePressed
+import com.elprompter.promptvault.ui.theme.NeuHighlight
 import com.elprompter.promptvault.ui.theme.TactileTokens
 
 private val TrackWidth = 46.dp
@@ -39,13 +35,18 @@ private val ThumbTravel = TrackWidth - ThumbSize - 6.dp // 3dp inset tiap sisi
 /**
  * Switch tactile bab 12 spesifikasi -- pengganti `Switch` Material3 polos.
  *
- * OFF: track "tenggelam" ke dalam glass (fill lebih gelap dari `GlassSurface`
- * sekitarnya + TANPA shadow terangkat) -- terasa recessed, bukan cuma abu-abu.
- * ON: track terangkat tipis dengan tint aksen (accentColor, default
- * `colors.primary`/Teal accent) + glow lokal SATU tempat saja (thumb),
- * sesuai bab 18 (glow untuk selected state itu diizinkan, bukan dekorasi
- * tersebar). ON/OFF tidak bergantung HANYA pada kedalaman -- posisi thumb
- * kiri/kanan + warna track tetap jadi penanda kedua (bab 21 Accessibility).
+ * v5.0.0 -- Redesign Glassmorphism -> Neumorphism. OFF: track sekarang benar
+ * BENAR tenggelam (NeumorphicSurface `pressed = true` -- overlay gradien
+ * diagonal terbalik, bukan cuma border gelap tunggal seperti versi glass
+ * lama) di dalam wadah [GlassSurfacePressed]. ON: track jadi tint aksen
+ * SOLID (bukan lagi indikator "recessed vs flat", tapi warna) + thumb-nya
+ * yang sekarang dapat efek TIMBUL neumorphic (dual-shadow kecil via
+ * `NeumorphicSurface`, [TactileTokens.NeuElevationThumb]/
+ * [TactileTokens.NeuOffsetThumb]) menggantikan `Modifier.shadow(spotColor=
+ * accentColor)` tunggal berwarna lama -- konsisten dgn seluruh app yang kini
+ * pakai shadow ganda terarah, bukan glow satu warna. ON/OFF TIDAK bergantung
+ * HANYA pada kedalaman -- posisi thumb kiri/kanan + warna track tetap jadi
+ * penanda kedua (bab 21 Accessibility), sama seperti sebelumnya.
  */
 @Composable
 fun TactileSwitch(
@@ -73,7 +74,11 @@ fun TactileSwitch(
         label = "switchThumbScale"
     )
 
-    Box(
+    // Track: NeumorphicSurface `pressed = true` permanen -- track SELALU
+    // terbaca sbg "wadah cekung" (baik ON maupun OFF), warna isi (trackColor)
+    // yang berubah utk sinyal status, bukan kedalamannya (konsisten dgn desain
+    // neumorphism umum: track selalu inset, thumb yang mengapung di atasnya).
+    NeumorphicSurface(
         modifier = modifier
             .size(width = TrackWidth, height = TrackHeight)
             .toggleable(
@@ -82,44 +87,35 @@ fun TactileSwitch(
                 indication = null,
                 role = Role.Switch,
                 onValueChange = onCheckedChange
-            )
-            .background(trackColor, RoundedCornerShape(50))
-            .border(
-                width = 1.dp,
-                // Bevel recessed saat OFF (garis atas lebih gelap dari bawah,
-                // kebalikan highlight normal bab 8) -- saat ON, border tenang
-                // mengikuti hairline glass biasa supaya aksennya tidak dobel.
-                color = if (checked) GlassBorder else GlassShadow.copy(alpha = 0.4f),
-                shape = RoundedCornerShape(50)
             ),
-        contentAlignment = Alignment.CenterStart
+        shape = RoundedCornerShape(50),
+        color = trackColor,
+        pressed = true
     ) {
-        // v4.0.0 -- shadow thumb ON direstrukturisasi ke pola aman: `Modifier.
-        // shadow(spotColor=...)` sekarang di-chain ke `.background(SOLID color)`
-        // (GlassSurfaceElevated polos), BUKAN langsung ke Brush.radialGradient
-        // seperti sebelumnya -- kombinasi shadow+Brush custom itu golongan bug
-        // yang sama dengan regresi CTA Home v2.14.0 (lihat dokumentasi lengkap
-        // di VaultCard.kt). Gradient radial tetap ada, ditumpuk sbg overlay Box
-        // terpisah DI ATAS, jadi bukan bagian dari node yang sama dengan shadow.
-        Box(
-            modifier = Modifier
-                .offset(x = 3.dp + thumbOffset)
-                .size(ThumbSize)
-                .scale(thumbScale)
-                .then(
-                    if (checked) Modifier.shadow(TactileTokens.ElevationThumb, RoundedCornerShape(50), spotColor = accentColor)
-                    else Modifier
-                )
-                .background(GlassSurfaceElevated, RoundedCornerShape(50))
-        ) {
-            Box(
+        Box(contentAlignment = Alignment.CenterStart) {
+            // Thumb: NeumorphicSurface timbul kecil saat ON (dual-shadow),
+            // flat tanpa shadow saat OFF (thumb "diam" di dasar cekungan,
+            // belum "terangkat" -- shadow ganda cuma relevan kalau ada tint
+            // aksen utk dipantulkan).
+            NeumorphicSurface(
                 modifier = Modifier
-                    .matchParentSize()
-                    .background(
-                        Brush.radialGradient(colors = listOf(GlassHighlight, GlassSurfaceElevated)),
-                        RoundedCornerShape(50)
-                    )
-            )
+                    .offset(x = 3.dp + thumbOffset)
+                    .size(ThumbSize)
+                    .scale(thumbScale),
+                shape = RoundedCornerShape(50),
+                color = GlassSurfaceElevated,
+                baseColor = trackColor,
+                elevation = if (checked) TactileTokens.NeuElevationThumb else 0.dp,
+                shadowOffset = TactileTokens.NeuOffsetThumb
+            ) {
+                Box(
+                    modifier = Modifier
+                        .background(
+                            Brush.radialGradient(colors = listOf(NeuHighlight, Color.Transparent)),
+                            RoundedCornerShape(50)
+                        )
+                )
+            }
         }
     }
 }

@@ -8,15 +8,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -25,7 +22,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import com.elprompter.promptvault.ui.theme.GlassBorder
 import com.elprompter.promptvault.ui.theme.GlassSurfaceElevated
 import com.elprompter.promptvault.ui.theme.TactileTokens
 
@@ -46,14 +42,21 @@ import com.elprompter.promptvault.ui.theme.TactileTokens
  *
  * v4.0.0 -- "ultra immersive depth/3D" (permintaan eksplisit user, MENGGANTI
  * keputusan v3.0.1 di atas soal shadow): kotak ikon sekarang dapat elevasi
- * NYATA tapi kecil & NETRAL ([TactileTokens.ElevationIcon], shadow bawaan
- * Material3 -- bukan `spotColor` berwarna tint) supaya tetap beda dari "glow"
- * yang dilarang bab 18 (glow = cahaya BERWARNA menyala; ini cuma bayangan
- * abu-abu netral kecil, sinyal "terangkat", bukan "menyala"). Base `Surface`
- * pakai `color` SOLID (`GlassSurfaceElevated`, bukan brush langsung) supaya
- * shadow aman -- pola sama dengan `VaultCard.kt` (lihat dokumentasi lengkap
- * di sana soal kenapa `Modifier.shadow`+brush langsung rawan glitch); tint
- * gradient tetap ada sebagai overlay Box terpisah DI DALAM Surface.
+ * NYATA tapi kecil & NETRAL, shadow bawaan Material3 -- bukan `spotColor`
+ * berwarna tint -- supaya tetap beda dari "glow" yang dilarang bab 18 (glow =
+ * cahaya BERWARNA menyala; ini cuma bayangan abu-abu netral kecil, sinyal
+ * "terangkat", bukan "menyala").
+ *
+ * v5.0.0 -- Redesign Glassmorphism -> Neumorphism: kotak ikon sekarang pakai
+ * `NeumorphicSurface` (shadow ganda kecil, [TactileTokens.NeuElevationControl]/
+ * [TactileTokens.NeuOffsetControl]) menggantikan `Surface` + border rambut +
+ * shadow tunggal netral. Border [GlassBorder] DIHAPUS dari komponen ini (efek
+ * "tepi kaca" bertentangan dgn neumorphism -- sisi kartu neumorphic TIDAK
+ * bergaris tepi, kedalamannya murni dari shadow). Tint warna per-menu (bab
+ * "menu tidak monoton satu warna", Keputusan Arsitektur #3) TETAP dipertahankan
+ * PERSIS SAMA lewat overlay gradient tint [resolvedTint] di dalam Surface --
+ * tidak berubah dari v4.0.0, hanya wadahnya (Surface polos -> NeumorphicSurface)
+ * yang berubah.
  */
 @Composable
 fun GroupedListRow(icon: ImageVector, label: String, tint: Color? = null, onClick: () -> Unit) {
@@ -67,13 +70,12 @@ fun GroupedListRow(icon: ImageVector, label: String, tint: Color? = null, onClic
             .padding(horizontal = 16.dp, vertical = 13.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Surface(
+        NeumorphicSurface(
             modifier = Modifier.size(30.dp),
-            shape = RoundedCornerShape(9.dp),
+            shape = MaterialTheme.shapes.small,
             color = GlassSurfaceElevated,
-            border = BorderStroke(1.dp, GlassBorder),
-            tonalElevation = 0.dp,
-            shadowElevation = TactileTokens.ElevationIcon
+            elevation = TactileTokens.NeuElevationControl,
+            shadowOffset = TactileTokens.NeuOffsetControl
         ) {
             Box(
                 modifier = Modifier.background(

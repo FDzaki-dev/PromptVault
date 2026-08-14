@@ -1,12 +1,12 @@
 package com.elprompter.promptvault.ui.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -16,11 +16,13 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
-import com.elprompter.promptvault.ui.theme.GlassBorder
+import com.elprompter.promptvault.ui.theme.GlassSurfacePressed
+import com.elprompter.promptvault.ui.theme.TactileTokens
 
 /**
  * Pengganti AlertDialog kotak di tengah layar -- muncul dari bawah seperti
@@ -28,6 +30,13 @@ import com.elprompter.promptvault.ui.theme.GlassBorder
  * perhatian penuh tapi tetap terasa ringan, bukan modal yang "mengunci" layar.
  * containerColor pakai surfaceVariant (lapisan "terangkat") supaya sheet
  * terasa mengambang di atas layar, terutama kontras jelas di dark mode.
+ *
+ * v5.0.0 -- Redesign Glassmorphism -> Neumorphism: garis rambut [GlassBorder]
+ * 1dp selebar layar (dulu penanda "tepi kaca", bab 8/9 spesifikasi lama)
+ * DIGANTI grabber pill neumorphic TENGGELAM di tengah-atas
+ * ([NeumorphicSurface] `pressed = true`, isi [GlassSurfacePressed]) -- pola
+ * drag-handle standar bottom sheet neumorphic (cekung kecil, bukan garis
+ * penuh), sekaligus isyarat "bisa digeser" yang lebih jelas dari garis datar.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,23 +56,25 @@ fun VaultActionSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = colors.surfaceVariant,
-        // tonalElevation=0 + border rambut manual di bawah (bukan tonal
-        // elevation Material default) -- sheet tetap terbaca sebagai lapisan
-        // glass tipis di atas AMOLED (bab 7), bukan panel Material solid.
+        // tonalElevation=0 -- sheet tetap terbaca sbg permukaan neumorphic
+        // tenang di atas AMOLED, bukan panel Material solid dgn tonal tint.
         // Catatan: ModalBottomSheet pada material3-bom 2024.06.00 tidak
         // memiliki parameter shadowElevation (hanya Surface yang punya).
         tonalElevation = 0.dp
     ) {
-        // Highlight rambut tunggal di TOP (bab 8/9: arah cahaya kiri-atas ->
-        // kanan-bawah, "reflected light" bukan garis outline penuh) -- satu
-        // isyarat kecil supaya sheet tetap terbaca sebagai lapisan glass
-        // yang mengambang, bukan panel Material solid tanpa tepi sama sekali.
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(1.dp)
-                .background(GlassBorder)
-        )
+        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+            NeumorphicSurface(
+                modifier = Modifier
+                    .padding(top = 10.dp, bottom = 4.dp)
+                    .size(width = 36.dp, height = 4.dp),
+                shape = RoundedCornerShape(50),
+                color = GlassSurfacePressed,
+                pressed = true,
+                elevation = TactileTokens.NeuElevationControl,
+                shadowOffset = TactileTokens.NeuOffsetControl,
+                content = {}
+            )
+        }
         Column(
             modifier = Modifier
                 .fillMaxWidth()

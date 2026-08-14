@@ -14,13 +14,28 @@ import androidx.compose.ui.graphics.Color
  * immersive (dipakai nyata di VaultCard.kt, HomeScreen.kt CTA, GroupedListRow.kt,
  * TactileSwitch.kt -- token warna di file ini cuma bahan baku).
  *
- * Aturan wajib (diwarisi dari v3.0.0, TIDAK berubah saat re-palette ini):
+ * v5.0.0 — Redesign TEKNIK render Glassmorphism -> Neumorphism ultra
+ * immersive, atas permintaan eksplisit user "tanpa harus ganti palet warna".
+ * SEMUA token di atas (Amoled*, Glass*, Teal*, Text*, Stamp/Amber/Rust/Slate
+ * *Glow) TIDAK DIUBAH NILAINYA SAMA SEKALI di batch ini -- hue/hex brand
+ * 100% identik dengan v4.0.0. Yang berubah adalah CARA token-token itu
+ * digambar (lihat `ui/components/Neumorphic.kt`): permukaan glass+border+
+ * gradient tipis (glassmorphism, "kaca berlapis") diganti permukaan solid
+ * timbul/tenggelam dgn shadow ganda arah cahaya kiri-atas terang -> kanan-
+ * bawah gelap (neumorphism, "soft UI dark"), tetap di atas fondasi AMOLED +
+ * tint Teal ambient yang sama persis. Satu token BARU ditambah di bawah
+ * (`NeuHighlight`) -- basisnya TETAP `Color.White` (sama seperti
+ * `GlassHighlight`), HANYA alpha yang lebih pekat supaya terbaca sebagai
+ * "cahaya" shadow-cast (bukan hairline border seperti `GlassHighlight`).
+ * Ini BUKAN hue baru, murni derivasi alpha dari warna netral yang sudah ada.
+ *
+ * Aturan wajib (diwarisi dari v3.0.0, TIDAK berubah saat re-palette/redesign):
  * 1. Dark mode adalah SATU-SATUNYA mode. Tidak ada fallback terang.
- * 2. AMOLED near-black + frosted glass = identitas DOMINAN.
- * 3. Teal HANYA tint/gradient ambient tipis di dalam permukaan glass +
- *    warna kontrol interaktif utama -- BUKAN warna latar layar penuh.
- * 4. Tidak ada tekstur bitmap berat -- kedalaman lewat Brush/gradient/
- *    border/shadow/elevation nyata (lihat TactileTokens.ElevationCard dkk).
+ * 2. AMOLED near-black = identitas DOMINAN (fondasi permukaan neumorphic).
+ * 3. Teal HANYA tint/gradient ambient tipis di dalam permukaan + warna
+ *    kontrol interaktif utama -- BUKAN warna latar layar penuh.
+ * 4. Tidak ada tekstur bitmap berat -- kedalaman lewat shadow ganda nyata
+ *    (lihat TactileTokens.NeuElevation* dkk & `Neumorphic.kt`).
  */
 
 // ---- Fondasi AMOLED + permukaan glass (hirarki elevasi), tint teal tipis ----
@@ -51,6 +66,17 @@ val TextMuted = Color(0xFF6C8A83)
 val GlassHighlight = Color.White.copy(alpha = 0.055f)
 val GlassBorder = Color.White.copy(alpha = 0.035f)
 val GlassShadow = Color.Black.copy(alpha = 0.72f) // sedikit lebih pekat dari v3.0.0 (0.70f) utk depth 3D lebih terasa
+
+// ---- v5.0.0: Neumorphism -- shadow "cahaya" utk sisi kiri-atas permukaan
+// timbul/tenggelam. Basis warna TETAP Color.White (identik GlassHighlight),
+// HANYA alpha yang dinaikkan (0.055f -> 0.16f) krn dipakai sbg spotColor/
+// ambientColor Modifier.shadow (efek shadow-cast), bukan sbg fill hairline
+// border tipis -- alpha lama terlalu lemah utk terbaca sbg "cahaya" nyata.
+// Sisi gelap (kanan-bawah) SENGAJA TIDAK dapat token baru -- reuse default
+// shadow hitam bawaan Compose (persis mekanisme yang sudah dipakai aman di
+// VaultCard/CTA/icon/thumb sejak v4.0.0), supaya tidak menambah token tanpa
+// perlu (bab "jangan duplikasi konstanta tactile").
+val NeuHighlight = Color.White.copy(alpha = 0.16f)
 
 /**
  * Aksen semantik ke-4 (stamp/sukses, amber/peringatan, rust/error, slate/
