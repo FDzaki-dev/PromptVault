@@ -122,13 +122,26 @@ class RuleRepository(private val context: Context) {
     /** Ekspor semua rule sebagai teks JSON (fitur lengkap -- backup/export via Pengaturan). */
     suspend fun exportAsJson(): String = json.encodeToString(getRules())
 
-    /** Impor rule dari teks JSON hasil export. Menggabungkan (merge) berdasarkan id. */
-    suspend fun importFromJson(jsonText: String): Int {
-        val imported = runCatching { json.decodeFromString<List<Rule>>(jsonText) }.getOrDefault(emptyList())
-        if (imported.isEmpty()) return 0
+    /**
+     * Impor rule dari teks JSON hasil export. Menggabungkan (merge) berdasarkan id.
+     *
+     * [Fix audit P2 #UI-13, 2026-08-15] Sebelumnya cuma `Int` (jumlah rule
+     * ter-import) -- tidak bisa dibedakan "0 karena JSON tidak valid/parse
+     * gagal" vs "0 karena JSON valid tapi array kosong". Sekarang return
+     * [ImportOutcome] eksplisit: [ImportOutcome.parseSuccess] = false HANYA
+     * kalau `jsonText` gagal di-decode sama sekali (format salah), TETAP true
+     * walau hasil array kosong (itu bukan error, cuma tidak ada yang diimpor).
+     */
+    data class ImportOutcome(val parseSuccess: Boolean, val importedCount: Int)
+
+    suspend fun importFromJson(jsonText: String): ImportOutcome {
+        val parseResult = runCatching { json.decodeFromString<List<Rule>>(jsonText) }
+        val imported = parseResult.getOrNull()
+            ?: return ImportOutcome(parseSuccess = false, importedCount = 0)
+        if (imported.isEmpty()) return ImportOutcome(parseSuccess = true, importedCount = 0)
         val current = getRules().associateBy { it.id }.toMutableMap()
         imported.forEach { current[it.id] = it }
         persist(current.values.toList())
-        return imported.size
+        return ImportOutcome(parseSuccess = true, importedCount = imported.size)
     }
 }

@@ -3,7 +3,91 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
-## STATUS PROJECT: v2.22.0 -- Fix 10 temuan P1 audit statis UI v2.21.1 (batch 1/2) -- 2026-08-15
+## STATUS PROJECT: v2.23.0 -- Fix 9 temuan P2 audit statis UI v2.21.1 (batch 2/2, PENUTUP audit) -- 2026-08-15
+- **User minta "lanjut P2"** -- eksekusi 9 temuan P2 yang di v2.22.0 sengaja
+  ditunda (rekomendasi eksplisit audit "sebaiknya masuk batch berikutnya").
+- **Audit ulang dulu, bukan asumsi 9 item mentah**: dicek satu-satu ke kode
+  AKTUAL (bukan percaya daftar audit txt begitu saja) -- ternyata **2 dari 9
+  item SUDAH TERTUTUP** di batch P1 v2.22.0 sebelumnya sbg "sekalian, tidak
+  menambah file" (lihat CHANGELOG.md v2.22.0): #UI-14 (uppercase folderName,
+  `RuleCard.kt`) & #UI-16 (whitespace alignment `ManifestRow`, `HomeScreen.kt`)
+  -- DAN #UI-15 (touch target crash log) ternyata sudah digabung eksekusinya
+  dgn #UI-08 di `DiagnosticsScreen.kt` batch yang sama. **6 item TERSISA
+  benar-benar dieksekusi** di batch ini: #UI-11, #UI-12, #UI-13, #UI-17
+  (diaudit ulang, TIDAK ada gap nyata -- ditutup TANPA ubah kode, lihat
+  bawah), #UI-18, #UI-19.
+- **#UI-11 (`SettingsScreen.kt`, `friendlySafFolderLabel`)**: sebelumnya
+  ambil bagian setelah ':' TERAKHIR di SELURUH string -- root/provider
+  (mis. "primary" vs kartu SD) hilang, 2 folder beda storage tapi path akhir
+  sama akan tampil identik. Fix: ambil segmen setelah "/tree/" dulu (root:path
+  satu kesatuan), tampilkan KEDUANYA `path (root)`.
+- **#UI-12 (`SettingsScreen.kt`, export JSON)**: tombol "Salin JSON" + Snackbar
+  konfirmasi ditambah (field read-only TETAP ada sbg preview) -- pola identik
+  tombol "Salin Log" `ActivityLogScreen.kt` (Insiden #6, `ClipboardManager`+
+  `AnnotatedString`).
+- **#UI-13 (`RuleRepository.kt`+`MainViewModel.kt`+`SettingsScreen.kt`, status
+  import)**: `RuleRepository.importFromJson()` return type `Int` ->
+  `ImportOutcome(parseSuccess: Boolean, importedCount: Int)` -- sebelumnya "0"
+  ambigu (parse gagal vs JSON valid tapi array kosong). `MainViewModel.
+  importRulesJson()` callback `(Int)->Unit` -> `(Boolean, Int)->Unit`, murni
+  pass-through. `SettingsScreen` dapat sealed `ImportResultUiState`
+  (Success/Warning/Error, warna primary/tertiary/error berbeda). **`MainActivity.
+  kt` (Protected Asset) TIDAK PERLU disentuh sama sekali** -- lambda
+  `{ text, cb -> viewModel.importRulesJson(text, cb) }` type-infer otomatis
+  dari kedua sisi yang sudah cocok, diverifikasi manual sebelum diklaim (bukan
+  asumsi).
+- **#UI-17 (accessibility `contentDescription=null`, HomeScreen/
+  GroupedListRow/ManifestRow)**: diaudit manual sesuai catatan audit sendiri
+  ("Prioritas P2 hanya bila TalkBack tidak dapat konteks cukup") -- SEMUA
+  icon ber-`contentDescription=null` di 3 lokasi itu decoratif & langsung
+  bersebelahan dgn `Text` yang membawa makna sama (ManifestRow icon+label,
+  ikon `ErrorOutline` di tombol "Lihat file dilewati", icon `GroupedListRow`
+  dlm `Row` yg sama dgn label, chevron affordance redundan dgn state
+  clickable). **TIDAK ADA gap nyata ditemukan -- TIDAK ada kode diubah untuk
+  item ini**, ditutup sbg "diverifikasi, bukan diasumsikan aman".
+- **#UI-18 (`SegmentedControl.kt`)**: `selectedIndex` sekarang di-`coerceIn`
+  ke range valid (`effectiveIndex`) sebelum dibandingkan -- sebelumnya index
+  di luar range = tidak ada segment terpilih sama sekali (bukan crash,
+  hardening murni, belum ada laporan bug aktif).
+- **#UI-19 (`SegmentedControl.kt`)**: ditemukan gap NYATA (bukan cuma beda
+  gaya) saat audit ulang -- segment TIDAK terpilih sebelumnya nol feedback
+  tekan sama sekali (`indication=null`, tanpa scale), beda dgn segment
+  terpilih yg otomatis dapat ripple bawaan `NeumorphicSurface(onClick=...)`.
+  Fix: `pressScale()` (sudah ada di `PressScale.kt`, reuse bukan bikin baru)
+  diterapkan ke segment tidak-terpilih -- pola scale dipilih (bukan ripple)
+  supaya konsisten dgn keluarga kontrol neumorphic lain (CTA Home,
+  TactileSwitch). **Keputusan eksplisit: 2 keluarga feedback (ripple utk row
+  list flat spt GroupedListRow/Diagnostics, scale utk kontrol neumorphic spt
+  CTA/Switch/SegmentedControl) DIPERTAHANKAN sbg desain sengaja, BUKAN
+  dianggap "inkonsistensi" yg harus diseragamkan jadi 1 pola tunggal** --
+  audit sendiri menyebut ini "design system issue" tapi setelah ditelusuri
+  akarnya cuma SegmentedControl unselected yg benar2 kosong, bukan seluruh
+  app perlu diseragamkan ulang. Kalau user MINTA eksplisit 1 pola feedback
+  tunggal utk seluruh app, itu instruksi terpisah -- jangan diasumsikan dari
+  audit ini saja.
+- File diubah (5): `data/RuleRepository.kt`, `ui/MainViewModel.kt`,
+  `ui/screens/SettingsScreen.kt`, `ui/components/SegmentedControl.kt`,
+  `app/build.gradle.kts` (versi). `scripts/preflight_check.sh` lolos bersih
+  11/11 (langsung, tanpa iterasi fix kali ini). Sempat ketangkap SENDIRI
+  sebelum ZIP dipaket: parameter type `onImportRequested` di signature fungsi
+  `SettingsScreen` sempat lupa diupdate (`(Int)->Unit` bukan `(Boolean,
+  Int)->Unit`) saat body call sudah diubah -- ketahuan via `grep` cross-check
+  semua caller/callee `importFromJson`/`importRulesJson`/`onImportRequested`
+  sebelum preflight, bukan lolos ke user. Juga 1 unused import (`IconButton`,
+  tidak jadi dipakai krn "Salin JSON" akhirnya pakai `OutlinedButton`+`Icon`
+  bukan `IconButton` polos) dibersihkan sebelum paket.
+- **BELUM PERNAH lewat `./gradlew` asli.** User WAJIB verifikasi visual di HP
+  asli: label folder SAF custom (kalau pakai kartu SD/lebih dari 1 storage,
+  cek root ikut tampil), tombol "Salin JSON" + Snackbar, import JSON rusak/
+  kosong/valid (3 warna beda), segment tidak-terpilih di tab Log/Undo terasa
+  mengecil dikit saat ditekan (bukan cuma diam).
+- **STATUS AUDIT UI v2.21.1: SEMUA 19 temuan (10 P1 + 9 P2) SEKARANG
+  TERTUTUP** (v2.22.0 + v2.23.0 ini) -- baik yang benar2 diubah kodenya
+  maupun yang diverifikasi TIDAK ada gap nyata (#UI-17). Sesi berikutnya
+  TIDAK PERLU audit ulang dari nol berdasar file audit txt yang sama; kalau
+  user laporkan gejala baru atau minta audit sektor lain, itu batch baru.
+
+## STATUS PROJECT SEBELUMNYA: v2.22.0 -- Fix 10 temuan P1 audit statis UI v2.21.1 (batch 1/2) -- 2026-08-15
 - **User upload** `PromptVault_v2_21_1_UI_Audit.txt` (audit statis eksternal,
   scope UI/UX + Compose logic + accessibility + responsiveness, 10 P1 + 9 P2,
   0 P0) + minta "debugging UI secara bertahap" -- dibaca sebagai: eksekusi

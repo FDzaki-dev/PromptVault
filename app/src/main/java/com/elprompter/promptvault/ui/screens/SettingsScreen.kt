@@ -8,17 +8,24 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -27,6 +34,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ClipboardManager
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import com.elprompter.promptvault.data.ConflictStrategy
 import com.elprompter.promptvault.data.SettingsRepository
@@ -44,7 +54,7 @@ fun SettingsScreen(
     currentScanConcurrency: Int,
     onScanConcurrencySelected: (Int) -> Unit,
     onExportRequested: suspend () -> String,
-    onImportRequested: (String, (Int) -> Unit) -> Unit,
+    onImportRequested: (String, (Boolean, Int) -> Unit) -> Unit,
     safTreeUri: String?,
     safAccessLost: Boolean,
     onPickSafFolder: () -> Unit,
@@ -53,9 +63,16 @@ fun SettingsScreen(
 ) {
     var exportedText by remember { mutableStateOf<String?>(null) }
     var importText by remember { mutableStateOf("") }
-    var importResult by remember { mutableStateOf<String?>(null) }
+    // [Fix audit P2 #UI-13, 2026-08-15] Sebelumnya String? polos ("$count rule
+    // berhasil diimpor.") -- tidak ada perbedaan visual sukses/kosong/gagal.
+    // Sekarang sealed state eksplisit + warna berbeda per kondisi.
+    var importResult by remember { mutableStateOf<ImportResultUiState?>(null) }
     val scope = rememberCoroutineScope()
     val colors = MaterialTheme.colorScheme
+    // [Fix audit P2 #UI-12, 2026-08-15] Dipakai tombol "Salin JSON" export --
+    // pola identik dgn tombol "Salin Log" di ActivityLogScreen (Insiden #6).
+    val clipboardManager: ClipboardManager = LocalClipboardManager.current
+    val snackbarHostState = remember { SnackbarHostState() }
 
     @Composable
     fun chipColors(dangerAccent: Boolean = false) = FilterChipDefaults.filterChipColors(
@@ -64,7 +81,12 @@ fun SettingsScreen(
     )
 
     Scaffold(
-        topBar = { VaultTopBar(title = "Pengaturan", onBack = onBack) }
+        topBar = { VaultTopBar(title = "Pengaturan", onBack = onBack) },
+        snackbarHost = {
+            SnackbarHost(snackbarHostState) { data ->
+                Snackbar(snackbarData = data, containerColor = colors.primary, contentColor = colors.onPrimary)
+            }
+        }
     ) { padding ->
         Column(
             modifier = Modifier
@@ -205,14 +227,28 @@ fun SettingsScreen(
                         Text("Tampilkan JSON Export")
                     }
 
-                    exportedText?.let {
+                    exportedText?.let { text ->
                         OutlinedTextField(
-                            value = it,
+                            value = text,
                             onValueChange = {},
                             readOnly = true,
                             label = { Text("Salin teks ini untuk backup") },
                             modifier = Modifier.fillMaxWidth()
                         )
+                        // [Fix audit P2 #UI-12, 2026-08-15] Sebelumnya user harus
+                        // long-press + select manual di field read-only -- rendah
+                        // discoverability utk aksi UTAMA fitur backup. Field
+                        // read-only TETAP ada sbg preview (tidak dihapus).
+                        OutlinedButton(
+                            onClick = {
+                                clipboardManager.setText(AnnotatedString(text))
+                                scope.launch { snackbarHostState.showSnackbar("JSON disalin ke clipboard") }
+                            },
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primary)
+                        ) {
+                            Icon(Icons.Filled.ContentCopy, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Text(" Salin JSON")
+                        }
                     }
                 }
             }
@@ -232,31 +268,76 @@ fun SettingsScreen(
                     )
                     Button(
                         onClick = {
-                            onImportRequested(importText) { count ->
-                                importResult = "$count rule berhasil diimpor."
-                                importText = ""
+                            onImportRequested(importText) { parseSuccess, count ->
+                                importResult = when {
+                                    !parseSuccess -> ImportResultUiState.Error(
+                                        "Format JSON tidak valid -- tidak ada rule yang diimpor."
+                                    )
+                                    count == 0 -> ImportResultUiState.Warning(
+                                        "JSON valid, tapi tidak ada rule di dalamnya untuk diimpor."
+                                    )
+                                    else -> ImportResultUiState.Success("$count rule berhasil diimpor.")
+                                }
+                                // Kosongkan field HANYA kalau parse berhasil (biar user
+                                // bisa perbaiki teks yang salah tanpa ngetik ulang dari nol).
+                                if (parseSuccess) importText = ""
                             }
                         },
                         enabled = importText.isNotBlank(),
                         colors = ButtonDefaults.buttonColors(containerColor = colors.primary, contentColor = colors.onPrimary)
                     ) { Text("Import") }
-                    importResult?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+                    importResult?.let { result ->
+                        Text(
+                            result.message,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = when (result) {
+                                is ImportResultUiState.Success -> colors.primary
+                                is ImportResultUiState.Warning -> colors.tertiary
+                                is ImportResultUiState.Error -> colors.error
+                            }
+                        )
+                    }
                 }
             }
         }
     }
 }
 
+/** Status hasil import rule, dipisah biar warna/pesan tidak ambigu (fix #UI-13). */
+private sealed class ImportResultUiState(val message: String) {
+    class Success(message: String) : ImportResultUiState(message)
+    class Warning(message: String) : ImportResultUiState(message)
+    class Error(message: String) : ImportResultUiState(message)
+}
+
 /**
  * [SAF] URI tree SAF berbentuk mis. "content://.../tree/primary%3ADownload%2FFoo"
- * -- tidak informatif ditampilkan mentah ke user non-teknis. Decode dulu lalu
- * ambil bagian setelah ':' TERAKHIR (format authority provider umumnya
- * "root:path/relatif"), supaya tampil ringkas mis. "Download/Foo". Fungsi
- * murni & private -- kalau decode gagal/format tidak dikenali, tampilkan hasil
- * decode apa adanya daripada crash layar Pengaturan.
+ * -- tidak informatif ditampilkan mentah ke user non-teknis. Fungsi murni &
+ * private -- kalau decode gagal/format tidak dikenali, tampilkan hasil decode
+ * apa adanya daripada crash layar Pengaturan.
+ *
+ * [Fix audit P2 #UI-11, 2026-08-15] Versi LAMA cuma ambil bagian setelah ':'
+ * TERAKHIR di seluruh string -- root/provider (mis. "primary" vs id kartu SD
+ * lain) hilang total dari label. Dua folder di ROOT/PROVIDER BERBEDA tapi
+ * path akhir sama (mis. "Download/Foo" di penyimpanan internal DAN di kartu
+ * SD) akan tampil IDENTIK, ambigu bagi user yang punya lebih dari satu
+ * penyimpanan. Sekarang: ambil segmen SETELAH "/tree/" dulu (root:path tetap
+ * satu kesatuan, tidak ikut ':' dalam skema "content://"), root & path
+ * relatif SAMA-SAMA ditampilkan (path duluan, root dlm kurung) -- tetap
+ * ringkas tapi tidak lagi kehilangan konteks.
  */
 private fun friendlySafFolderLabel(treeUri: String): String {
     val decoded = runCatching { Uri.decode(treeUri) }.getOrDefault(treeUri)
-    val afterColon = decoded.substringAfterLast(':')
-    return afterColon.ifBlank { decoded }
+    // Provider tree URI standar berakhir dgn segmen "root:path/relatif" tepat
+    // setelah "/tree/" (mis. ".../tree/primary:Download/Foo", atau
+    // ".../tree/1234-5678:Download/Foo" utk kartu SD). Ambil segmen SETELAH
+    // "/tree/" biar root:path tetap satu kesatuan, bukan cuma cari ':' di
+    // seluruh string (yang juga match ':' dalam skema "content://").
+    val treeSegment = decoded.substringAfterLast("/tree/", missingDelimiterValue = decoded)
+        .substringBefore("/document/")
+    val colonIndex = treeSegment.indexOf(':')
+    if (colonIndex < 0) return treeSegment.ifBlank { decoded }
+    val root = treeSegment.substring(0, colonIndex).ifBlank { "?" }
+    val path = treeSegment.substring(colonIndex + 1).ifBlank { "/" }
+    return "$path ($root)"
 }

@@ -3,6 +3,68 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.23.0 -- Fix 9 temuan P2 dari audit statis UI v2.21.1 (batch 2/2, PENUTUP audit) (2026-08-15)
+Lanjutan v2.22.0 (P1). Audit ulang ke kode aktual dulu: 2 dari 9 item P2
+ternyata SUDAH tertutup co-located di batch P1 (#UI-14, #UI-16), dan #UI-15
+sudah tergabung eksekusinya dengan #UI-08. 6 item sisanya dieksekusi di sini.
+
+- **#UI-11 (`SettingsScreen.kt`)**: `friendlySafFolderLabel()` sebelumnya
+  cuma ambil bagian setelah ':' TERAKHIR di seluruh string URI -- root/
+  provider (mis. "primary" vs id kartu SD) hilang dari label, 2 folder beda
+  storage dgn path akhir sama tampil identik/ambigu. Fix: ambil segmen
+  setelah "/tree/" dulu, tampilkan `path (root)` -- root & path relatif
+  sama-sama terlihat.
+- **#UI-12 (`SettingsScreen.kt`)**: tombol "Salin JSON" + Snackbar
+  konfirmasi ditambah di kartu Export (field read-only preview tetap ada).
+  Pola identik "Salin Log" `ActivityLogScreen.kt` (`ClipboardManager` +
+  `AnnotatedString`, Insiden #6).
+- **#UI-13 (`RuleRepository.kt`, `MainViewModel.kt`, `SettingsScreen.kt`)**:
+  `RuleRepository.importFromJson()` return `Int` -> data class
+  `ImportOutcome(parseSuccess: Boolean, importedCount: Int)` -- sebelumnya
+  "0 rule diimpor" ambigu (parse gagal total vs JSON valid tapi array
+  kosong). `MainViewModel.importRulesJson()` callback jadi `(Boolean, Int)
+  -> Unit` (pass-through murni). `SettingsScreen` dapat sealed private
+  `ImportResultUiState` (Success/Warning/Error) dgn warna beda
+  (primary/tertiary/error). `MainActivity.kt` (Protected Asset) **TIDAK
+  disentuh** -- lambda wiring `{ text, cb -> viewModel.importRulesJson(text,
+  cb) }` type-infer otomatis cocok di kedua sisi, diverifikasi via grep
+  cross-reference semua caller sebelum diklaim aman.
+- **#UI-14, #UI-16**: sudah tertutup di v2.22.0 (co-located dgn batch P1,
+  lihat entri di bawah) -- tidak ada perubahan lagi di sini.
+- **#UI-15**: sudah tertutup di v2.22.0 (digabung eksekusinya dgn #UI-08 di
+  `DiagnosticsScreen.kt`) -- tidak ada perubahan lagi di sini.
+- **#UI-17 (audit, `HomeScreen.kt`/`GroupedListRow.kt`/`ManifestRow()`)**:
+  diaudit manual ulang sesuai catatan audit sendiri ("prioritas P2 hanya
+  bila TalkBack tidak dapat konteks cukup"). Semua icon `contentDescription
+  = null` di 3 lokasi itu decoratif, bersebelahan langsung dgn `Text` yang
+  membawa makna sama, atau chevron affordance yang redundan dgn state
+  clickable Row. **TIDAK ada gap nyata -- nol perubahan kode untuk item
+  ini**, ditutup sbg "diverifikasi", bukan "diasumsikan aman".
+- **#UI-18 (`SegmentedControl.kt`)**: `selectedIndex` di-`coerceIn(0,
+  options.lastIndex)` sebelum dibandingkan per-segment -- sebelumnya index
+  di luar range = tidak ada segment yang terlihat terpilih (hardening,
+  belum ada laporan bug aktif).
+- **#UI-19 (`SegmentedControl.kt`)**: audit ulang menemukan gap NYATA (bukan
+  cuma beda gaya) -- segment TIDAK terpilih sebelumnya nol feedback tekan
+  (`indication = null`, tanpa scale), beda dgn segment terpilih yang
+  otomatis dapat ripple bawaan `NeumorphicSurface(onClick=...)`. Fix: reuse
+  `pressScale()` (sudah ada di `PressScale.kt`) di segment tidak-terpilih --
+  scale dipilih (bukan ripple) supaya konsisten dgn keluarga kontrol
+  neumorphic lain (CTA Home, TactileSwitch). Keputusan eksplisit: 2 keluarga
+  feedback (ripple utk row list flat, scale utk kontrol neumorphic)
+  DIPERTAHANKAN sbg desain sengaja, bukan diseragamkan paksa jadi 1 pola.
+- File diubah (5): `data/RuleRepository.kt`, `ui/MainViewModel.kt`,
+  `ui/screens/SettingsScreen.kt`, `ui/components/SegmentedControl.kt`,
+  `app/build.gradle.kts` (versi). `scripts/preflight_check.sh` lolos bersih
+  11/11. 1 typo ketangkap sendiri sebelum ZIP dipaket (parameter type
+  `onImportRequested` di signature `SettingsScreen` sempat telat diupdate
+  dari `(Int)->Unit`, ketahuan via grep cross-reference semua caller/callee
+  terkait import, bukan lolos ke user) + 1 unused import (`IconButton`)
+  dibersihkan. **BELUM PERNAH lewat `./gradlew` asli.**
+- versionCode 71->72, versionName 2.22.0->2.23.0.
+- **STATUS: audit UI v2.21.1 (19 temuan: 10 P1 + 9 P2) SEKARANG TERTUTUP
+  SEMUA** antara v2.22.0 dan v2.23.0 ini.
+
 ## v2.22.0 -- Fix 10 temuan P1 dari audit statis UI v2.21.1 (batch 1/2, semua P1) (2026-08-15)
 User upload `PromptVault_v2_21_1_UI_Audit.txt` (audit statis UI eksternal,
 10 temuan P1 + 9 P2, 0 P0). Batch ini menuntaskan SEMUA 10 P1 (P2 menyusul

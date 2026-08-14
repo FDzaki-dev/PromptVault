@@ -32,6 +32,15 @@ import com.elprompter.promptvault.ui.theme.TactileTokens
 @Composable
 fun SegmentedControl(options: List<String>, selectedIndex: Int, onSelect: (Int) -> Unit) {
     val colors = MaterialTheme.colorScheme
+    // [Fix audit P2 #UI-18, 2026-08-15] Sebelumnya `selected = index ==
+    // selectedIndex` polos -- kalau caller kirim index di luar range
+    // options (mis. 0-based vs 1-based ketukar, atau options berubah tapi
+    // state index belum di-reset), TIDAK ADA segment yang keliatan
+    // terpilih, bukan crash tapi state visual jadi hilang tanpa jejak.
+    // Diklem ke range valid di sini (boundary component, bukan di tiap
+    // caller) supaya selalu ada 1 segment terpilih selama `options` tidak
+    // kosong -- hardening, belum ada laporan bug aktif dari ini.
+    val effectiveIndex = if (options.isEmpty()) -1 else selectedIndex.coerceIn(0, options.lastIndex)
     NeumorphicSurface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -42,7 +51,7 @@ fun SegmentedControl(options: List<String>, selectedIndex: Int, onSelect: (Int) 
     ) {
         Row(modifier = Modifier.padding(3.dp)) {
             options.forEachIndexed { index, label ->
-                val selected = index == selectedIndex
+                val selected = index == effectiveIndex
                 val interactionSource = remember { MutableInteractionSource() }
                 if (selected) {
                     NeumorphicSurface(
@@ -64,9 +73,21 @@ fun SegmentedControl(options: List<String>, selectedIndex: Int, onSelect: (Int) 
                         )
                     }
                 } else {
+                    // [Fix audit P2 #UI-19, 2026-08-15] Sebelumnya segment TIDAK
+                    // terpilih benar-benar NOL feedback tekan (indication=null,
+                    // tanpa scale) -- beda dari segment terpilih yang otomatis
+                    // dapat ripple bawaan `NeumorphicSurface(onClick=...)`. Bukan
+                    // sekadar "beda gaya" (ripple di list biasa vs scale di
+                    // kontrol neumorphic itu memang pola desain sengaja, lihat
+                    // dokumentasi `PressScale.kt`/`Neumorphic.kt`) -- ini gap
+                    // NYATA: segment ini sama sekali tidak dapat KEDUANYA.
+                    // `pressScale()` dipakai (bukan ripple) supaya konsisten dgn
+                    // keluarga kontrol neumorphic lain (CTA Home, TactileSwitch),
+                    // bukan menambah pola feedback ketiga.
                     Box(
                         modifier = Modifier
                             .weight(1f)
+                            .pressScale(interactionSource)
                             .clickable(
                                 interactionSource = interactionSource,
                                 indication = null

@@ -314,10 +314,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     suspend fun exportRulesJson(): String = ruleRepository.exportAsJson()
 
-    fun importRulesJson(text: String, onDone: (Int) -> Unit) {
+    /**
+     * [Fix audit P2 #UI-13, 2026-08-15] `onDone` sekarang `(Boolean, Int) ->
+     * Unit` (parseSuccess, importedCount) -- sebelumnya `(Int) -> Unit` tidak
+     * bisa membedakan "gagal parse" dari "berhasil parse tapi 0 rule". Murni
+     * pass-through hasil [RuleRepository.ImportOutcome], nol perubahan logika.
+     */
+    fun importRulesJson(text: String, onDone: (Boolean, Int) -> Unit) {
         viewModelScope.launch {
-            val count = ruleRepository.importFromJson(text)
-            onDone(count)
+            val outcome = ruleRepository.importFromJson(text)
+            onDone(outcome.parseSuccess, outcome.importedCount)
         }
     }
 
