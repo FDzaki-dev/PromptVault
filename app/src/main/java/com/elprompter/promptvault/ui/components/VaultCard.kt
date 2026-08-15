@@ -18,8 +18,9 @@ import com.elprompter.promptvault.ui.theme.TactileTokens
  * dihapus total, digantikan `NeumorphicSurface` (lihat `Neumorphic.kt` utk
  * detail teknik shadow ganda). Warna isi kartu TETAP [GlassSurface] --
  * TIDAK ADA hex baru di batch ini, murni ganti CARA permukaan itu digambar
- * (shadow ganda terarah, bukan lagi gradient+hairline). `TealTint`/
- * `TealGradientAlpha`/`GlassBorder` (dulu dipakai di sini) SEKARANG TIDAK
+ * (shadow ganda terarah, bukan lagi gradient+hairline). `PlatinumTint`/
+ * `PlatinumGradientAlpha`/`GlassBorder` (dulu dipakai di sini, era Teal
+ * disebut `TealTint`/`TealGradientAlpha`) SEKARANG TIDAK
  * dipakai lagi oleh `VaultCard` -- tapi TIDAK dihapus dari `Color.kt`, masih
  * dipakai komponen lain (lihat FILE_MANIFEST/grep sebelum audit hapus).
  */

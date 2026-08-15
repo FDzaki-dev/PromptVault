@@ -3,6 +3,55 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.24.0 -- Debug + polish: fix bug FAB nutup aksi kartu, re-palette Platinum+Ruby (2026-08-15)
+User kirim 3 screenshot: (1) riwayat aktivitas normal, (2) layar "Kelola
+Rule" -- tombol "+" (FAB tambah rule) MENUTUPI ikon Hapus di kartu rule
+terakhir ("FileManager project"), (3) Home normal. Diminta debug bug UI +
+redesign palet jadi "Platinum + Ruby blend" premium, "anti gagal".
+
+- **Bug nyata #UI-20 (`RuleListScreen.kt`)**: `LazyColumn` daftar rule TIDAK
+  punya `contentPadding` bawah -- `Scaffold` M3 TIDAK otomatis menghindarkan
+  `floatingActionButton` dari konten (FAB by design melayang DI ATAS,
+  content harus kasih padding sendiri). Akibatnya kartu rule terakhir
+  (khususnya tombol Edit/Hapus) ketutup fisik & optik oleh FAB "+" --
+  PERSIS match screenshot #2 user. Fix: `contentPadding = PaddingValues
+  (bottom = 88.dp)` (56dp tinggi FAB M3 + margin aman).
+- **Bug laten #UI-21 (`Color.kt`, ditemukan saat audit warna sebelum
+  re-palette)**: token lama `StampGlow` (`#FF6E52`, badge sukses) vs
+  `RustGlow` (`#FF6B5C`, error) HAMPIR IDENTIK hex-nya -- 2 makna semantik
+  beda (sukses vs error) nyaris tak terbedakan mata. Tertutup otomatis oleh
+  re-palette di bawah (Ruby baru digeser jauh ke hue crimson).
+- **Re-palette v6.0.0 (`Color.kt`, `Theme.kt`)**: "Transformative Teal" ->
+  "Platinum + Ruby" (permintaan eksplisit). `TealAccent*` -> `PlatinumAccent*`
+  (primary, silver-platinum dingin `#DCE2E9`), `StampGlow*` -> `RubyGlow*`
+  (secondary, crimson jenuh `#E23A55`). `AmberGlow`/`RustGlow`/`SlateGlow`
+  TIDAK diubah nilainya (sudah cukup beda hue). `onSecondary` sekarang
+  `RubyOn` baru (terang) -- BUKAN reuse `PlatinumAccentOn` (gelap) seperti
+  pola lama, krn Ruby cukup jenuh/gelap-value shg teks terang kontrasnya
+  lebih baik (a11y).
+- **CTA "Scan Sekarang" (`HomeScreen.kt`)**: gradient diganti dari (Stamp ->
+  Amber) jadi (Ruby -> Platinum) dgn `colorStops` TIDAK merata (0f/0.65f/1f)
+  -- 65% area tengah (tempat label teks) tetap solid Ruby demi kontras teks
+  aman, 35% sisi kanan "meleleh" ke Platinum terang utk kesan blend premium
+  nyata (bukan cuma 2 warna solid berdampingan).
+- **`colors.xml`**: `pv_teal_accent` -> `pv_platinum_accent` (`#DCE2E9`) --
+  disamakan walau saat ini tidak direferensikan XML lain, supaya tidak jadi
+  sisa hex basi.
+- Verifikasi sebelum ZIP: `grep -rn "TealAccent\|StampGlow\|TealTint"` di
+  seluruh `app/src/main/java` & `res` -- 0 referensi kode aktif tersisa
+  (hanya komentar historis penjelas rename). `grep -rn "0xFF"` di seluruh
+  `ui/` di luar `Color.kt` -- 0 hasil (tidak ada hex hardcode lain yang
+  perlu ikut diubah, semua komponen sudah theme-aware sejak lama).
+- File diubah (6): `ui/theme/Color.kt`, `ui/theme/Theme.kt`,
+  `ui/screens/HomeScreen.kt`, `ui/screens/RuleListScreen.kt`,
+  `ui/components/VaultCard.kt` (komentar saja), `app/build.gradle.kts`
+  (versi) + `res/values/colors.xml`. `AndroidManifest.xml`/`MainActivity.kt`
+  (Protected Assets) **TIDAK disentuh** -- keduanya cuma referensi
+  `AmoledBackground` yang nilainya tidak berubah.
+- **Belum diverifikasi**: build CI + tampilan nyata di device (Termux tidak
+  attach ke compiler Android/preview Compose) -- kontras Ruby/teks & efek
+  blend CTA perlu dicek visual oleh user pasca-install.
+
 ## v2.23.0 -- Fix 9 temuan P2 dari audit statis UI v2.21.1 (batch 2/2, PENUTUP audit) (2026-08-15)
 Lanjutan v2.22.0 (P1). Audit ulang ke kode aktual dulu: 2 dari 9 item P2
 ternyata SUDAH tertutup co-located di batch P1 (#UI-14, #UI-16), dan #UI-15

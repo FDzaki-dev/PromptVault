@@ -1602,3 +1602,19 @@ akal ditulis sebagai entri changelog per-versi.
   SELALU cek signature komposable itu spesifik (ModalBottomSheet != Surface),
   jangan asumsi semua composable "container" M3 punya param yang sama.
 - Belum diverifikasi CI hijau untuk versi ini -- perlu push & cek Actions.
+
+### [2026-08-15] v2.24.0 -- Fix FAB nutup aksi kartu + re-palette Platinum+Ruby
+- User kirim screenshot nyata: FAB "+" di "Kelola Rule" nutup ikon Hapus
+  kartu terakhir. Root cause: `LazyColumn` tanpa `contentPadding` bawah --
+  FAB M3 by design melayang di atas konten, bukan bug Scaffold. Fix: 88dp
+  bottom padding. **Pelajaran**: kalau nambah FAB ke Scaffold baru, SELALU
+  cek scrollable content di dalamnya punya bottom padding/spacing yang
+  cukup -- ini kelas bug yang gampang lolos audit kode statis (kelihatan
+  benar di kode, cuma kelihatan salah di screenshot render nyata).
+- Re-palette penuh Teal -> Platinum+Ruby (lihat javadoc `Color.kt` &
+  CHANGELOG utk detail hex/rasional). Ketemu bonus: `StampGlow` lama vs
+  `RustGlow` HAMPIR IDENTIK hex-nya (2 makna beda, warna nyaris sama) --
+  otomatis tertutup krn Ruby baru digeser jauh ke hue crimson.
+- **Belum diverifikasi**: build CI + tampilan visual asli di device (sandbox
+  Termux tidak bisa compile/preview Compose). User perlu install & cek
+  kontras teks CTA + kesan "blend" Platinum-Ruby sebelum dianggap matang.

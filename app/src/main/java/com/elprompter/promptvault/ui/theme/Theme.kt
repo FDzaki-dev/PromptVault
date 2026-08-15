@@ -23,18 +23,25 @@ import androidx.compose.runtime.staticCompositionLocalOf
  * v4.0.0 -- gradient tint "Midnight Blue" diganti "Transformative Teal"
  * (biru-hijau gelap), token `MidnightBlueAccent*` -> `TealAccent*` di
  * Color.kt (rename + re-hex, bukan cuma rename kosong). Lihat CHANGELOG.
+ *
+ * v6.0.0 -- Re-palette "Transformative Teal" -> "Platinum + Ruby" (lihat
+ * javadoc lengkap di Color.kt). `onSecondary`/`onSecondaryContainer`
+ * SENGAJA TIDAK reuse `PlatinumAccentOn` lagi (beda dari pola lama yang
+ * reuse `TealAccentOn` utk semua *On) -- `RubyOn` baru (terang) dipasang
+ * krn `RubyGlow` cukup jenuh/gelap-value shg teks terang kontrasnya lebih
+ * baik drpd teks gelap, lihat javadoc Color.kt.
  */
 private val VaultDarkColors = darkColorScheme(
-    primary = TealAccent,
-    onPrimary = TealAccentOn,
-    primaryContainer = TealAccentContainer,
-    onPrimaryContainer = TealAccent,
-    secondary = StampGlow,
-    onSecondary = TealAccentOn,
-    secondaryContainer = StampGlowContainer,
-    onSecondaryContainer = StampGlow,
+    primary = PlatinumAccent,
+    onPrimary = PlatinumAccentOn,
+    primaryContainer = PlatinumAccentContainer,
+    onPrimaryContainer = PlatinumAccent,
+    secondary = RubyGlow,
+    onSecondary = RubyOn,
+    secondaryContainer = RubyGlowContainer,
+    onSecondaryContainer = RubyOn,
     tertiary = AmberGlow,
-    onTertiary = TealAccentOn,
+    onTertiary = PlatinumAccentOn,
     tertiaryContainer = AmberGlowContainer,
     onTertiaryContainer = AmberGlow,
     background = AmoledBackground,
@@ -50,9 +57,9 @@ private val VaultDarkColors = darkColorScheme(
     surfaceContainerLowest = AmoledBackground,
     inverseSurface = TextPrimary,
     inverseOnSurface = AmoledBackground,
-    inversePrimary = TealAccent,
+    inversePrimary = PlatinumAccent,
     error = RustGlow,
-    onError = TealAccentOn,
+    onError = PlatinumAccentOn,
     errorContainer = RustGlowContainer,
     onErrorContainer = RustGlow,
     outline = HairlineGlass,

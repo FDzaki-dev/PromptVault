@@ -5,7 +5,11 @@
          di sini; sumber kebenaran warna tetap ui/theme/Color.kt (Compose).
          v4.0.0: hex disamakan ke AmoledBackground baru (tint teal), token
          aksen di-rename dari pv_midnight_blue_accent -> pv_teal_accent
-         (rebrand "Transformative Teal", ikut Color.kt#TealAccent). -->
+         (rebrand "Transformative Teal", ikut Color.kt#TealAccent).
+         v6.0.0: pv_teal_accent -> pv_platinum_accent, ikut re-palette
+         Color.kt#PlatinumAccent (Platinum + Ruby). Token ini TIDAK
+         direferensikan XML lain saat ini (cek grep sebelum edit) -- tetap
+         disamakan supaya tidak jadi sisa hex basi kalau kelak dipakai. -->
     <color name="pv_amoled_background">#030A09</color>
-    <color name="pv_teal_accent">#2EE6B8</color>
+    <color name="pv_platinum_accent">#DCE2E9</color>
 </resources>

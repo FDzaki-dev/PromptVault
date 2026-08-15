@@ -163,11 +163,16 @@ fun HomeScreen(
             // Saat ditekan (`pressed = scanPressed`), shadow ganda LENYAP
             // total & diganti overlay cekung (lihat `Neumorphic.kt`) -- CTA
             // terasa benar-benar "tertekan masuk", bukan cuma elevasi turun
-            // seperti sistem glass lama. Gradient hangat (Stamp -> Amber)
-            // TETAP SAMA PERSIS (tidak diubah warnanya), tetap ditumpuk sbg
-            // overlay Box terpisah DI DALAM `NeumorphicSurface` (pola aman
-            // "shadow tidak pernah 1 node dgn brush" tetap dihormati -- lihat
-            // dokumentasi lengkap di `Neumorphic.kt`).
+            // seperti sistem glass lama. Overlay Box terpisah DI DALAM
+            // `NeumorphicSurface` (pola aman "shadow tidak pernah 1 node dgn
+            // brush" tetap dihormati -- lihat dokumentasi lengkap di
+            // `Neumorphic.kt`).
+            //
+            // v6.0.0 -- Gradient CTA diganti dari (Stamp -> Amber) jadi
+            // (Platinum -> Ruby) SENGAJA (permintaan eksplisit "accent
+            // Platinum+Ruby nge-blend") -- CTA ini titik satu-satunya di app
+            // tempat 2 aksen utama benar-benar berbaur jadi satu bidang
+            // warna kontinu, bukan cuma berdampingan di komponen terpisah.
             val scanInteraction = remember { MutableInteractionSource() }
             val scanPressed by scanInteraction.collectIsPressedAsState()
             val ctaScale by animateFloatAsState(
@@ -191,11 +196,21 @@ fun HomeScreen(
                 Box(
                     modifier = Modifier
                         .background(
-                            // CTA utama gradient hangat (Stamp -> Amber), bukan blok
-                            // warna solid tunggal, supaya jadi titik fokus visual
-                            // yang jelas dan lebih "hidup" -- kini murni layer
-                            // dekoratif di atas dasar solid, bukan pemilik shadow.
-                            Brush.horizontalGradient(colors = listOf(colors.secondary, colors.tertiary))
+                            // v6.0.0: blend Ruby -> Platinum, bukan lagi Stamp -> Amber.
+                            // Stop diatur TIDAK merata (0f/0.65f/1f, bukan 2 warna polos
+                            // default) SENGAJA -- 65% pertama (area teks/label di tengah,
+                            // lihat Alignment.Center di bawah) tetap solid Ruby supaya
+                            // teks terang (onSecondary/RubyOn) selalu kontras aman;
+                            // "blend"-nya baru nyata terlihat di 35% sisi kanan yang
+                            // meleleh ke Platinum terang -- kesan logam premium tanpa
+                            // mengorbankan keterbacaan label di tengah tombol.
+                            Brush.horizontalGradient(
+                                colorStops = arrayOf(
+                                    0f to colors.secondary,
+                                    0.65f to colors.secondary,
+                                    1f to colors.primary
+                                )
+                            )
                         )
                         .padding(vertical = 15.dp),
                     contentAlignment = Alignment.Center

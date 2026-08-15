@@ -128,7 +128,18 @@ fun RuleListScreen(
                         )
                     }
                 } else {
-                    LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    // v2.24.0 fix (#UI-20): LazyColumn sebelumnya TANPA contentPadding
+                    // bawah -- item terakhir (khususnya tombol Edit/Hapus di
+                    // RuleCard) ketutup FloatingActionButton "+" yang MELAYANG di
+                    // atas konten (Scaffold TIDAK otomatis menghindarkan FAB dari
+                    // content padding kecuali diberi manual, ini bukan bug Scaffold
+                    // tapi kelalaian pemanggil). 88dp = tinggi standar FAB M3 (56dp)
+                    // + margin aman supaya baris aksi kartu terakhir tetap bisa
+                    // di-tap penuh & tidak ketutup optik.
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 88.dp)
+                    ) {
                         items(filtered, key = { it.id }) { rule ->
                             val globalIndex = rules.indexOfFirst { it.id == rule.id }
                             RuleCard(
