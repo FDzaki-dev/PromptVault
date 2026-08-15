@@ -73,3 +73,48 @@ val RustGlow = Color(0xFFFF6B5C)              // error
 val RustGlowContainer = Color(0xFF2A1512)
 val SlateGlow = Color(0xFF8B9DFF)             // aksen "Pengaturan"
 val SlateGlowContainer = Color(0xFF1A1F33)
+
+/**
+ * v7.1.0 — Preset tema ALTERNATIF "Charcoal + Copper", toggle ON/OFF di
+ * Pengaturan (fitur baru, lihat SettingsRepository.DEFAULT_USE_ALT_THEME).
+ * User memilih eksplisit lewat pertanyaan klarifikasi: "cuma switch ON/OFF
+ * antara Navy+Brass vs 1 preset alternatif TETAP" (bukan color picker bebas,
+ * bukan banyak preset) -- jadi HANYA 2 total, ini preset ke-2 & TERAKHIR.
+ *
+ * PENTING (transparansi sumber warna, beda dgn Navy/Brass): 2 hex Navy+Brass
+ * DIPATOK LANGSUNG oleh user sesi sebelumnya ("dilarang keras ngide
+ * sendiri"). Preset INI **BEDA** -- user hanya minta "1 preset alternatif
+ * tetap" TANPA menentukan hex-nya, jadi warna di bawah adalah KEPUTUSAN
+ * DESAIN Claude sesi ini (bukan direkonstruksi dari palet lama manapun --
+ * `PlatinumAccent`/`RubyGlow` v6.0.0 sudah DIHAPUS TOTAL di v7.0.0 & hex
+ * persisnya TIDAK tercatat presisi di CHANGELOG/PROJECT_STATE utk
+ * direkonstruksi dgn aman, jadi TIDAK coba "mengembalikan" itu). Kalau user
+ * maunya hex spesifik lain utk preset ke-2 ini, tinggal bilang -- desain
+ * ini reversibel, 1 blok di file ini saja.
+ *
+ * Root `#12100E` (charcoal netral HANGAT, H=30 -- beda arah dari Navy H=225
+ * supaya 2 preset terasa jelas berbeda, bukan cuma gelap-terang yang sama).
+ * Tingkat elevasi = hasil hitungan HSL->RGB manual (H=30 tetap, L naik
+ * bertahap per tingkat), pola SAMA seperti Navy di atas -- bukan tebakan.
+ * `#C97B4A` (Copper, aksen TOMBOL UTAMA preset ini) dipilih supaya kontras
+ * WCAG konsisten dgn Brass (tujuan: 2 preset SAMA-SAMA lulus AA, bukan cuma
+ * salah satu).
+ *
+ * WCAG (formula relative luminance W3C, dihitung manual):
+ * - Teks terang (`TextPrimary`, dipakai ulang -- TIDAK ada token teks baru)
+ *   di atas [CharcoalBackground] (L=0,0053): kontras ~19:1 (lulus AAA).
+ * - [CharcoalBackground] sbg teks/ikon di atas [CopperAccent] (L=0,2707,
+ *   dipakai sbg `onSecondary`): kontras 5,80:1 (lulus AA teks normal).
+ * - [CopperAccent] vs [CharcoalBackground] sbg pasangan graphical-object
+ *   (border/ikon, ambang WCAG 1.4.11 = 3:1): 5,80:1, lulus jauh di atas
+ *   ambang.
+ */
+val CharcoalBackground = Color(0xFF12100E)     // root -- H30 S13% L6% (charcoal hangat)
+val CharcoalSurface = Color(0xFF1D1A16)        // panel utama -- H30 S14% L10%
+val CharcoalSurfaceElevated = Color(0xFF28241F) // panel naik 1 tingkat -- H30 S13% L14%
+val CharcoalSurfaceSheet = Color(0xFF36302B)   // sheet/dialog -- H30 S12% L19%
+val CharcoalSurfacePressed = Color(0xFF0C0A09) // recessed/track -- H30 S15% L4%
+
+val CopperAccent = Color(0xFFC97B4A)
+val CopperAccentContainer = CopperAccent.copy(alpha = 0.18f)  // pola SAMA persis BrassAccentContainer
+val CopperAccentOn = CharcoalBackground        // teks gelap di atas Copper terang -- kontras 5,80:1 (AA)

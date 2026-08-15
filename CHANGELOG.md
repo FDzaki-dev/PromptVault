@@ -3,6 +3,61 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v7.1.0 -- FITUR BARU: toggle tema (Deep Navy+Brass <-> Charcoal+Copper) di Pengaturan (2026-08-15)
+User upload state repo terkini (`PromptVault-main.zip`, sudah v7.0.1 -- lompat
+dari v7.0.0 Glassmorphism-Navy-Brass, jadi konteks kerja sesi ini BUKAN
+lanjutan draft Neumorphism `drawBehind`+`setShadowLayer` yang sempat digarap
+sesi sebelumnya & TIDAK PERNAH sempat di-deliver/push -- itu draft SEPENUHNYA
+DITINGGALKAN, sesi lain sudah ambil arah berbeda [balik Glassmorphism] &
+sudah di-push+CI-hotfix duluan). Minta lanjut sbg "toggle saklar tema custom".
+
+**Klarifikasi (ditanya via pilihan, dijawab user)**: toggle SIMPEL ON/OFF
+antara 2 preset TETAP -- BUKAN color picker bebas, BUKAN banyak preset.
+
+**Preset ke-2 ("Charcoal + Copper") -- BARU dirancang sesi ini**, BUKAN
+rekonstruksi Platinum/Ruby v6.0.0 lama (sudah dihapus total di v7.0.0, hex
+persisnya tidak tercatat presisi di mana pun utk direkonstruksi dgn aman).
+Root `#12100E` (charcoal HANGAT, H=30 -- sengaja beda arah hue dari Navy
+H=225 spy 2 preset kerasa beda, bukan cuma gelap/terang yg sama), aksen
+`#C97B4A` (Copper). WCAG dihitung manual (formula relative luminance W3C):
+teks di atas Charcoal ~19:1 (AAA), teks gelap di atas Copper 5,80:1 (AA) --
+LULUS di kedua pasangan, sama rigor-nya dgn preset default.
+
+**Implementasi (BUKAN switch UI kosong -- pelajaran wajib dari Insiden
+`ThemeMode` v2.16.0 yang dihapus krn togglenya tidak pernah benar-benar
+mengubah apa pun)**:
+- `SettingsRepository`: `useAltThemeFlow`/`getUseAltTheme`/`setUseAltTheme`
+  (DataStore boolean, pola identik `intervalMinutesFlow` dkk).
+- `MainViewModel`: `useAltTheme: StateFlow<Boolean>` + `setUseAltTheme()`,
+  pola identik `scanConcurrency`/`setScanConcurrency`.
+- `Color.kt`: token `Charcoal*`/`Copper*` baru (5 tingkat elevasi Charcoal
+  dihitung HSL->RGB manual, pola sama persis Navy). Semantik Amber/Rust/Slate
+  TIDAK berubah di preset ke-2 (konsisten prinsip v7.0.0: di luar scope
+  toggle "warna dominan+aksen tombol").
+- `Theme.kt`: `VaultDarkColorsDefault`/`VaultDarkColorsAlt` (2 `ColorScheme`
+  struktur-identik, cuma token beda) + `PromptVaultTheme(useAltTheme: Boolean)`
+  BENAR-BENAR `@Composable` yg memilih skema reaktif tiap recomposition --
+  BUKAN parameter mati spt `ThemeMode` lama. `resolveBackgroundColor()` baru,
+  1 sumber kebenaran warna bg dipakai bareng status/nav bar + Compose.
+- `SettingsScreen.kt`: section "Tema" baru (`TactileSwitch` + label preset
+  aktif), param `useAltTheme`/`onUseAltThemeChanged`.
+- `MainActivity.kt` (protected asset, edit PARSIAL): `setContent` collect
+  `viewModel.useAltTheme`, teruskan ke `PromptVaultTheme(useAltTheme=...)`.
+  `SideEffect` BARU memanggil ulang `enableEdgeToEdge` pakai
+  `resolveBackgroundColor(useAltTheme)` tiap state berubah -- TANPA ini,
+  status/nav bar (disetel sekali di `onCreate` SEBELUM state DataStore
+  termuat) bisa "nyangkut" di preset lama walau konten Compose sudah pindah.
+
+File diubah (6): `SettingsRepository.kt`, `MainViewModel.kt`, `Color.kt`,
+`Theme.kt`, `SettingsScreen.kt`, `MainActivity.kt` (parsial). Tidak ada file
+baru/dihapus -- `FILE_MANIFEST.txt` TIDAK perlu berubah. `preflight_check.sh`
+13/13 kategori lolos bersih (termasuk #13, kategori dari hotfix v7.0.1, jadi
+KDoc panjang batch ini otomatis tervalidasi tidak mengulang bug yang sama).
+**BELUM PERNAH lewat `./gradlew` asli / device asli.** User WAJIB
+verifikasi: (1) toggle di Pengaturan benar-benar mengganti seluruh tampilan
+app (bukan cuma 1 layar), (2) status/nav bar ikut berubah warna, (3) tidak
+ada teks tak terbaca di preset manapun.
+
 ## v7.0.1 -- HOTFIX build CI gagal total: KDoc tertutup prematur di TactileTokens.kt (2026-08-15)
 User upload log CI gagal (`build-failure-log-v7_0_0.zip`, `kspDebugKotlin FAILED`,
 ratusan error "Expecting a top level declaration" mulai `TactileTokens.kt:10`).

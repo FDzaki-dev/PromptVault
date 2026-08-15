@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -33,6 +34,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -40,6 +42,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import com.elprompter.promptvault.data.ConflictStrategy
 import com.elprompter.promptvault.data.SettingsRepository
+import com.elprompter.promptvault.ui.components.TactileSwitch
 import com.elprompter.promptvault.ui.components.VaultCard
 import com.elprompter.promptvault.ui.components.VaultTopBar
 import kotlinx.coroutines.launch
@@ -53,6 +56,8 @@ fun SettingsScreen(
     onConflictStrategySelected: (ConflictStrategy) -> Unit,
     currentScanConcurrency: Int,
     onScanConcurrencySelected: (Int) -> Unit,
+    useAltTheme: Boolean,
+    onUseAltThemeChanged: (Boolean) -> Unit,
     onExportRequested: suspend () -> String,
     onImportRequested: (String, (Boolean, Int) -> Unit) -> Unit,
     safTreeUri: String?,
@@ -111,6 +116,34 @@ fun SettingsScreen(
                         colors = chipColors()
                     )
                 }
+            }
+
+            // [Fitur baru, v7.1.0] Toggle tema -- ON/OFF antara 2 preset TETAP
+            // (Deep Navy+Brass default / Charcoal+Copper alternatif), BUKAN
+            // color picker bebas -- lihat javadoc lengkap di Theme.kt/Color.kt.
+            Text("Tema", style = MaterialTheme.typography.titleMedium)
+            Text(
+                if (useAltTheme) {
+                    "Charcoal + Copper aktif. Matikan untuk kembali ke Deep Navy + Brass (default)."
+                } else {
+                    "Deep Navy + Brass (default) aktif. Nyalakan untuk pindah ke preset alternatif Charcoal + Copper."
+                },
+                style = MaterialTheme.typography.bodySmall
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    if (useAltTheme) "Charcoal + Copper" else "Deep Navy + Brass",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                TactileSwitch(
+                    checked = useAltTheme,
+                    onCheckedChange = onUseAltThemeChanged,
+                    accentColor = colors.primary
+                )
             }
 
             Text("Kalau Nama File Sudah Ada di Tujuan", style = MaterialTheme.typography.titleMedium)

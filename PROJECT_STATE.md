@@ -3,7 +3,72 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
-## STATUS PROJECT: v7.0.1 -- HOTFIX build CI gagal total: KDoc tertutup prematur di TactileTokens.kt -- 2026-08-15
+## STATUS PROJECT: v7.1.0 -- FITUR BARU: toggle tema (Deep Navy+Brass <-> Charcoal+Copper) di Pengaturan -- 2026-08-15
+- User upload state repo terkini (`PromptVault-main.zip`, ternyata sudah
+  v7.0.1 -- lompat dari v7.0.0). **Penting utk sesi berikutnya**: draft
+  Neumorphism `drawBehind`+`Paint.setShadowLayer` yang sempat digarap sesi
+  SEBELUM ini TIDAK PERNAH di-deliver/push ke user -- sesi lain sudah ambil
+  arah berbeda (balik Glassmorphism total, `GlassPanel.kt`) & sudah
+  di-push+CI-hotfix duluan. Draft itu SEPENUHNYA gugur, jangan dilanjutkan
+  atau dicari lagi -- state ground-truth SELALU upload/PROJECT_STATE.md
+  terbaru, bukan riwayat chat sesi manapun.
+- Diminta lanjut sbg "toggle saklar tema custom" -- ambigu, DIKLARIFIKASI
+  via pertanyaan pilihan (bukan ditebak): user pilih **switch ON/OFF simpel
+  antara 2 preset TETAP**, BUKAN color picker bebas atau banyak preset.
+- **Preset ke-2 "Charcoal + Copper" -- BARU dirancang sesi ini** (`#12100E`
+  root, H=30 hangat, sengaja beda ARAH hue dari Navy H=225 spy 2 preset
+  kerasa beda bukan cuma gelap/terang yg sama; `#C97B4A` aksen). BUKAN
+  rekonstruksi Platinum/Ruby v6.0.0 -- itu sudah dihapus total v7.0.0, hex
+  persisnya tidak tercatat presisi di mana pun (CHANGELOG/PROJECT_STATE)
+  utk direkonstruksi dgn aman, jadi TIDAK dicoba "dikembalikan". WCAG
+  dihitung manual sama rigor-nya dgn preset default: teks di atas Charcoal
+  ~19:1 (AAA), teks gelap di atas Copper 5,80:1 (AA) -- lulus.
+- **Implementasi BENAR-BENAR reaktif, BUKAN switch UI kosong** -- pelajaran
+  wajib dihormati dari Insiden `ThemeMode` v2.16.0 (dihapus total krn
+  togglenya TIDAK PERNAH benar-benar mengubah apa pun, `PromptVaultTheme`
+  hardcode 1 skema, parameter diabaikan). Diverifikasi manual: `Theme.kt`
+  `PromptVaultTheme(useAltTheme: Boolean)` SEKARANG memilih 1 dari 2
+  `ColorScheme` (`VaultDarkColorsDefault`/`VaultDarkColorsAlt`, struktur
+  peran M3 identik, cuma token beda) tiap recomposition -- bukan parameter
+  mati.
+- **Status/nav bar sistem ikut reaktif** (celah yg TIDAK ada di era
+  `ThemeMode` lama krn togglenya memang tidak pernah berfungsi sama sekali):
+  `resolveBackgroundColor()` baru (Theme.kt, 1 sumber kebenaran) dipanggil
+  dari `SideEffect` BARU di `MainActivity.setContent` -- tiap `useAltTheme`
+  berubah (baik krn DataStore baru selesai dimuat ATAU user toggle live),
+  `enableEdgeToEdge` dipanggil ULANG dgn warna yg benar. Tanpa ini, chrome
+  sistem bisa nyangkut di preset lama walau konten Compose sudah pindah.
+- File diubah (6, non-Atomic -- fitur baru murni tambahan, tidak ada 1
+  sistem visual lama yg "dipecah"): `SettingsRepository.kt` (DataStore
+  boolean, pola identik `intervalMinutesFlow`), `MainViewModel.kt`
+  (`StateFlow`+setter, pola identik `scanConcurrency`), `Color.kt` (token
+  Charcoal/Copper baru, 5 tingkat elevasi dihitung HSL manual sama seperti
+  Navy), `Theme.kt` (2 ColorScheme + `PromptVaultTheme` reaktif +
+  `resolveBackgroundColor`), `SettingsScreen.kt` (section "Tema" baru,
+  `TactileSwitch`), `MainActivity.kt` (PARSIAL: collect state + SideEffect
+  + teruskan param, protected asset lain TIDAK disentuh). `FILE_MANIFEST.txt`
+  TIDAK berubah (0 file baru/dihapus).
+- `scripts/preflight_check.sh` dijalankan ulang, **13/13 kategori lolos
+  bersih** (termasuk #13, kategori hotfix v7.0.1 utk KDoc `*/` prematur --
+  KDoc panjang batch ini otomatis tervalidasi tidak mengulang bug yg sama
+  yg baru saja menyebabkan CI gagal total di v7.0.1).
+- Confidence Rating: **93%** (bukan 95%+ murni krn 2 hal: (1) **BELUM
+  PERNAH lewat `./gradlew` asli/device asli** sama sekali -- sandbox tanpa
+  Android SDK/jaringan Gradle, TERLEBIH lagi baru saja ada insiden CI gagal
+  total v7.0.1 dari sesi lain yg JUGA "lolos preflight lama" sebelum
+  ketahuan gagal compile sungguhan, jadi kewaspadaan ekstra wajar; (2) toggle
+  reaktif lintas Activity+Compose (`SideEffect`+`enableEdgeToEdge` dipanggil
+  ulang) adalah pola yg BELUM PERNAH dipakai project ini sebelumnya --
+  logikanya masuk akal & sudah direview manual baris-per-baris, tapi TIDAK
+  ada preseden lain di codebase ini utk dibandingkan). User WAJIB
+  verifikasi: (1) toggle benar-benar mengganti SELURUH tampilan app, bukan
+  cuma 1 layar, (2) status/nav bar ikut berubah warna, (3) tidak ada teks
+  tak terbaca di preset manapun, (4) restart app dgn toggle ON -- preset
+  harus tetap Charcoal+Copper sejak splash/frame pertama (persistensi
+  DataStore).
+- versionCode 79->80, versionName 7.0.1->7.1.0.
+
+## STATUS PROJECT SEBELUMNYA: v7.0.1 -- HOTFIX build CI gagal total: KDoc tertutup prematur di TactileTokens.kt -- 2026-08-15
 - User upload log CI gagal (`build-failure-log-v7_0_0.zip`): `kspDebugKotlin
   FAILED`, ratusan error `Expecting a top level declaration` mulai
   `TactileTokens.kt:10:27`. Semua error lain di log = 1 CASCADE dari 1 root
