@@ -3,7 +3,37 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
-## STATUS PROJECT: v2.24.3 -- FIX BUG NYATA (screenshot user, Insiden #9): "kartu hantu" mengintip di HomeScreen -- 2026-08-15
+## STATUS PROJECT: v2.24.4 -- FIX AKAR Insiden #9 (v2.24.3 TERBUKTI TIDAK CUKUP, Insiden #10): hapus wash gradient HomeScreen -- 2026-08-15
+- User kirim 3 screenshot device asli v2.24.3 (App Info konfirmasi versi
+  terpasang) + laporan tegas: fix v2.24.3 GAGAL -- "ekor shadow gak jelas"
+  masih nongol & sekarang malah kentara HIJAU, minta "Neumorphism real
+  dengan accent Platinum+Ruby nge-blend", bukan tambal lagi.
+- **Root cause v2.24.3 salah konsep (bukan cuma kurang presisi)**:
+  `baseColor` = compositeOver 1 titik gradient statis, padahal gradient
+  DIAM di Box terluar sementara `VaultCard`/CTA ada di `Column` yang
+  verticalScroll DI ATASNYA -- posisi relatif berubah tiap scroll, TIDAK
+  ADA baseColor statis yang akurat di semua posisi. Titik yang dipilih
+  (dekat y=0) menyerap porsi besar `colors.surfaceVariant`
+  (`GlassSurfaceElevated` 0xFF0D2622, HIJAU tua) -- shadow-caster jadi
+  makin kentara beda warna, bukan makin menyatu.
+- **Fix akar**: wash gradient `HomeScreen` (fitur lama UI-10, pra-
+  Neumorphism v5.0.0, tujuan asli murni anti-"monoton") DIHAPUS TOTAL --
+  latar sekarang `colors.background` solid, SAMA PERSIS 12 layar lain di
+  app ini yang tidak pernah kena bug kelas ini. `VaultCard`/CTA Scan balik
+  ke `baseColor` DEFAULT (tidak perlu compositeOver lagi). Kelas bug ini
+  sekarang TIDAK BISA terulang di layar ini, bukan cuma diredam.
+- Param `VaultCard.baseColor` (ditambah v2.24.3) TETAP disimpan (tidak
+  di-revert) -- tidak salah, cuma tidak dipakai HomeScreen lagi saat ini.
+- File diubah (2): `ui/screens/HomeScreen.kt` (hapus gradient + baseColor
+  plumbing + import compositeOver), `app/build.gradle.kts` (versi).
+  `scripts/preflight_check.sh` TIDAK diubah -- kategori #12 (v2.24.3) tetap
+  relevan sbg jaring pengaman, lolos trivial (0 layar gradient tersisa).
+  Lolos bersih 12/12. **BELUM PERNAH lewat `./gradlew` asli / device asli.**
+  User WAJIB verifikasi ULANG di HP: bersih dari potongan persegi mengintip
+  di SEMUA posisi scroll (bukan cuma posisi awal seperti v2.24.3 kemarin).
+- versionCode 76->77, versionName 2.24.3->2.24.4.
+
+## STATUS PROJECT SEBELUMNYA: v2.24.3 -- FIX BUG NYATA (screenshot user, Insiden #9): "kartu hantu" mengintip di HomeScreen -- 2026-08-15
 - User kirim 2 screenshot HP asli v2.24.2 + instruksi eksplisit "lupakan
   progres sebelum-sebelumnya, fokus perbaiki kerusakan asimetris & cacat
   ulah sesi lain" -- diaudit LANGSUNG dari gejala visual kedua screenshot

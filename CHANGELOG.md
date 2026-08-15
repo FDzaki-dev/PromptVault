@@ -3,6 +3,59 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.24.4 -- FIX AKAR Insiden #9 (v2.24.3 TERBUKTI TIDAK CUKUP di device asli): hapus wash gradient, HomeScreen kembali latar solid (2026-08-15)
+User kirim 3 screenshot device asli v2.24.3 (termasuk App Info yg konfirmasi
+versi terpasang) + laporan tegas: fix v2.24.3 GAGAL -- "ekor shadow" masih
+nongol & sekarang malah kentara HIJAU, "Neumorphism real" yg diminta belum
+tercapai.
+
+**Analisis ulang (Insiden #10)**: v2.24.3 mencoba `baseColor` =
+`colors.surfaceVariant.copy(alpha=0.55f).compositeOver(colors.background)`
+(estimasi warna gradient di titik y=0) -- PENDEKATAN INI SALAH SECARA
+KONSEP, bukan cuma kurang presisi: `Brush.verticalGradient` DIAM di Box
+terluar (fillMaxSize, tidak scroll), sedangkan `VaultCard`/CTA ada di dalam
+`Column` yang verticalScroll DI ATAS Box itu -- posisi relatif kartu vs
+gradient BERUBAH terus setiap discroll, jadi TIDAK ADA satu `baseColor`
+statis yang bisa akurat di semua posisi. Warna hasil composite yg dipilih
+(dekat titik teratas gradient, alpha 0.55 penuh) menyerap porsi besar
+`colors.surfaceVariant` (`GlassSurfaceElevated`, `0xFF0D2622` -- HIJAU tua),
+jadi bukannya menyamar makin baik, badan shadow-caster malah makin kentara
+beda warna dari sekitarnya yang sebagian besar sudah meluruh ke
+`AmoledBackground` (near-black). **Kesimpulan**: teknik shadow neumorphism
+di `Neumorphic.kt` (badan shadow-caster diisi solid `baseColor` supaya
+"menyatu" dgn latar) secara DESAIN cuma valid di atas latar SOLID SERAGAM --
+bukan gradient apapun, presisi berapa pun perhitungannya.
+
+**Fix (akar, bukan tambal lagi)**: wash gradient di `HomeScreen` (fitur lama
+`UI-10`, ditambahkan SEBELUM redesign Neumorphism v5.0.0 ada, tujuannya
+dulu murni mengatasi keluhan "monoton") **DIHAPUS TOTAL** -- latar
+`HomeScreen` sekarang `colors.background` solid, IDENTIK dgn 12 layar lain
+di app ini (yang semua sudah solid AmoledBackground sejak awal & TIDAK
+PERNAH kena kelas bug ini). `VaultCard`/CTA Scan kembali pakai `baseColor`
+DEFAULT (tidak perlu compositeOver/parameter tambahan lagi) -- kelas bug ini
+sekarang TIDAK BISA terulang di layar ini sama sekali, bukan cuma diredam.
+Variasi visual "anti-monoton" yang dulu jadi alasan wash gradient itu ada
+SEKARANG sudah cukup terwakili oleh gradient CTA Platinum->Ruby + shadow
+ganda timbul neumorphism itu sendiri -- SESUAI permintaan eksplisit user
+"Neumorphism real dengan accent Platinum+Ruby nge-blend" (bukan flat +
+tempelan wash gradient yang justru bentrok teknis dgn neumorphism-nya).
+
+`VaultCard.kt` param `baseColor` (ditambah v2.24.3) TETAP disimpan (tidak
+di-revert) -- tidak salah/berbahaya, cuma jadi tidak dipakai lagi di
+`HomeScreen` saat ini, tetap berguna kalau suatu saat ada layar solid non-
+default butuh baseColor custom.
+
+File diubah (3): `ui/screens/HomeScreen.kt` (hapus gradient, hapus
+`homeCardBaseColor`/2 pemanggilan baseColor, hapus import `compositeOver`
+yg jadi tidak terpakai), `app/build.gradle.kts` (versi).
+`scripts/preflight_check.sh` TIDAK diubah lagi -- kategori #12 (v2.24.3)
+TETAP relevan sbg jaring pengaman ke depan (sekarang lolos trivial krn 0
+layar bergradient tersisa, bukan krn kategorinya dihapus). Lolos bersih
+12/12. **BELUM PERNAH lewat `./gradlew` asli / device asli.** User WAJIB
+verifikasi ulang di HP: kartu stat & tombol Scan Sekarang BENAR-BENAR bersih
+dari potongan persegi mengintip di kanan/bawah, di SEMUA posisi scroll
+(bukan cuma posisi awal seperti pengecekan v2.24.3 kemarin).
+
 ## v2.24.3 -- FIX bug visual nyata (screenshot user): "kartu hantu" mengintip di HomeScreen (2026-08-15)
 User kirim 2 screenshot HP asli v2.24.2 + instruksi "fokus perbaiki kerusakan
 asimetris & cacat ulah sesi lain" -- diaudit langsung dari gejala visual

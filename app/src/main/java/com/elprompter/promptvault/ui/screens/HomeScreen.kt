@@ -42,7 +42,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
@@ -71,27 +70,31 @@ fun HomeScreen(
     onOpenSkippedFiles: () -> Unit
 ) {
     val colors = MaterialTheme.colorScheme
-    // [Fix Insiden #9, v2.24.3] Warna latar EFEKTIF di area atas layar ini
-    // (tempat VaultCard "Rule aktif" & CTA "Scan Sekarang" duduk) -- BUKAN
-    // colors.background mentah. Box pembungkus Column di bawah dicat pakai
-    // Brush.verticalGradient(colors.surfaceVariant 55% alpha -> colors.background),
-    // jadi piksel yang BENAR-BENAR tampak di dekat y=0 adalah hasil composite
-    // surfaceVariant(alpha 0.55) DI ATAS background, bukan background polos.
-    // NeumorphicSurface (lihat Neumorphic.kt) butuh `baseColor` = warna latar
-    // SESUNGGUHNYA supaya badan shadow-caster-nya menyatu tak terlihat --
-    // sebelum fix ini, 2 pemanggil di bawah (VaultCard stat + CTA Scan) diam-
-    // diam pakai default AmoledBackground yang MELESET dari gradient asli di
-    // layar ini (satu-satunya layar berlatar gradient di app, lihat grep
-    // verticalGradient di PROJECT_STATE.md) -- gejala nyata: potongan
-    // persegi "hantu" mengintip di sisi kanan-bawah kedua komponen itu
-    // (laporan screenshot user, TIDAK terjadi di layar lain yang latarnya
-    // solid). Dihitung utk titik PALING ATAS gradient (alpha stop 0.55 penuh)
-    // krn itu posisi kedua komponen ini secara konsisten (tepat di bawah
-    // judul, sebelum verticalScroll mulai geser konten jauh) -- TIDAK
-    // sempurna 100% di semua posisi scroll (gradient sendiri diam, konten
-    // scroll), tapi jauh lebih dekat drpd default polos & menghilangkan
-    // artefak di posisi normal/tanpa-scroll (kondisi screenshot user).
-    val homeCardBaseColor = colors.surfaceVariant.copy(alpha = 0.55f).compositeOver(colors.background)
+    // [Fix Insiden #10, v2.24.4] v2.24.3 SEBELUMNYA mencoba `baseColor`
+    // hasil compositeOver(gradient) di sini -- TERBUKTI SALAH/tidak cukup
+    // di device asli (screenshot user): "ekor" hantu masih nongol, sekarang
+    // malah kentara HIJAU (warna `colors.surfaceVariant` = `GlassSurfaceElevated`
+    // 0xFF0D2622 yang ke-bake ke dalam hasil composite itu). Analisis ulang:
+    // pendekatan "cocokkan baseColor dgn 1 titik gradient" fundamentally
+    // rapuh -- gradient BERGERAK relatif kartu (Box gradient diam, Column
+    // konten SCROLL di atasnya via verticalScroll), jadi baseColor statis
+    // TIDAK PERNAH bisa akurat di semua posisi scroll sekaligus. Root fix
+    // SEBENARNYA: teknik shadow neumorphism di `Neumorphic.kt` (badan
+    // shadow-caster diisi solid `baseColor` supaya "menyatu" dgn latar)
+    // secara DESAIN cuma valid di atas latar SOLID SERAGAM -- bukan gradient
+    // apapun. Wash gradient di Box di bawah (dari fix "monoton" lama,
+    // SEBELUM redesign Neumorphism v5.0.0 ada) sekarang justru BERTENTANGAN
+    // dgn neumorphism asli (permintaan eksplisit user: "Neumorphism real",
+    // bukan tambal baseColor lagi) -- neumorphism sejatinya MEMANG butuh
+    // permukaan dasar rata/seragam supaya ilusi shadow timbul terbaca bersih
+    // (variasi visual "monoton" sudah cukup teratasi lewat gradient CTA
+    // Platinum->Ruby + shadow ganda timbul itu sendiri, TIDAK butuh wash
+    // gradient latar lagi). Gradient wash DIHAPUS di bawah (lihat comment
+    // Box) -- `VaultCard`/CTA di layar ini kembali pakai `baseColor` DEFAULT
+    // (`AmoledBackground`, sama seperti 12 pemanggil VaultCard lain), tidak
+    // perlu compositeOver lagi krn latar sekarang solid & identik dgn
+    // default itu -- kelas bug ini TIDAK BISA terulang lagi (bukan cuma
+    // ditambal titik ini).
     val haptics = LocalHapticFeedback.current
     val snackbarHostState = remember { SnackbarHostState() }
     // Warna Snackbar yang SEDANG tayang di-snapshot terpisah dari scanFeedback
@@ -132,18 +135,23 @@ fun HomeScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(
-                    // Wash gradient halus di latar, supaya layar tidak terasa
-                    // datar rata satu warna dari atas sampai bawah (keluhan
-                    // "monoton") -- tetap subtil, bukan warna-warni mencolok.
-                    // UI-10 fix: endY TIDAK di-hardcode ke pixel absolut lagi --
-                    // dibiarkan default (Float.POSITIVE_INFINITY) supaya Compose
-                    // resolve otomatis ke tinggi area gambar sesungguhnya saat
-                    // draw, jadi proporsional di semua ukuran/densitas layar.
-                    Brush.verticalGradient(
-                        colors = listOf(colors.surfaceVariant.copy(alpha = 0.55f), colors.background)
-                    )
-                )
+                .background(colors.background)
+                // [Fix Insiden #10, v2.24.4] Wash gradient (UI-10, era
+                // pra-Neumorphism) DIHAPUS -- konflik langsung dgn teknik
+                // shadow ganda neumorphism (`Neumorphic.kt`), yang butuh
+                // latar SOLID SERAGAM supaya badan shadow-caster (diisi
+                // `baseColor`) menyatu sempurna. Di atas gradient (latar
+                // BERUBAH per-piksel + BERGERAK relatif konten yg scroll),
+                // shadow-caster manapun PASTI meleset di suatu titik --
+                // v2.24.3 sempat coba tambal pakai baseColor hasil
+                // compositeOver(gradient), TERBUKTI tetap bocor & malah
+                // kentara hijau di device asli (lihat PROJECT_STATE.md
+                // Insiden #10). `colors.background` di sini = AmoledBackground,
+                // IDENTIK dgn default `baseColor` NeumorphicSurface -- 12
+                // layar lain di app ini semua sudah solid AmoledBackground
+                // sejak awal & TIDAK PERNAH kena bug kelas ini, jadi ini
+                // bukan downgrade visual, murni menyamakan HomeScreen ke
+                // pola yang SUDAH terbukti aman di seluruh app.
         ) {
         // UI-01 fix: Column body Home sekarang scrollable (verticalScroll).
         // Sebelumnya fillMaxSize() tanpa scroll -- di layar pendek/landscape/
@@ -162,7 +170,7 @@ fun HomeScreen(
             Text("PromptVault", style = MaterialTheme.typography.headlineMedium, color = colors.onBackground)
             Text("Rapikan otomatis file di Downloads kamu sesuai rule.", style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
 
-            VaultCard(modifier = Modifier.fillMaxWidth(), baseColor = homeCardBaseColor) {
+            VaultCard(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     ManifestRow(icon = Icons.Filled.Rule, tint = colors.primary, label = "Rule aktif", value = "$ruleCount")
                     ManifestRow(icon = Icons.Filled.Schedule, tint = colors.tertiary, label = "Auto-scan", value = "tiap $intervalMinutes menit")
@@ -211,7 +219,6 @@ fun HomeScreen(
                     .scale(ctaScale),
                 shape = MaterialTheme.shapes.large,
                 color = colors.secondary,
-                baseColor = homeCardBaseColor,
                 elevation = TactileTokens.NeuElevationCta,
                 shadowOffset = TactileTokens.NeuOffsetCta,
                 pressed = scanPressed
