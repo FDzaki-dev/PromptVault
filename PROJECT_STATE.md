@@ -3,7 +3,54 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
-## STATUS PROJECT: v2.23.0 -- Fix 9 temuan P2 audit statis UI v2.21.1 (batch 2/2, PENUTUP audit) -- 2026-08-15
+## STATUS PROJECT: v2.24.1 -- COMPILE-FIX "--" di colors.xml + rapikan urutan dokumentasi -- 2026-08-15
+- User upload `build-failure-log-v2_24_0.zip`: `:app:mergeDebugResources
+  FAILED` -- `colors.xml:11` punya `--` di badan komentar `<!-- -->`,
+  dilarang keras spec XML 1.0. **Kelas bug identik dengan Insiden `v2.6.0`**
+  (2026-08-05, lihat Insiden log di bawah) -- pelajaran lama ("jangan pakai
+  `--` di komentar XML manapun") terulang di file `.xml` LAIN yang belum
+  pernah kena kasus ini. Fix: ganti `--` jadi koma, nol perubahan logika.
+- Validasi ulang SEMUA `res/**/*.xml` + `AndroidManifest.xml` via
+  `xml.dom.minidom.parse` (kategori #10 `preflight_check.sh`) -- 0 masalah
+  lain, `preflight_check.sh` lolos bersih 11/11.
+- **Permintaan eksplisit user: rapikan urutan SEMUA dokumentasi, info
+  terbaru wajib selalu di atas.** Ditemukan 2 file tidak strictly
+  newest-first: `CHANGELOG.md` (klaster `v2.9.x`-`v2.11.x` ke-append di
+  bawah `v2.1.x` yang lebih lama, akibat urutan insert historis, bukan
+  urutan versi) dan `PROJECT_STATE.md` (entri Insiden `v2.24.0` nyangkut di
+  baris PALING BAWAH file, alih-alih jadi status teratas). Kedua file
+  diurutkan ulang murni berdasar versi/tanggal descending -- **0 baris
+  konten dihapus atau ditulis ulang isinya, murni reposisi** (diverifikasi
+  line-count sebelum/sesudah identik). Entri Insiden `v2.24.0` yang
+  sebelumnya nyasar sekarang jadi entri STATUS PROJECT resmi (bukan cuma
+  Insiden log) karena memang itu status rilis terkini.
+- `README.md`: judul versi basi ("v2.1.4") disamakan ke `versionName`
+  aktual.
+- File diubah (3, semuanya di luar Batch Limit karena murni fix+reorg
+  dokumentasi, bukan fitur baru): `colors.xml`, `app/build.gradle.kts`,
+  `README.md`. Reorder tanpa ubah isi: `CHANGELOG.md`, `PROJECT_STATE.md`
+  (file ini sendiri).
+- **Belum diverifikasi CI hijau** -- WAJIB dicek run Actions berikutnya
+  sebelum dianggap final, meski risiko regresi rendah (fix syntax XML murni,
+  well-formedness sudah divalidasi lokal).
+
+## STATUS PROJECT SEBELUMNYA: v2.24.0 -- Fix FAB nutup aksi kartu + re-palette Platinum+Ruby -- 2026-08-15
+- User kirim screenshot nyata: FAB "+" di "Kelola Rule" nutup ikon Hapus
+  kartu terakhir. Root cause: `LazyColumn` tanpa `contentPadding` bawah --
+  FAB M3 by design melayang di atas konten, bukan bug Scaffold. Fix: 88dp
+  bottom padding. **Pelajaran**: kalau nambah FAB ke Scaffold baru, SELALU
+  cek scrollable content di dalamnya punya bottom padding/spacing yang
+  cukup -- ini kelas bug yang gampang lolos audit kode statis (kelihatan
+  benar di kode, cuma kelihatan salah di screenshot render nyata).
+- Re-palette penuh Teal -> Platinum+Ruby (lihat javadoc `Color.kt` &
+  CHANGELOG utk detail hex/rasional). Ketemu bonus: `StampGlow` lama vs
+  `RustGlow` HAMPIR IDENTIK hex-nya (2 makna beda, warna nyaris sama) --
+  otomatis tertutup krn Ruby baru digeser jauh ke hue crimson.
+- **Belum diverifikasi**: build CI + tampilan visual asli di device (sandbox
+  Termux tidak bisa compile/preview Compose). User perlu install & cek
+  kontras teks CTA + kesan "blend" Platinum-Ruby sebelum dianggap matang.
+
+## STATUS PROJECT SEBELUMNYA: v2.23.0 -- Fix 9 temuan P2 audit statis UI v2.21.1 (batch 2/2, PENUTUP audit) -- 2026-08-15
 - **User minta "lanjut P2"** -- eksekusi 9 temuan P2 yang di v2.22.0 sengaja
   ditunda (rekomendasi eksplisit audit "sebaiknya masuk batch berikutnya").
 - **Audit ulang dulu, bukan asumsi 9 item mentah**: dicek satu-satu ke kode
@@ -1254,6 +1301,17 @@ worker/          -- AutoSortWorker (WorkManager), BootCompletedReceiver,
   ke user (penghapusan v2.13.0 dulu itu keputusan EKSPLISIT user, bukan default
   otomatis kalau ada bug).
 
+### [2026-08-09] v2.16.1 -- Hotfix build: `shadowElevation` bukan param ModalBottomSheet
+- CI gagal 2x (v2.16.0 attempt) di `compileDebugKotlin`: `ModalBottomSheet`
+  di `VaultActionSheet.kt` pakai `shadowElevation = 0.dp`, padahal param itu
+  cuma ada di `Surface`, bukan di `ModalBottomSheet` versi material3 1.2.x
+  (compose-bom 2024.06.00) yang dipakai project ini. Fix: ganti jadi
+  `tonalElevation = 0.dp` (efek visual setara -- flat, no Material elevation).
+- **Pelajaran**: kalau nambah param elevation ke composable Material3 baru,
+  SELALU cek signature komposable itu spesifik (ModalBottomSheet != Surface),
+  jangan asumsi semua composable "container" M3 punya param yang sama.
+- Belum diverifikasi CI hijau untuk versi ini -- perlu push & cek Actions.
+
 ### [2026-08-08] Insiden #7 -- SAF dihapus total: root-cause analysis kenapa TIDAK diterapkan kembali sekarang
 - **Permintaan user**: hapus semua fitur SAF sampai bersih ke akar, DAN
   terapkan kembali kalau Claude sudah tahu letak kesalahan logika fatal yang
@@ -1327,6 +1385,69 @@ worker/          -- AutoSortWorker (WorkManager), BootCompletedReceiver,
   selamanya" cuma karena sudah ditulis ulang sekali -- kalau ada perubahan
   BESAR lagi ke kode SAF di masa depan (bukan bugfix kecil), baca ulang
   seluruh entri Insiden #7 ini dari awal, bukan cuma baca UPDATE ini saja.
+
+### [2026-08-07] v2.11.1 -- Status: semua fitur inti lengkap, siap uji nyata
+- Audit menyeluruh selesai: 3 bug nyata ditemukan & fixed sesi ini (SAF izin
+  bocor, SAF mime type, UNDO hasil palsu). Semua TODO lama di kode ternyata
+  sudah selesai fungsional, tinggal label basi -- sudah dibersihkan.
+- **Satu-satunya item genuinely pending**: verifikasi nyata di perangkat fisik
+  (build CI + install + test manual semua fitur, terutama SAF & Undo). Claude
+  tidak punya akses build/device untuk verifikasi ini sendiri.
+- Kalau sesi depan mulai lagi tanpa temuan bug baru dari user, TIDAK PERLU
+  re-audit kode yang sama dari nol -- cek dulu apakah ada laporan masalah
+  baru dari user/CI sebelum grep ulang seluruh codebase.
+
+### [2026-08-07] v2.11.0 -- Fix UNDO: hasil palsu + pesan hardcode
+- Fitur UNDO ternyata sudah 100% fungsional dari sesi sebelumnya (bukan TODO
+  lagi) -- yang jadi bug adalah UI-nya BOHONG soal hasil (selalu bilang
+  sukses) dan pesannya hardcode "Downloads" walau bisa folder SAF kustom.
+- Fix: `undoMove()` suspend + return Boolean asli, snackbar sesuai hasil
+  nyata, guard anti-double-tap.
+- **Pelajaran sesi ini**: TODO comment lama di kode TIDAK SELALU akurat --
+  fitur bisa sudah selesai tapi komentarnya lupa diupdate. Selalu baca kode
+  aktual dulu sebelum asumsi dari nama TODO.
+- CI belum dikonfirmasi hijau untuk versi ini.
+
+### [2026-08-07] v2.10.0 -- Debugging fokus SAF: 2 bug nyata ditemukan & diperbaiki
+- **Bug #1**: `releasePersistableUriPermission()` didokumentasikan tapi TIDAK
+  PERNAH diimplementasi -- izin folder kustom lama menumpuk selamanya tiap
+  ganti/hapus folder. Risiko jangka panjang: kena limit OS (~128 persisted
+  permission/app), fitur folder kustom berhenti berfungsi diam-diam. Fix di
+  `MainViewModel.setSafTreeUri()`/`clearSafTreeUri()`.
+- **Bug #2**: mime type buat `createFile()` SAF dipercaya dari provider
+  SUMBER (`doc.type`), bukan diturunkan dari ekstensi -- berisiko nama
+  dobel-ekstensi di provider tertentu. Fix: `mimeTypeForFileName()` baru
+  (murni dari ekstensi), + verifikasi nama aktual pasca-create, log WARNING
+  kalau provider ubah nama sendiri.
+- **Cara nemuinnya**: grep `takePersistableUriPermission` cross-reference ke
+  `releasePersistableUriPermission` (nihil) -- gap antara komentar/dokumentasi
+  kode dan implementasi aktual. Pelajaran: kalau komentar bilang "dilakukan di
+  X", SELALU verifikasi X benar-benar melakukannya, jangan percaya komentar
+  begitu saja.
+- **Belum diverifikasi nyata**: butuh user test folder kustom di kartu SD/
+  provider selain Downloads, plus build CI sukses, sebelum dianggap matang
+  100%. Kalau CI hijau & user konfirmasi folder kustom jalan normal (pindah,
+  undo, ganti folder berkali-kali tanpa error), SAF bisa dianggap matang.
+
+### [2026-08-07] v2.9.1 -- Viewer crash log ditambah di Diagnostik
+- Lanjutan v2.9.0. `DiagnosticsScreen` sekarang punya card "Crash Log" (list
+  + tap-to-view AlertDialog). Menutup gap "belum ada UI viewer" yang dicatat
+  di entri sebelumnya.
+- CI belum dikonfirmasi hijau untuk versi ini.
+
+### [2026-08-07] v2.9.0 -- Crash Logger bawaan ditambahkan
+- **Kenapa**: fitur ini sudah lama jadi requirement standar user (lihat
+  instruksi baku sesi), tapi belum pernah diimplementasi di kode -- diaudit
+  sesi ini (`grep -rn crash app/src/main/java` nihil) lalu dibangun dari nol.
+- **Desain**: lihat `util/CrashLogger.kt` (javadoc lengkap di file). Ringkas:
+  `Thread.setDefaultUncaughtExceptionHandler` dipasang di `PromptVaultApp`,
+  tulis ke `MediaStore.Files` (`Documents/PromptVault/logs/`), fail-safe,
+  FIFO 50 file.
+- **Belum ada**: UI in-app untuk browse/lihat log (baru bisa diakses via
+  file manager/adb). Kalau user minta viewer, itu batch terpisah -- jangan
+  gabung ke perubahan lain supaya tetap dalam batas 10 file/1 modul.
+- **State lain masih sama seperti entri di atas**: fix Home screen v2.3.1
+  BELUM ada konfirmasi eksplisit "sudah normal" dari user.
 
 ### [2026-08-06] v2.8.0 GAGAL BUILD di CI -- `async{}`/`awaitAll()` tanpa CoroutineScope receiver di `scanAndSortSafLocked()`
 - **Gejala**: user upload `build-failure-log-v2_8_0.zip`. `:app:compileDebugKotlin FAILED` -- `Unresolved reference` di `FileSorter.kt:368-369` (`async`, `awaitAll`) dan efek domino di `:376` (`it`).
@@ -1528,93 +1649,3 @@ Ikuti `MAINTENANCE.md` (fetch README/CHANGELOG/MAINTENANCE dari GitHub raw
 URL dulu sebelum minta user upload ZIP). File ini (`PROJECT_STATE.md`)
 melengkapi `CHANGELOG.md` dengan konteks KEPUTUSAN & INSIDEN yang tidak masuk
 akal ditulis sebagai entri changelog per-versi.
-
-### [2026-08-07] v2.9.0 -- Crash Logger bawaan ditambahkan
-- **Kenapa**: fitur ini sudah lama jadi requirement standar user (lihat
-  instruksi baku sesi), tapi belum pernah diimplementasi di kode -- diaudit
-  sesi ini (`grep -rn crash app/src/main/java` nihil) lalu dibangun dari nol.
-- **Desain**: lihat `util/CrashLogger.kt` (javadoc lengkap di file). Ringkas:
-  `Thread.setDefaultUncaughtExceptionHandler` dipasang di `PromptVaultApp`,
-  tulis ke `MediaStore.Files` (`Documents/PromptVault/logs/`), fail-safe,
-  FIFO 50 file.
-- **Belum ada**: UI in-app untuk browse/lihat log (baru bisa diakses via
-  file manager/adb). Kalau user minta viewer, itu batch terpisah -- jangan
-  gabung ke perubahan lain supaya tetap dalam batas 10 file/1 modul.
-- **State lain masih sama seperti entri di atas**: fix Home screen v2.3.1
-  BELUM ada konfirmasi eksplisit "sudah normal" dari user.
-
-### [2026-08-07] v2.9.1 -- Viewer crash log ditambah di Diagnostik
-- Lanjutan v2.9.0. `DiagnosticsScreen` sekarang punya card "Crash Log" (list
-  + tap-to-view AlertDialog). Menutup gap "belum ada UI viewer" yang dicatat
-  di entri sebelumnya.
-- CI belum dikonfirmasi hijau untuk versi ini.
-
-### [2026-08-07] v2.10.0 -- Debugging fokus SAF: 2 bug nyata ditemukan & diperbaiki
-- **Bug #1**: `releasePersistableUriPermission()` didokumentasikan tapi TIDAK
-  PERNAH diimplementasi -- izin folder kustom lama menumpuk selamanya tiap
-  ganti/hapus folder. Risiko jangka panjang: kena limit OS (~128 persisted
-  permission/app), fitur folder kustom berhenti berfungsi diam-diam. Fix di
-  `MainViewModel.setSafTreeUri()`/`clearSafTreeUri()`.
-- **Bug #2**: mime type buat `createFile()` SAF dipercaya dari provider
-  SUMBER (`doc.type`), bukan diturunkan dari ekstensi -- berisiko nama
-  dobel-ekstensi di provider tertentu. Fix: `mimeTypeForFileName()` baru
-  (murni dari ekstensi), + verifikasi nama aktual pasca-create, log WARNING
-  kalau provider ubah nama sendiri.
-- **Cara nemuinnya**: grep `takePersistableUriPermission` cross-reference ke
-  `releasePersistableUriPermission` (nihil) -- gap antara komentar/dokumentasi
-  kode dan implementasi aktual. Pelajaran: kalau komentar bilang "dilakukan di
-  X", SELALU verifikasi X benar-benar melakukannya, jangan percaya komentar
-  begitu saja.
-- **Belum diverifikasi nyata**: butuh user test folder kustom di kartu SD/
-  provider selain Downloads, plus build CI sukses, sebelum dianggap matang
-  100%. Kalau CI hijau & user konfirmasi folder kustom jalan normal (pindah,
-  undo, ganti folder berkali-kali tanpa error), SAF bisa dianggap matang.
-
-### [2026-08-07] v2.11.0 -- Fix UNDO: hasil palsu + pesan hardcode
-- Fitur UNDO ternyata sudah 100% fungsional dari sesi sebelumnya (bukan TODO
-  lagi) -- yang jadi bug adalah UI-nya BOHONG soal hasil (selalu bilang
-  sukses) dan pesannya hardcode "Downloads" walau bisa folder SAF kustom.
-- Fix: `undoMove()` suspend + return Boolean asli, snackbar sesuai hasil
-  nyata, guard anti-double-tap.
-- **Pelajaran sesi ini**: TODO comment lama di kode TIDAK SELALU akurat --
-  fitur bisa sudah selesai tapi komentarnya lupa diupdate. Selalu baca kode
-  aktual dulu sebelum asumsi dari nama TODO.
-- CI belum dikonfirmasi hijau untuk versi ini.
-
-### [2026-08-07] v2.11.1 -- Status: semua fitur inti lengkap, siap uji nyata
-- Audit menyeluruh selesai: 3 bug nyata ditemukan & fixed sesi ini (SAF izin
-  bocor, SAF mime type, UNDO hasil palsu). Semua TODO lama di kode ternyata
-  sudah selesai fungsional, tinggal label basi -- sudah dibersihkan.
-- **Satu-satunya item genuinely pending**: verifikasi nyata di perangkat fisik
-  (build CI + install + test manual semua fitur, terutama SAF & Undo). Claude
-  tidak punya akses build/device untuk verifikasi ini sendiri.
-- Kalau sesi depan mulai lagi tanpa temuan bug baru dari user, TIDAK PERLU
-  re-audit kode yang sama dari nol -- cek dulu apakah ada laporan masalah
-  baru dari user/CI sebelum grep ulang seluruh codebase.
-
-### [2026-08-09] v2.16.1 -- Hotfix build: `shadowElevation` bukan param ModalBottomSheet
-- CI gagal 2x (v2.16.0 attempt) di `compileDebugKotlin`: `ModalBottomSheet`
-  di `VaultActionSheet.kt` pakai `shadowElevation = 0.dp`, padahal param itu
-  cuma ada di `Surface`, bukan di `ModalBottomSheet` versi material3 1.2.x
-  (compose-bom 2024.06.00) yang dipakai project ini. Fix: ganti jadi
-  `tonalElevation = 0.dp` (efek visual setara -- flat, no Material elevation).
-- **Pelajaran**: kalau nambah param elevation ke composable Material3 baru,
-  SELALU cek signature komposable itu spesifik (ModalBottomSheet != Surface),
-  jangan asumsi semua composable "container" M3 punya param yang sama.
-- Belum diverifikasi CI hijau untuk versi ini -- perlu push & cek Actions.
-
-### [2026-08-15] v2.24.0 -- Fix FAB nutup aksi kartu + re-palette Platinum+Ruby
-- User kirim screenshot nyata: FAB "+" di "Kelola Rule" nutup ikon Hapus
-  kartu terakhir. Root cause: `LazyColumn` tanpa `contentPadding` bawah --
-  FAB M3 by design melayang di atas konten, bukan bug Scaffold. Fix: 88dp
-  bottom padding. **Pelajaran**: kalau nambah FAB ke Scaffold baru, SELALU
-  cek scrollable content di dalamnya punya bottom padding/spacing yang
-  cukup -- ini kelas bug yang gampang lolos audit kode statis (kelihatan
-  benar di kode, cuma kelihatan salah di screenshot render nyata).
-- Re-palette penuh Teal -> Platinum+Ruby (lihat javadoc `Color.kt` &
-  CHANGELOG utk detail hex/rasional). Ketemu bonus: `StampGlow` lama vs
-  `RustGlow` HAMPIR IDENTIK hex-nya (2 makna beda, warna nyaris sama) --
-  otomatis tertutup krn Ruby baru digeser jauh ke hue crimson.
-- **Belum diverifikasi**: build CI + tampilan visual asli di device (sandbox
-  Termux tidak bisa compile/preview Compose). User perlu install & cek
-  kontras teks CTA + kesan "blend" Platinum-Ruby sebelum dianggap matang.

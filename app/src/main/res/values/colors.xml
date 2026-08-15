@@ -8,7 +8,7 @@
          (rebrand "Transformative Teal", ikut Color.kt#TealAccent).
          v6.0.0: pv_teal_accent -> pv_platinum_accent, ikut re-palette
          Color.kt#PlatinumAccent (Platinum + Ruby). Token ini TIDAK
-         direferensikan XML lain saat ini (cek grep sebelum edit) -- tetap
+         direferensikan XML lain saat ini (cek grep sebelum edit), tetap
          disamakan supaya tidak jadi sisa hex basi kalau kelak dipakai. -->
     <color name="pv_amoled_background">#030A09</color>
     <color name="pv_platinum_accent">#DCE2E9</color>

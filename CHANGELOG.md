@@ -3,6 +3,39 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.24.1 -- COMPILE-FIX: `"--"` di komentar `colors.xml` + rapikan urutan seluruh dokumentasi (2026-08-15)
+
+User upload `build-failure-log-v2_24_0.zip`. `:app:mergeDebugResources FAILED`
+-- `SAXParseException: The string "--" is not permitted within comments`,
+`colors.xml:11`. Root cause: komentar riwayat re-palette token `pv_platinum_
+accent` (v6.0.0) memakai `--` sebagai pemisah kalimat di badan `<!-- -->` --
+PERSIS kelas bug yang sama dengan Insiden `v2.6.0` (2026-08-05,
+`AndroidManifest.xml`) yang sudah didokumentasikan sebagai pelajaran
+permanen di `PROJECT_STATE.md`, tapi terulang lagi di file `.xml` lain.
+
+**Fix**: ganti `--` jadi koma di komentar `colors.xml`, tidak ada perubahan
+logika/warna. Scan ulang SEMUA `res/**/*.xml` + `AndroidManifest.xml` pakai
+`xml.dom.minidom.parse` (kategori #10 `preflight_check.sh`) -- 0 pelanggaran
+lain ditemukan.
+
+**Dokumentasi dirapikan (permintaan eksplisit user)**: `CHANGELOG.md` dan
+`PROJECT_STATE.md` diaudit ulang urutannya -- beberapa entri lama ternyata
+tidak strictly newest-first (mis. `v2.11.x`/`v2.9.x` di `CHANGELOG.md`
+sempat ke-append di bawah entri `v2.1.x` yang lebih lama; entri Insiden
+`v2.24.0` di `PROJECT_STATE.md` sempat nyangkut di baris PALING BAWAH file
+alih-alih jadi status teratas). Semua entri diurutkan ulang murni
+berdasarkan versi/tanggal (descending), TIDAK ADA teks/riwayat yang dihapus
+atau ditulis ulang isinya -- hanya reposisi. `README.md` (versi di judul
+sempat basi, "v2.1.4") disamakan ke `versionName` aktual.
+
+File diubah (3): `app/src/main/res/values/colors.xml` (fix bug), `app/
+build.gradle.kts` (versi), `README.md` (sinkron versi judul). Reorder murni
+(0 perubahan isi kalimat) di `CHANGELOG.md` & `PROJECT_STATE.md`.
+
+**Belum diverifikasi CI** -- fix ini murni syntax XML (well-formedness
+sudah divalidasi lokal via parser), risiko regresi sangat rendah, tapi tetap
+WAJIB dicek build hijau di Actions sebelum dianggap final.
+
 ## v2.24.0 -- Debug + polish: fix bug FAB nutup aksi kartu, re-palette Platinum+Ruby (2026-08-15)
 User kirim 3 screenshot: (1) riwayat aktivitas normal, (2) layar "Kelola
 Rule" -- tombol "+" (FAB tambah rule) MENUTUPI ikon Hapus di kartu rule
@@ -1024,6 +1057,90 @@ supaya risiko nol terhadap fitur existing yang sudah SELESAI/STABLE.
   test manual (pilih folder, taruh file campuran+ZIP, cek hasil grouping & extract)
   sebelum dianggap matang.
 
+## v2.11.1 -- Bersihkan label TODO basi (docs-only, no behavior change)
+- Diaudit ulang: TODO #1 (Undo), #2 (interval), #3 (overlap warning), #7
+  (export), #9 (konfirmasi duplikat) SEMUA sudah lengkap fungsional di kode --
+  labelnya cuma lupa dihapus, berisiko menyesatkan sesi Claude berikutnya
+  kalau dikira masih ada kerjaan tersisa. Diganti jadi komentar deskriptif
+  biasa (bukan TODO).
+- TODO #4 & #5 (`DiagnosticsScreen.kt`) DIBIARKAN -- itu memang masih
+  pending nyata: PromptVault belum pernah diuji di HP fisik oleh Claude.
+- Tidak ada perubahan behavior/logic apapun di batch ini.
+
+## v2.11.0 -- Fix bug UNDO (hasil palsu + pesan hardcode Downloads)
+- **Konteks**: fitur UNDO di tab "Undo Pemindahan" sebenarnya SUDAH lengkap
+  fungsional (list, konfirmasi, panggil `FileSorter.undo()`) -- komentar
+  "TODO #1" di kode sudah basi/tidak akurat, dihapus.
+- **Bug nyata yang ditemukan**: `MainViewModel.undoMove()` sebelumnya
+  fire-and-forget (`viewModelScope.launch { fileSorter.undo(entry) }`, hasil
+  `Boolean` dibuang). `ActivityLogScreen` menampilkan snackbar "berhasil
+  dikembalikan ke Downloads" SELALU, tanpa peduli undo aslinya sukses atau
+  gagal -- dan teksnya hardcode "Downloads" padahal tujuan bisa folder SAF
+  kustom (lihat v2.10.0).
+- **Fix**: `undoMove()` jadi `suspend fun` mengembalikan `Boolean` asli;
+  `ActivityLogScreen.onUndo` diubah jadi `suspend (MoveHistoryEntry) ->
+  Boolean`; snackbar sekarang JUJUR (beda pesan sukses/gagal) dan pesan tidak
+  lagi hardcode "Downloads". Tambah guard `undoInFlight` supaya tombol Undo
+  tidak bisa di-tap dobel selagi proses berjalan.
+- **Belum diverifikasi build CI di sesi ini.**
+
+## v2.10.0 -- Debugging & pematangan SAF (2 bug nyata diperbaiki)
+- **Bug #1 (kebocoran izin persisted, FATAL jangka panjang)**: komentar lama di
+  `clearSafTreeUri()` bilang pelepasan `releasePersistableUriPermission()`
+  "dilakukan di pemanggil (MainActivity)" -- ternyata TIDAK PERNAH benar-benar
+  dipanggil di mana pun. Tiap kali user ganti/hapus folder kustom, izin lama
+  menumpuk selamanya. Android membatasi jumlah persisted URI permission per
+  app (~128) -- kalau limit tercapai, `takePersistableUriPermission()`
+  berikutnya lempar `SecurityException` dan fitur folder kustom berhenti bisa
+  dipakai TANPA pesan error jelas ke user (silently fallback ke Downloads
+  lewat catch block yang sudah ada). **Fix**: `MainViewModel.setSafTreeUri()`
+  & `clearSafTreeUri()` sekarang eksplisit `releasePersistableUriPermission()`
+  ke URI lama sebelum ganti/hapus (best-effort, gagal-pun diabaikan aman).
+- **Bug #2 (mime type tidak reliable, sama kelas insiden #4/#6)**:
+  `moveFileSaf`/`undoSaf` sebelumnya pakai `doc.type`/`current.type` (MIME dari
+  provider SUMBER) buat `createFile()` di TUJUAN. Provider SAF beda-beda
+  (Google Drive, SD card, dll) kadang isi MIME_TYPE generik/salah, dan
+  beberapa provider tujuan menambah/ubah ekstensi otomatis sesuai mime saat
+  `createFile()` -- berisiko nama dobel-ekstensi (`laporan.txt.txt`) TANPA
+  exception apapun. **Fix**: MIME sekarang diturunkan dari ekstensi nama file
+  sendiri (`mimeTypeForFileName()`, zip/txt eksplisit, bukan dipercaya dari
+  provider), plus verifikasi pasca-`createFile()`: kalau nama aktual di
+  storage != nama yang diminta, dicatat WARNING ke Activity Log (bukan
+  di-assume berhasil diam-diam).
+- **Belum diverifikasi build CI di sesi ini.**
+
+## v2.9.1 -- Viewer crash log di Diagnostik
+- **Fitur baru**: `DiagnosticsScreen` sekarang tampilkan daftar crash log
+  tersimpan (10 terbaru, total count di judul), pakai `CrashLogger.listLogs()`
+  (baru, query MediaStore) berjalan di `Dispatchers.IO`.
+- Ketuk satu log -> `AlertDialog` isi lengkap stack trace via
+  `CrashLogger.readLog()` (baru), juga di IO thread, fail-safe (query/baca
+  dibungkus try-catch, list kosong kalau gagal -- tidak crash layar sendiri).
+- Selaras `MAINTENANCE.md`/instruksi baku: "prioritaskan baca crash log
+  sebelum minta Logcat/ADB" -- sekarang bisa langsung dari dalam app, tidak
+  perlu file manager/adb pull lagi.
+- **Belum diverifikasi build CI di sesi ini.**
+
+## v2.9.0 -- Crash Logger bawaan (MediaStore, tanpa permission legacy)
+- **Fitur baru**: `util/CrashLogger.kt` -- uncaught exception handler global,
+  dipasang paling awal di `PromptVaultApp.onCreate()` (sebelum apapun lain).
+  Setiap crash otomatis ditulis ke
+  `Documents/PromptVault/logs/crash_<yyyyMMdd_HHmmss>_<uuid8>.txt` lewat
+  `MediaStore.Files` (API 29+, scoped storage resmi) -- TIDAK butuh
+  `WRITE_EXTERNAL_STORAGE`.
+- Metadata lengkap per log: App Version+versionCode, OS (release+SDK),
+  Device (manufacturer+model), Thread, timestamp, full stack trace.
+- **Fail-safe**: penulisan log dibungkus try-catch penuh; kalau logger
+  sendiri gagal, tidak menutupi crash asli -- handler default sistem tetap
+  SELALU dipanggil lewat blok `finally`.
+- **FIFO retention**: query `MediaStore` untuk file `crash_*.txt` di folder
+  log, urut `DATE_ADDED ASC`, hapus yang tertua kalau total > 50.
+- Belum ada UI viewer di app (di luar scope batch ini) -- untuk debugging,
+  tarik file log langsung dari `Documents/PromptVault/logs/` (file manager
+  atau `adb pull`). Prioritaskan baca file ini sebelum minta Logcat/ADB.
+- **Belum diverifikasi build CI di sesi ini** -- `preflight_check.sh` lolos
+  bersih + review manual, tapi tunggu konfirmasi APK CI sukses.
+
 ## v2.8.3 -- Fix: listCandidateFilesSaf gagal detect file, MIME false-negative (2026-08-06)
 Kelas bug SAMA dgn v2.8.1 (`resolveSafRoot`). `listCandidateFilesSaf()`
 syaratkan `doc.isFile` -- query MIME type provider, false-negatif kalau MIME
@@ -1868,90 +1985,6 @@ menyusul di batch terpisah (anti "rombak total" sekali jalan).
   karena signing tidak terpasang), langsung ketahuan dari log
 - Pencarian APK sekarang dinamis (`find ... -name "*.apk"`), bukan hardcode
   nama file, dan otomatis warning kalau APK yang ketemu tidak bertanda tangan
-
-## v2.11.1 -- Bersihkan label TODO basi (docs-only, no behavior change)
-- Diaudit ulang: TODO #1 (Undo), #2 (interval), #3 (overlap warning), #7
-  (export), #9 (konfirmasi duplikat) SEMUA sudah lengkap fungsional di kode --
-  labelnya cuma lupa dihapus, berisiko menyesatkan sesi Claude berikutnya
-  kalau dikira masih ada kerjaan tersisa. Diganti jadi komentar deskriptif
-  biasa (bukan TODO).
-- TODO #4 & #5 (`DiagnosticsScreen.kt`) DIBIARKAN -- itu memang masih
-  pending nyata: PromptVault belum pernah diuji di HP fisik oleh Claude.
-- Tidak ada perubahan behavior/logic apapun di batch ini.
-
-## v2.11.0 -- Fix bug UNDO (hasil palsu + pesan hardcode Downloads)
-- **Konteks**: fitur UNDO di tab "Undo Pemindahan" sebenarnya SUDAH lengkap
-  fungsional (list, konfirmasi, panggil `FileSorter.undo()`) -- komentar
-  "TODO #1" di kode sudah basi/tidak akurat, dihapus.
-- **Bug nyata yang ditemukan**: `MainViewModel.undoMove()` sebelumnya
-  fire-and-forget (`viewModelScope.launch { fileSorter.undo(entry) }`, hasil
-  `Boolean` dibuang). `ActivityLogScreen` menampilkan snackbar "berhasil
-  dikembalikan ke Downloads" SELALU, tanpa peduli undo aslinya sukses atau
-  gagal -- dan teksnya hardcode "Downloads" padahal tujuan bisa folder SAF
-  kustom (lihat v2.10.0).
-- **Fix**: `undoMove()` jadi `suspend fun` mengembalikan `Boolean` asli;
-  `ActivityLogScreen.onUndo` diubah jadi `suspend (MoveHistoryEntry) ->
-  Boolean`; snackbar sekarang JUJUR (beda pesan sukses/gagal) dan pesan tidak
-  lagi hardcode "Downloads". Tambah guard `undoInFlight` supaya tombol Undo
-  tidak bisa di-tap dobel selagi proses berjalan.
-- **Belum diverifikasi build CI di sesi ini.**
-
-## v2.10.0 -- Debugging & pematangan SAF (2 bug nyata diperbaiki)
-- **Bug #1 (kebocoran izin persisted, FATAL jangka panjang)**: komentar lama di
-  `clearSafTreeUri()` bilang pelepasan `releasePersistableUriPermission()`
-  "dilakukan di pemanggil (MainActivity)" -- ternyata TIDAK PERNAH benar-benar
-  dipanggil di mana pun. Tiap kali user ganti/hapus folder kustom, izin lama
-  menumpuk selamanya. Android membatasi jumlah persisted URI permission per
-  app (~128) -- kalau limit tercapai, `takePersistableUriPermission()`
-  berikutnya lempar `SecurityException` dan fitur folder kustom berhenti bisa
-  dipakai TANPA pesan error jelas ke user (silently fallback ke Downloads
-  lewat catch block yang sudah ada). **Fix**: `MainViewModel.setSafTreeUri()`
-  & `clearSafTreeUri()` sekarang eksplisit `releasePersistableUriPermission()`
-  ke URI lama sebelum ganti/hapus (best-effort, gagal-pun diabaikan aman).
-- **Bug #2 (mime type tidak reliable, sama kelas insiden #4/#6)**:
-  `moveFileSaf`/`undoSaf` sebelumnya pakai `doc.type`/`current.type` (MIME dari
-  provider SUMBER) buat `createFile()` di TUJUAN. Provider SAF beda-beda
-  (Google Drive, SD card, dll) kadang isi MIME_TYPE generik/salah, dan
-  beberapa provider tujuan menambah/ubah ekstensi otomatis sesuai mime saat
-  `createFile()` -- berisiko nama dobel-ekstensi (`laporan.txt.txt`) TANPA
-  exception apapun. **Fix**: MIME sekarang diturunkan dari ekstensi nama file
-  sendiri (`mimeTypeForFileName()`, zip/txt eksplisit, bukan dipercaya dari
-  provider), plus verifikasi pasca-`createFile()`: kalau nama aktual di
-  storage != nama yang diminta, dicatat WARNING ke Activity Log (bukan
-  di-assume berhasil diam-diam).
-- **Belum diverifikasi build CI di sesi ini.**
-
-## v2.9.1 -- Viewer crash log di Diagnostik
-- **Fitur baru**: `DiagnosticsScreen` sekarang tampilkan daftar crash log
-  tersimpan (10 terbaru, total count di judul), pakai `CrashLogger.listLogs()`
-  (baru, query MediaStore) berjalan di `Dispatchers.IO`.
-- Ketuk satu log -> `AlertDialog` isi lengkap stack trace via
-  `CrashLogger.readLog()` (baru), juga di IO thread, fail-safe (query/baca
-  dibungkus try-catch, list kosong kalau gagal -- tidak crash layar sendiri).
-- Selaras `MAINTENANCE.md`/instruksi baku: "prioritaskan baca crash log
-  sebelum minta Logcat/ADB" -- sekarang bisa langsung dari dalam app, tidak
-  perlu file manager/adb pull lagi.
-- **Belum diverifikasi build CI di sesi ini.**
-
-## v2.9.0 -- Crash Logger bawaan (MediaStore, tanpa permission legacy)
-- **Fitur baru**: `util/CrashLogger.kt` -- uncaught exception handler global,
-  dipasang paling awal di `PromptVaultApp.onCreate()` (sebelum apapun lain).
-  Setiap crash otomatis ditulis ke
-  `Documents/PromptVault/logs/crash_<yyyyMMdd_HHmmss>_<uuid8>.txt` lewat
-  `MediaStore.Files` (API 29+, scoped storage resmi) -- TIDAK butuh
-  `WRITE_EXTERNAL_STORAGE`.
-- Metadata lengkap per log: App Version+versionCode, OS (release+SDK),
-  Device (manufacturer+model), Thread, timestamp, full stack trace.
-- **Fail-safe**: penulisan log dibungkus try-catch penuh; kalau logger
-  sendiri gagal, tidak menutupi crash asli -- handler default sistem tetap
-  SELALU dipanggil lewat blok `finally`.
-- **FIFO retention**: query `MediaStore` untuk file `crash_*.txt` di folder
-  log, urut `DATE_ADDED ASC`, hapus yang tertua kalau total > 50.
-- Belum ada UI viewer di app (di luar scope batch ini) -- untuk debugging,
-  tarik file log langsung dari `Documents/PromptVault/logs/` (file manager
-  atau `adb pull`). Prioritaskan baca file ini sebelum minta Logcat/ADB.
-- **Belum diverifikasi build CI di sesi ini** -- `preflight_check.sh` lolos
-  bersih + review manual, tapi tunggu konfirmasi APK CI sukses.
 
 ## v2.1.1 -- Fix CI (Gradle version mismatch + logging yang gak kepakai)
 - **Root cause build v2.1.0 gagal**: runner GitHub Actions memakai Gradle
