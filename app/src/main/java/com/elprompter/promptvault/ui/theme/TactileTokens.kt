@@ -7,7 +7,7 @@ import androidx.compose.ui.unit.dp
  * layar). `ElevationRaised`/`ElevationPressed`/`PressScale`/
  * `PressAnimationMillis`/`ControlCornerRadius` TIDAK diubah -- masih dipakai
  * `PressScale.kt` (`pressScale()`/`tactilePress()`), lepas dari sistem
- * shadow permukaan (Neu*/Glass*).
+ * shadow permukaan (Neu*, Glass*).
  *
  * v7.0.0 — Neumorphism -> Glassmorphism: token `Neu*` (elevasi+offset shadow
  * ganda, `NeuPressedDarkAlpha`/`NeuPressedLightAlpha`) DIHAPUS TOTAL bersama

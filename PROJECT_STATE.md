@@ -3,7 +3,57 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
-## STATUS PROJECT: v7.0.0 -- Neumorphism DIHAPUS TOTAL, kembali ke Glassmorphism Deep Navy + Brass -- 2026-08-15
+## STATUS PROJECT: v7.0.1 -- HOTFIX build CI gagal total: KDoc tertutup prematur di TactileTokens.kt -- 2026-08-15
+- User upload log CI gagal (`build-failure-log-v7_0_0.zip`): `kspDebugKotlin
+  FAILED`, ratusan error `Expecting a top level declaration` mulai
+  `TactileTokens.kt:10:27`. Semua error lain di log = 1 CASCADE dari 1 root
+  cause tunggal (dikonfirmasi: `awk`/`sort -u` atas seluruh log CI cuma
+  menunjuk 1 file, `ui/theme/TactileTokens.kt`).
+- **Root cause**: KDoc header yang DITULIS SESI INI (v7.0.0, lihat entri di
+  bawah) berisi `(Neu*/Glass*)` -- substring `*/` DI TENGAH kalimat KDoc
+  menutup block comment `/** ... */` PREMATUR (Kotlin, spt C/Java, comment
+  block tutup di kemunculan PERTAMA `*/`, titik, bukan yang dimaksud
+  penulis). Sisa isi KDoc (baris 10 s.d. `*/` yang SEBENARNYA di baris 20)
+  ke-parse compiler sbg KODE KOTLIN SUNGGUHAN -> parser Kotlin bingung total
+  di situ, berantai jadi ratusan error "Expecting a top level declaration"
+  di seluruh sisa file (bukan ratusan bug terpisah, 1 typo tunggal).
+- **Kenapa lolos preflight sesi sebelumnya**: kategori #1 (keseimbangan
+  kurung `{}()`) TIDAK mendeteksi ini krn jumlah kurung tetap seimbang --
+  comment-nesting Kotlin (`/** ... */`) adalah lapisan terpisah dari
+  brace-nesting kode, tidak dicek sama sekali oleh heuristik lama.
+  `bash -n`/lint statis lain di sandbox JUGA tidak mendeteksi (bukan syntax
+  BASH, ini syntax KOTLIN -- perlu compiler Kotlin asli/heuristik khusus).
+- **Fix**: `(Neu*/Glass*)` -> `(Neu*, Glass*)` di `TactileTokens.kt`, 1
+  baris, makna tidak berubah (cuma pemisah "atau" jadi koma, hindari
+  karakter `*/` nyasar).
+- **Fix preventif (bukan cuma tambal titik ini)**: `scripts/preflight_check.sh`
+  kategori #12 lama (baseColor gradient check, SUDAH OBSOLETE sejak
+  parameter `baseColor` dihapus total di v7.0.0 -- kategori itu jadi
+  omong-kosong tanpa guna sejak commit sebelumnya, TIDAK ketahuan krn
+  kebetulan tetap "lolos" trivial 0 gradient) dipensiunkan resmi jadi no-op
+  permanen (didokumentasikan kenapa, bukan dihapus diam-diam). Kategori #13
+  BARU: `grep -rnP '\*/\S' "$KT_DIR"` -- deteksi SEMUA kemunculan `*/` yang
+  diikuti LANGSUNG karakter bukan-spasi di baris yang sama (comment penutup
+  ASLI selalu diikuti akhir baris atau spasi, bukan lanjut teks/kode).
+  Dijalankan ulang di seluruh `$KT_DIR`, 0 kemunculan lain ditemukan (bug
+  ini SATU-SATUNYA insiden, bukan pola berulang) -- kelas bug ini sekarang
+  KEPANTAU OTOMATIS ke depan.
+- **Pelajaran utk sesi Claude berikutnya**: KDoc/comment BUKAN "teks bebas
+  bahaya" -- karakter `*/` di TENGAH kalimat penjelasan (notasi
+  "A*/B*" gaya wildcard, pecahan, atau simbol pembagi apapun yang kebetulan
+  diikuti garis miring) bisa menutup block comment secara tidak sengaja.
+  Preflight sekarang menjaring ini otomatis (kategori #13) -- TETAP hati-hati
+  saat menulis KDoc panjang berisi banyak notasi teknis.
+- File diubah (3): `ui/theme/TactileTokens.kt` (fix 1 baris),
+  `scripts/preflight_check.sh` (kategori #12 dipensiunkan + #13 baru),
+  `app/build.gradle.kts` (versi). **Preflight 13/13 kategori lolos bersih
+  setelah fix** (termasuk kategori #13 baru yg langsung diuji thd bug
+  aslinya -- dikonfirmasi 0 sisa). Confidence Rating: **97%** (fix titik
+  tunggal, sudah divalidasi ulang lewat kategori khusus baru, risiko sisa
+  hanya krn TETAP belum lewat `./gradlew` asli -- sandbox tanpa Android
+  SDK/jaringan Gradle).
+
+## STATUS PROJECT SEBELUMNYA: v7.0.0 -- Neumorphism DIHAPUS TOTAL, kembali ke Glassmorphism Deep Navy + Brass -- 2026-08-15
 - User: gaya visual Neumorphism ("shadow ganda offset-Box" milik `Neumorphic.kt`,
   riwayat Insiden #3/#8/#9/#10 di bawah) dinilai **"ultra buggy"** -- minta
   hapus total & kembali ke Glassmorphism secara eksplisit, dgn 2 hex dipatok:

@@ -3,6 +3,30 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v7.0.1 -- HOTFIX build CI gagal total: KDoc tertutup prematur di TactileTokens.kt (2026-08-15)
+User upload log CI gagal (`build-failure-log-v7_0_0.zip`, `kspDebugKotlin FAILED`,
+ratusan error "Expecting a top level declaration" mulai `TactileTokens.kt:10`).
+
+**Root cause**: KDoc header v7.0.0 di `TactileTokens.kt` menulis
+`(Neu*/Glass*)` -- substring `*/` DI TENGAH kalimat menutup block comment
+`/** ... */` lebih awal dari yang dimaksud. Sisa isi KDoc (baris 10 s.d.
+`*/` sebenarnya di baris 20) ke-parse compiler sbg KODE KOTLIN SUNGGUHAN,
+bukan lagi komentar -> parser bingung total, berantai jadi ratusan error
+"Expecting a top level declaration" di seluruh sisa file. Kelas bug ini
+TIDAK kelihatan dari preflight kategori #1 (hitung kurung `{}()`) krn
+jumlah kurung tetap seimbang -- comment-nesting bukan brace-nesting.
+
+**Fix**: `(Neu*/Glass*)` -> `(Neu*, Glass*)` di `TactileTokens.kt` (1 baris,
+makna tidak berubah). Preflight `scripts/preflight_check.sh` kategori #12
+lama (baseColor gradient, sudah obsolete sejak `baseColor` dihapus v7.0.0)
+dipensiunkan jadi no-op permanen; kategori #13 BARU ditambahkan: deteksi
+`*/` yang diikuti langsung karakter bukan-spasi di baris yang sama (comment
+penutup ASLI selalu diikuti akhir baris/spasi) -- kelas bug ini sekarang
+KEPANTAU OTOMATIS ke depan, bukan cuma ditambal titik ini.
+
+File diubah (2): `ui/theme/TactileTokens.kt`, `scripts/preflight_check.sh`
+(kategori #12 dipensiunkan + #13 baru). `app/build.gradle.kts` (versi).
+
 ## v7.0.0 -- Neumorphism DIHAPUS TOTAL, kembali ke Glassmorphism Deep Navy + Brass (2026-08-15)
 User: gaya visual Neumorphism ("shadow ganda offset-Box", riwayat Insiden
 #3/#8/#9/#10) dinilai **"ultra buggy"** -- minta hapus total & kembali ke

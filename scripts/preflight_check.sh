@@ -128,34 +128,37 @@ for f in $(grep -rl "\.decodeFromString<" "$KT_DIR" 2>/dev/null); do
 done
 [ "$DECODE_ISSUE" -eq 0 ] && ok "Semua decodeFromString<T> punya import lengkap"
 
+
+echo "== 12. [OBSOLETE sejak v7.0.0, dipertahankan sbg no-op utk histori] baseColor gradient check =="
+# [ditambahkan 2026-08-15, fix v2.24.3, Insiden #9; DIPENSIUNKAN v7.0.0]
+# Category ini dulu mengecek parameter `baseColor` (teknik shadow-caster
+# Neumorphism lama, `Neumorphic.kt`) yang harus menyamar dgn latar gradient.
+# v7.0.0 menghapus TOTAL `Neumorphic.kt` & parameter `baseColor` (diganti
+# `GlassPanel.kt`, shadow standar Compose yg valid di atas latar apapun) --
+# jadi heuristik lama SUDAH TIDAK RELEVAN lagi (tidak ada lagi baseColor utk
+# dicek). Dibiarkan sbg dokumentasi historis, no-op permanen. Lihat
+# CHANGELOG/PROJECT_STATE v2.24.4 utk detail insiden aslinya.
+ok "Dilewati (parameter baseColor sudah tidak ada sejak v7.0.0)"
+
 echo ""
-echo "== 12. NeumorphicSurface/VaultCard di layar berlatar gradient tanpa baseColor eksplisit =="
-# [ditambahkan 2026-08-15, fix v2.24.3, Insiden #9] NeumorphicSurface hanya
-# menyamarkan badan shadow-caster-nya kalau `baseColor` cocok dgn warna LATAR
-# SESUNGGUHNYA (lihat javadoc Neumorphic.kt). Default baseColor=AmoledBackground
-# cuma valid utk layar berlatar SOLID -- kalau sebuah file layar punya latar
-# gradient (Brush.verticalGradient/horizontalGradient/radialGradient dipasang
-# sbg .background() Box terluar) TAPI ada pemanggil VaultCard(...)/
-# NeumorphicSurface(...) di file yang SAMA tanpa parameter baseColor, badan
-# shadow-caster-nya akan meleset dari gradient asli -- gejala nyata: potongan
-# persegi "hantu" mengintip di tepi komponen (lihat PROJECT_STATE.md Insiden #9,
-# laporan screenshot user pada HomeScreen). Heuristik per-file (bukan per-baris
-# persis) -- kalau false-positive di masa depan (mis. VaultCard dalam gradient
-# TAPI sudah dikasih baseColor di baris lain jauh dari pemanggilnya), review manual.
-GRADIENT_BASECOLOR_ISSUE=0
-for f in $(grep -rl "Brush\.\(vertical\|horizontal\|radial\)Gradient" "$KT_DIR/ui/screens" 2>/dev/null); do
-  if grep -qE "VaultCard\(|NeumorphicSurface\(" "$f"; then
-    # Ambil blok pemanggilan VaultCard/NeumorphicSurface s.d. 6 baris ke bawah,
-    # cek apakah ADA baseColor di salah satu pemanggilan itu.
-    CALL_COUNT=$(grep -cE "VaultCard\(|NeumorphicSurface\(" "$f")
-    BASECOLOR_COUNT=$(grep -c "baseColor" "$f")
-    if [ "$BASECOLOR_COUNT" -eq 0 ]; then
-      fail "PERIKSA MANUAL (layar gradient, $CALL_COUNT pemanggilan VaultCard/NeumorphicSurface, 0 baseColor): $f"
-      GRADIENT_BASECOLOR_ISSUE=1
-    fi
-  fi
-done
-[ "$GRADIENT_BASECOLOR_ISSUE" -eq 0 ] && ok "Semua layar gradient sudah pasang baseColor eksplisit"
+echo "== 13. KDoc/block comment ('/** ... */') tertutup PREMATUR di tengah isi =="
+# [ditambahkan 2026-08-15, fix v7.0.0 build failure] Root cause NYATA: KDoc
+# di `TactileTokens.kt` berisi teks "Neu*/Glass*" -- substring "*/" di
+# TENGAH kalimat menutup block comment lebih awal dari yang dimaksud, sisa
+# isi KDoc (s.d. `*/` yang SEBENARNYA di baris lain) ke-parse sbg kode
+# Kotlin sungguhan -> "Expecting a top level declaration" berantai (CI log
+# `build-failure-log-v7_0_0.zip`). Kelas bug ini TIDAK kelihatan dari
+# hitungan kurung `{`/`}`/`(`/`)` biasa (kategori #1) -- perlu pengecekan
+# khusus: cari "*/" yang diikuti LANGSUNG karakter bukan-spasi di baris yang
+# sama (comment penutup ASLI selalu diikuti akhir baris/spasi, bukan lanjut
+# teks/kode).
+BROKEN_COMMENT=$(grep -rnP '\*/\S' "$KT_DIR" 2>/dev/null)
+if [ -n "$BROKEN_COMMENT" ]; then
+  fail "Block comment tertutup prematur (ada '*/' di tengah kalimat KDoc):"
+  echo "$BROKEN_COMMENT"
+else
+  ok "Tidak ada '*/' yang menutup comment secara tidak sengaja"
+fi
 
 echo ""
 if [ "$FAIL" -eq 0 ]; then
