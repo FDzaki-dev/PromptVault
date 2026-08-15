@@ -41,14 +41,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import com.elprompter.promptvault.ui.MainViewModel
+import com.elprompter.promptvault.ui.components.GlassPanel
 import com.elprompter.promptvault.ui.components.GroupedList
 import com.elprompter.promptvault.ui.components.GroupedListRow
-import com.elprompter.promptvault.ui.components.NeumorphicSurface
 import com.elprompter.promptvault.ui.components.VaultCard
 import com.elprompter.promptvault.ui.theme.TactileTokens
 import com.elprompter.promptvault.ui.theme.VaultTheme
@@ -70,31 +69,13 @@ fun HomeScreen(
     onOpenSkippedFiles: () -> Unit
 ) {
     val colors = MaterialTheme.colorScheme
-    // [Fix Insiden #10, v2.24.4] v2.24.3 SEBELUMNYA mencoba `baseColor`
-    // hasil compositeOver(gradient) di sini -- TERBUKTI SALAH/tidak cukup
-    // di device asli (screenshot user): "ekor" hantu masih nongol, sekarang
-    // malah kentara HIJAU (warna `colors.surfaceVariant` = `GlassSurfaceElevated`
-    // 0xFF0D2622 yang ke-bake ke dalam hasil composite itu). Analisis ulang:
-    // pendekatan "cocokkan baseColor dgn 1 titik gradient" fundamentally
-    // rapuh -- gradient BERGERAK relatif kartu (Box gradient diam, Column
-    // konten SCROLL di atasnya via verticalScroll), jadi baseColor statis
-    // TIDAK PERNAH bisa akurat di semua posisi scroll sekaligus. Root fix
-    // SEBENARNYA: teknik shadow neumorphism di `Neumorphic.kt` (badan
-    // shadow-caster diisi solid `baseColor` supaya "menyatu" dgn latar)
-    // secara DESAIN cuma valid di atas latar SOLID SERAGAM -- bukan gradient
-    // apapun. Wash gradient di Box di bawah (dari fix "monoton" lama,
-    // SEBELUM redesign Neumorphism v5.0.0 ada) sekarang justru BERTENTANGAN
-    // dgn neumorphism asli (permintaan eksplisit user: "Neumorphism real",
-    // bukan tambal baseColor lagi) -- neumorphism sejatinya MEMANG butuh
-    // permukaan dasar rata/seragam supaya ilusi shadow timbul terbaca bersih
-    // (variasi visual "monoton" sudah cukup teratasi lewat gradient CTA
-    // Platinum->Ruby + shadow ganda timbul itu sendiri, TIDAK butuh wash
-    // gradient latar lagi). Gradient wash DIHAPUS di bawah (lihat comment
-    // Box) -- `VaultCard`/CTA di layar ini kembali pakai `baseColor` DEFAULT
-    // (`AmoledBackground`, sama seperti 12 pemanggil VaultCard lain), tidak
-    // perlu compositeOver lagi krn latar sekarang solid & identik dgn
-    // default itu -- kelas bug ini TIDAK BISA terulang lagi (bukan cuma
-    // ditambal titik ini).
+    // [v7.0.0] Riwayat panjang Insiden #9/#10 (baseColor vs wash gradient,
+    // lihat PROJECT_STATE.md) sepenuhnya MOOT sekarang: `GlassPanel`
+    // (pengganti `NeumorphicSurface`, lihat `GlassPanel.kt`) tidak lagi
+    // pakai teknik shadow-caster yang butuh `baseColor` "menyamar" dengan
+    // latar -- shadow-nya `Modifier.shadow` standar, valid di atas latar
+    // solid ATAUPUN gradient. Latar layar ini tetap solid `colors.background`
+    // (konsisten dgn seluruh app), bukan krn keterbatasan teknik lagi.
     val haptics = LocalHapticFeedback.current
     val snackbarHostState = remember { SnackbarHostState() }
     // Warna Snackbar yang SEDANG tayang di-snapshot terpisah dari scanFeedback
@@ -136,22 +117,11 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .background(colors.background)
-                // [Fix Insiden #10, v2.24.4] Wash gradient (UI-10, era
-                // pra-Neumorphism) DIHAPUS -- konflik langsung dgn teknik
-                // shadow ganda neumorphism (`Neumorphic.kt`), yang butuh
-                // latar SOLID SERAGAM supaya badan shadow-caster (diisi
-                // `baseColor`) menyatu sempurna. Di atas gradient (latar
-                // BERUBAH per-piksel + BERGERAK relatif konten yg scroll),
-                // shadow-caster manapun PASTI meleset di suatu titik --
-                // v2.24.3 sempat coba tambal pakai baseColor hasil
-                // compositeOver(gradient), TERBUKTI tetap bocor & malah
-                // kentara hijau di device asli (lihat PROJECT_STATE.md
-                // Insiden #10). `colors.background` di sini = AmoledBackground,
-                // IDENTIK dgn default `baseColor` NeumorphicSurface -- 12
-                // layar lain di app ini semua sudah solid AmoledBackground
-                // sejak awal & TIDAK PERNAH kena bug kelas ini, jadi ini
-                // bukan downgrade visual, murni menyamakan HomeScreen ke
-                // pola yang SUDAH terbukti aman di seluruh app.
+                // [v7.0.0] Latar tetap solid `colors.background` (Deep Navy)
+                // -- bukan lagi keterbatasan teknik shadow (`GlassPanel`
+                // valid di atas latar apapun), murni konsisten dgn 12 layar
+                // lain di app + instruksi eksplisit user: Navy dominan 60-70%
+                // sebagai latar, bukan wash gradient/tekstur.
         ) {
         // UI-01 fix: Column body Home sekarang scrollable (verticalScroll).
         // Sebelumnya fillMaxSize() tanpa scroll -- di layar pendek/landscape/
@@ -186,23 +156,14 @@ fun HomeScreen(
                 }
             }
 
-            // v5.0.0 -- Redesign Glassmorphism -> Neumorphism (permintaan
-            // eksplisit user, titik fokus utama layar): `NeumorphicSurface`
-            // dgn shadow ganda ([TactileTokens.NeuElevationCta]/[NeuOffsetCta])
-            // saat idle -- terasa "timbul" nyata dari AMOLED, bukan flat.
-            // Saat ditekan (`pressed = scanPressed`), shadow ganda LENYAP
-            // total & diganti overlay cekung (lihat `Neumorphic.kt`) -- CTA
-            // terasa benar-benar "tertekan masuk", bukan cuma elevasi turun
-            // seperti sistem glass lama. Overlay Box terpisah DI DALAM
-            // `NeumorphicSurface` (pola aman "shadow tidak pernah 1 node dgn
-            // brush" tetap dihormati -- lihat dokumentasi lengkap di
-            // `Neumorphic.kt`).
-            //
-            // v6.0.0 -- Gradient CTA diganti dari (Stamp -> Amber) jadi
-            // (Platinum -> Ruby) SENGAJA (permintaan eksplisit "accent
-            // Platinum+Ruby nge-blend") -- CTA ini titik satu-satunya di app
-            // tempat 2 aksen utama benar-benar berbaur jadi satu bidang
-            // warna kontinu, bukan cuma berdampingan di komponen terpisah.
+            // v7.0.0 -- Neumorphism -> Glassmorphism (KEMBALI, permintaan
+            // eksplisit user "ultra buggy"): `GlassPanel` dgn shadow tunggal
+            // standar ([TactileTokens.GlassElevationCta]) saat idle, `recessed
+            // = scanPressed` saat ditekan (shadow hilang, terasa "masuk").
+            // Blend gradient Ruby->Platinum (v6.0.0) DIHAPUS TOTAL -- CTA
+            // sekarang SATU warna solid Brass saja (`colors.primary` ==
+            // `colors.secondary`, keduanya `BrassAccent`, lihat Theme.kt),
+            // sesuai instruksi eksplisit "aksen tombol utama" tunggal.
             val scanInteraction = remember { MutableInteractionSource() }
             val scanPressed by scanInteraction.collectIsPressedAsState()
             val ctaScale by animateFloatAsState(
@@ -210,7 +171,7 @@ fun HomeScreen(
                 animationSpec = tween(TactileTokens.PressAnimationMillis),
                 label = "ctaScale"
             )
-            NeumorphicSurface(
+            GlassPanel(
                 onClick = onScanNow,
                 enabled = !isScanning,
                 interactionSource = scanInteraction,
@@ -218,37 +179,18 @@ fun HomeScreen(
                     .fillMaxWidth()
                     .scale(ctaScale),
                 shape = MaterialTheme.shapes.large,
-                color = colors.secondary,
-                elevation = TactileTokens.NeuElevationCta,
-                shadowOffset = TactileTokens.NeuOffsetCta,
-                pressed = scanPressed
+                color = colors.primary,
+                elevation = TactileTokens.GlassElevationCta,
+                recessed = scanPressed
             ) {
                 Box(
-                    modifier = Modifier
-                        .background(
-                            // v6.0.0: blend Ruby -> Platinum, bukan lagi Stamp -> Amber.
-                            // Stop diatur TIDAK merata (0f/0.65f/1f, bukan 2 warna polos
-                            // default) SENGAJA -- 65% pertama (area teks/label di tengah,
-                            // lihat Alignment.Center di bawah) tetap solid Ruby supaya
-                            // teks terang (onSecondary/RubyOn) selalu kontras aman;
-                            // "blend"-nya baru nyata terlihat di 35% sisi kanan yang
-                            // meleleh ke Platinum terang -- kesan logam premium tanpa
-                            // mengorbankan keterbacaan label di tengah tombol.
-                            Brush.horizontalGradient(
-                                colorStops = arrayOf(
-                                    0f to colors.secondary,
-                                    0.65f to colors.secondary,
-                                    1f to colors.primary
-                                )
-                            )
-                        )
-                        .padding(vertical = 15.dp),
+                    modifier = Modifier.padding(vertical = 15.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     if (isScanning) {
-                        CircularProgressIndicator(modifier = Modifier.size(18.dp), color = colors.onSecondary)
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), color = colors.onPrimary)
                     } else {
-                        Text("Scan Sekarang", color = colors.onSecondary, style = MaterialTheme.typography.titleMedium)
+                        Text("Scan Sekarang", color = colors.onPrimary, style = MaterialTheme.typography.titleMedium)
                     }
                 }
             }

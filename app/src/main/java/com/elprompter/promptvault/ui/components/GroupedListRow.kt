@@ -48,16 +48,14 @@ import com.elprompter.promptvault.ui.theme.TactileTokens
  * cahaya BERWARNA menyala; ini cuma bayangan abu-abu netral kecil, sinyal
  * "terangkat", bukan "menyala").
  *
- * v5.0.0 -- Redesign Glassmorphism -> Neumorphism: kotak ikon sekarang pakai
- * `NeumorphicSurface` (shadow ganda kecil, [TactileTokens.NeuElevationControl]/
- * [TactileTokens.NeuOffsetControl]) menggantikan `Surface` + border rambut +
- * shadow tunggal netral. Border [GlassBorder] DIHAPUS dari komponen ini (efek
- * "tepi kaca" bertentangan dgn neumorphism -- sisi kartu neumorphic TIDAK
- * bergaris tepi, kedalamannya murni dari shadow). Tint warna per-menu (bab
- * "menu tidak monoton satu warna", Keputusan Arsitektur #3) TETAP dipertahankan
- * PERSIS SAMA lewat overlay gradient tint [resolvedTint] di dalam Surface --
- * tidak berubah dari v4.0.0, hanya wadahnya (Surface polos -> NeumorphicSurface)
- * yang berubah.
+ * v7.0.0 -- Neumorphism -> Glassmorphism (KEMBALI, permintaan eksplisit
+ * user): kotak ikon sekarang pakai `GlassPanel` (border kaca + shadow
+ * tunggal + highlight, lihat `GlassPanel.kt`) menggantikan
+ * `NeumorphicSurface`. Border [GlassBorder] otomatis KEMBALI ADA (default
+ * `GlassPanel`) -- "tepi kaca" adalah ciri Glassmorphism, bukan lagi
+ * dihindari seperti era Neumorphism v5.0.0. Tint warna per-menu (bab "menu
+ * tidak monoton satu warna") TETAP dipertahankan PERSIS SAMA lewat overlay
+ * gradient tint [resolvedTint] di dalam Surface, tidak berubah.
  */
 @Composable
 fun GroupedListRow(icon: ImageVector, label: String, tint: Color? = null, onClick: () -> Unit) {
@@ -76,12 +74,11 @@ fun GroupedListRow(icon: ImageVector, label: String, tint: Color? = null, onClic
             .padding(horizontal = 16.dp, vertical = 13.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        NeumorphicSurface(
+        GlassPanel(
             modifier = Modifier.size(30.dp),
             shape = MaterialTheme.shapes.small,
             color = GlassSurfaceElevated,
-            elevation = TactileTokens.NeuElevationControl,
-            shadowOffset = TactileTokens.NeuOffsetControl
+            elevation = TactileTokens.GlassElevationControl
         ) {
             Box(
                 modifier = Modifier.background(

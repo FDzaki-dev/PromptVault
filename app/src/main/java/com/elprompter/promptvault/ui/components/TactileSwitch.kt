@@ -23,9 +23,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import com.elprompter.promptvault.ui.theme.GlassHighlight
 import com.elprompter.promptvault.ui.theme.GlassSurfaceElevated
 import com.elprompter.promptvault.ui.theme.GlassSurfacePressed
-import com.elprompter.promptvault.ui.theme.NeuHighlight
 import com.elprompter.promptvault.ui.theme.TactileTokens
 
 private val TrackWidth = 46.dp
@@ -36,18 +36,14 @@ private val ThumbTravel = TrackWidth - ThumbSize - 6.dp // 3dp inset tiap sisi
 /**
  * Switch tactile bab 12 spesifikasi -- pengganti `Switch` Material3 polos.
  *
- * v5.0.0 -- Redesign Glassmorphism -> Neumorphism. OFF: track sekarang benar
- * BENAR tenggelam (NeumorphicSurface `pressed = true` -- overlay gradien
- * diagonal terbalik, bukan cuma border gelap tunggal seperti versi glass
- * lama) di dalam wadah [GlassSurfacePressed]. ON: track jadi tint aksen
- * SOLID (bukan lagi indikator "recessed vs flat", tapi warna) + thumb-nya
- * yang sekarang dapat efek TIMBUL neumorphic (dual-shadow kecil via
- * `NeumorphicSurface`, [TactileTokens.NeuElevationThumb]/
- * [TactileTokens.NeuOffsetThumb]) menggantikan `Modifier.shadow(spotColor=
- * accentColor)` tunggal berwarna lama -- konsisten dgn seluruh app yang kini
- * pakai shadow ganda terarah, bukan glow satu warna. ON/OFF TIDAK bergantung
- * HANYA pada kedalaman -- posisi thumb kiri/kanan + warna track tetap jadi
- * penanda kedua (bab 21 Accessibility), sama seperti sebelumnya.
+ * v7.0.0 -- Neumorphism -> Glassmorphism (KEMBALI): track pakai `GlassPanel`
+ * `recessed = true` (shadow+highlight dimatikan, warna [GlassSurfacePressed]
+ * gelap yang membawa kesan "slot" tenggelam -- tanpa overlay gradien
+ * diagonal terbalik seperti sistem lama, cukup warna solid + tanpa shadow).
+ * Thumb ON pakai `GlassPanel` timbul kecil ([TactileTokens.GlassElevationThumb],
+ * border+highlight+shadow tunggal standar) menggantikan dual-shadow lama.
+ * ON/OFF TIDAK bergantung HANYA pada kedalaman -- posisi thumb kiri/kanan +
+ * warna track tetap jadi penanda kedua (Accessibility), tidak berubah.
  */
 @Composable
 fun TactileSwitch(
@@ -76,9 +72,9 @@ fun TactileSwitch(
     )
 
     // UI-04 fix: hitbox (toggleable) sekarang TERPISAH dari ukuran visual
-    // track (46x26dp). Sebelumnya toggleable dipasang LANGSUNG di
-    // NeumorphicSurface bertrack 46x26dp -- area sentuh fisik/logis jadi
-    // lebih kecil dari touch target Android yang nyaman. Sekarang wrapper
+    // track (46x26dp). Sebelumnya toggleable dipasang LANGSUNG di panel
+    // bertrack 46x26dp -- area sentuh fisik/logis jadi lebih kecil dari
+    // touch target Android yang nyaman. Sekarang wrapper
     // Box luar diberi minimum 48dp x 48dp, toggleable dipasang di wrapper
     // itu, track visual TETAP 46x26dp (tidak berubah tampilannya) di-center
     // di dalam wrapper.
@@ -94,37 +90,33 @@ fun TactileSwitch(
             ),
         contentAlignment = Alignment.Center
     ) {
-        // Track: NeumorphicSurface `pressed = true` permanen -- track SELALU
+        // Track: GlassPanel `recessed = true` permanen -- track SELALU
         // terbaca sbg "wadah cekung" (baik ON maupun OFF), warna isi
-        // (trackColor) yang berubah utk sinyal status, bukan kedalamannya
-        // (konsisten dgn desain neumorphism umum: track selalu inset, thumb
-        // yang mengapung di atasnya).
-        NeumorphicSurface(
+        // (trackColor) yang berubah utk sinyal status, bukan kedalamannya.
+        GlassPanel(
             modifier = Modifier.size(width = TrackWidth, height = TrackHeight),
             shape = RoundedCornerShape(50),
             color = trackColor,
-            pressed = true
+            recessed = true
         ) {
             Box(contentAlignment = Alignment.CenterStart) {
-                // Thumb: NeumorphicSurface timbul kecil saat ON (dual-shadow),
-                // flat tanpa shadow saat OFF (thumb "diam" di dasar cekungan,
-                // belum "terangkat" -- shadow ganda cuma relevan kalau ada tint
-                // aksen utk dipantulkan).
-                NeumorphicSurface(
+                // Thumb: GlassPanel timbul kecil saat ON (shadow+highlight+
+                // border standar), recessed (tanpa shadow) saat OFF -- thumb
+                // "diam" di dasar slot, belum "terangkat".
+                GlassPanel(
                     modifier = Modifier
                         .offset(x = 3.dp + thumbOffset)
                         .size(ThumbSize)
                         .scale(thumbScale),
                     shape = RoundedCornerShape(50),
                     color = GlassSurfaceElevated,
-                    baseColor = trackColor,
-                    elevation = if (checked) TactileTokens.NeuElevationThumb else 0.dp,
-                    shadowOffset = TactileTokens.NeuOffsetThumb
+                    elevation = TactileTokens.GlassElevationThumb,
+                    recessed = !checked
                 ) {
                     Box(
                         modifier = Modifier
                             .background(
-                                Brush.radialGradient(colors = listOf(NeuHighlight, Color.Transparent)),
+                                Brush.radialGradient(colors = listOf(GlassHighlight, Color.Transparent)),
                                 RoundedCornerShape(50)
                             )
                     )

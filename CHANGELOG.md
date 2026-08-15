@@ -3,6 +3,61 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v7.0.0 -- Neumorphism DIHAPUS TOTAL, kembali ke Glassmorphism Deep Navy + Brass (2026-08-15)
+User: gaya visual Neumorphism ("shadow ganda offset-Box", riwayat Insiden
+#3/#8/#9/#10) dinilai **"ultra buggy"** -- minta hapus total & kembali ke
+Glassmorphism secara eksplisit, dengan 2 hex dipatok: `#0B132B` (Deep Navy
+Blue, 60-70% latar dominan) & `#B5A642` (Brass, 10-30% aksen tombol utama).
+Instruksi tegas: **"dilarang keras untuk ngide sendiri"** -- TIDAK ADA hue
+baru ditambahkan di luar 2 hex ini.
+
+**Perubahan arsitektur (Atomic Change, 13 file -- lihat Impact Report sesi
+ini utk justifikasi melebihi batas 10 file/batch):**
+- `Neumorphic.kt` **DIHAPUS**, digantikan `GlassPanel.kt` (primitif baru,
+  jauh lebih sederhana): `Modifier.shadow` standar 1 lapis + border hairline
+  + overlay highlight diagonal tipis, TANPA teknik shadow-caster offset-Box
+  ganda. Ini menghilangkan 2 SUMBER BUG STRUKTURAL sekaligus (bukan cuma
+  ditambal): (1) parameter `baseColor` yang harus "menyamar" dgn latar
+  (root cause Insiden #9 & #10, gagal total di atas gradient) -- SUDAH TIDAK
+  ADA lagi krn shadow standar valid di atas latar apapun; (2) `modifier`
+  pemanggil yang harus dipasang di `Box` pembungkus terpisah dari `Surface`
+  (root cause Insiden #8, `weight()` nyasar) -- SUDAH TIDAK ADA lagi krn
+  `modifier` sekarang dipasang LANGSUNG di `Surface` (satu-satunya root
+  composable primitif ini, tidak ada Box tambahan).
+- `Color.kt`: palet direstrukturisasi total ke Deep Navy (`AmoledBackground`,
+  nama token TIDAK diubah -- lihat di bawah) + Brass (`BrassAccent`, baru).
+  `RubyGlow`/`PlatinumAccent`/`PlatinumTint` (blend gradient CTA v6.0.0)
+  **DIHAPUS**. Token semantik lama (`AmberGlow`/`RustGlow`/`SlateGlow`) TIDAK
+  diubah hex-nya -- di luar cakupan 2 constraint user ("latar dominan" +
+  "aksen tombol utama"), dipertahankan apa adanya.
+- `Theme.kt`: `primary` & `secondary` SEKARANG SAMA-SAMA `BrassAccent` (CTA
+  tidak lagi blend 2 aksen). `SortedStamp` (pakai `colors.secondary`)
+  otomatis jadi stempel Brass -- cocok tematik ("stempel kuningan"), bukan
+  penambahan warna baru.
+- `TactileTokens.kt`: token `Neu*` (elevasi+offset shadow ganda,
+  `NeuPressedDarkAlpha`/`NeuPressedLightAlpha`) DIHAPUS, digantikan
+  `Glass*` (1 nilai elevasi per komponen, bukan pasangan).
+- `VaultCard.kt`, `GroupedListRow.kt`, `TactileSwitch.kt`,
+  `SegmentedControl.kt`, `EmptyState.kt`, `VaultActionSheet.kt`,
+  `HomeScreen.kt`: seluruh pemanggilan `NeumorphicSurface` diganti
+  `GlassPanel`. Parameter `baseColor` di `VaultCard` **DIHAPUS** (0 call
+  site pernah override, dikonfirmasi grep sebelum audit hapus) -- API lebih
+  sederhana, kelas bug baseColor tidak mungkin terulang krn parameternya
+  sendiri sudah tidak ada.
+- CTA "Scan Sekarang" (`HomeScreen.kt`): gradient blend Ruby->Platinum
+  (v6.0.0) **DIHAPUS TOTAL**, sekarang 1 warna solid Brass (`colors.primary`)
+  sesuai instruksi eksplisit "aksen tombol utama" tunggal, bukan blend.
+- `colors.xml`: `pv_amoled_background` diisi hex Deep Navy (nama TIDAK
+  diubah -- `MainActivity.kt`, protected asset, jadi TIDAK PERLU disentuh
+  sama sekali, status bar/nav bar/splash otomatis ikut Deep Navy tanpa edit
+  manual). `pv_platinum_accent` -> `pv_brass_accent`.
+
+**Keputusan interpretasi (dicatat supaya transparan, lihat PROJECT_STATE.md
+untuk detail penuh)**: instruksi user membatasi 2 hal SAJA -- warna latar
+dominan & warna aksen tombol utama. Warna semantik non-tombol-utama (error/
+warning/menu Pengaturan) sengaja TIDAK disentuh krn di luar 2 constraint
+itu & sudah ada sebelum instruksi ini (bukan penambahan baru).
+
 ## v2.24.4 -- FIX AKAR Insiden #9 (v2.24.3 TERBUKTI TIDAK CUKUP di device asli): hapus wash gradient, HomeScreen kembali latar solid (2026-08-15)
 User kirim 3 screenshot device asli v2.24.3 (termasuk App Info yg konfirmasi
 versi terpasang) + laporan tegas: fix v2.24.3 GAGAL -- "ekor shadow" masih

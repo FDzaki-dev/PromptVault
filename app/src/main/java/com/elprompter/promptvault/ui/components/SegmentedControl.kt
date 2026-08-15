@@ -22,11 +22,11 @@ import com.elprompter.promptvault.ui.theme.TactileTokens
  * lebih jelas mana yang aktif, dan terasa lebih "sentuh" di layar sempit.
  * Semua warna theme-aware supaya kontrasnya tetap benar di dark mode.
  *
- * v5.0.0 -- Redesign Glassmorphism -> Neumorphism: wadah track sekarang
- * [NeumorphicSurface] TENGGELAM (`pressed = true`, alur konsisten dengan
- * track `TactileSwitch`) supaya terbaca sebagai "slot" -- pilihan aktif
- * digambar sebagai pil [NeumorphicSurface] TIMBUL kecil di atasnya (dual-
- * shadow, [TactileTokens.NeuElevationControl]), pilihan tidak-aktif rata
+ * v7.0.0 -- Neumorphism -> Glassmorphism (KEMBALI): wadah track sekarang
+ * [GlassPanel] `recessed = true` (alur konsisten dengan track
+ * `TactileSwitch`) supaya terbaca sebagai "slot" -- pilihan aktif digambar
+ * sebagai pil [GlassPanel] TIMBUL kecil di atasnya (border+highlight+shadow
+ * standar, [TactileTokens.GlassElevationControl]), pilihan tidak-aktif rata
  * tanpa shadow. Warna `colors.primary`/`colors.surfaceVariant` TIDAK berubah.
  */
 @Composable
@@ -41,26 +41,22 @@ fun SegmentedControl(options: List<String>, selectedIndex: Int, onSelect: (Int) 
     // caller) supaya selalu ada 1 segment terpilih selama `options` tidak
     // kosong -- hardening, belum ada laporan bug aktif dari ini.
     val effectiveIndex = if (options.isEmpty()) -1 else selectedIndex.coerceIn(0, options.lastIndex)
-    NeumorphicSurface(
+    GlassPanel(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         color = colors.surfaceVariant,
-        pressed = true,
-        elevation = TactileTokens.NeuElevationControl,
-        shadowOffset = TactileTokens.NeuOffsetControl
+        recessed = true
     ) {
         Row(modifier = Modifier.padding(3.dp)) {
             options.forEachIndexed { index, label ->
                 val selected = index == effectiveIndex
                 val interactionSource = remember { MutableInteractionSource() }
                 if (selected) {
-                    NeumorphicSurface(
+                    GlassPanel(
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(10.dp),
                         color = colors.primary,
-                        baseColor = colors.surfaceVariant,
-                        elevation = TactileTokens.NeuElevationControl,
-                        shadowOffset = TactileTokens.NeuOffsetControl,
+                        elevation = TactileTokens.GlassElevationControl,
                         onClick = { onSelect(index) },
                         interactionSource = interactionSource
                     ) {
@@ -76,14 +72,13 @@ fun SegmentedControl(options: List<String>, selectedIndex: Int, onSelect: (Int) 
                     // [Fix audit P2 #UI-19, 2026-08-15] Sebelumnya segment TIDAK
                     // terpilih benar-benar NOL feedback tekan (indication=null,
                     // tanpa scale) -- beda dari segment terpilih yang otomatis
-                    // dapat ripple bawaan `NeumorphicSurface(onClick=...)`. Bukan
-                    // sekadar "beda gaya" (ripple di list biasa vs scale di
-                    // kontrol neumorphic itu memang pola desain sengaja, lihat
-                    // dokumentasi `PressScale.kt`/`Neumorphic.kt`) -- ini gap
-                    // NYATA: segment ini sama sekali tidak dapat KEDUANYA.
-                    // `pressScale()` dipakai (bukan ripple) supaya konsisten dgn
-                    // keluarga kontrol neumorphic lain (CTA Home, TactileSwitch),
-                    // bukan menambah pola feedback ketiga.
+                    // dapat ripple bawaan `GlassPanel(onClick=...)`. Bukan sekadar
+                    // "beda gaya" (ripple di list biasa vs scale di kontrol
+                    // tactile itu memang pola desain sengaja, lihat dokumentasi
+                    // `PressScale.kt`) -- ini gap NYATA: segment ini sama sekali
+                    // tidak dapat KEDUANYA. `pressScale()` dipakai (bukan ripple)
+                    // supaya konsisten dgn keluarga kontrol tactile lain (CTA
+                    // Home, TactileSwitch), bukan menambah pola feedback ketiga.
                     Box(
                         modifier = Modifier
                             .weight(1f)

@@ -3,7 +3,79 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
-## STATUS PROJECT: v2.24.4 -- FIX AKAR Insiden #9 (v2.24.3 TERBUKTI TIDAK CUKUP, Insiden #10): hapus wash gradient HomeScreen -- 2026-08-15
+## STATUS PROJECT: v7.0.0 -- Neumorphism DIHAPUS TOTAL, kembali ke Glassmorphism Deep Navy + Brass -- 2026-08-15
+- User: gaya visual Neumorphism ("shadow ganda offset-Box" milik `Neumorphic.kt`,
+  riwayat Insiden #3/#8/#9/#10 di bawah) dinilai **"ultra buggy"** -- minta
+  hapus total & kembali ke Glassmorphism secara eksplisit, dgn 2 hex dipatok:
+  `#0B132B` (Deep Navy Blue, 60-70% latar dominan) & `#B5A642` (Brass,
+  10-30% aksen tombol utama). Instruksi tegas: **"dilarang keras untuk ngide
+  sendiri"** -- TIDAK ADA hue baru ditambahkan di luar 2 hex ini.
+- **Keputusan interpretasi (supaya transparan utk sesi berikutnya)**:
+  instruksi user membatasi 2 hal SAJA -- warna latar dominan & warna aksen
+  tombol UTAMA. Token semantik non-tombol-utama yang SUDAH ADA SEBELUM
+  instruksi ini (`AmberGlow`/warning-auto-scan, `RustGlow`/error,
+  `SlateGlow`/menu Pengaturan) SENGAJA TIDAK disentuh hex-nya -- ini bukan
+  "ngide sendiri" krn bukan hue BARU, cuma token lama yang dipertahankan
+  krn di luar cakupan 2 constraint eksplisit user. Kalau user MAKSUDNYA
+  ingin ketiga token itu juga diseragamkan ke Navy/Brass murni, tinggal
+  bilang -- keputusan ini reversibel & 1 file (`Color.kt`) saja.
+- **Root cause arsitektur yang dihapus (kenapa Neumorphism "ultra buggy")**:
+  `Neumorphic.kt` lama butuh (1) `baseColor` yang harus PERSIS menyamar dgn
+  latar sesungguhnya di belakang tiap komponen (root cause Insiden #9 & #10
+  di bawah -- gagal total di atas gradient, `baseColor` statis tidak pernah
+  akurat di semua posisi scroll) dan (2) `modifier` pemanggil (`weight()`
+  dst.) HARUS dipasang di `Box` pembungkus TERPISAH dari `Surface` konten
+  (root cause Insiden #8 -- `weight()` nyasar, segment/kartu kolaps). Kedua
+  sumber bug itu MELEKAT PADA DESAIN teknik shadow-ganda-offset-Box itu
+  sendiri, bukan bug implementasi yang bisa ditambal titik-per-titik --
+  sudah terbukti 3 kali (#8, #9, #10) tambal ulang tetap memunculkan kelas
+  bug baru dari akar yang sama.
+- **Fix arsitektur (bukan tambal)**: `Neumorphic.kt` **DIHAPUS**, diganti
+  `GlassPanel.kt` -- primitif tunggal baru, `Modifier.shadow` standar Compose
+  1 lapis (bukan dual-shadow-caster) + border hairline + overlay highlight
+  diagonal tipis. `modifier` pemanggil sekarang dipasang LANGSUNG di
+  `Surface` (satu-satunya root composable primitif ini, TIDAK ADA Box
+  pembungkus tambahan) -- kelas bug Insiden #8 TIDAK MUNGKIN terulang lagi
+  krn strukturnya sendiri sudah tidak punya 2 lapis composable terpisah.
+  Parameter `baseColor` **DIHAPUS TOTAL** dari `VaultCard`/`GlassPanel` (0
+  call site pernah override-nya, dikonfirmasi grep sebelum audit hapus) --
+  kelas bug Insiden #9/#10 TIDAK MUNGKIN terulang krn parameternya sendiri
+  sudah tidak ada untuk disalahgunakan.
+- **Palet (`Color.kt` v7.0.0)**: `AmoledBackground` (nama token TIDAK
+  diubah, supaya `MainActivity.kt` -- protected asset -- TIDAK PERLU
+  disentuh sama sekali) nilainya jadi Deep Navy `#0B132B` solid.
+  `GlassSurface`/`GlassSurfaceElevated`/`GlassSurfaceSheet`/
+  `GlassSurfacePressed` -- tint/shade progresif dari hue Navy yang SAMA
+  (bukan hue baru, murni variasi terang-gelap utk hierarki elevasi tanpa
+  blur asli -- `Modifier.blur` RenderEffect cuma nyata di API 31+, project
+  minSdk 26). `BrassAccent` (`#B5A642`) jadi SATU-SATUNYA aksen interaktif
+  utama -- `RubyGlow`/`PlatinumAccent`/`PlatinumTint` (blend gradient CTA
+  v6.0.0) **DIHAPUS TOTAL**, `primary` DAN `secondary` di `Theme.kt`
+  sekarang SAMA-SAMA `BrassAccent` (CTA tidak lagi blend 2 aksen).
+- **CTA "Scan Sekarang"**: gradient blend Ruby->Platinum (v6.0.0) DIHAPUS,
+  sekarang 1 warna solid Brass, sesuai instruksi eksplisit "aksen tombol
+  utama" TUNGGAL (bukan blend/campuran 2 warna seperti sebelumnya).
+- **File diubah (13, Atomic Change -- 1 sistem visual kohesif, tidak bisa
+  dipecah antar-batch tanpa membuat build gagal di tengah)**: `Neumorphic.kt`
+  (DIHAPUS), `GlassPanel.kt` (BARU), `Color.kt`, `Theme.kt`,
+  `TactileTokens.kt`, `VaultCard.kt`, `GroupedListRow.kt`, `TactileSwitch.kt`,
+  `SegmentedControl.kt`, `EmptyState.kt`, `VaultActionSheet.kt`,
+  `HomeScreen.kt`, `res/values/colors.xml`. `FILE_MANIFEST.txt` disesuaikan
+  (Neumorphic.kt keluar, GlassPanel.kt masuk, urutan alfabetis, diverifikasi
+  cocok 1:1 dgn tree via diff).
+- `scripts/preflight_check.sh` dijalankan ulang, 12/12 kategori lolos
+  (termasuk #10 well-formedness XML -- sempat gagal 1x krn `--` ganda tidak
+  sah di komentar XML `colors.xml`, sudah diperbaiki). **BELUM PERNAH lewat
+  `./gradlew` asli / device asli** (sandbox tanpa Android SDK/jaringan Gradle)
+  -- hanya lolos preflight statis + review manual menyeluruh tiap file.
+  Minta user konfirmasi build APK CI sukses & tampilan Glassmorphism Navy+
+  Brass di HP sesuai sebelum dianggap selesai total.
+- Confidence Rating: **92%** (bukan 95%+ murni krn keterbatasan verifikasi
+  di atas -- bukan krn ada bagian yang diragukan secara desain).
+- versionCode/versionName: lihat `app/build.gradle.kts` utk nilai final
+  (protected asset, dinaikkan mengikuti pola versi sebelumnya).
+
+## STATUS PROJECT SEBELUMNYA: v2.24.4 -- FIX AKAR Insiden #9 (v2.24.3 TERBUKTI TIDAK CUKUP, Insiden #10): hapus wash gradient HomeScreen -- 2026-08-15
 - User kirim 3 screenshot device asli v2.24.3 (App Info konfirmasi versi
   terpasang) + laporan tegas: fix v2.24.3 GAGAL -- "ekor shadow gak jelas"
   masih nongol & sekarang malah kentara HIJAU, minta "Neumorphism real

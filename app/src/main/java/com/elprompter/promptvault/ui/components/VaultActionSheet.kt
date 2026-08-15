@@ -22,7 +22,6 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import com.elprompter.promptvault.ui.theme.GlassSurfacePressed
-import com.elprompter.promptvault.ui.theme.TactileTokens
 
 /**
  * Pengganti AlertDialog kotak di tengah layar -- muncul dari bawah seperti
@@ -31,12 +30,10 @@ import com.elprompter.promptvault.ui.theme.TactileTokens
  * containerColor pakai surfaceVariant (lapisan "terangkat") supaya sheet
  * terasa mengambang di atas layar, terutama kontras jelas di dark mode.
  *
- * v5.0.0 -- Redesign Glassmorphism -> Neumorphism: garis rambut [GlassBorder]
- * 1dp selebar layar (dulu penanda "tepi kaca", bab 8/9 spesifikasi lama)
- * DIGANTI grabber pill neumorphic TENGGELAM di tengah-atas
- * ([NeumorphicSurface] `pressed = true`, isi [GlassSurfacePressed]) -- pola
- * drag-handle standar bottom sheet neumorphic (cekung kecil, bukan garis
- * penuh), sekaligus isyarat "bisa digeser" yang lebih jelas dari garis datar.
+ * v7.0.0 -- Neumorphism -> Glassmorphism (KEMBALI): grabber pill tetap
+ * bentuk cekung di tengah-atas ([GlassPanel] `recessed = true`, isi
+ * [GlassSurfacePressed]) -- pola drag-handle standar, sekarang lewat
+ * primitif Glass yang sama dengan seluruh app.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -63,15 +60,13 @@ fun VaultActionSheet(
         tonalElevation = 0.dp
     ) {
         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            NeumorphicSurface(
+            GlassPanel(
                 modifier = Modifier
                     .padding(top = 10.dp, bottom = 4.dp)
                     .size(width = 36.dp, height = 4.dp),
                 shape = RoundedCornerShape(50),
                 color = GlassSurfacePressed,
-                pressed = true,
-                elevation = TactileTokens.NeuElevationControl,
-                shadowOffset = TactileTokens.NeuOffsetControl,
+                recessed = true,
                 content = {}
             )
         }

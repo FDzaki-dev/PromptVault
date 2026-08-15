@@ -29,8 +29,8 @@ app/src/main/java/com/elprompter/promptvault/data/db/MoveHistoryEntity.kt
 app/src/main/java/com/elprompter/promptvault/ui/MainViewModel.kt
 app/src/main/java/com/elprompter/promptvault/ui/Navigation.kt
 app/src/main/java/com/elprompter/promptvault/ui/components/EmptyState.kt
+app/src/main/java/com/elprompter/promptvault/ui/components/GlassPanel.kt
 app/src/main/java/com/elprompter/promptvault/ui/components/GroupedListRow.kt
-app/src/main/java/com/elprompter/promptvault/ui/components/Neumorphic.kt
 app/src/main/java/com/elprompter/promptvault/ui/components/PressScale.kt
 app/src/main/java/com/elprompter/promptvault/ui/components/RuleCard.kt
 app/src/main/java/com/elprompter/promptvault/ui/components/SegmentedControl.kt

@@ -33,12 +33,11 @@ import com.elprompter.promptvault.ui.theme.TactileTokens
  * Dipanggil lewat Crossfade di tiap layar supaya transisi kosong<->berisi
  * halus, bukan potongan tiba-tiba.
  *
- * v5.0.0 -- Redesign Glassmorphism -> Neumorphism: lingkaran ikon (dulu fill
- * flat `accentContainerColor` polos tanpa depth) sekarang [NeumorphicSurface]
- * timbul kecil ([TactileTokens.NeuElevationControl]/[NeuOffsetControl]),
- * konsisten dengan kotak ikon `GroupedListRow` & thumb `TactileSwitch` --
- * satu bahasa visual "shadow ganda" di semua elemen bulat/kotak kecil app.
- * Warna aksen per layar (`accentColor`/`accentContainerColor`) TIDAK berubah.
+ * v7.0.0 -- Neumorphism -> Glassmorphism (KEMBALI): lingkaran ikon sekarang
+ * [GlassPanel] timbul kecil ([TactileTokens.GlassElevationControl], border+
+ * highlight+shadow standar), konsisten dengan kotak ikon `GroupedListRow` &
+ * thumb `TactileSwitch`. Warna aksen per layar (`accentColor`/
+ * `accentContainerColor`) TIDAK berubah.
  */
 @Composable
 fun EmptyState(
@@ -56,12 +55,11 @@ fun EmptyState(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        NeumorphicSurface(
+        GlassPanel(
             modifier = Modifier.size(56.dp),
             shape = RoundedCornerShape(16.dp),
             color = accentContainerColor,
-            elevation = TactileTokens.NeuElevationControl,
-            shadowOffset = TactileTokens.NeuOffsetControl
+            elevation = TactileTokens.GlassElevationControl
         ) {
             Box(
                 modifier = Modifier.background(

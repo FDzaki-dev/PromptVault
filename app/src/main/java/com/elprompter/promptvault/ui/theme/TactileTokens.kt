@@ -3,31 +3,20 @@ package com.elprompter.promptvault.ui.theme
 import androidx.compose.ui.unit.dp
 
 /**
- * v3.0.0 — Konstanta tactile terpusat (bab 12 spesifikasi: "Do not duplicate
- * tactile constants throughout screen files"). Satu arah cahaya simulasi
- * untuk seluruh app: kiri-atas terang -> kanan-bawah gelap (bab 3).
+ * v3.0.0 — Konstanta tactile terpusat (satu titik, bukan duplikasi di tiap
+ * layar). `ElevationRaised`/`ElevationPressed`/`PressScale`/
+ * `PressAnimationMillis`/`ControlCornerRadius` TIDAK diubah -- masih dipakai
+ * `PressScale.kt` (`pressScale()`/`tactilePress()`), lepas dari sistem
+ * shadow permukaan (Neu*/Glass*).
  *
- * v4.0.0 — Ditambah token elevasi utk sistem "depth/3D ultra immersive"
- * (permintaan eksplisit user). SEMUA elevasi baru di sini dipakai LEWAT
- * `Surface(shadowElevation=...)` dengan `color` SOLID (bukan `Modifier.shadow`
- * yang dirantai langsung ke node ber-Brush gradient) -- lihat dokumentasi
- * di `VaultCard.kt` untuk alasan lengkap: kombinasi itu PERNAH menyebabkan
- * regresi nyata (kotak pucat/glitch) di CTA Home v2.14.0, di-fix v2.14.1
- * dengan MELEPAS shadow sepenuhnya. Sistem baru ini menghidupkan kembali
- * shadow BERELEVASI NYATA tapi dengan pola aman (solid base + overlay brush
- * terpisah), bukan mengulang kombinasi yang sama.
- *
- * v5.0.0 — Redesign Glassmorphism -> Neumorphism. Token `ElevationCard` /
- * `ElevationCta` / `ElevationCtaPressed` / `ElevationIcon` / `ElevationThumb`
- * DIHAPUS (bukan cuma tidak dipakai -- diganti total, dead code dibersihkan
- * di batch yang sama supaya tidak menumpuk seperti pelajaran audit v2.16.0)
- * dan digantikan set token `Neu*` di bawah: neumorphism butuh SEPASANG
- * nilai per komponen (elevasi UNTUK shadow ganda + offset jarak kedua
- * shadow-caster dari posisi asli), bukan satu nilai elevasi tunggal seperti
- * sistem glassmorphism lama. `ElevationRaised`/`ElevationPressed` di bawah
- * TETAP ADA TIDAK DIUBAH -- masih dipakai `PressScale.kt` (`tactilePress()`,
- * belum dipanggil di mana pun saat ini tapi disengaja dipertahankan sejak
- * v2.14.1 utk kontrol lain di masa depan), di luar scope batch redesign ini.
+ * v7.0.0 — Neumorphism -> Glassmorphism: token `Neu*` (elevasi+offset shadow
+ * ganda, `NeuPressedDarkAlpha`/`NeuPressedLightAlpha`) DIHAPUS TOTAL bersama
+ * `Neumorphic.kt` (permintaan eksplisit user, "ultra buggy"). Digantikan set
+ * `Glass*` di bawah -- SATU nilai elevasi standar per komponen (dipakai
+ * langsung lewat `Modifier.shadow` biasa di `GlassPanel.kt`, TIDAK butuh
+ * pasangan offset seperti sistem lama), jauh lebih sederhana & tanpa kelas
+ * bug shadow-caster/baseColor-matching yang tercatat di PROJECT_STATE.md
+ * (Insiden #3, #8, #9, #10).
  */
 object TactileTokens {
     /** Elevasi normal kontrol yang bisa ditekan (terangkat). */
@@ -45,38 +34,16 @@ object TactileTokens {
     /** Radius bevel standar untuk kontrol tactile (tombol, chip ikon, dll). */
     val ControlCornerRadius = 12.dp
 
-    // ---- v5.0.0: Neumorphism -- shadow ganda (dual-shadow) ----
-    // Tiap komponen timbul (raised) butuh 2 nilai: `elevation` (dalam ke
-    // dua shadow-caster, lihat `NeumorphicSurface` di `Neumorphic.kt`) dan
-    // `offset` (jarak geser tiap shadow-caster dari posisi permukaan asli --
-    // MAKIN BESAR offset, makin jelas kesan permukaan itu "melayang" bukan
-    // cuma buram di tepi). Rasio offset:elevation dijaga ~1:2 di semua
-    // komponen supaya kesan cahaya konsisten satu app, bukan tiap komponen
-    // beda "kekuatan lampu".
+    // ---- v7.0.0: Glassmorphism -- elevasi tunggal per komponen ----
+    /** VaultCard -- permukaan kaca paling besar/dominan di app. */
+    val GlassElevationCard = 6.dp
 
-    /** VaultCard -- permukaan neumorphic paling besar/dominan di app. */
-    val NeuElevationCard = 10.dp
-    val NeuOffsetCard = 5.dp
-
-    /** CTA "Scan Sekarang" -- titik fokus utama, dual-shadow paling kuat. */
-    val NeuElevationCta = 12.dp
-    val NeuOffsetCta = 6.dp
+    /** CTA "Scan Sekarang" -- titik fokus utama. */
+    val GlassElevationCta = 10.dp
 
     /** Kotak ikon GroupedListRow & lingkaran ikon EmptyState -- kontrol kecil. */
-    val NeuElevationControl = 6.dp
-    val NeuOffsetControl = 3.dp
+    val GlassElevationControl = 3.dp
 
-    /** Thumb TactileSwitch saat ON -- kecil, dual-shadow paling halus. */
-    val NeuElevationThumb = 5.dp
-    val NeuOffsetThumb = 2.dp
-
-    /** Alpha overlay scrim diagonal utk simulasi permukaan tenggelam (pressed/
-     * inset) -- sisi gelap (mendekati sisi cahaya datang, kiri-atas, seolah
-     * memblokir cahaya) & sisi terang (kanan-bawah, seolah pantulan tipis di
-     * dasar cekungan). Dipakai `NeumorphicSurface(pressed = true)` & track
-     * OFF `TactileSwitch`. Basis warna TETAP Color.Black/Color.White netral
-     * (bukan hue brand baru), murni token alpha.
-     */
-    const val NeuPressedDarkAlpha = 0.30f
-    const val NeuPressedLightAlpha = 0.05f
+    /** Thumb TactileSwitch saat ON. */
+    val GlassElevationThumb = 2.dp
 }

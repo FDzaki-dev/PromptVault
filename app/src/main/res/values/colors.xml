@@ -1,15 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- v3.0.0: palet kraft/pine terang lama dihapus total. Hanya token
-         AMOLED yang dibutuhkan resource sistem (splash screen) yang tersisa
-         di sini; sumber kebenaran warna tetap ui/theme/Color.kt (Compose).
-         v4.0.0: hex disamakan ke AmoledBackground baru (tint teal), token
-         aksen di-rename dari pv_midnight_blue_accent -> pv_teal_accent
-         (rebrand "Transformative Teal", ikut Color.kt#TealAccent).
-         v6.0.0: pv_teal_accent -> pv_platinum_accent, ikut re-palette
-         Color.kt#PlatinumAccent (Platinum + Ruby). Token ini TIDAK
-         direferensikan XML lain saat ini (cek grep sebelum edit), tetap
-         disamakan supaya tidak jadi sisa hex basi kalau kelak dipakai. -->
-    <color name="pv_amoled_background">#030A09</color>
-    <color name="pv_platinum_accent">#DCE2E9</color>
+    <!-- v7.0.0: Neumorphism to Glassmorphism. pv_amoled_background diisi
+         hex Deep Navy (#0B132B, sesuai Color.kt#AmoledBackground, nama
+         token TIDAK diubah supaya MainActivity.kt protected asset tidak
+         perlu disentuh). pv_platinum_accent diganti pv_brass_accent, ikut
+         re-palette Color.kt#BrassAccent (aksen tombol utama, permintaan
+         eksplisit user). Token ini TIDAK direferensikan XML lain saat ini
+         (cek grep sebelum edit), tetap disamakan supaya tidak jadi sisa
+         hex basi kalau kelak dipakai. -->
+    <color name="pv_amoled_background">#0B132B</color>
+    <color name="pv_brass_accent">#B5A642</color>
 </resources>
