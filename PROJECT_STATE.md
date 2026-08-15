@@ -3,7 +3,62 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
-## STATUS PROJECT: v2.24.1 -- COMPILE-FIX "--" di colors.xml + rapikan urutan dokumentasi -- 2026-08-15
+## STATUS PROJECT: v2.24.2 -- FIX BUG NYATA (screenshot user): tab "Undo Pemindahan" hilang + "Log" melebar + kotak kosong raksasa di Riwayat Aktivitas -- 2026-08-15
+- User kirim 2 screenshot HP asli v2.24.1 dibanding referensi struktur lama
+  (3 screenshot v2.20.3): segmented control "Riwayat Aktivitas" cuma
+  menampilkan pil "Log" melebar selebar layar, tab "Undo Pemindahan"
+  lenyap total, + kotak hijau gelap kosong raksasa di bawahnya.
+- **Root cause (`ui/components/Neumorphic.kt`)**: `NeumorphicSurface`
+  memasang `modifier` parameter pemanggil (termasuk `RowScope.weight(1f)`
+  dari `SegmentedControl.kt` utk segment terpilih) ke `Surface` KONTEN
+  beberapa lapis `Box` DI DALAM, bukan ke `Box` TERLUAR yang benar-benar
+  jadi anak langsung `Row` pemanggil. `weight()` adalah `ParentDataModifier`
+  yang HANYA terbaca Row dari modifier chain anak LANGSUNG-nya -- nyasar ke
+  lapisan dalam = `Row` menganggap segment itu TIDAK punya weight sama
+  sekali, lebar internalnya (`Text(fillMaxWidth())`) malah mengambil
+  SELURUH lebar Row, menyisakan nol ruang utk sibling. **Dicatat sebagai
+  Insiden #8** (lihat riwayat insiden kronologis di bawah untuk detail
+  lengkap + kelas bug ini).
+- **Fix**: `modifier` sekarang dipasang di `Box` terluar (root komposabel,
+  sesuai konvensi Compose resmi). `Surface` konten SENGAJA TETAP bukan
+  `matchParentSize()` (beda dari shadow-caster) supaya `Box` tetap
+  wrap-content tinggi mengikuti `Surface` kalau `modifier` cuma mengunci
+  lebar (kasus umum: `fillMaxWidth()`/`weight()` tanpa tinggi eksplisit) --
+  0 perubahan visual utk 6 pemanggil `NeumorphicSurface` lain yang sudah
+  diverifikasi manual satu-satu (`VaultCard`, `GroupedListRow`,
+  `TactileSwitch` x2, `EmptyState`, `VaultActionSheet`, CTA `HomeScreen`).
+- **Verifikasi cakupan bug**: `grep -rn "\.weight("` seluruh `ui/` --
+  HANYA 1 titik yang mengoper `weight()` sbg `modifier` param ke
+  `NeumorphicSurface` (titik bug ini). Semua `weight()` lain dipasang
+  LANGSUNG ke elemen native Row/Column/Spacer, tidak lewat wrapper --
+  tidak kena kelas bug yang sama, tidak perlu diubah.
+- File diubah (2): `ui/components/Neumorphic.kt` (fix inti + javadoc),
+  `app/build.gradle.kts` (versi). `scripts/preflight_check.sh` lolos
+  bersih 11/11.
+- **Investigasi awal SEBELUM bug ini ditemukan** (dicatat supaya sesi
+  depan tidak audit ulang dari nol): user awalnya kirim 3 screenshot
+  v2.20.3 + klaim umum "layout deformasi akibat merge" TANPA screenshot
+  kondisi v2.24.1 saat ini. Audit statis `RuleListScreen`/`ActivityLogScreen`/
+  `RuleCard`/`SegmentedControl` terhadap referensi v2.20.3 TIDAK menemukan
+  elemen hilang/struktur kacau (RuleCard 2-baris = fix P1 terdokumentasi
+  v2.22.0 #UI-03, FAB `contentPadding=88dp` = fix terdokumentasi v2.24.0
+  #UI-20, keduanya BUKAN regresi baru) -- diminta klarifikasi ke user via
+  `ask_user_input_v0` alih-alih menebak/mengubah kode blind. User lalu
+  kirim screenshot KONDISI NYATA v2.24.1 (bukan cuma klaim), barulah bug
+  Insiden #8 di atas ketemu lewat pembacaan kode `Neumorphic.kt` yang
+  ditunjuk balik dari gejala visual di screenshot itu. **Pelajaran
+  proses**: saat klaim "deformasi/regresi" datang tanpa bukti visual
+  kondisi SAAT INI, minta screenshot/gejala konkret dulu sebelum menebak
+  filenya -- audit statis terhadap referensi lama saja tidak cukup untuk
+  menangkap bug runtime-only class ini (`weight()` salah lapis TIDAK
+  terlihat sebagai kesalahan dari membaca kode 1 file saja tanpa tahu
+  ParentDataModifier semantics -- ketemu justru krn dicari SPESIFIK
+  menjelaskan gejala visual "1 pil melebar + 1 hilang + kotak kosong").
+- **BELUM PERNAH lewat `./gradlew` asli / device asli.** User WAJIB
+  verifikasi di HP: tab "Log"/"Undo Pemindahan" tampil berdampingan
+  (bukan 1 melebar penuh), tidak ada kotak kosong, kedua tab bisa di-tap.
+
+## STATUS PROJECT SEBELUMNYA: v2.24.1 -- COMPILE-FIX "--" di colors.xml + rapikan urutan dokumentasi -- 2026-08-15
 - User upload `build-failure-log-v2_24_0.zip`: `:app:mergeDebugResources
   FAILED` -- `colors.xml:11` punya `--` di badan komentar `<!-- -->`,
   dilarang keras spec XML 1.0. **Kelas bug identik dengan Insiden `v2.6.0`**
@@ -1249,6 +1304,67 @@ worker/          -- AutoSortWorker (WorkManager), BootCompletedReceiver,
      ikut terpindah setengah jadi/korup, tidak aman dihapus begitu saja.
 
 ## Riwayat insiden kronologis (JANGAN DIHAPUS, tambah entri baru di ATAS)
+
+### [2026-08-15] Insiden #8 -- NeumorphicSurface: `modifier` (termasuk `weight()`) dipasang di lapisan Compose yang salah
+- **Gejala (laporan user + 2 screenshot HP asli v2.24.1)**: layar "Riwayat
+  Aktivitas" -- pil "Log" melebar SELEBAR LAYAR, tab "Undo Pemindahan"
+  lenyap total, + kotak hijau gelap kosong raksasa di bawah pil sebelum
+  daftar log muncul.
+- **Root cause**: `NeumorphicSurface` (`ui/components/Neumorphic.kt`,
+  primitif tunggal Neumorphism sejak v5.0.0/v2.21.0) menerima parameter
+  `modifier: Modifier` dari pemanggil, tapi memasangnya ke `Surface` KONTEN
+  yang posisinya BEBERAPA LAPIS `Box` DI DALAM -- BUKAN ke `Box` TERLUAR
+  yang benar-benar jadi elemen anak-langsung dari composable pemanggil
+  (mis. `Row` di `SegmentedControl.kt`). Ini "bekerja" (tidak kelihatan
+  salah) untuk modifier UKURAN biasa (`size()`, `fillMaxWidth()`,
+  `padding()`, `offset()`, `scale()`) karena `Box` tanpa modifier tetap
+  bisa wrap-content mengikuti ukuran `Surface` di dalamnya. TAPI FATAL
+  untuk `ParentDataModifier` seperti `RowScope.weight()`/`ColumnScope
+  .weight()` -- parent data itu HANYA dibaca `Row`/`Column` dari modifier
+  chain milik ANAK LANGSUNG-nya (di sini: `Box` terluar `NeumorphicSurface`),
+  BUKAN dari node manapun yang lebih dalam. `SegmentedControl.kt` memanggil
+  `NeumorphicSurface(modifier = Modifier.weight(1f), ...)` untuk segment
+  YANG SEDANG TERPILIH -- `weight()` itu nyasar ke `Surface` dalam,
+  `Row` menganggap child ini TIDAK berbobot sama sekali, lalu `Text
+  (Modifier.fillMaxWidth())` di dalamnya mewarisi lebar penuh Row yang
+  tersedia (karena child "tak berbobot" diukur dgn constraint longgar) --
+  menyisakan NOL ruang untuk sibling segment lain yang weight-nya justru
+  valid. Match PERSIS gejala di screenshot.
+- **Kenapa lolos audit statis sebelumnya**: `preflight_check.sh` kategori
+  #2 mengecek IMPORT member-scope yang salah (pola insiden lama
+  `animateItemPlacement`/v2.3.7 & `weight` import top-level/v2.22.0) --
+  BUKAN mengecek APAKAH `weight()` yang sudah correct-diimport dipasang di
+  LAPISAN Compose yang tepat saat dioper lewat parameter `modifier` sebuah
+  wrapper composable. Ini kelas kesalahan BERBEDA (semantik layout, bukan
+  resolusi import) yang preflight statis TIDAK dirancang menangkapnya --
+  hanya kelihatan lewat reasoning manual tentang bagaimana Row membaca
+  parent data, dipicu justru oleh gejala visual di screenshot user.
+- **Fix**: `modifier` parameter sekarang dipasang LANGSUNG di `Box`
+  terluar `NeumorphicSurface` (root komposabel -- sesuai konvensi resmi
+  Compose "selalu pasang parameter modifier di elemen root"). `Surface`
+  konten SENGAJA TETAP BUKAN `matchParentSize()` (beda perlakuan dari 2
+  shadow-caster Box yang MEMANG `matchParentSize()`) -- ia anak `Box`
+  biasa yang mewarisi constraints yang sama dari induknya, supaya kasus
+  umum (`modifier` cuma mengunci LEBAR, mis. `fillMaxWidth()`/`weight()`,
+  TANPA tinggi eksplisit) `Box` tetap bisa wrap-content TINGGI mengikuti
+  konten `Surface` asli -- PERSIS perilaku lama untuk 6 pemanggil lain
+  (`VaultCard`, `GroupedListRow`, `TactileSwitch` x2, `EmptyState`,
+  `VaultActionSheet`, CTA `HomeScreen`), semua sudah pakai modifier ukuran
+  biasa, bukan `weight()` -- diverifikasi manual satu-satu (bukan asumsi)
+  sebelum ZIP dipaket, 0 perubahan visual utk mereka.
+- **PELAJARAN PERMANEN untuk sesi Claude berikutnya**: composable wrapper
+  APA PUN yang menerima parameter `modifier: Modifier` WAJIB memasang
+  modifier itu di elemen ROOT/terluar yang composable itu kembalikan --
+  BUKAN di elemen anak yang lebih dalam -- meskipun secara visual "kelihatan
+  benar" untuk modifier ukuran biasa (fillMaxWidth/size/padding/dst).
+  Modifier `ParentDataModifier` (`weight()` di Row/Column, & sejenisnya)
+  HANYA berfungsi kalau nempel di anak LANGSUNG dari Row/Column/layout
+  scope terkait -- kalau ada composable wrapper lain di codebase ini yang
+  ditambahkan ke depan dan menerima `modifier` dari pemanggil, cek dulu
+  modifier itu benar-benar jatuh di root, terutama kalau composable itu
+  nanti dipakai di dalam `Row`/`Column` dengan `weight()`.
+- **BELUM dikonfirmasi user** -- tunggu screenshot/laporan HP asli
+  setelah update berikutnya.
 
 ### [2026-08-12] v2.17.0 -- SAF ditulis ulang mengikuti prosedur Insiden #7 (bukan insiden baru, ini eksekusi remediasinya)
 - **Trigger**: user minta "tambahkan fitur SAF, dengan penuh dedikasi bukan

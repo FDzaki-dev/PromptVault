@@ -3,6 +3,71 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.24.2 -- FIX BUG NYATA (laporan user + screenshot): tab "Undo Pemindahan" hilang, "Log" melebar + kotak kosong raksasa di Riwayat Aktivitas (2026-08-15)
+
+User kirim 2 screenshot HP asli v2.24.1 (dibandingkan ke screenshot v2.20.3
+sebagai referensi struktur lama): layar "Riwayat Aktivitas" -- segmented
+control cuma menampilkan pil "Log" MELEBAR SELEBAR LAYAR, tab "Undo
+Pemindahan" hilang total, DAN ada kotak hijau gelap kosong raksasa di
+bawahnya sebelum daftar log mulai muncul.
+
+**Root cause (`ui/components/Neumorphic.kt`, `NeumorphicSurface`)**:
+`SegmentedControl.kt` memanggil `NeumorphicSurface(modifier =
+Modifier.weight(1f), ...)` untuk segment yang SEDANG TERPILIH (di dalam
+`Row` tab Log/Undo). `NeumorphicSurface` SEBELUMNYA memasang `modifier`
+parameter ini ke `Surface` KONTEN yang letaknya beberapa lapis `Box` DI
+DALAM, bukan ke `Box` TERLUAR yang benar-benar jadi anak langsung `Row`
+pemanggil. `RowScope.weight()` adalah `ParentDataModifier` -- HANYA
+terbaca oleh `Row` kalau nempel di modifier chain anak LANGSUNG-nya. Karena
+`weight()` di sini nyasar ke `Surface` (bukan `Box` terluar), `Row` sama
+sekali TIDAK menganggap segment itu "punya weight" -- diperlakukan sebagai
+child tak-berbobot yang lebar internalnya (lewat `Text(Modifier
+.fillMaxWidth())` di dalam) malah mengambil SELURUH lebar `Row` yang
+tersedia, menyisakan NOL ruang untuk segment "Undo Pemindahan" (yang
+weight-nya justru valid tapi kehabisan sisa ruang) -- match PERSIS gejala
+di screenshot (satu pil melebar penuh, satunya lenyap).
+
+**Ini KELAS BUG BARU yang belum pernah tercatat di project ini** -- mirip
+semangatnya dengan Insiden #3 lama (modifier di lapisan wrapper yang salah
+menyebabkan ukuran kacau), tapi soal `ParentDataModifier`/`weight()`,
+bukan soal `fillMaxSize()`. Dicatat sebagai **Insiden #8** di
+`PROJECT_STATE.md`.
+
+**Fix**: `modifier` parameter sekarang dipasang LANGSUNG di `Box` terluar
+`NeumorphicSurface` (root komposabel sesuai konvensi resmi Compose), bukan
+lagi di `Surface` konten. `Surface` konten SENGAJA TETAP bukan
+`matchParentSize()` (beda dari shadow-caster) -- ia anak `Box` biasa yang
+mewarisi constraints yang sama, supaya kasus umum (`modifier` cuma
+mengunci lebar, mis. `fillMaxWidth()`/`weight()`, tanpa tinggi eksplisit)
+`Box` TETAP wrap-content tinggi mengikuti `Surface` persis seperti
+sebelumnya -- **0 perubahan visual utk 6 pemanggil lain** (`VaultCard`,
+`GroupedListRow`, `TactileSwitch` x2, `EmptyState`, `VaultActionSheet`,
+CTA `HomeScreen`), semua sudah pakai modifier ukuran biasa (size/
+fillMaxWidth/padding/offset/scale, bukan `weight()`) -- diverifikasi
+manual satu-satu (lihat grep cross-check di bawah) sebelum ZIP dipaket.
+
+**Verifikasi sebelum paket**: `grep -rn "\.weight("` di seluruh `ui/` --
+HANYA 1 titik di seluruh codebase yang mengoper `weight()` sebagai
+`modifier` PARAMETER ke dalam `NeumorphicSurface` (persis titik bug ini,
+`SegmentedControl.kt` segment terpilih); semua pemakaian `weight()`
+lainnya (`GroupedListRow`, `RuleCard` Spacer, `ActivityLogScreen` x2,
+`AddEditRuleScreen` x2, `DiagnosticsScreen`, `OnboardingScreen`) dipasang
+LANGSUNG ke elemen native (`Row`/`Column`/`Spacer`), tidak lewat wrapper
+apa pun -- tidak kena kelas bug yang sama. `scripts/preflight_check.sh`
+lolos bersih 11/11.
+
+File diubah (2): `ui/components/Neumorphic.kt` (fix inti + javadoc
+diperbarui), `app/build.gradle.kts` (versi).
+
+**BELUM PERNAH lewat `./gradlew` asli / device asli.** User WAJIB
+verifikasi di HP: buka "Riwayat Aktivitas", pastikan pil "Log" dan "Undo
+Pemindahan" tampil BERDAMPINGAN (bukan satu melebar penuh), tidak ada
+kotak kosong di bawahnya, dan kedua tab tetap bisa di-tap normal. Kalau
+masih ada gejala serupa (elemen melebar tak wajar / hilang) di komponen
+LAIN yang juga pakai `NeumorphicSurface` + `weight()` di masa depan,
+kemungkinan pola bug yang sama -- cek dulu `modifier` param-nya dipasang
+di `Box` terluar, bukan lapisan dalam.
+
 ## v2.24.1 -- COMPILE-FIX: `"--"` di komentar `colors.xml` + rapikan urutan seluruh dokumentasi (2026-08-15)
 
 User upload `build-failure-log-v2_24_0.zip`. `:app:mergeDebugResources FAILED`

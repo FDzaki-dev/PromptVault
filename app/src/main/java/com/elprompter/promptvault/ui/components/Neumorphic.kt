@@ -49,16 +49,22 @@ import com.elprompter.promptvault.ui.theme.TactileTokens
  * shadow SELALU jatuh di node ber-`background` SOLID, TIDAK PERNAH dirantai
  * langsung ke node ber-`Brush` gradient di modifier chain yang sama.
  *
- * PENTING (mencegah regresi kelas Insiden #3 "VaultCard wrap-content"):
- * kedua Box shadow-caster memakai `Modifier.matchParentSize()` (BoxScope),
- * BUKAN `Modifier.fillMaxSize()` -- dan keduanya dideklarasikan SEBELUM
- * `Surface` konten asli. `matchParentSize()` tidak ikut menentukan ukuran
- * `Box` induk (hanya elemen TANPA `matchParentSize` yang menentukan ukuran,
- * lihat dokumentasi resmi Compose `Box`) -- jadi `Surface` konten asli
- * (wrap-content mengikuti isi + modifier dari pemanggil) TETAP yang
- * menentukan ukuran akhir, kedua shadow-caster otomatis mengikuti ukuran
- * itu. Urutan deklarasi (caster dulu, baru Surface) HANYA mempengaruhi
- * z-order gambar (caster di belakang), bukan pengukuran ukuran.
+ * PENTING (mencegah regresi kelas Insiden #3 "VaultCard wrap-content" DAN
+ * Insiden #8 "SegmentedControl weight() nyasar"): `modifier` PARAMETER
+ * (dari pemanggil -- `fillMaxWidth()`/`size(...)`/`weight(1f)`/dst) dipasang
+ * di `Box` TERLUAR ini sendiri (root komposabel, sesuai konvensi resmi
+ * Compose), BUKAN di `Surface` konten di dalamnya -- WAJIB begitu supaya
+ * `ParentDataModifier` seperti `RowScope.weight()` terbaca benar oleh
+ * Row/Column pemanggil (lihat Insiden #8, PROJECT_STATE.md). Kedua Box
+ * shadow-caster memakai `Modifier.matchParentSize()` (BoxScope), BUKAN
+ * `Modifier.fillMaxSize()`. `Surface` konten TIDAK matchParentSize (beda
+ * dari shadow-caster) -- ia anak Box "biasa" yang mewarisi constraints yang
+ * sama dari `Box` (lebar ikut terkunci kalau `modifier` mengunci lebar,
+ * tinggi tetap longgar kalau tidak dikunci) sehingga `Box` TETAP bisa
+ * wrap-content TINGGI mengikuti konten `Surface` asli persis seperti
+ * sebelumnya (mis. `VaultCard`/CTA Home yang cuma `fillMaxWidth()` tanpa
+ * tinggi eksplisit). Urutan deklarasi (caster dulu, baru Surface) HANYA
+ * mempengaruhi z-order gambar (caster di belakang), bukan pengukuran ukuran.
  *
  * ## Cara kerja (PRESSED / permukaan tenggelam, `pressed = true`)
  * Shadow-caster offset TIDAK dipakai (tidak ada "permukaan timbul" utk
@@ -109,13 +115,28 @@ fun NeumorphicSurface(
     // dari pemanggil wrap-content, bukan ukuran tetap).
     content: @Composable () -> Unit
 ) {
-    // PENTING: `modifier` (mis. `fillMaxWidth()`/`size(...)` dari pemanggil)
-    // dipasang di `Surface` KONTEN ASLI di bawah, BUKAN di `Box` pembungkus
-    // ini -- `Box` sengaja TANPA modifier ukuran sendiri supaya cuma wrap
-    // apa pun ukuran akhir `Surface` (persis pola lama VaultCard: modifier
-    // pemanggil selalu jatuh di elemen yang benar-benar menentukan ukuran).
-    // Shadow-caster `matchParentSize()` di bawah otomatis ikut ukuran itu.
-    Box {
+    // [Fix Insiden #8, v2.24.2] SEBELUMNYA `modifier` pemanggil (mis.
+    // `fillMaxWidth()`/`size(...)`/`weight(1f)`) dipasang di `Surface` KONTEN
+    // di dalam, BUKAN di `Box` pembungkus terluar ini -- niatnya supaya `Box`
+    // cuma wrap ukuran akhir `Surface`. Itu BEKERJA untuk modifier ukuran
+    // biasa (size/fillMaxWidth/padding/offset/scale), TAPI SALAH FATAL untuk
+    // `ParentDataModifier` seperti `RowScope.weight()`/`ColumnScope.weight()`
+    // -- parent data itu HANYA dibaca oleh Row/Column dari modifier chain
+    // milik ANAK LANGSUNG-nya. Karena anak langsung Row/Column di sini
+    // adalah `Box` INI (bukan `Surface` yang beberapa lapis di dalamnya),
+    // `weight()` yang nyasar ke `Surface` tidak pernah terbaca -- child
+    // dianggap TIDAK punya weight sama sekali. Gejala nyata: `SegmentedControl`
+    // segment TERPILIH (dibungkus komponen ini) melebar tak terkendali +
+    // segment lain hilang/kolaps (lihat PROJECT_STATE.md Insiden #8).
+    // **Fix**: `modifier` pemanggil sekarang dipasang LANGSUNG di `Box`
+    // terluar ini (elemen yang BENAR-BENAR jadi anak Row/Column pemanggil,
+    // sesuai konvensi resmi Compose "selalu pasang parameter modifier di
+    // root komposabel"). Shadow-caster & `Surface` konten di bawah sekarang
+    // `matchParentSize()` mengikuti `Box` ini -- hasil visual utk SEMUA
+    // pemanggil modifier ukuran biasa (VaultCard, GroupedListRow, dst)
+    // IDENTIK seperti sebelumnya (diverifikasi manual tiap call site di
+    // CHANGELOG v2.24.2), cuma `weight()` yang sekarang benar-benar berfungsi.
+    Box(modifier = modifier) {
         if (!pressed) {
             // Shadow gelap (kanan-bawah) -- pakai warna bayangan default
             // Compose (hitam, dimodulasi elevasi), identik mekanisme yang
@@ -157,11 +178,21 @@ fun NeumorphicSurface(
             shape = shape
         )
 
-        // `modifier` pemanggil dipasang DI SINI (bukan di Box induk, lihat
-        // catatan di atas) supaya perilaku ukuran identik dgn `Surface`
-        // polos yang digantikan (fillMaxWidth/size dari pemanggil langsung
-        // menentukan ukuran elemen konten asli, wrap-content kalau kosong).
-        val contentModifier = modifier.then(if (pressed) pressedScrim else Modifier)
+        // `Surface` konten TIDAK lagi membawa `modifier` pemanggil sendiri
+        // (sudah pindah ke `Box` terluar, lihat catatan di atas) -- TAPI
+        // SENGAJA JUGA TIDAK `matchParentSize()` (beda dari shadow-caster).
+        // `Surface` di sini tetap anak Box "biasa" (non-matchParentSize)
+        // supaya kalau `modifier` pemanggil cuma mengunci LEBAR (mis.
+        // `fillMaxWidth()`/`weight(1f)`, tinggi longgar), `Box` tetap bisa
+        // wrap-content TINGGI mengikuti konten `Surface` asli -- persis
+        // perilaku lama (`VaultCard`/CTA Home yang cuma `fillMaxWidth()`
+        // TANPA tinggi eksplisit TETAP wrap-content). `Box` meneruskan
+        // constraints yang sama ke `Surface` non-matchParentSize ini
+        // (lebar terkunci ikut constraint `Box`, tinggi tetap longgar) --
+        // hasil akhir identik dgn sebelumnya utk kasus ukuran biasa, TAPI
+        // sekarang `weight()`/ParentData lain terbaca benar oleh Row/Column
+        // karena sudah nempel di `Box`, bukan lagi nyasar ke sini.
+        val contentModifier = Modifier.then(if (pressed) pressedScrim else Modifier)
         if (onClick != null) {
             Surface(
                 onClick = onClick,
