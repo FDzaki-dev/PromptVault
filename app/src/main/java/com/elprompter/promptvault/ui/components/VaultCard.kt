@@ -3,6 +3,8 @@ package com.elprompter.promptvault.ui.components
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import com.elprompter.promptvault.ui.theme.AmoledBackground
 import com.elprompter.promptvault.ui.theme.GlassSurface
 import com.elprompter.promptvault.ui.theme.TactileTokens
 
@@ -23,16 +25,28 @@ import com.elprompter.promptvault.ui.theme.TactileTokens
  * disebut `TealTint`/`TealGradientAlpha`) SEKARANG TIDAK
  * dipakai lagi oleh `VaultCard` -- tapi TIDAK dihapus dari `Color.kt`, masih
  * dipakai komponen lain (lihat FILE_MANIFEST/grep sebelum audit hapus).
+ *
+ * [Fix Insiden #9, v2.24.3] `baseColor` sekarang bisa dioper pemanggil
+ * (default TETAP [AmoledBackground], 0 perubahan utk 12 dari 13 call site --
+ * lihat PROJECT_STATE.md). Dibutuhkan krn `NeumorphicSurface` cuma
+ * "menyamarkan" badan shadow-caster-nya kalau `baseColor` PERSIS/dekat sama
+ * warna LATAR SESUNGGUHNYA di belakang kartu (lihat javadoc `Neumorphic.kt`)
+ * -- default [AmoledBackground] cocok utk layar berlatar solid, TAPI
+ * `HomeScreen` (satu-satunya pemanggil non-default) punya wash gradient di
+ * latarnya (bukan solid), jadi perlu baseColor efektif hasil composite,
+ * bukan default mentah.
  */
 @Composable
 fun VaultCard(
     modifier: Modifier = Modifier,
+    baseColor: Color = AmoledBackground,
     content: @Composable () -> Unit
 ) {
     NeumorphicSurface(
         modifier = modifier,
         shape = MaterialTheme.shapes.medium,
         color = GlassSurface,
+        baseColor = baseColor,
         elevation = TactileTokens.NeuElevationCard,
         shadowOffset = TactileTokens.NeuOffsetCard,
         content = content

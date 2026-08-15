@@ -3,6 +3,61 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v2.24.3 -- FIX bug visual nyata (screenshot user): "kartu hantu" mengintip di HomeScreen (2026-08-15)
+User kirim 2 screenshot HP asli v2.24.2 + instruksi "fokus perbaiki kerusakan
+asimetris & cacat ulah sesi lain" -- diaudit langsung dari gejala visual
+kedua screenshot (bukan tebakan), BUKAN melanjutkan technical debt list sesi
+sebelumnya (instruksi eksplisit: lupakan progres sebelumnya).
+
+**Bug (Insiden #9)**: kartu statistik "Rule aktif/Auto-scan" & tombol "Scan
+Sekarang" di `HomeScreen` sama-sama menampakkan potongan persegi "hantu" di
+sisi kanan(-bawah), tidak simetris dgn sisi kiri. Root cause: keduanya lewat
+`NeumorphicSurface` (lihat `Neumorphic.kt`) yang butuh `baseColor` = warna
+LATAR SESUNGGUHNYA supaya badan shadow-caster-nya (persegi solid yg digeser
+`shadowOffset` ke kanan-bawah) menyatu tak terlihat dgn sekitarnya -- kedua
+pemanggil ini diam-diam pakai default `AmoledBackground`, padahal `HomeScreen`
+(SATU-SATUNYA layar di app ini berlatar gradient, `Brush.verticalGradient`
+`colors.surfaceVariant` 55% alpha -> `colors.background`, ditambahkan sejak
+fix UI-10) TIDAK berlatar solid AmoledBackground di area itu -- badan
+shadow-caster jadi nongol sbg persegi salah warna, gejala visual "kartu
+hantu" mengintip persis sisi geser shadow (kanan-bawah = asimetris, bukan
+simetris di semua sisi seperti seharusnya cuma shadow tipis biasa). TIDAK
+terjadi di 12 pemanggil `VaultCard` lain (semua berlatar solid, tidak kena
+kelas bug ini).
+
+**Fix**: `VaultCard` sekarang menerima parameter `baseColor` opsional
+(default TETAP `AmoledBackground`, 0 perubahan di 12 call site lain).
+`HomeScreen` menghitung warna latar EFEKTIF di titik gradient teratas
+(`colors.surfaceVariant.copy(alpha=0.55f).compositeOver(colors.background)`,
+pakai `Color.compositeOver()` bawaan Compose, bukan pendekatan manual) lalu
+mengoper itu ke `VaultCard` (kartu stat) & `NeumorphicSurface` CTA (tombol
+Scan Sekarang) -- 2 satu-satunya pemanggil di layar bergradient itu. Tidak
+sempurna 100% di semua posisi scroll (background gradient diam, konten
+scroll di atasnya), tapi menghilangkan artefak di posisi normal/tanpa-scroll
+(persis kondisi screenshot user) & jauh lebih dekat drpd default polos.
+
+**Preflight ditambah kategori #12** (`scripts/preflight_check.sh`): tiap
+file layar dgn `Brush.*Gradient` di latar, cek ADA pemanggilan
+`baseColor` di file yg sama -- heuristik per-file (bukan presisi per-baris),
+supaya kelas bug ini (baseColor default meleset dari latar non-solid)
+kepantau otomatis di masa depan, bukan cuma titik ini.
+
+**Ditinjau & DIBIARKAN (bukan bug)**: screenshot 1 (Kelola Rule) menampilkan
+FAB "+" menumpuk ikon hapus kartu rule #3 dari 6 -- ini perilaku FAB
+mengambang standar Android SAAT BELUM di-scroll penuh (kartu TERAKHIR sudah
+diberi `contentPadding(bottom=88dp)` sejak v2.24.0 #UI-20 supaya tetap bisa
+di-tap penuh setelah discroll -- itu fix yg relevan, sudah ada). Tidak ada
+kode yang diubah utk gejala ini -- bukan regresi, bukan kelas bug yang sama
+dgn Insiden #9.
+
+File diubah (4): `ui/components/VaultCard.kt` (param `baseColor`),
+`ui/screens/HomeScreen.kt` (hitung & pasang `homeCardBaseColor`),
+`scripts/preflight_check.sh` (kategori #12 baru), `app/build.gradle.kts`
+(versi). `scripts/preflight_check.sh` lolos bersih 12/12. **BELUM PERNAH
+lewat `./gradlew` asli / device asli.** User WAJIB verifikasi di HP: kartu
+stat & tombol Scan Sekarang di layar utama tidak lagi ada potongan persegi
+mengintip di sisi kanan/bawah.
+
 ## v2.24.2 -- FIX BUG NYATA (laporan user + screenshot): tab "Undo Pemindahan" hilang, "Log" melebar + kotak kosong raksasa di Riwayat Aktivitas (2026-08-15)
 
 User kirim 2 screenshot HP asli v2.24.1 (dibandingkan ke screenshot v2.20.3

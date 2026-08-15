@@ -129,6 +129,35 @@ done
 [ "$DECODE_ISSUE" -eq 0 ] && ok "Semua decodeFromString<T> punya import lengkap"
 
 echo ""
+echo "== 12. NeumorphicSurface/VaultCard di layar berlatar gradient tanpa baseColor eksplisit =="
+# [ditambahkan 2026-08-15, fix v2.24.3, Insiden #9] NeumorphicSurface hanya
+# menyamarkan badan shadow-caster-nya kalau `baseColor` cocok dgn warna LATAR
+# SESUNGGUHNYA (lihat javadoc Neumorphic.kt). Default baseColor=AmoledBackground
+# cuma valid utk layar berlatar SOLID -- kalau sebuah file layar punya latar
+# gradient (Brush.verticalGradient/horizontalGradient/radialGradient dipasang
+# sbg .background() Box terluar) TAPI ada pemanggil VaultCard(...)/
+# NeumorphicSurface(...) di file yang SAMA tanpa parameter baseColor, badan
+# shadow-caster-nya akan meleset dari gradient asli -- gejala nyata: potongan
+# persegi "hantu" mengintip di tepi komponen (lihat PROJECT_STATE.md Insiden #9,
+# laporan screenshot user pada HomeScreen). Heuristik per-file (bukan per-baris
+# persis) -- kalau false-positive di masa depan (mis. VaultCard dalam gradient
+# TAPI sudah dikasih baseColor di baris lain jauh dari pemanggilnya), review manual.
+GRADIENT_BASECOLOR_ISSUE=0
+for f in $(grep -rl "Brush\.\(vertical\|horizontal\|radial\)Gradient" "$KT_DIR/ui/screens" 2>/dev/null); do
+  if grep -qE "VaultCard\(|NeumorphicSurface\(" "$f"; then
+    # Ambil blok pemanggilan VaultCard/NeumorphicSurface s.d. 6 baris ke bawah,
+    # cek apakah ADA baseColor di salah satu pemanggilan itu.
+    CALL_COUNT=$(grep -cE "VaultCard\(|NeumorphicSurface\(" "$f")
+    BASECOLOR_COUNT=$(grep -c "baseColor" "$f")
+    if [ "$BASECOLOR_COUNT" -eq 0 ]; then
+      fail "PERIKSA MANUAL (layar gradient, $CALL_COUNT pemanggilan VaultCard/NeumorphicSurface, 0 baseColor): $f"
+      GRADIENT_BASECOLOR_ISSUE=1
+    fi
+  fi
+done
+[ "$GRADIENT_BASECOLOR_ISSUE" -eq 0 ] && ok "Semua layar gradient sudah pasang baseColor eksplisit"
+
+echo ""
 if [ "$FAIL" -eq 0 ]; then
   echo "🟢 SEMUA AMAN -- boleh lanjut package ZIP."
 else

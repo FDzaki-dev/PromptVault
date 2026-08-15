@@ -42,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
@@ -70,6 +71,27 @@ fun HomeScreen(
     onOpenSkippedFiles: () -> Unit
 ) {
     val colors = MaterialTheme.colorScheme
+    // [Fix Insiden #9, v2.24.3] Warna latar EFEKTIF di area atas layar ini
+    // (tempat VaultCard "Rule aktif" & CTA "Scan Sekarang" duduk) -- BUKAN
+    // colors.background mentah. Box pembungkus Column di bawah dicat pakai
+    // Brush.verticalGradient(colors.surfaceVariant 55% alpha -> colors.background),
+    // jadi piksel yang BENAR-BENAR tampak di dekat y=0 adalah hasil composite
+    // surfaceVariant(alpha 0.55) DI ATAS background, bukan background polos.
+    // NeumorphicSurface (lihat Neumorphic.kt) butuh `baseColor` = warna latar
+    // SESUNGGUHNYA supaya badan shadow-caster-nya menyatu tak terlihat --
+    // sebelum fix ini, 2 pemanggil di bawah (VaultCard stat + CTA Scan) diam-
+    // diam pakai default AmoledBackground yang MELESET dari gradient asli di
+    // layar ini (satu-satunya layar berlatar gradient di app, lihat grep
+    // verticalGradient di PROJECT_STATE.md) -- gejala nyata: potongan
+    // persegi "hantu" mengintip di sisi kanan-bawah kedua komponen itu
+    // (laporan screenshot user, TIDAK terjadi di layar lain yang latarnya
+    // solid). Dihitung utk titik PALING ATAS gradient (alpha stop 0.55 penuh)
+    // krn itu posisi kedua komponen ini secara konsisten (tepat di bawah
+    // judul, sebelum verticalScroll mulai geser konten jauh) -- TIDAK
+    // sempurna 100% di semua posisi scroll (gradient sendiri diam, konten
+    // scroll), tapi jauh lebih dekat drpd default polos & menghilangkan
+    // artefak di posisi normal/tanpa-scroll (kondisi screenshot user).
+    val homeCardBaseColor = colors.surfaceVariant.copy(alpha = 0.55f).compositeOver(colors.background)
     val haptics = LocalHapticFeedback.current
     val snackbarHostState = remember { SnackbarHostState() }
     // Warna Snackbar yang SEDANG tayang di-snapshot terpisah dari scanFeedback
@@ -140,7 +162,7 @@ fun HomeScreen(
             Text("PromptVault", style = MaterialTheme.typography.headlineMedium, color = colors.onBackground)
             Text("Rapikan otomatis file di Downloads kamu sesuai rule.", style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
 
-            VaultCard(modifier = Modifier.fillMaxWidth()) {
+            VaultCard(modifier = Modifier.fillMaxWidth(), baseColor = homeCardBaseColor) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     ManifestRow(icon = Icons.Filled.Rule, tint = colors.primary, label = "Rule aktif", value = "$ruleCount")
                     ManifestRow(icon = Icons.Filled.Schedule, tint = colors.tertiary, label = "Auto-scan", value = "tiap $intervalMinutes menit")
@@ -189,6 +211,7 @@ fun HomeScreen(
                     .scale(ctaScale),
                 shape = MaterialTheme.shapes.large,
                 color = colors.secondary,
+                baseColor = homeCardBaseColor,
                 elevation = TactileTokens.NeuElevationCta,
                 shadowOffset = TactileTokens.NeuOffsetCta,
                 pressed = scanPressed
