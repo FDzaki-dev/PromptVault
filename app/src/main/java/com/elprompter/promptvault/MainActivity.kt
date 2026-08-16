@@ -84,6 +84,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 private val onboardingDoneKey = booleanPreferencesKey("onboarding_done")
+private val notificationPermissionAskedKey = booleanPreferencesKey("notification_permission_asked")
 
 class MainActivity : ComponentActivity() {
 
@@ -105,6 +106,28 @@ class MainActivity : ComponentActivity() {
     private val safTreePickerLauncher = registerForActivityResult(
         ActivityResultContracts.OpenDocumentTree()
     ) { uri -> uri?.let { viewModel.setSafTreeUri(it) } }
+
+    /**
+     * [Fix audit permission edge-case, 2026-08-16] `POST_NOTIFICATIONS`
+     * SUDAH dideklarasikan di `AndroidManifest.xml` sejak Batch §5 (untuk
+     * notifikasi ongoing `AutoSortWorker` via `setForeground()`, lihat
+     * `AutoSortNotification.kt`) TAPI TIDAK PERNAH diminta secara runtime --
+     * di Android 13+ (API 33, `targetSdk = 34` app ini SUDAH di atas ambang
+     * itu), deklarasi manifest SAJA TIDAK CUKUP, izin tetap "belum
+     * diberikan" sampai diminta eksplisit lewat launcher spt ini. Tanpa
+     * fix ini, notifikasi "Auto-sort sedang berjalan" (justru tujuan UTAMA
+     * Batch §5 -- kasih user visibility scan latar belakang) kemungkinan
+     * TIDAK PERNAH tampil di HP Android 13+ manapun, padahal foreground
+     * service-nya sendiri tetap jalan diam-diam. Hasil (granted/denied)
+     * SENGAJA diabaikan (`{ _ -> }`) -- ini fitur pelengkap (visibility),
+     * BUKAN gate wajib spt izin storage; user yang menolak tidak boleh
+     * "dipaksa" lewat dialog berulang (lihat flag one-shot di
+     * `notificationPermissionAskedKey`, diminta MAKSIMAL sekali seumur
+     * instalasi, bukan tiap buka app).
+     */
+    private val notificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { _ -> }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // Splash brand-in AMOLED sebelum konten Compose siap -- kesan pertama
@@ -155,7 +178,12 @@ class MainActivity : ComponentActivity() {
                                 )
                             )
                         },
-                        onPickSafFolder = { safTreePickerLauncher.launch(null) }
+                        onPickSafFolder = { safTreePickerLauncher.launch(null) },
+                        onRequestNotificationPermission = {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            }
+                        }
                     )
                 }
             }
@@ -168,7 +196,8 @@ private fun PromptVaultRoot(
     viewModel: MainViewModel,
     legacyPermissionRecheckTrigger: Int,
     onRequestLegacyStoragePermission: () -> Unit,
-    onPickSafFolder: () -> Unit
+    onPickSafFolder: () -> Unit,
+    onRequestNotificationPermission: () -> Unit
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val navController = rememberNavController()
@@ -236,6 +265,28 @@ private fun PromptVaultRoot(
             }
         })
         return
+    }
+
+    // [Fix audit permission edge-case, 2026-08-16] Diminta SEKALI di sini
+    // (bukan di dalam PermissionGate storage di atas -- POST_NOTIFICATIONS
+    // BUKAN gate wajib, app tetap 100% fungsional tanpanya, cuma notifikasi
+    // ongoing auto-sort yang tidak tampil). Titik ini tepat setelah user
+    // resmi masuk ke app (storage granted + onboarding selesai) -- konteks
+    // paling wajar utk Android best-practice "minta izin saat relevan",
+    // BUKAN saat AutoSortWorker tiba-tiba jalan di background tanpa UI utk
+    // menampilkan dialog sama sekali. Lihat javadoc lengkap di
+    // `notificationPermissionLauncher`/`notificationPermissionAskedKey`.
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val alreadyAsked = context.promptVaultDataStore.data.first()[notificationPermissionAskedKey] ?: false
+            val alreadyGranted = ContextCompat.checkSelfPermission(
+                context, Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+            if (!alreadyAsked && !alreadyGranted) {
+                context.promptVaultDataStore.edit { it[notificationPermissionAskedKey] = true }
+                onRequestNotificationPermission()
+            }
+        }
     }
 
     NavHost(

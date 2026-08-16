@@ -3,6 +3,49 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v7.1.3 -- FIX GAP FUNGSIONAL NYATA: POST_NOTIFICATIONS tidak pernah diminta runtime (2026-08-16)
+User minta audit lebih dalam (edge case DB/permission/migrasi), setelah item
+pertama yang saya coba (`FileSorter.undo()` dispatcher) ternyata FALSE
+POSITIVE -- sudah difix di v2.20.1, langsung direvert begitu ketahuan
+(lihat commit sebelumnya utk detail koreksi).
+
+**Audit DB (Room)**: `AppDatabase.kt` (version=1, fallbackToDestructiveMigration
+terdokumentasi jelas & disengaja), `MoveHistoryDao`/`ActivityLogDao` (trim
+FIFO 200/500 baris, debounce trim v2.4.1 sudah optimal), `Converters.kt`
+(enum LogLevel<->String dgn fallback aman) -- **semua OK, tidak ada bug**.
+
+**Audit permission -- GAP NYATA ditemukan**: `POST_NOTIFICATIONS` dideklarasikan
+di `AndroidManifest.xml` sejak Batch §5 (utk notifikasi ongoing
+`AutoSortWorker`, lihat `AutoSortNotification.kt`) TAPI **tidak pernah
+diminta runtime** di kode manapun (`grep` konfirmasi 0 pemanggilan
+`ActivityResultContracts.RequestPermission()` utk izin ini). App ini
+`targetSdk=34` (Android 14), jauh di atas ambang API 33 tempat
+`POST_NOTIFICATIONS` WAJIB diminta eksplisit -- deklarasi manifest SAJA
+tidak cukup. **Dampak nyata**: notifikasi "Auto-sort sedang berjalan" --
+tujuan UTAMA Batch §5 (kasih user visibility scan background) -- kemungkinan
+TIDAK PERNAH tampil di HP Android 13+ manapun, padahal foreground service-nya
+sendiri tetap jalan diam-diam (jadi bukan crash/gagal fungsi, tapi user
+kehilangan visibility yang justru jadi alasan fitur ini dibuat).
+
+**Fix**: `MainActivity.kt` (protected asset, parsial) -- launcher baru
+`notificationPermissionLauncher`, diminta SEKALI (one-shot, flag DataStore
+`notification_permission_asked`) tepat setelah user lolos gate storage
+permission + onboarding (titik paling wajar "minta izin saat relevan").
+Hasil grant/deny SENGAJA diabaikan -- ini fitur pelengkap (visibility),
+BUKAN gate wajib spt storage, user yang menolak tidak dipaksa dialog
+berulang.
+
+**Audit migrasi**: `LegacyDataMigration.kt` sudah didesain aman-walau-tebakan-
+salah (no-op murni kalau key tidak cocok, guard flag anti-retry) -- sudah
+diverifikasi cukup di v2.20.2, tidak ada gap baru ditemukan sesi ini.
+
+File diubah (2): `MainActivity.kt` (parsial), `app/build.gradle.kts` (versi).
+`FILE_MANIFEST.txt` tidak berubah. `preflight_check.sh` 13/13 lolos bersih.
+**BELUM PERNAH lewat `./gradlew` asli/device asli.** User WAJIB verifikasi:
+(1) dialog izin notifikasi muncul SEKALI saat pertama masuk app (Android
+13+ saja), (2) setelah accept, notifikasi "Auto-sort sedang berjalan"
+benar-benar tampil saat auto-scan jalan di background.
+
 ## v7.1.2 -- Polish UI lanjutan: highlight GlassPanel diagonal->vertikal + fix Row Undo (2026-08-16)
 User laporkan v7.1.1 belum cukup: toggle/saklar, kotak ikon menu, dan tombol
 Undo masih terlihat asimetris.

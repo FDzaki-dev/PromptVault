@@ -1063,9 +1063,18 @@ class FileSorter(
      *    TAPI `originalParentUri` path lokal biasa (sumber SELALU Downloads
      *    sekarang) -> [undoSafDestination].
      *  - Bukan keduanya -> jalur lokal-ke-lokal biasa (di bawah, tidak berubah).
-     * Karakteristik dispatcher fungsi ini SENGAJA tidak diubah (masih tanpa
-     * `withContext` sendiri, sama seperti sebelumnya) -- lihat catatan di
-     * PROJECT_STATE.md soal potensi I/O di thread pemanggil.
+     * Karakteristik dispatcher fungsi ini SENGAJA tidak mengurus perpindahan
+     * thread sendiri -- caller (`MainViewModel.undoMove()`) SUDAH membungkus
+     * pemanggilan fungsi ini dengan `withContext(Dispatchers.IO)` sejak
+     * v2.20.1 (2026-08-13). Membungkus lagi DI SINI cuma jadi nested
+     * `withContext(Dispatchers.IO)` yang redundan (secara fungsional tidak
+     * salah, tapi tidak perlu & bisa menyesatkan pembaca yang mengira ini
+     * "baru pertama kali" dipindah dispatcher). [Koreksi 2026-08-16] Sempat
+     * salah ditambahkan di sini pada sesi yang sama krn catatan
+     * PROJECT_STATE.md v2.16.0 lama ("temuan sampingan, kandidat batch
+     * terpisah") dibaca tanpa cross-check entri v2.20.1 yang lebih baru,
+     * yang TERNYATA sudah menutup gap ini di caller -- langsung direvert
+     * begitu ketahuan, sebelum sempat di-package.
      */
     suspend fun undo(entry: MoveHistoryEntry): Boolean {
         if (entry.destUri.startsWith("content://")) {

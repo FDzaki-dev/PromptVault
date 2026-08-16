@@ -3,7 +3,65 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
-## STATUS PROJECT: v7.1.2 -- Polish UI lanjutan: highlight GlassPanel diagonal->vertikal + fix Row Undo tanpa CenterVertically -- 2026-08-16
+## STATUS PROJECT: v7.1.3 -- FIX GAP FUNGSIONAL NYATA: POST_NOTIFICATIONS tidak pernah diminta runtime -- 2026-08-16
+- User minta audit lebih dalam (edge case DB/permission/migrasi) setelah
+  static audit TODO/FIXME kosong. **Item pertama yang dicoba
+  (`FileSorter.undo()` dispatcher) FALSE POSITIVE** -- ternyata sudah difix
+  di v2.20.1 di level `MainViewModel.undoMove()` (`withContext(Dispatchers.IO)
+  { fileSorter.undo(entry) }`), bukan di dalam `FileSorter.undo()` sendiri.
+  Catatan v2.16.0 yang jadi acuan awal ("kandidat batch terpisah") sudah
+  usang/superseded tapi sempat kebaca tanpa cross-check entri v2.20.1 yang
+  lebih baru -- **langsung direvert begitu ketahuan, sebelum sempat
+  di-package**. Pelajaran: SELALU cek entri PALING BARU yang menyinggung
+  topik yang sama sebelum eksekusi, bukan cuma entri pertama yang ketemu.
+- **Audit Room DB**: `AppDatabase.kt` (version=1 dari awal,
+  `fallbackToDestructiveMigration` terdokumentasi jelas & disengaja --
+  belum pernah ada migrasi asli krn versi belum pernah naik), `MoveHistoryDao`/
+  `ActivityLogDao` (trim FIFO 200/500 baris + debounce v2.4.1 sudah
+  optimal), `Converters.kt` (enum LogLevel<->String dgn `getOrDefault`
+  fallback aman kalau ada rename enum masa depan) -- **semua ditinjau,
+  TIDAK ADA bug ditemukan**.
+- **Audit permission -- GAP NYATA ditemukan & difix**: `POST_NOTIFICATIONS`
+  dideklarasikan `AndroidManifest.xml` sejak Batch §5 (utk notifikasi
+  ongoing `AutoSortWorker`, lihat `AutoSortNotification.kt`) TAPI **tidak
+  pernah diminta runtime** (grep konfirmasi 0 pemanggilan
+  `ActivityResultContracts.RequestPermission()` utk izin ini di seluruh
+  kode). `targetSdk=34` (Android 14) -- jauh di atas ambang API 33 tempat
+  izin ini WAJIB diminta eksplisit, deklarasi manifest saja tidak cukup.
+  **Dampak nyata**: notifikasi "Auto-sort sedang berjalan" -- tujuan UTAMA
+  Batch §5 (kasih user visibility scan background) -- kemungkinan TIDAK
+  PERNAH tampil di Android 13+ manapun, padahal foreground service-nya
+  sendiri tetap jalan diam-diam (bukan crash, tapi kehilangan visibility
+  yang jadi alasan fitur itu dibuat).
+- **Fix**: `MainActivity.kt` (protected asset, parsial) -- launcher baru
+  `notificationPermissionLauncher`, diminta SEKALI (one-shot, flag DataStore
+  `notification_permission_asked`, pola sama dgn `onboarding_done`) tepat
+  setelah user lolos gate storage permission + onboarding. Hasil grant/deny
+  SENGAJA diabaikan -- fitur pelengkap (visibility), BUKAN gate wajib spt
+  storage, user yang menolak tidak dipaksa dialog berulang tiap buka app.
+- **Audit migrasi**: `LegacyDataMigration.kt` sudah diverifikasi cukup aman
+  di v2.20.2 (no-op murni kalau key tidak cocok, guard flag anti-retry-loop)
+  -- tidak ada gap baru ditemukan sesi ini.
+- File diubah (2): `MainActivity.kt` (parsial), `app/build.gradle.kts`
+  (versi). `FILE_MANIFEST.txt` tidak berubah. `preflight_check.sh` 13/13
+  lolos bersih.
+- Confidence Rating: **92%** (turun dari biasanya krn: (1) BELUM PERNAH
+  lewat `./gradlew` asli/device asli spt biasa, (2) API
+  `ActivityResultContracts.RequestPermission()` single-permission BELUM
+  ADA preseden lain di codebase ini -- yang sudah ada cuma
+  `RequestMultiplePermissions()` (2 izin storage legacy) dan
+  `OpenDocumentTree()`, jadi pola single-permission ini baru pertama kali
+  dipakai project ini, ditulis dari API resmi Android tapi belum ada
+  cross-check preseden internal). User WAJIB verifikasi: (1) dialog izin
+  notifikasi muncul SEKALI saat pertama kali masuk app (HANYA di Android
+  13+, tidak akan muncul di HP Android 12 ke bawah -- itu benar/sesuai
+  desain, bukan bug), (2) setelah accept, notifikasi "Auto-sort sedang
+  berjalan" benar-benar tampil saat auto-scan jalan di background, (3)
+  kalau ditolak, app tetap 100% berfungsi normal (cuma notifikasi itu yang
+  tidak tampil).
+- versionCode 82->83, versionName 7.1.2->7.1.3.
+
+## STATUS PROJECT SEBELUMNYA: v7.1.2 -- Polish UI lanjutan: highlight GlassPanel diagonal->vertikal + fix Row Undo tanpa CenterVertically -- 2026-08-16
 - User tegaskan lagi (v7.1.1 belum cukup): "Toggle/saklar, icon menu, dan
   undo button. Semuanya masih asimetris" -- diaudit ULANG dari nol (bukan
   percaya fix RuleCard v7.1.1 sudah menutup semua), fokus ke 3 elemen
