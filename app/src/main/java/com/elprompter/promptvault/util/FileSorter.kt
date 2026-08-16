@@ -107,8 +107,10 @@ fun mimeTypeForFileName(name: String): String = when (name.substringAfterLast('.
  * lihat catatan arsitektur di [FileSorter.scanAndSort]), cocokkan tiap file
  * terhadap rule aktif (berurutan sesuai PRIORITAS, mendukung multi-pattern &
  * filter ukuran), lalu pindahkan ke Downloads/PromptVault/<folderName>/ ATAU,
- * kalau user sudah memilih folder tujuan kustom lewat SAF, ke <folder
- * kustom>/PromptVault/<folderName>/ -- dan catat riwayat untuk undo.
+ * kalau user sudah memilih folder tujuan kustom lewat SAF, LANGSUNG ke <folder
+ * kustom>/<folderName>/ (SEJAK 2026-08-17, app tidak lagi bikin subfolder
+ * "PromptVault" sendiri di dalam folder kustom -- lihat KDoc
+ * [FileSorter.resolveSafRuleDestinations]) -- dan catat riwayat untuk undo.
  *
  * Prinsip "expert-level file organizer": setiap file yang TIDAK dipindahkan harus
  * bisa dijelaskan alasannya secara spesifik ke user, bukan cuma angka "dilewati".
@@ -462,34 +464,41 @@ class FileSorter(
      * "PromptVault/NamaRule"), dipakai [SettingsRepository] cache -- lihat KDoc
      * lengkap root-cause "duplikat folder berulang" di sana. `null` = gagal
      * (jangan paksa lanjut).
+     *
+     * [Instrumentasi 2026-08-16 -- user lapor duplikat MASIH terjadi meski cache
+     * Uri (fix sesi sebelumnya) sudah aktif] Cache-by-Uri TERBUKTI BELUM CUKUP
+     * sendirian -- kemungkinan besar karena skenario yang mendasarinya (listing
+     * SAF stale) juga bisa membuat query `exists()`/`isDirectory` langsung on
+     * cache HIT jadi false-negative sesaat setelah `createDirectory()`, bukan
+     * cuma `findFile()`. Tanpa akses device/Logcat asli, TIDAK bisa dipastikan
+     * ini vs kemungkinan lain -- jadi sesi ini fokus 2 hal: (1) retry pendek
+     * dengan delay sebelum menyerah & membuat folder baru (mitigasi kalau
+     * memang staleness sesaat), (2) LOG EKSPLISIT ke Activity Log tiap kali
+     * folder BARU dibuat DAN tiap kali nama hasil `createDirectory()` TIDAK
+     * PERSIS sama dengan yang diminta (bukti definitif provider ikut
+     * auto-suffix, bukan asumsi) -- supaya lain kali kejadian, user bisa
+     * buka layar Log Aktivitas & kirim baris relevan, GANTI screenshot folder
+     * yang cuma nunjukkin gejala akhir, bukan penyebabnya.
      */
     private suspend fun findOrCreateChildDirSaf(parent: DocumentFile, name: String, cacheKey: String): DocumentFile? {
-        // Langkah 1: coba URI hasil cache dulu -- resolusi 1 dokumen spesifik by Uri.
+        // Langkah 1: coba URI hasil cache dulu -- resolusi 1 dokumen spesifik by
+        // Uri, BUKAN query listing by-nama yang rentan stale (root cause fix ini).
         settingsRepository.getCachedFolderUri(cacheKey)?.let { cachedUriStr ->
             try {
-                val uri = Uri.parse(cachedUriStr)
-
-                // [Fix Duplikasi P0, 2026-08-16]
-                // Coba parsing sebagai Tree URI lebih dulu karena URI yang
-                // dikembalikan createDirectory() pada parent SAF adalah Tree URI.
-                var cached = DocumentFile.fromTreeUri(context, uri)
-
-                // Anti-Regresi: Jika OS/OEM menolak Tree URI atau gagal validasi,
-                // fallback ke SingleDocumentFile seperti implementasi awal.
-                if (cached == null || !cached.isDirectory) {
-                    cached = DocumentFile.fromSingleUri(context, uri)
-                }
-
-                if (cached != null && cached.isDirectory && cached.exists()) {
-                    return cached
-                }
+                val cached = DocumentFile.fromSingleUri(context, Uri.parse(cachedUriStr))
+                if (cached != null && cached.isDirectory && cached.exists()) return cached
             } catch (e: Exception) {
-                // URI cache basi/tidak valid (mis. folder dihapus manual atau gagal parse)
-                // -- lanjut jalur normal di bawah, JANGAN gagal di sini.
+                // URI cache basi/tidak valid (mis. folder dihapus manual) -- lanjut jalur normal di bawah, JANGAN gagal di sini.
             }
         }
-        // Langkah 2: fallback -- query listing by-nama seperti semula.
-        val existing = parent.findFile(name)
+        // Langkah 2: fallback -- query listing by-nama, dengan 1x retry+delay
+        // singkat kalau hasil pertama null (mitigasi dugaan listing stale
+        // sesaat pasca-create scan sebelumnya -- lihat KDoc di atas).
+        var existing = parent.findFile(name)
+        if (existing == null) {
+            delay(200)
+            existing = parent.findFile(name)
+        }
         if (existing != null) {
             if (!existing.isDirectory) return null // nama dipakai FILE, bukan folder -- konflik, jangan dipaksa
             settingsRepository.setCachedFolderUri(cacheKey, existing.uri.toString())
@@ -497,6 +506,18 @@ class FileSorter(
         }
         return try {
             val created = parent.createDirectory(name) ?: return null
+            if (created.name != name) {
+                // BUKTI KONKRET provider auto-suffix nama (mis. "PromptVault (1)")
+                // -- ini SUMBER duplikat, dicatat APA ADANYA supaya user bisa lihat
+                // di Log Aktivitas persis kapan/nama apa yang dihasilkan.
+                activityLogRepository.add(
+                    LogLevel.ERROR,
+                    "Provider SAF mengubah nama folder \"$name\" jadi \"${created.name}\" saat dibuat " +
+                        "(cacheKey=$cacheKey) -- ini penyebab folder duplikat \"(N)\". Sudah dicatat, folder ini tetap dipakai."
+                )
+            } else {
+                activityLogRepository.add(LogLevel.INFO, "Folder SAF baru dibuat: \"$name\" (cacheKey=$cacheKey).")
+            }
             settingsRepository.setCachedFolderUri(cacheKey, created.uri.toString())
             created
         } catch (e: Exception) {
@@ -543,13 +564,29 @@ class FileSorter(
      * periodik, tiap scan tetap serial berkat [scanMutex] -- BUKAN race baru).
      * Lapis fix tambahan ada di [findOrCreateChildDirSaf]/[SettingsRepository]
      * (cache Uri per folder, resolusi langsung by-Uri bukan listing by-nama).
+     *
+     * [Keputusan Arsitektur 2026-08-17 -- PERMINTAAN LANGSUNG USER, setelah 2
+     * ronde mitigasi (v7.1.5 cache-Uri, v7.1.6 retry+instrumentasi) TIDAK
+     * berhasil membuktikan/menyingkirkan bug ini tuntas] App **BERHENTI
+     * membuat folder root "PromptVault" sendiri di dalam folder tujuan
+     * kustom**. User membuat folder root itu MANUAL lewat file manager,
+     * lalu PILIH folder itu SENDIRI lewat SAF picker sbg "Folder Tujuan
+     * Kustom" -- `destinationRoot` (hasil `fromTreeUri`) SEKARANG LANGSUNG
+     * dipakai sbg root vault, TANPA lapisan `findOrCreateChildDirSaf(...,
+     * "PromptVault", ...)` lagi. App HANYA membuat subfolder RULE (mis.
+     * "Apps vault", "Markdown vault") langsung di dalamnya -- jalur ini
+     * TERBUKTI 0 masalah di seluruh log yang direview sesi ini. Ini
+     * menghilangkan SATU-SATUNYA titik panggilan `createDirectory("PromptVault")`
+     * di seluruh codebase (grep dikonfirmasi cuma 1 titik) -- bukan cuma
+     * menambal race/staleness-nya lagi, tapi menghapus PEMICUNYA sepenuhnya.
+     * Konsekuensi: user yang sebelumnya sudah pakai folder tujuan kustom
+     * dengan subfolder "PromptVault" di dalamnya akan lihat scan BARU
+     * menulis LANGSUNG ke root (tanpa subfolder "PromptVault" lagi) --
+     * kalau mau lanjutin struktur lama, tinggal arahkan SAF picker ke folder
+     * "PromptVault" yang sudah ada itu sendiri (bukan parent-nya).
      */
     private suspend fun resolveSafRuleDestinations(destinationRoot: DocumentFile, rules: List<Rule>): Map<String, DocumentFile?> {
-        val vaultRootDoc = findOrCreateChildDirSaf(destinationRoot, "PromptVault", cacheKey = "PromptVault")
-        if (vaultRootDoc == null) {
-            activityLogRepository.add(LogLevel.ERROR, "Gagal membuat/membuka folder \"PromptVault\" di folder tujuan kustom.")
-            return rules.associate { it.folderName to null }
-        }
+        val vaultRootDoc = destinationRoot
         val resolved = mutableMapOf<String, DocumentFile?>()
         for (rule in rules.distinctBy { it.folderName }) {
             // [Fix P0-1, audit gap 2026-08-16] Invarian yang SAMA dengan
@@ -566,7 +603,7 @@ class FileSorter(
                 resolved[rule.folderName] = null
                 continue
             }
-            val dir = findOrCreateChildDirSaf(vaultRootDoc, rule.folderName, cacheKey = "PromptVault/${rule.folderName}")
+            val dir = findOrCreateChildDirSaf(vaultRootDoc, rule.folderName, cacheKey = rule.folderName)
             if (dir == null) {
                 activityLogRepository.add(LogLevel.ERROR, "Gagal membuat/membuka folder tujuan \"${rule.folderName}\" di folder kustom.")
             }
@@ -710,7 +747,7 @@ class FileSorter(
                     ruleFolderName = rule.folderName
                 )
             )
-            activityLogRepository.add(LogLevel.SUCCESS, "\"${file.name}\" -> folder tujuan kustom/PromptVault/${rule.folderName}/")
+            activityLogRepository.add(LogLevel.SUCCESS, "\"${file.name}\" -> folder tujuan kustom/${rule.folderName}/")
             MoveOutcome.MOVED
         } catch (e: Exception) {
             activityLogRepository.add(LogLevel.ERROR, "Error memindahkan \"${file.name}\" (folder tujuan kustom): ${e.message}")
@@ -976,7 +1013,7 @@ class FileSorter(
         } else {
             moveFile(file, rule, conflictStrategy)
         }
-        val destLabel = if (destinationRoot != null) "folder tujuan kustom/PromptVault" else "PromptVault"
+        val destLabel = if (destinationRoot != null) "folder tujuan kustom" else "PromptVault"
         return when (outcome) {
             MoveOutcome.MOVED -> CandidateOutcome.Moved(overlapWarning)
             MoveOutcome.SKIPPED_CONFLICT -> CandidateOutcome.Skipped(

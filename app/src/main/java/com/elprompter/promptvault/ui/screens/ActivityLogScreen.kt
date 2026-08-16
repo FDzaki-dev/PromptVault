@@ -182,7 +182,22 @@ fun ActivityLogScreen(
                                 ) {
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(entry.fileName, style = MaterialTheme.typography.bodyMedium)
-                                        Text("Ke: PromptVault/${entry.ruleFolderName}/", style = MaterialTheme.typography.labelSmall)
+                                        Text(
+                                            // [Fix 2026-08-17] Label ini SEBELUMNYA hardcode
+                                            // "PromptVault/<rule>/" utk SEMUA entri -- sejak app
+                                            // berhenti bikin subfolder "PromptVault" sendiri di
+                                            // folder tujuan kustom SAF (lihat KDoc
+                                            // FileSorter.resolveSafRuleDestinations), itu SALAH
+                                            // utk entri SAF (destUri berupa content:// Uri).
+                                            // Entri lokal (destUri = path absolut Downloads/
+                                            // PromptVault/...) TETAP benar pakai prefix itu.
+                                            text = if (entry.destUri.startsWith("content://")) {
+                                                "Ke: folder tujuan kustom/${entry.ruleFolderName}/"
+                                            } else {
+                                                "Ke: PromptVault/${entry.ruleFolderName}/"
+                                            },
+                                            style = MaterialTheme.typography.labelSmall
+                                        )
                                         Text(formatter.format(Date(entry.timestampMillis)), style = MaterialTheme.typography.labelSmall)
                                     }
                                     TextButton(

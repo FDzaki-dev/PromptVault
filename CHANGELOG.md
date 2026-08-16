@@ -3,39 +3,100 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
-## v7.1.6 -- FIX cache-miss PERMANEN pada fix v7.1.5 (fromSingleUri().isDirectory selalu false di banyak OEM) (2026-08-16)
-Sumber: `fixing_PromptVault.md` (kontributor eksternal: Gemini). Fix v7.1.5
-(cache Uri + `DocumentFile.fromSingleUri()`) SECARA LOGIKA benar tapi PADA
-BANYAK OEM ANDROID gagal total di praktiknya: `fromSingleUri()` mengembalikan
-`SingleDocumentFile`, yang pada banyak implementasi OEM TIDAK diizinkan
-dikelola sebagai direktori -- `isDirectory` SELALU `false` untuk objek ini,
-walau URI-nya memang menunjuk folder valid. Akibatnya cek
-`cached.isDirectory` di `findOrCreateChildDirSaf` SELALU gagal -> cache-hit
-tidak pernah terjadi -> tetap jatuh ke `findFile()`/`createDirectory()` lama
-tiap scan -> bug duplikat folder v7.1.5 TIDAK benar-benar tertutup di
-device-device tsb (root cause "staleness listing SAF antar-scan" dari
-v7.1.5 tetap valid, tapi FIX-nya tidak pernah aktif).
+## v7.2.0 -- PERUBAHAN ARSITEKTUR: app BERHENTI bikin folder root "PromptVault" sendiri di folder tujuan kustom (2026-08-17)
+Setelah 2 ronde mitigasi (v7.1.5 cache-Uri, v7.1.6 retry+instrumentasi) TIDAK
+berhasil membuktikan/menyingkirkan tuntas laporan duplikat "PromptVault (N)"
+di folder tujuan kustom SAF -- **PERMINTAAN LANGSUNG USER**: hilangkan
+pemicunya sepenuhnya, bukan tambal lagi. Terverifikasi lewat grep: SELURUH
+codebase cuma punya 1 titik panggilan `createDirectory()`, yaitu di dalam
+`findOrCreateChildDirSaf` yang dipanggil `resolveSafRuleDestinations` utk
+folder root "PromptVault". Log Aktivitas user (16/08 11:44 - 17/08 07:16,
+APK 7.1.6 terverifikasi terpasang) menunjukkan JALUR SUBFOLDER RULE (Apps
+vault, Markdown vault, dst -- juga lewat `findOrCreateChildDirSaf`, fungsi
+YANG SAMA) 0 masalah -- artinya fungsinya sendiri sudah cukup solid, TAPI
+spesifik pemanggilan folder ROOT tetap jadi sumber ketidakpastian yang tidak
+kunjung terbukti tuntas tanpa akses device langsung.
 
-**Fix**: `findOrCreateChildDirSaf` sekarang coba `DocumentFile.fromTreeUri()`
-LEBIH DULU utk URI cache (Tree URI adalah jenis URI yang benar dikembalikan
-`createDirectory()` pada parent SAF, sehingga `isDirectory` valid). Fallback
-ke `fromSingleUri()` DIPERTAHANKAN (anti-regresi) kalau `fromTreeUri()` gagal
-atau OEM tetap menolak. File diubah (2): `util/FileSorter.kt`,
-`app/build.gradle.kts` (versi). Tidak ada file baru -> `FILE_MANIFEST.txt`
-tidak berubah. `scripts/preflight_check.sh` 13/13 lolos bersih.
+**Perubahan**: `resolveSafRuleDestinations` TIDAK LAGI memanggil
+`findOrCreateChildDirSaf(destinationRoot, "PromptVault", ...)`.
+`destinationRoot` (folder yang user pilih SENDIRI lewat SAF picker -- user
+BIKIN & PILIH folder itu manual, mis. beri nama "PromptVault" sendiri kalau
+mau) SEKARANG LANGSUNG dipakai sbg vault root. App HANYA membuat subfolder
+RULE (Apps vault, dst) langsung di dalamnya -- jalur yang SUDAH TERBUKTI
+bersih di log. Efek samping: konsumsi 1x lookup SAF lebih sedikit per scan
+(1 folder lebih dikit yang perlu di-resolve), scan custom-destination
+SEDIKIT lebih cepat.
 
-**PENTING**: sama seperti v7.1.5 -- folder duplikat yang SUDAH ADA di device
-user TIDAK otomatis digabung, fix ini cuma cegah duplikat baru ke depan.
+**Konsekuensi behavioral (PENTING, WAJIB dibaca user)**:
+- User yang sebelumnya sudah pakai folder tujuan kustom dgn subfolder
+  "PromptVault" DI DALAMNYA: scan BARU nulis LANGSUNG ke root (rule folder
+  langsung di bawah folder yang dipilih), TANPA subfolder "PromptVault" lagi.
+  File LAMA di subfolder "PromptVault" lama TETAP DI SANA, TIDAK dipindah
+  otomatis (di luar scope Strict Delete & Repack Guard -- ini file hasil
+  sortir user, bukan file proyek). Kalau mau lanjutin struktur lama: arahkan
+  SAF picker LANGSUNG ke folder "PromptVault" lama itu sendiri (bukan
+  parent-nya) sbg Folder Tujuan Kustom yang baru.
+- Jalur LOKAL (tanpa folder tujuan kustom, default Downloads) TIDAK berubah
+  -- masih `Downloads/PromptVault/<rule>/` seperti biasa (jalur ini
+  struktural TIDAK BISA kena bug "(N)" -- `File.mkdirs()` biasa, bukan SAF).
+- `ActivityLogScreen` (tab Undo): label "Ke: ..." SEBELUMNYA hardcode
+  "PromptVault/<rule>/" utk SEMUA entri -- sekarang dibedakan per `destUri`
+  (`content://` = SAF -> "folder tujuan kustom/<rule>/", path absolut =
+  lokal -> tetap "PromptVault/<rule>/"). Entri UNDO LAMA (sebelum update ini)
+  tetap akurat krn dibaca dari `destUri` yang TERSIMPAN, bukan di-generate ulang.
 
-**Update verifikasi user (pasca-rilis)**: bug TIDAK pernah terjadi di Android
-14 meski scan diulang berkali-kali, TAPI SELALU terjadi di Android 15. Pola
-ini memperkuat teori `fixing_PromptVault.md` -- split kemungkinan besar per
-VERSI ANDROID (pengetatan semantik Document URI 14->15), bukan murni per-OEM
-seperti dugaan awal. Fix `fromTreeUri()`-dulu tetap tepat sasaran.
-Confidence Rating: **90%** (naik dari 85% -- root cause kini punya bukti
-device asli yang cocok dgn teori, bukan cuma static-review; sisa 10% krn
-belum ada laporan eksplisit "sudah tidak duplikat lagi" pasca-fix di
-Android 15).
+**Cache Uri (v7.1.5) & retry+instrumentasi (v7.1.6) TETAP DIPERTAHANKAN**
+utk subfolder rule -- keduanya sudah TERBUKTI bekerja baik di log, tidak ada
+alasan dicabut. `cacheKey` subfolder disederhanakan dari `"PromptVault/<rule>"`
+jadi `"<rule>"` langsung (entri cache lama dgn key format "PromptVault/..."
+jadi orphan, harmless -- tidak pernah di-lookup lagi, tidak dibersihkan
+otomatis, tidak berdampak fungsional).
+
+File diubah (2): `util/FileSorter.kt`, `ui/screens/ActivityLogScreen.kt`,
+`app/build.gradle.kts` (versi). `preflight_check.sh` 13/13 lolos.
+Confidence Rating: **80%** -- perubahan strukturalnya SENDIRI straightforward
+& low-risk (menghapus kode, bukan menambah logika baru rawan bug), TAPI tetap
+BELUM lewat `./gradlew`/device asli spt biasa (batasan lingkungan kerja
+Claude, sudah konsisten dicatat tiap sesi). **User WAJIB verifikasi**: (1)
+scan ke folder tujuan kustom BARU (rule folder langsung di root, tanpa
+subfolder "PromptVault") berjalan normal, (2) tab Undo tampilkan label
+tujuan yang benar, (3) build CI hijau.
+versionCode 86->87, versionName 7.1.6->7.2.0 (MINOR bump krn breaking
+behavioral change, bukan cuma bugfix).
+
+## v7.1.6 -- Duplikat "PromptVault (N)" MASIH terjadi setelah v7.1.5 -- retry+INSTRUMENTASI, JUJUR: root cause belum 100% terkonfirmasi (2026-08-16)
+User konfirmasi: sudah update ke v7.1.5 (cache Uri), sudah rapikan folder lama,
+test ulang -- **duplikat baru MUNCUL LAGI**. Artinya cache-by-Uri v7.1.5 SAJA
+TIDAK CUKUP. Ditulis jujur di sini: tanpa Logcat/device asli, root cause
+pastinya BELUM bisa dipastikan 100% -- dugaan terkuat (listing SAF stale) bisa
+jadi juga bikin query `exists()` LANGSUNG on cache-hit false-negative, bukan
+cuma `findFile()` yang dulu diasumsikan satu²nya titik lemah.
+
+**Perubahan sesi ini (mitigasi + instrumentasi, BUKAN klaim "sudah pasti fix")**:
+1. `findOrCreateChildDirSaf`: retry 1x + `delay(200)` sebelum menyerah &
+   membuat folder baru kalau `findFile()` pertama null (jaga² staleness sesaat).
+2. **Verifikasi nama pasca-`createDirectory()`**: kalau nama hasil TIDAK
+   PERSIS sama dgn yang diminta (mis. provider balikin "PromptVault (1)"),
+   dicatat `LogLevel.ERROR` ke Activity Log dgn detail lengkap (cacheKey, nama
+   diminta, nama aktual) -- ini BUKTI KONKRET kalau kejadian lagi, bukan
+   asumsi. Folder baru (nama match) dicatat `LogLevel.INFO` juga, supaya
+   pola waktu kejadian kelihatan di log.
+3. **User WAJIB reproduce sambil buka layar Log Aktivitas** (atau screenshot
+   Log Aktivitas setelah kejadian) -- baris ERROR barunya PERSIS nunjukkin
+   penyebabnya provider auto-suffix beneran atau bukan. Tanpa ini, sesi
+   berikutnya masih akan nebak buta lagi.
+4. **Pertanyaan terbuka yang BELUM terjawab**: apakah user pakai "Folder
+   Tujuan Kustom" (SAF, di Pengaturan) atau default Downloads? Kalau default
+   (java.io.File biasa) -- `File.mkdirs()` TIDAK PERNAH auto-suffix "(N)"
+   secara struktural, artinya seluruh dugaan SAF di v7.1.4/v7.1.5/v7.1.6 SALAH
+   ALAMAT dan sumber duplikat ada di TEMPAT LAIN yang belum diperiksa (custom
+   destination path lokal, atau bukan dari app sama sekali). WAJIB dikonfirmasi
+   sebelum sesi berikutnya lanjut fix lebih jauh -- jangan tambal lagi di jalur
+   SAF kalau ternyata jalur yang dipakai bukan SAF.
+File diubah (2): `util/FileSorter.kt`, `app/build.gradle.kts` (versi).
+`preflight_check.sh` 13/13 lolos.
+Confidence Rating: **50%** -- SENGAJA rendah, ini iterasi mitigasi+instrumentasi
+kedua utk bug yang sama, BUKAN fix definitif. Jangan overclaim ke user.
 versionCode 85->86, versionName 7.1.5->7.1.6.
 
 ## v7.1.5 -- FIX duplikat folder "PromptVault"/"(N)" BERULANG (beda root cause dari fix v-sebelumnya) (2026-08-16)
