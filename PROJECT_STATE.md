@@ -3,7 +3,40 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
-## STATUS PROJECT: v7.1.5 -- FIX duplikat folder "PromptVault"/"(N)" berulang, root cause staleness listing SAF antar-scan (BEDA dari race-fix 2026-08-13) -- 2026-08-16
+## STATUS PROJECT: v7.1.6 -- FIX cache-miss permanen di fix v7.1.5 (fromSingleUri().isDirectory selalu false di banyak OEM) -- 2026-08-16
+- User upload `fixing_PromptVault.md` (kontributor eksternal: Gemini). Isi:
+  fix v7.1.5 (cache Uri + `fromSingleUri()`) BENAR secara desain tapi GAGAL
+  di praktik pada banyak OEM -- `fromSingleUri()` mengembalikan
+  `SingleDocumentFile` yang `isDirectory`-nya SELALU `false` di banyak
+  implementasi OEM (walau URI valid menunjuk folder), jadi cek
+  `cached.isDirectory` di `findOrCreateChildDirSaf` tak pernah lolos -> cache
+  tak pernah "hit" -> scan tetap jatuh ke `findFile()`/`createDirectory()`
+  lama -> duplikat v7.1.5 masih terjadi di device-device tsb walau kode
+  "kelihatan" sudah fix. Root-cause staleness listing SAF dari v7.1.5 SENDIRI
+  tetap valid & dipertahankan -- yang salah cuma jenis DocumentFile yang
+  dipakai utk baca cache-nya.
+- **Fix**: `findOrCreateChildDirSaf` coba `DocumentFile.fromTreeUri()` LEBIH
+  DULU (Tree URI = jenis URI yang benar dikembalikan `createDirectory()` pada
+  parent SAF, `isDirectory` valid utk ini). Fallback ke `fromSingleUri()`
+  DIPERTAHANKAN kalau `fromTreeUri()` null/bukan direktori (anti-regresi utk
+  cache lama/OEM lain). Kode PERSIS sesuai instruksi `fixing_PromptVault.md`,
+  tidak dimodifikasi lebih lanjut.
+- File diubah (2): `util/FileSorter.kt`, `app/build.gradle.kts` (versi).
+  Tidak ada file baru. `preflight_check.sh` 13/13 lolos bersih.
+- **PENTING**: sama seperti v7.1.5 -- folder duplikat yang SUDAH ADA di
+  device user TIDAK otomatis digabung/dihapus, fix ini cuma cegah duplikat
+  baru ke depan.
+- Confidence Rating: **85%** (perbaikan bertarget sesuai deskripsi bug yang
+  diberikan user, logika `fromTreeUri`-dulu-baru-fallback masuk akal & sudah
+  match cara `createDirectory()` mengembalikan URI di kode lain -- turun dari
+  95%+ krn perilaku `isDirectory` pada `SingleDocumentFile` bervariasi
+  antar-OEM/versi Android dan TIDAK BISA diverifikasi tanpa device asli;
+  fix v7.1.5 sebelumnya JUGA lolos static-review tapi ternyata gagal
+  praktik, jadi pola ini butuh verifikasi device sungguhan sebelum
+  confidence naik).
+- versionCode 85->86, versionName 7.1.5->7.1.6.
+
+## STATUS PROJECT SEBELUMNYA: v7.1.5 -- FIX duplikat folder "PromptVault"/"(N)" berulang, root cause staleness listing SAF antar-scan (BEDA dari race-fix 2026-08-13) -- 2026-08-16
 - User lapor (screenshot) 7 folder "PromptVault"/"(1)".."(6)" di tujuan
   kustom, tiap folder isi LENGKAP (9-10 item), tanggal 15-16/08 -- pola BEDA
   dari bug lama (1 item/duplikat, race antar-coroutine, sudah difix

@@ -464,14 +464,28 @@ class FileSorter(
      * (jangan paksa lanjut).
      */
     private suspend fun findOrCreateChildDirSaf(parent: DocumentFile, name: String, cacheKey: String): DocumentFile? {
-        // Langkah 1: coba URI hasil cache dulu -- resolusi 1 dokumen spesifik by
-        // Uri, BUKAN query listing by-nama yang rentan stale (root cause fix ini).
+        // Langkah 1: coba URI hasil cache dulu -- resolusi 1 dokumen spesifik by Uri.
         settingsRepository.getCachedFolderUri(cacheKey)?.let { cachedUriStr ->
             try {
-                val cached = DocumentFile.fromSingleUri(context, Uri.parse(cachedUriStr))
-                if (cached != null && cached.isDirectory && cached.exists()) return cached
+                val uri = Uri.parse(cachedUriStr)
+
+                // [Fix Duplikasi P0, 2026-08-16]
+                // Coba parsing sebagai Tree URI lebih dulu karena URI yang
+                // dikembalikan createDirectory() pada parent SAF adalah Tree URI.
+                var cached = DocumentFile.fromTreeUri(context, uri)
+
+                // Anti-Regresi: Jika OS/OEM menolak Tree URI atau gagal validasi,
+                // fallback ke SingleDocumentFile seperti implementasi awal.
+                if (cached == null || !cached.isDirectory) {
+                    cached = DocumentFile.fromSingleUri(context, uri)
+                }
+
+                if (cached != null && cached.isDirectory && cached.exists()) {
+                    return cached
+                }
             } catch (e: Exception) {
-                // URI cache basi/tidak valid (mis. folder dihapus manual) -- lanjut jalur normal di bawah, JANGAN gagal di sini.
+                // URI cache basi/tidak valid (mis. folder dihapus manual atau gagal parse)
+                // -- lanjut jalur normal di bawah, JANGAN gagal di sini.
             }
         }
         // Langkah 2: fallback -- query listing by-nama seperti semula.

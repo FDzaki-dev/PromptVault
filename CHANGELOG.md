@@ -3,6 +3,34 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v7.1.6 -- FIX cache-miss PERMANEN pada fix v7.1.5 (fromSingleUri().isDirectory selalu false di banyak OEM) (2026-08-16)
+Sumber: `fixing_PromptVault.md` (kontributor eksternal: Gemini). Fix v7.1.5
+(cache Uri + `DocumentFile.fromSingleUri()`) SECARA LOGIKA benar tapi PADA
+BANYAK OEM ANDROID gagal total di praktiknya: `fromSingleUri()` mengembalikan
+`SingleDocumentFile`, yang pada banyak implementasi OEM TIDAK diizinkan
+dikelola sebagai direktori -- `isDirectory` SELALU `false` untuk objek ini,
+walau URI-nya memang menunjuk folder valid. Akibatnya cek
+`cached.isDirectory` di `findOrCreateChildDirSaf` SELALU gagal -> cache-hit
+tidak pernah terjadi -> tetap jatuh ke `findFile()`/`createDirectory()` lama
+tiap scan -> bug duplikat folder v7.1.5 TIDAK benar-benar tertutup di
+device-device tsb (root cause "staleness listing SAF antar-scan" dari
+v7.1.5 tetap valid, tapi FIX-nya tidak pernah aktif).
+
+**Fix**: `findOrCreateChildDirSaf` sekarang coba `DocumentFile.fromTreeUri()`
+LEBIH DULU utk URI cache (Tree URI adalah jenis URI yang benar dikembalikan
+`createDirectory()` pada parent SAF, sehingga `isDirectory` valid). Fallback
+ke `fromSingleUri()` DIPERTAHANKAN (anti-regresi) kalau `fromTreeUri()` gagal
+atau OEM tetap menolak. File diubah (2): `util/FileSorter.kt`,
+`app/build.gradle.kts` (versi). Tidak ada file baru -> `FILE_MANIFEST.txt`
+tidak berubah. `scripts/preflight_check.sh` 13/13 lolos bersih.
+
+**PENTING**: sama seperti v7.1.5 -- folder duplikat yang SUDAH ADA di device
+user TIDAK otomatis digabung, fix ini cuma cegah duplikat baru ke depan.
+Confidence Rating: **85%** (perbaikan bertarget & masuk akal dari deskripsi
+bug yang diberikan, tapi perilaku `isDirectory` pada `SingleDocumentFile`
+bervariasi antar-OEM dan tidak bisa diverifikasi tanpa device asli).
+versionCode 85->86, versionName 7.1.5->7.1.6.
+
 ## v7.1.5 -- FIX duplikat folder "PromptVault"/"(N)" BERULANG (beda root cause dari fix v-sebelumnya) (2026-08-16)
 User lapor screenshot BARU: 7 folder "PromptVault"/"PromptVault (1)".."(6)" di
 folder tujuan kustom, masing-masing ISI LENGKAP (9-10 item = semua subfolder
