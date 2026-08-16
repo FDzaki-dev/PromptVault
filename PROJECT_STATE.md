@@ -3,7 +3,39 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
-## STATUS PROJECT: v7.1.4 -- FIX 3 GAP P0 audit eksternal (folder-name traversal, copy parsial, urutan undo SAF), Phase 1/4 -- 2026-08-16
+## STATUS PROJECT: v7.1.5 -- FIX duplikat folder "PromptVault"/"(N)" berulang, root cause staleness listing SAF antar-scan (BEDA dari race-fix 2026-08-13) -- 2026-08-16
+- User lapor (screenshot) 7 folder "PromptVault"/"(1)".."(6)" di tujuan
+  kustom, tiap folder isi LENGKAP (9-10 item), tanggal 15-16/08 -- pola BEDA
+  dari bug lama (1 item/duplikat, race antar-coroutine, sudah difix
+  2026-08-13 via serialisasi `resolveSafRuleDestinations`). Fix lama itu
+  TETAP BENAR & DIPERTAHANKAN (menutup race dlm 1 scan) -- celah baru ada di
+  luar cakupannya: staleness listing SAF ANTAR-scan (scan tetap serial via
+  `scanMutex`, TERVERIFIKASI DI KODE, bukan race baru).
+- **Root cause**: `findFile()` (`listFiles()` query) di `findOrCreateChildDirSaf`
+  dipanggil ULANG tiap scan. Sebagian provider/OEM listing children bisa
+  STALE sesaat pasca `createDirectory()` scan sebelumnya (lag FUSE/index) --
+  scan berikutnya "tidak lihat" folder yg sudah ADA secara fisik, bikin baru
+  -> provider deteksi tabrakan nama di level filesystem -> auto-suffix.
+- **Fix**: cache Uri folder (root "PromptVault" + tiap subfolder rule) di
+  `SettingsRepository` (key relatif thd `safTreeUri`, auto-invalidate kalau
+  root ganti), `findOrCreateChildDirSaf` coba resolusi LANGSUNG by-Uri
+  (`fromSingleUri`+`exists()`) dari cache dulu sebelum fallback ke
+  `findFile()`/`createDirectory()` lama. Detail lengkap: CHANGELOG.md v7.1.5.
+- File diubah (3): `util/FileSorter.kt`, `data/SettingsRepository.kt`,
+  `app/build.gradle.kts` (versi). Tidak ada file baru. `preflight_check.sh`
+  13/13 lolos (sempat false-positive kurung tidak seimbang gara² komentar
+  "1)"/"2)" numbering -- diganti "Langkah 1:"/"Langkah 2:" biar heuristik
+  proyek yg literal-count karakter tidak salah baca).
+- **PENTING**: folder duplikat yg SUDAH ADA di device user TIDAK otomatis
+  digabung -- fix ini cuma cegah duplikat baru ke depan. User perlu gabung
+  manual isi tiap "PromptVault (N)" ke folder asli lalu hapus yg kosong.
+- Confidence Rating: **85%** (root cause & fix well-reasoned dari bukti
+  kode+screenshot, tapi staleness provider/OEM tidak bisa disimulasikan
+  tanpa device asli -- lihat CHANGELOG.md utk detail penuh & item verifikasi
+  wajib user).
+- versionCode 84->85, versionName 7.1.4->7.1.5.
+
+## STATUS PROJECT SEBELUMNYA: v7.1.4 -- FIX 3 GAP P0 audit eksternal (folder-name traversal, copy parsial, urutan undo SAF), Phase 1/4 -- 2026-08-16
 - User upload `PromptVault_real_functional_polish_gap_audit.md` (audit statis
   eksternal baru: 3 P0, 9 P1, 7 P2 -- BEDA dokumen dari `SAF_FINAL_VERDICT_FIX.txt`/
   `SAF_FINAL_LOGIC_AUDIT.md` lama, jangan tertukar). Instruksi eksplisit user:

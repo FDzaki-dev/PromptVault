@@ -456,14 +456,35 @@ class FileSorter(
         ScanResult(moved, skipped, foldersUnreadable = false, overlapWarnings = overlapWarnings, skippedDetails = skippedDetails)
     }
 
-    /** [SAF] Cari subfolder bernama [name] di [parent]; buat baru kalau belum ada. `null` = gagal (jangan paksa lanjut). */
-    private fun findOrCreateChildDirSaf(parent: DocumentFile, name: String): DocumentFile? {
+    /**
+     * [SAF] Cari subfolder bernama [name] di [parent]; buat baru kalau belum ada.
+     * [cacheKey] = path relatif thd `safTreeUri` (mis. "PromptVault" atau
+     * "PromptVault/NamaRule"), dipakai [SettingsRepository] cache -- lihat KDoc
+     * lengkap root-cause "duplikat folder berulang" di sana. `null` = gagal
+     * (jangan paksa lanjut).
+     */
+    private suspend fun findOrCreateChildDirSaf(parent: DocumentFile, name: String, cacheKey: String): DocumentFile? {
+        // Langkah 1: coba URI hasil cache dulu -- resolusi 1 dokumen spesifik by
+        // Uri, BUKAN query listing by-nama yang rentan stale (root cause fix ini).
+        settingsRepository.getCachedFolderUri(cacheKey)?.let { cachedUriStr ->
+            try {
+                val cached = DocumentFile.fromSingleUri(context, Uri.parse(cachedUriStr))
+                if (cached != null && cached.isDirectory && cached.exists()) return cached
+            } catch (e: Exception) {
+                // URI cache basi/tidak valid (mis. folder dihapus manual) -- lanjut jalur normal di bawah, JANGAN gagal di sini.
+            }
+        }
+        // Langkah 2: fallback -- query listing by-nama seperti semula.
         val existing = parent.findFile(name)
         if (existing != null) {
-            return if (existing.isDirectory) existing else null // nama dipakai FILE, bukan folder -- konflik, jangan dipaksa
+            if (!existing.isDirectory) return null // nama dipakai FILE, bukan folder -- konflik, jangan dipaksa
+            settingsRepository.setCachedFolderUri(cacheKey, existing.uri.toString())
+            return existing
         }
         return try {
-            parent.createDirectory(name)
+            val created = parent.createDirectory(name) ?: return null
+            settingsRepository.setCachedFolderUri(cacheKey, created.uri.toString())
+            created
         } catch (e: Exception) {
             null
         }
@@ -501,9 +522,16 @@ class FileSorter(
      * menciptakan folder yang sama, bukan cuma "lebih jarang" kena race.
      * Beberapa rule bisa berbagi `folderName` yang sama -- `distinctBy` supaya
      * folder itu cuma di-resolve sekali, bukan sekali per rule.
+     *
+     * [Update 2026-08-16, duplikat MASIH berulang meski fix di atas tetap
+     * berlaku] Fix serial di atas menutup race ANTAR-coroutine dalam 1 scan,
+     * tapi TIDAK menutup staleness listing SAF ANTAR-scan (mis. AutoSortWorker
+     * periodik, tiap scan tetap serial berkat [scanMutex] -- BUKAN race baru).
+     * Lapis fix tambahan ada di [findOrCreateChildDirSaf]/[SettingsRepository]
+     * (cache Uri per folder, resolusi langsung by-Uri bukan listing by-nama).
      */
     private suspend fun resolveSafRuleDestinations(destinationRoot: DocumentFile, rules: List<Rule>): Map<String, DocumentFile?> {
-        val vaultRootDoc = findOrCreateChildDirSaf(destinationRoot, "PromptVault")
+        val vaultRootDoc = findOrCreateChildDirSaf(destinationRoot, "PromptVault", cacheKey = "PromptVault")
         if (vaultRootDoc == null) {
             activityLogRepository.add(LogLevel.ERROR, "Gagal membuat/membuka folder \"PromptVault\" di folder tujuan kustom.")
             return rules.associate { it.folderName to null }
@@ -524,7 +552,7 @@ class FileSorter(
                 resolved[rule.folderName] = null
                 continue
             }
-            val dir = findOrCreateChildDirSaf(vaultRootDoc, rule.folderName)
+            val dir = findOrCreateChildDirSaf(vaultRootDoc, rule.folderName, cacheKey = "PromptVault/${rule.folderName}")
             if (dir == null) {
                 activityLogRepository.add(LogLevel.ERROR, "Gagal membuat/membuka folder tujuan \"${rule.folderName}\" di folder kustom.")
             }

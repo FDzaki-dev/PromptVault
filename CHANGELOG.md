@@ -3,6 +3,58 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v7.1.5 -- FIX duplikat folder "PromptVault"/"(N)" BERULANG (beda root cause dari fix v-sebelumnya) (2026-08-16)
+User lapor screenshot BARU: 7 folder "PromptVault"/"PromptVault (1)".."(6)" di
+folder tujuan kustom, masing-masing ISI LENGKAP (9-10 item = semua subfolder
+rule) -- BEDA POLA dari bug lama (v2.4.1-era, 1 item per duplikat, sudah
+"selesai" difix 2026-08-13 dgn serialisasi `resolveSafRuleDestinations`
+SEBELUM parallel processing). Fix lama itu TETAP BENAR & TETAP DIPERTAHANKAN
+(menutup race ANTAR-coroutine dalam 1 scan) -- tapi tidak menutup celah lain.
+
+**Root cause BARU**: `DocumentFile.findFile(name)` di `findOrCreateChildDirSaf`
+query listing (`listFiles()`) provider SAF ULANG setiap scan. `scanMutex`
+sudah pastikan scan SERIAL (tidak overlap) -- tapi pada sebagian provider/OEM,
+listing children bisa STALE sesaat setelah `createDirectory()` scan
+sebelumnya (lag FUSE/index). Scan berikutnya (mis. AutoSortWorker periodik,
+menit² kemudian) query listing, tidak lihat folder yang SUDAH ADA secara
+fisik -> `createDirectory()` dipanggil lagi -> provider deteksi tabrakan nama
+di level FILESYSTEM (bukan di listing yang stale) -> auto-suffix "(1)", dst.
+Pola "tiap folder isinya SET LENGKAP" cocok: tiap duplikat = 1 scan yang gagal
+kenali root lama, bukan 1 file terpecah spt bug lama.
+
+**Fix**: `SettingsRepository` (parsial, 2 fungsi+1 key baru: `getCachedFolderUri`/
+`setCachedFolderUri`/`safFolderCacheKey`) -- cache Uri folder hasil resolve,
+key = path relatif thd `safTreeUri` saat ini (auto-invalidate di
+`setSafTreeUri`/`clearSafTreeUri` kalau root berubah). `FileSorter.
+findOrCreateChildDirSaf` (jadi `suspend`, +param `cacheKey`) -- coba resolusi
+LANGSUNG by-Uri (`DocumentFile.fromSingleUri` + `exists()`) dari cache DULU,
+baru fallback ke `findFile()`/`createDirectory()` seperti semula kalau cache
+kosong/basi. Resolusi by-Uri jauh lebih tahan stale drpd query listing
+by-nama krn menyasar 1 dokumen spesifik, bukan cursor children penuh.
+File diubah (2): `util/FileSorter.kt`, `data/SettingsRepository.kt`,
+`app/build.gradle.kts` (versi). Tidak ada file baru -> `FILE_MANIFEST.txt`
+tidak berubah. `scripts/preflight_check.sh` 13/13 lolos bersih.
+
+**PENTING -- folder duplikat YANG SUDAH TERLANJUR ADA di device user TIDAK
+otomatis digabung/dihapus oleh fix ini** (fix ini cuma cegah duplikat BARU
+ke depan). User perlu gabung manual: pindahkan isi tiap "PromptVault (N)" ke
+"PromptVault" asli via file manager, lalu hapus folder "(N)" yang sudah
+kosong -- app sengaja tidak melakukan ini otomatis (lihat Strict Delete &
+Repack Guard, ini file HASIL SORTIR user, bukan file proyek).
+
+Confidence Rating: **85%** (root cause & fix logikanya sesuai bukti kuat di
+kode+screenshot, tapi turun dari standar 90%+ krn: (1) BELUM PERNAH lewat
+`./gradlew`/device asli spt biasa, (2) staleness listing SAF adalah perilaku
+provider/OEM yang TIDAK BISA disimulasikan/diverifikasi tanpa device asli --
+cache-by-Uri adalah mitigasi terbaik yang bisa ditulis dari kode, TAPI kalau
+provider tertentu bahkan menolak `fromSingleUri` yang valid dlm kasus langka,
+fallback ke jalur lama tetap jalan (tidak regresi), namun skenario itu sendiri
+belum bisa dites end-to-end). **User WAJIB verifikasi**: (1) scan manual +
+auto-sort periodik berulang kali (bbrp jam) TIDAK lagi bikin folder
+"PromptVault (N)" baru, (2) rule folder normal tetap ke-scan & file tetap
+sampai ke folder yang benar (nol regresi jalur normal), (3) build CI hijau.
+versionCode 84->85, versionName 7.1.4->7.1.5.
+
 ## v7.1.4 -- FIX 3 GAP P0 dari audit eksternal (folder-name traversal, copy parsial, urutan undo SAF) -- Phase 1/4 (2026-08-16)
 User upload `PromptVault_real_functional_polish_gap_audit.md` (audit statis
 eksternal: 3 P0, 9 P1, 7 P2). Instruksi eksplisit: kerjakan BERTAHAP, jangan

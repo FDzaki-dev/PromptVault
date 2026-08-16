@@ -131,11 +131,62 @@ class SettingsRepository(private val context: Context) {
     suspend fun getSafTreeUri(): String? = safTreeUriFlow.first()
 
     suspend fun setSafTreeUri(uri: String) {
-        context.promptVaultDataStore.edit { prefs -> prefs[safTreeUriKey] = uri }
+        context.promptVaultDataStore.edit { prefs ->
+            if (prefs[safTreeUriKey] != uri) prefs.remove(safFolderCacheKey) // root beda -> cache lama tidak valid
+            prefs[safTreeUriKey] = uri
+        }
     }
 
     suspend fun clearSafTreeUri() {
-        context.promptVaultDataStore.edit { prefs -> prefs.remove(safTreeUriKey) }
+        context.promptVaultDataStore.edit { prefs ->
+            prefs.remove(safTreeUriKey)
+            prefs.remove(safFolderCacheKey) // cache folder di bawah root lama jadi tidak relevan
+        }
+    }
+
+    /**
+     * [Fix duplikat folder "PromptVault"/"PromptVault (N)" berulang, 2026-08-16]
+     * ROOT CAUSE BARU (beda dari race-fix 2026-08-13 yang sudah menyerialkan
+     * pembuatan folder DALAM satu scan): `DocumentFile.findFile(name)` di
+     * [FileSorter.findOrCreateChildDirSaf] melakukan `listFiles()` (query
+     * cursor children) ULANG setiap scan dipanggil -- pada sebagian provider
+     * (cache FUSE/indexing OEM tertentu), listing ini bisa STALE sesaat
+     * setelah `createDirectory()` sukses di scan sebelumnya. Scan berikutnya
+     * (mis. AutoSortWorker periodik, TETAP serial berkat `scanMutex` --
+     * ini BUKAN race antar-coroutine) query listing, tidak melihat folder
+     * yang SUDAH ADA secara fisik, lalu memanggil `createDirectory()` lagi --
+     * provider mendeteksi tabrakan nama di level FILESYSTEM (bukan di level
+     * listing yang stale tadi) -> auto-suffix "(1)", "(2)", dst. Pola ini
+     * konsisten dgn laporan user: beberapa folder "PromptVault"/"(N)" utuh
+     * (bukan 1 file terpecah spt bug lama), tiap folder isinya SET LENGKAP
+     * subfolder rule -- tiap kemunculan adalah 1 scan yang gagal menemukan
+     * root lama, bukan 1 file yang salah folder.
+     *
+     * Fix: cache `Uri` folder hasil resolve (root "PromptVault" + tiap
+     * subfolder rule) di sini, key = path relatif thd `safTreeUri` saat ini.
+     * Scan berikutnya resolve LANGSUNG lewat `DocumentFile.fromSingleUri()`
+     * (query 1 dokumen spesifik by Uri) -- BUKAN query listing by-nama lagi
+     * -- baru fallback ke `findFile()`/`createDirectory()` kalau cache
+     * kosong/URI ternyata sudah tidak valid. Cache otomatis dibuang saat
+     * `safTreeUri` berubah/dihapus ([setSafTreeUri]/[clearSafTreeUri]) --
+     * mencegah cache "nyasar" nunjuk folder di root lama.
+     */
+    private val safFolderCacheKey = stringPreferencesKey("saf_folder_uri_cache")
+
+    suspend fun getCachedFolderUri(relativePath: String): String? {
+        val raw = context.promptVaultDataStore.data.map { prefs -> prefs[safFolderCacheKey] }.first() ?: return null
+        return raw.lineSequence()
+            .map { line -> line.split("::", limit = 2) }
+            .firstOrNull { it.size == 2 && it[0] == relativePath }
+            ?.get(1)
+    }
+
+    suspend fun setCachedFolderUri(relativePath: String, uri: String) {
+        context.promptVaultDataStore.edit { prefs ->
+            val existing = prefs[safFolderCacheKey].orEmpty()
+            val filtered = existing.lineSequence().filterNot { it.startsWith("$relativePath::") }
+            prefs[safFolderCacheKey] = (filtered + "$relativePath::$uri").joinToString("\n")
+        }
     }
 
     /** Lihat dokumentasi lengkap di [DEFAULT_SCAN_CONCURRENCY]/[ALLOWED_SCAN_CONCURRENCY]. */
