@@ -53,12 +53,30 @@ val BrassAccentOn = DeepNavy                      // teks gelap di atas brass te
 // ---- Teks (netral, putih-alpha di atas Navy -- bukan hue baru) ----
 val TextPrimary = Color(0xFFF2F4F8)
 val TextSecondary = Color(0xFFF2F4F8).copy(alpha = 0.68f)
-val TextMuted = Color(0xFFF2F4F8).copy(alpha = 0.42f)
+// [Fix WCAG, 2026-08-16] alpha SEBELUMNYA 0.42f -> kontras cuma 3.45-3.81:1
+// di 5 tingkat permukaan (SEMUA gagal ambang teks normal 4.5:1). Token ini
+// TIDAK ada pemanggil aktif saat ini (diverifikasi grep, dead code) --
+// tetap diperbaiki sekarang spy AMAN dipakai kapan pun tanpa jadi jebakan
+// WCAG di masa depan. 0.55f -> worst-case (GlassSurfaceSheet, tingkat
+// paling terang, margin kontras paling kecil) 4.81:1, lulus AA di semua
+// tingkat.
+val TextMuted = Color(0xFFF2F4F8).copy(alpha = 0.55f)
 
 // ---- Bevel kaca: highlight/border/shadow -- netral White/Black, teknik
 // standar glassmorphism, TIDAK bagian dari constraint 2-hue di atas. ----
+// [Fix WCAG 1.4.11, 2026-08-16] GlassBorder/HairlineGlass SEBELUMNYA alpha
+// 0.14f -- battasnya JADI syarat visual satu-satunya bagi FilterChip
+// unselected (Interval Auto-Scan) & tepi VaultCard buat "kelihatan sbg
+// bentuk bisa-ditekan", tapi 0.14f cuma kontras ~1.5:1 lawan SEMUA tingkat
+// permukaan (dihitung formula relative luminance W3C) -- jauh di bawah
+// ambang WCAG 1.4.11 (non-text/boundary UI, 3:1). Naik ke 0.38f -> kontras
+// 3.00-3.80:1 di 4 tingkat permukaan (worst-case GlassSurfaceSheet 3.00:1,
+// SELALU dicek tingkat paling terang krn margin kontras paling kecil di
+// situ). GlassHighlight (bevel dekoratif, BUKAN pembatas fungsional) TIDAK
+// ikut dinaikkan -- 1.4.11 cuma soal batas komponen yang perlu dikenali,
+// bukan kilau dekoratif.
 val GlassHighlight = Color.White.copy(alpha = 0.10f)
-val GlassBorder = Color.White.copy(alpha = 0.14f)
+val GlassBorder = Color.White.copy(alpha = 0.38f)
 val GlassShadow = Color.Black.copy(alpha = 0.35f)
 val HairlineGlass = GlassBorder
 

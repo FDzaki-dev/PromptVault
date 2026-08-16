@@ -93,11 +93,19 @@ fun RuleCard(
 
             Spacer(modifier = Modifier.size(8.dp))
 
-            // Baris bawah: semua kontrol aksi, sejajar & bertouch-target aman.
+            // [Fix UI polish, 2026-08-16] Baris kontrol SEBELUMNYA
+            // `spacedBy(4.dp)` + `Spacer(weight(1f))` di tengah -- efeknya
+            // chevron naik/turun numpuk RAPAT di ujung kiri, sementara
+            // switch+edit+hapus numpuk RAPAT di ujung kanan, nyisain 1
+            // celah kosong lebar persis di tengah (asimetris, bukan
+            // proporsional). `Arrangement.SpaceEvenly` (TANPA Spacer
+            // manual) sebarkan jarak antar SEMUA 5 kontrol secara merata
+            // di lebar penuh -- baris jadi seimbang kiri-kanan, bukan cuma
+            // 2 gerombolan nempel tepi.
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 IconButton(onClick = onMoveUp, enabled = canMoveUp, modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)) {
                     Icon(Icons.Filled.KeyboardArrowUp, contentDescription = "Naikkan prioritas", tint = if (canMoveUp) colors.primary else colors.onSurfaceVariant)
@@ -105,7 +113,6 @@ fun RuleCard(
                 IconButton(onClick = onMoveDown, enabled = canMoveDown, modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)) {
                     Icon(Icons.Filled.KeyboardArrowDown, contentDescription = "Turunkan prioritas", tint = if (canMoveDown) colors.primary else colors.onSurfaceVariant)
                 }
-                Spacer(modifier = Modifier.weight(1f))
                 TactileSwitch(
                     checked = rule.enabled,
                     onCheckedChange = {

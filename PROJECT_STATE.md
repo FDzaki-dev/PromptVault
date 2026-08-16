@@ -3,7 +3,39 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
-## STATUS PROJECT: v7.1.0 -- FITUR BARU: toggle tema (Deep Navy+Brass <-> Charcoal+Copper) di Pengaturan -- 2026-08-15
+## STATUS PROJECT: v7.1.1 -- Polish UI: fix kontras border WCAG 1.4.11 + rapikan baris kontrol asimetris RuleCard -- 2026-08-16
+- User kirim 4 screenshot build v7.1.0 NYATA (bukan cuma baca kode) + minta
+  fokus 2 hal eksplisit: (1) WCAG utk "layout terdistorsi", (2) khusus polish
+  UI/rapikan asimetri -- ditegaskan "no less no more", jadi TIDAK melebar ke
+  redesign/ganti hue.
+- Audit WCAG numerik (bukan tebakan) ke SEMUA token x tingkat permukaan:
+  `GlassBorder`/`HairlineGlass` GAGAL 1.4.11 (1.49-1.55:1, alpha 0.14f) ->
+  naik 0.38f (3.00-3.80:1, lulus). `TextMuted` GAGAL 4.5:1 teks normal
+  (3.45-3.81:1 di alpha 0.42f, token dead-code tapi tetap diperbaiki
+  preventif) -> naik 0.56f (4.81:1 worst-case). `BrassAccent` DICEK TERPISAH
+  -- 7.44:1 LULUS AAA, bukan pelanggaran; saturasi rendahnya (47% vs
+  Amber/Slate/Rust 77-100%) BUKAN bug WCAG, dan hex-nya dipatok eksplisit
+  user sesi sebelumnya -- **ditanyakan ke user via pilihan sebelum
+  disentuh**, dijawab fokus ke asimetri layout, jadi hex Brass TIDAK diubah
+  sesi ini (keputusan didokumentasikan, bukan diam-diam dilewati).
+- Asimetri layout NYATA yang ditemukan (dari screenshot "Kelola Rule"):
+  `RuleCard.kt` baris kontrol aksi pakai `Spacer(weight(1f))` di tengah,
+  numpuk 2 tombol reorder di kiri vs 3 kontrol lain di kanan, nyisa celah
+  kosong lebar di tengah -- diganti `Arrangement.SpaceEvenly`, 5 kontrol
+  merata di lebar penuh.
+- File diubah (3, non-Atomic): `Color.kt` (2 token alpha), `RuleCard.kt`
+  (1 Arrangement), `app/build.gradle.kts` (versi). `FILE_MANIFEST.txt` tidak
+  berubah. `preflight_check.sh` 13/13 lolos bersih.
+- Confidence Rating: **96%** (fix WCAG murni numerik terverifikasi formula
+  relative luminance W3C + 1 fix layout Arrangement straightforward, tidak
+  ada logika baru berisiko; turun dari potensi 97%+ semata krn tetap BELUM
+  PERNAH lewat `./gradlew` asli/device asli, sandbox tanpa Android SDK).
+  User WAJIB verifikasi visual: (1) border kartu/chip kelihatan jelas tapi
+  tidak mengganggu di kedua preset tema, (2) baris kontrol RuleCard di
+  "Kelola Rule" sekarang seimbang kiri-kanan, bukan berat sebelah.
+- versionCode 80->81, versionName 7.1.0->7.1.1.
+
+## STATUS PROJECT SEBELUMNYA: v7.1.0 -- FITUR BARU: toggle tema (Deep Navy+Brass <-> Charcoal+Copper) di Pengaturan -- 2026-08-15
 - User upload state repo terkini (`PromptVault-main.zip`, ternyata sudah
   v7.0.1 -- lompat dari v7.0.0). **Penting utk sesi berikutnya**: draft
   Neumorphism `drawBehind`+`Paint.setShadowLayer` yang sempat digarap sesi

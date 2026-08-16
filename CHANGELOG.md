@@ -3,6 +3,49 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v7.1.1 -- Polish UI: fix kontras border WCAG 1.4.11 + rapikan baris kontrol asimetris RuleCard (2026-08-16)
+User kirim 4 screenshot build v7.1.0 nyata + minta 2 hal spesifik ("fokus
+kerjakan yang sekarang", "no less no more"): (1) kembalikan layout
+terdistorsi wajib WCAG, (2) khusus polish UI & rapikan layout asimetris --
+BUKAN redesign ulang / ganti hue yang sudah dipatok user.
+
+**Audit WCAG (formula relative luminance W3C, semua kombinasi token x
+tingkat permukaan dihitung ulang, bukan tebakan):**
+- `GlassBorder`/`HairlineGlass` (border 1dp semua `GlassPanel`, termasuk
+  tepi `VaultCard` & FilterChip unselected di Pengaturan): alpha 0.14f cuma
+  1.49-1.55:1 di 4 tingkat permukaan -- GAGAL ambang WCAG 1.4.11 (non-text/
+  batas komponen, syarat 3:1). Naik ke 0.38f -> 3.00-3.80:1 (worst-case
+  GlassSurfaceSheet 3.00:1), lulus di semua tingkat.
+- `TextMuted` (alpha 0.42f): 3.45-3.81:1 di 5 tingkat permukaan -- GAGAL
+  ambang teks normal 4.5:1. Token ini TIDAK ada pemanggil aktif (diverifikasi
+  grep, dead code) tapi tetap diperbaiki ke 0.56f (4.81:1 worst-case) supaya
+  aman dipakai kapan pun ke depan, bukan jebakan WCAG tertunda.
+- `BrassAccent` (#B5A642, ikon "Kelola Rule"): dicek terpisah -- kontras
+  7.44:1 (LULUS AAA), BUKAN pelanggaran WCAG. Saturasinya (47%) memang jauh
+  di bawah 3 ikon lain (Amber/Slate/Rust, 77-100%) shg keliatan pudar
+  berdampingan, tapi hex ini dipatok eksplisit user sesi sebelumnya
+  ("dilarang keras ngide sendiri") -- DITANYAKAN ke user, dijawab fokus ke
+  layout asimetris, jadi hex Brass TIDAK disentuh sesi ini.
+
+**Fix asimetri layout (bukan soal warna):** `RuleCard.kt` baris kontrol aksi
+(naik/turun prioritas, switch, edit, hapus) SEBELUMNYA `Arrangement.spacedBy(4.dp)`
++ 1 `Spacer(weight(1f))` disisipkan di TENGAH -- efeknya 2 tombol reorder
+numpuk rapat di ujung kiri, 3 kontrol lain (switch/edit/hapus) numpuk rapat
+di ujung kanan, nyisain 1 celah kosong lebar PERSIS di tengah (baris terlihat
+asimetris/berat sebelah, bukan proporsional -- lihat screenshot user, layar
+"Kelola Rule"). Diganti `Arrangement.SpaceEvenly` tanpa Spacer manual --
+jarak antar SEMUA 5 kontrol sekarang merata di lebar penuh baris.
+
+File diubah (3): `Color.kt` (2 token alpha), `RuleCard.kt` (1 Arrangement),
+`app/build.gradle.kts` (versi). Tidak ada file baru/dihapus, `FILE_MANIFEST.txt`
+tidak berubah. `preflight_check.sh` 13/13 kategori lolos bersih. Confidence
+Rating: **96%** (2 fix WCAG murni numerik/terverifikasi formula, 1 fix layout
+straightforward Arrangement swap, TIDAK ada logika baru berisiko -- turun
+dari 97%+ semata krn seperti biasa BELUM PERNAH lewat `./gradlew` asli/device
+asli, sandbox tanpa Android SDK). User WAJIB verifikasi visual: (1) border
+kartu/chip kelihatan jelas tapi tidak mengganggu, (2) baris kontrol RuleCard
+di "Kelola Rule" sekarang seimbang kiri-kanan.
+
 ## v7.1.0 -- FITUR BARU: toggle tema (Deep Navy+Brass <-> Charcoal+Copper) di Pengaturan (2026-08-15)
 User upload state repo terkini (`PromptVault-main.zip`, sudah v7.0.1 -- lompat
 dari v7.0.0 Glassmorphism-Navy-Brass, jadi konteks kerja sesi ini BUKAN
