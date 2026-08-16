@@ -26,14 +26,18 @@
 - **PENTING**: sama seperti v7.1.5 -- folder duplikat yang SUDAH ADA di
   device user TIDAK otomatis digabung/dihapus, fix ini cuma cegah duplikat
   baru ke depan.
-- Confidence Rating: **85%** (perbaikan bertarget sesuai deskripsi bug yang
-  diberikan user, logika `fromTreeUri`-dulu-baru-fallback masuk akal & sudah
-  match cara `createDirectory()` mengembalikan URI di kode lain -- turun dari
-  95%+ krn perilaku `isDirectory` pada `SingleDocumentFile` bervariasi
-  antar-OEM/versi Android dan TIDAK BISA diverifikasi tanpa device asli;
-  fix v7.1.5 sebelumnya JUGA lolos static-review tapi ternyata gagal
-  praktik, jadi pola ini butuh verifikasi device sungguhan sebelum
-  confidence naik).
+- **VERIFIKASI DEVICE ASLI (user, pasca-rilis)**: bug TIDAK terjadi di Android
+  14 walau scan diulang berkali-kali, TAPI SELALU terjadi di Android 15.
+  Ini memperkuat (bukan melemahkan) teori root-cause `fixing_PromptVault.md`
+  -- indikasi kuat split-nya bukan OEM seperti dugaan awal, tapi PENGETATAN
+  enforcement semantik Document URI antara Android 14->15 (kemungkinan
+  `SingleDocumentFile.isDirectory` makin konsisten `false` di API level
+  baru). Fix `fromTreeUri()`-dulu tetap relevan & tepat sasaran utk kasus
+  ini. Belum ada laporan regresi setelah fix di Android 15.
+- Confidence Rating: **90%** (naik dari 85% -- root cause sekarang punya
+  bukti device asli yang match teori, bukan cuma static-review; sisa 10%
+  krn belum ada laporan verifikasi eksplisit "sudah tidak duplikat lagi
+  pasca-fix" dari device Android 15 yang sama, baru observasi pola lama).
 - versionCode 85->86, versionName 7.1.5->7.1.6.
 
 ## STATUS PROJECT SEBELUMNYA: v7.1.5 -- FIX duplikat folder "PromptVault"/"(N)" berulang, root cause staleness listing SAF antar-scan (BEDA dari race-fix 2026-08-13) -- 2026-08-16

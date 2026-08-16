@@ -26,9 +26,16 @@ tidak berubah. `scripts/preflight_check.sh` 13/13 lolos bersih.
 
 **PENTING**: sama seperti v7.1.5 -- folder duplikat yang SUDAH ADA di device
 user TIDAK otomatis digabung, fix ini cuma cegah duplikat baru ke depan.
-Confidence Rating: **85%** (perbaikan bertarget & masuk akal dari deskripsi
-bug yang diberikan, tapi perilaku `isDirectory` pada `SingleDocumentFile`
-bervariasi antar-OEM dan tidak bisa diverifikasi tanpa device asli).
+
+**Update verifikasi user (pasca-rilis)**: bug TIDAK pernah terjadi di Android
+14 meski scan diulang berkali-kali, TAPI SELALU terjadi di Android 15. Pola
+ini memperkuat teori `fixing_PromptVault.md` -- split kemungkinan besar per
+VERSI ANDROID (pengetatan semantik Document URI 14->15), bukan murni per-OEM
+seperti dugaan awal. Fix `fromTreeUri()`-dulu tetap tepat sasaran.
+Confidence Rating: **90%** (naik dari 85% -- root cause kini punya bukti
+device asli yang cocok dgn teori, bukan cuma static-review; sisa 10% krn
+belum ada laporan eksplisit "sudah tidak duplikat lagi" pasca-fix di
+Android 15).
 versionCode 85->86, versionName 7.1.5->7.1.6.
 
 ## v7.1.5 -- FIX duplikat folder "PromptVault"/"(N)" BERULANG (beda root cause dari fix v-sebelumnya) (2026-08-16)
