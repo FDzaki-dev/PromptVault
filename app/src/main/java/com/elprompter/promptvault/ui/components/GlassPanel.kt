@@ -90,11 +90,23 @@ fun GlassPanel(
     val innerContent: @Composable () -> Unit = {
         Box {
             if (!recessed) {
+                // [Fix UI polish, 2026-08-16] Highlight SEBELUMNYA
+                // `Brush.linearGradient(...)` TANPA `start`/`end` eksplisit --
+                // Compose default-nya menarik garis DIAGONAL dari pojok
+                // kiri-atas ke pojok kanan-bawah persis. Efeknya kelihatan di
+                // SEMUA elemen kecil bulat/pill yang pakai primitif ini
+                // (thumb TactileSwitch, kotak ikon GroupedListRow, pil
+                // SegmentedControl terpilih, dst.) -- satu pojok terang
+                // jelas, pojok seberangnya gelap polos, terbaca "berat
+                // sebelah" walau layout-nya sendiri sudah simetris. Diganti
+                // `Brush.verticalGradient` (atas->bawah, SIMETRIS kiri-kanan)
+                // -- kesan "cahaya dari atas" khas kaca tetap ada, tapi tidak
+                // lagi condong ke satu sisi horizontal manapun.
                 Box(
                     modifier = Modifier
                         .matchParentSize()
                         .background(
-                            brush = Brush.linearGradient(colors = listOf(GlassHighlight, Color.Transparent)),
+                            brush = Brush.verticalGradient(colors = listOf(GlassHighlight, Color.Transparent)),
                             shape = shape
                         )
                 )

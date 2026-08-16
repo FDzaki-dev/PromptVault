@@ -3,6 +3,34 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v7.1.2 -- Polish UI lanjutan: highlight GlassPanel diagonal->vertikal + fix Row Undo (2026-08-16)
+User laporkan v7.1.1 belum cukup: toggle/saklar, kotak ikon menu, dan tombol
+Undo masih terlihat asimetris.
+
+**Root cause #1 (toggle + icon menu, 1 akar sama):** `GlassPanel.kt` overlay
+highlight pakai `Brush.linearGradient(...)` tanpa `start`/`end` -- default
+Compose menarik gradient DIAGONAL pojok kiri-atas ke kanan-bawah. Di elemen
+kecil bulat (thumb switch 20dp, kotak ikon 30dp) ini kelihatan jelas sebagai
+"satu pojok terang, pojok seberang gelap" walau posisi/ukuran elemen itu
+sendiri sudah presisi center (diverifikasi ulang matematis). Fix: ganti ke
+`Brush.verticalGradient` (atas->bawah, simetris kiri-kanan). 1 titik ubah,
+otomatis berlaku ke semua pemakai primitif (thumb switch, kotak ikon menu,
+pil SegmentedControl, VaultCard, dst.).
+
+**Root cause #2 (tombol Undo, beda kelas):** `ActivityLogScreen.kt` tab
+"Undo Pemindahan" -- `Row` pembungkus Column-teks (3 baris) + tombol "Undo"
+tidak punya `verticalAlignment` (default Top). Column teks lebih tinggi dari
+tombol -> tombol nempel rata atas, nyisa ruang kosong di bawah. Fix: tambah
+`verticalAlignment = Alignment.CenterVertically`, sama seperti Row tab "Log"
+di atasnya yang sudah benar.
+
+File diubah (3): `ui/components/GlassPanel.kt`, `ui/screens/ActivityLogScreen.kt`,
+`app/build.gradle.kts` (versi). `scripts/preflight_check.sh` 13/13 lolos
+bersih. **BELUM PERNAH lewat `./gradlew` asli/device asli.** User WAJIB
+verifikasi visual: thumb switch & kotak ikon Home terang merata dari atas
+(bukan 1 pojok), tombol Undo center vertikal sejajar teks di sampingnya.
+versionCode 81->82, versionName 7.1.1->7.1.2.
+
 ## v7.1.1 -- Polish UI: fix kontras border WCAG 1.4.11 + rapikan baris kontrol asimetris RuleCard (2026-08-16)
 User kirim 4 screenshot build v7.1.0 nyata + minta 2 hal spesifik ("fokus
 kerjakan yang sekarang", "no less no more"): (1) kembalikan layout

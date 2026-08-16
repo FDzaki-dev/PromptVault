@@ -166,7 +166,20 @@ fun ActivityLogScreen(
                     LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(top = 8.dp)) {
                         items(undoable, key = { it.id }) { entry ->
                             VaultCard(modifier = Modifier.fillMaxWidth().animateItemPlacement()) {
-                                Row(modifier = Modifier.padding(10.dp)) {
+                                // [Fix UI polish, 2026-08-16] Row ini SEBELUMNYA tanpa
+                                // `verticalAlignment` (default Alignment.Top) -- beda
+                                // dari Row tab "Log" di atas yang sudah pakai
+                                // CenterVertically. Column kiri berisi 3 baris teks
+                                // (nama file/tujuan/waktu) jauh lebih tinggi dari 1
+                                // baris "Undo", jadi tombolnya nempel RATA ATAS,
+                                // nyisa ruang kosong di bawahnya -- persis gejala
+                                // "tombol Undo asimetris" yang dilaporkan. Disamakan
+                                // ke CenterVertically supaya tombol center vertikal
+                                // terhadap tinggi Column di sebelahnya.
+                                Row(
+                                    modifier = Modifier.padding(10.dp),
+                                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                                ) {
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(entry.fileName, style = MaterialTheme.typography.bodyMedium)
                                         Text("Ke: PromptVault/${entry.ruleFolderName}/", style = MaterialTheme.typography.labelSmall)

@@ -3,7 +3,63 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
-## STATUS PROJECT: v7.1.1 -- Polish UI: fix kontras border WCAG 1.4.11 + rapikan baris kontrol asimetris RuleCard -- 2026-08-16
+## STATUS PROJECT: v7.1.2 -- Polish UI lanjutan: highlight GlassPanel diagonal->vertikal + fix Row Undo tanpa CenterVertically -- 2026-08-16
+- User tegaskan lagi (v7.1.1 belum cukup): "Toggle/saklar, icon menu, dan
+  undo button. Semuanya masih asimetris" -- diaudit ULANG dari nol (bukan
+  percaya fix RuleCard v7.1.1 sudah menutup semua), fokus ke 3 elemen
+  eksplisit yang disebut.
+- **Audit matematis RuleCard/TactileSwitch/GroupedListRow (layout murni)**:
+  dihitung ulang semua offset/inset/touch-target satu-satu -- TIDAK ketemu
+  bug POSISI/UKURAN (touch target 5 kontrol RuleCard sudah sama 48dp,
+  inset thumb switch 3dp presisi sama tiap sisi, kotak ikon GroupedListRow
+  30dp+icon 16dp center, indent divider 58dp match posisi teks). Layout
+  angka-nya SUDAH simetris sejak v7.1.1 -- tapi user tetap lihat "berat
+  sebelah" di 2 elemen ini (toggle & icon menu), jadi akar masalahnya
+  BUKAN di angka layout.
+- **Akar sebenarnya ditemukan di `GlassPanel.kt`** (primitif BERSAMA yang
+  dipakai thumb TactileSwitch, kotak ikon GroupedListRow, pil
+  SegmentedControl, VaultCard, dst.): overlay "highlight" pakai
+  `Brush.linearGradient(colors=[GlassHighlight, Color.Transparent])` TANPA
+  `start`/`end` eksplisit -- default Compose menarik gradient DIAGONAL
+  pojok kiri-atas ke pojok kanan-bawah. Di elemen BESAR (VaultCard) efek
+  ini nyaris tak kentara, tapi di elemen KECIL bulat/pill (thumb 20dp,
+  kotak ikon 30dp) satu pojok jelas terang & pojok seberang gelap polos --
+  scan visual manusia langsung baca ini sebagai "tidak simetris" walau
+  bounding-box/posisinya presisi center. **Fix**: `Brush.verticalGradient`
+  (atas->bawah) -- simetris kiri-kanan, kesan "cahaya dari atas" tetap ada
+  (bahasa visual glassmorphism tidak berubah), cuma arahnya diluruskan.
+  1 titik ubah di 1 file (`GlassPanel.kt`), otomatis berlaku ke SEMUA
+  pemakai primitif ini (toggle & icon menu SEKALIGUS, tanpa sentuh
+  masing-masing file) -- termasuk kenapa 2 keluhan user yang kelihatannya
+  tidak berhubungan (toggle + icon menu) ternyata 1 akar yang sama.
+- **Undo button** (`ActivityLogScreen.kt`, tab "Undo Pemindahan"): BUG
+  LAYOUT NYATA ditemukan (beda kelas dari 2 di atas) -- `Row` pembungkus
+  Column-teks (3 baris: nama file/tujuan/waktu) + `TextButton("Undo")`
+  TIDAK punya `verticalAlignment` (default `Alignment.Top`), BEDA dari
+  `Row` tab "Log" di atasnya yang sudah benar pakai `CenterVertically`.
+  Karena Column kiri jauh lebih tinggi (3 baris) dari tombol (1 baris),
+  tombol nempel RATA ATAS, nyisa ruang kosong di bawahnya -- match persis
+  laporan user. Fix: tambah `verticalAlignment = Alignment.CenterVertically`,
+  pola sama dgn Row tab Log.
+- File diubah (3, non-Atomic): `GlassPanel.kt` (1 brush), `ActivityLogScreen.kt`
+  (1 Row), `app/build.gradle.kts` (versi). `FILE_MANIFEST.txt` tidak berubah.
+  `preflight_check.sh` 13/13 lolos bersih.
+- Confidence Rating: **95%** (2 fix independen berisiko rendah -- 1 ganti
+  arah Brush tanpa logika baru, 1 tambah parameter alignment standar Compose
+  yang sudah ada polanya persis di file yang sama; turun dari 97%+ semata
+  krn tetap BELUM PERNAH lewat `./gradlew` asli/device asli, sandbox tanpa
+  Android SDK, DAN karena root-cause GlassPanel diinferensi dari membaca
+  perilaku default `Brush.linearGradient` -- bukan dari screenshot baru user
+  sesi ini). **User WAJIB verifikasi visual**: (1) thumb switch & kotak ikon
+  menu Home sekarang terang merata dari ATAS (bukan lagi nyala di 1 pojok
+  doang), (2) tombol "Undo" di tab "Riwayat Aktivitas" -> "Undo Pemindahan"
+  sekarang center vertikal sejajar tengah teks di sampingnya, bukan nempel
+  atas. Kalau MASIH terasa asimetris setelah ini, kirim screenshot -- akar
+  penyebabnya kemungkinan bukan lagi di 3 elemen yang sama, butuh titik
+  visual baru untuk diaudit.
+- versionCode 81->82, versionName 7.1.1->7.1.2.
+
+## STATUS PROJECT SEBELUMNYA: v7.1.1 -- Polish UI: fix kontras border WCAG 1.4.11 + rapikan baris kontrol asimetris RuleCard -- 2026-08-16
 - User kirim 4 screenshot build v7.1.0 NYATA (bukan cuma baca kode) + minta
   fokus 2 hal eksplisit: (1) WCAG utk "layout terdistorsi", (2) khusus polish
   UI/rapikan asimetri -- ditegaskan "no less no more", jadi TIDAK melebar ke
