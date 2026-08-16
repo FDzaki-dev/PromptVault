@@ -3,7 +3,64 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
-## STATUS PROJECT: v7.1.3 -- FIX GAP FUNGSIONAL NYATA: POST_NOTIFICATIONS tidak pernah diminta runtime -- 2026-08-16
+## STATUS PROJECT: v7.1.4 -- FIX 3 GAP P0 audit eksternal (folder-name traversal, copy parsial, urutan undo SAF), Phase 1/4 -- 2026-08-16
+- User upload `PromptVault_real_functional_polish_gap_audit.md` (audit statis
+  eksternal baru: 3 P0, 9 P1, 7 P2 -- BEDA dokumen dari `SAF_FINAL_VERDICT_FIX.txt`/
+  `SAF_FINAL_LOGIC_AUDIT.md` lama, jangan tertukar). Instruksi eksplisit user:
+  **"kerjakan secara bertahap ... jangan greedy"** -- dibaca sebagai: JANGAN
+  coba tuntaskan seluruh audit (19 temuan) dalam 1 batch. Dieksekusi: **Phase 1
+  PENUH** dari "Priority Fix Order" audit tsb (3 item P0, "Safety/correctness"),
+  BUKAN sebagian P0 + sebagian P1 dicampur (supaya batch ini tuntas 1 fase utuh,
+  bukan setengah-setengah lintas fase).
+- **P0-1 (folder rule tidak divalidasi -> potensi path traversal)**: file BARU
+  `util/RuleFolderNameValidator.kt` (`validateRuleFolderName`/`isValidRuleFolderName`/
+  `isContainedIn`, top-level pure function, pola sama `mimeTypeForFileName`/
+  `GlobMatcher` -- unit-testable tanpa Context, lihat `RuleFolderNameValidatorTest.kt`
+  baru). Dipasang di 2 lapis WAJIB: `AddEditRuleScreen.kt` (inline `isError`+
+  `supportingText`, Save disabled kalau invalid) DAN `FileSorter.moveFile()`+
+  `resolveSafRuleDestinations()` (gerbang terakhir -- rule LAMA yang sudah
+  tersimpan sebelum fix ini tetap divalidasi ulang tiap scan, bukan cuma dicegah
+  untuk rule baru). Detail lengkap: CHANGELOG.md v7.1.4.
+- **P0-2 (`copyThenDelete()` bisa nyisain file tujuan PARSIAL kalau copy gagal
+  di tengah jalan)**: fix pola temp-file-lalu-rename (tulis ke `<nama>.tmp_<uuid>`
+  dulu, verifikasi, baru rename ke nama final) -- nama final TIDAK PERNAH
+  tersentuh sampai transfer tuntas. `copyThenDelete` sekarang `suspend fun`
+  (dipanggil dari `moveFile`+`undo()`, keduanya sudah suspend context, aman).
+- **P0-3 (urutan `markUndone()` salah di `undoSaf()`/`undoSafDestination()`)**:
+  sebelumnya riwayat ditandai "selesai undo" TANPA SYARAT begitu salinan balik
+  sukses, TIDAK PEDULI hasil `current.delete()` (hapus salinan lama di tujuan).
+  Fix: `markUndone()` HANYA dipanggil kalau delete BENAR-BENAR sukses; gagal ->
+  entri riwayat SENGAJA dibiarkan "belum selesai" + WARNING "Undo SEBAGIAN" di
+  Activity Log, supaya user tahu ada duplikat & bisa coba undo lagi -- bukan
+  silent-mark-done yang menyembunyikan state sebenarnya.
+- **SENGAJA TIDAK dikerjakan sesi ini** (Phase 2-4 audit, BUKAN lupa): P1-1
+  s.d P1-9 (test matrix FileSorter lengkap, retry worker, kategori skip granular,
+  RuleRepository transactional, semantik import, OVERWRITE destruktif tanpa
+  histori, dst.) & semua P2 (min/max validation, diagnostics live-refresh, dst.).
+  Lihat "Priority Fix Order" di `PromptVault_real_functional_polish_gap_audit.md`
+  utk urutan Phase 2-4 kalau user minta lanjut -- JANGAN audit ulang dari nol,
+  daftar lengkap 16 temuan sisa sudah ada di dokumen itu (masih relevan sampai
+  dieksekusi/di-supersede entri PROJECT_STATE yang lebih baru).
+- File diubah (4) + 2 baru: `util/FileSorter.kt`, `ui/screens/AddEditRuleScreen.kt`,
+  `app/build.gradle.kts` (versi), `FILE_MANIFEST.txt`; BARU `util/
+  RuleFolderNameValidator.kt`, `app/src/test/.../RuleFolderNameValidatorTest.kt`.
+  `scripts/preflight_check.sh` 13/13 lolos bersih.
+- Confidence Rating: **90%** (3 fix bertarget, masing-masing risiko rendah
+  secara individual -- validator murni pure-function baru + reuse pola project
+  yang sudah ada, temp-file-rename adalah pola standar well-known, reorder
+  markUndone tidak mengubah struktur fungsi lain; turun dari 95%+ semata krn (1)
+  BELUM PERNAH lewat `./gradlew` asli/device asli sama sekali (konsisten seluruh
+  riwayat project), (2) skenario P0-2/P0-3 (disk penuh, provider SAF menolak
+  delete) SULIT disimulasikan tanpa device/provider asli utk diverifikasi
+  end-to-end, cuma bisa direview manual jalur logikanya). **User WAJIB
+  verifikasi**: (1) isi nama folder rule dengan `/` atau `..` di Tambah/Edit
+  Rule -- field harus tampil error merah, tombol Simpan nonaktif, (2) rule
+  normal (tanpa karakter aneh) tetap tersimpan & scan seperti biasa (nol
+  regresi jalur normal -- PALING PENTING, ini jalur yang dipakai 100% user
+  selama ini), (3) build CI hijau.
+- versionCode 83->84, versionName 7.1.3->7.1.4.
+
+## STATUS PROJECT SEBELUMNYA: v7.1.3 -- FIX GAP FUNGSIONAL NYATA: POST_NOTIFICATIONS tidak pernah diminta runtime -- 2026-08-16
 - User minta audit lebih dalam (edge case DB/permission/migrasi) setelah
   static audit TODO/FIXME kosong. **Item pertama yang dicoba
   (`FileSorter.undo()` dispatcher) FALSE POSITIVE** -- ternyata sudah difix

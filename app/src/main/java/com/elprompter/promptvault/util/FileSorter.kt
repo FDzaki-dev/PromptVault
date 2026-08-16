@@ -510,6 +510,20 @@ class FileSorter(
         }
         val resolved = mutableMapOf<String, DocumentFile?>()
         for (rule in rules.distinctBy { it.folderName }) {
+            // [Fix P0-1, audit gap 2026-08-16] Invarian yang SAMA dengan
+            // jalur lokal ([FileSorter.moveFile]) -- lihat KDoc lengkap di
+            // RuleFolderNameValidator.kt. Provider SAF TIDAK menjamin
+            // containment yang sama seperti java.io.File, jadi nama rule
+            // WAJIB tervalidasi juga sebelum dipakai `createDirectory()`.
+            val folderNameError = validateRuleFolderName(rule.folderName)
+            if (folderNameError != null) {
+                activityLogRepository.add(
+                    LogLevel.ERROR,
+                    "Rule \"${rule.folderName}\" punya nama folder tidak valid ($folderNameError) -- folder tujuan kustom untuk rule ini dilewati."
+                )
+                resolved[rule.folderName] = null
+                continue
+            }
             val dir = findOrCreateChildDirSaf(vaultRootDoc, rule.folderName)
             if (dir == null) {
                 activityLogRepository.add(LogLevel.ERROR, "Gagal membuat/membuka folder tujuan \"${rule.folderName}\" di folder kustom.")
@@ -713,11 +727,26 @@ class FileSorter(
                 return false
             }
 
+            // [Fix P0-3, audit gap 2026-08-16 -- PromptVault_real_functional_polish_gap_audit.md]
+            // SEBELUMNYA `markUndone()` dipanggil TANPA SYARAT begitu salinan
+            // balik sukses, TIDAK PEDULI `current.delete()` (hapus salinan lama
+            // di folder kustom) berhasil atau tidak -- kalau provider SAF
+            // menolak delete, riwayat SUDAH TERLANJUR ditandai "selesai
+            // di-undo" padahal DUA salinan (lama di folder kustom + baru hasil
+            // restore) masih ada sekaligus, dan UI tidak lagi menawarkan cara
+            // untuk menindaklanjuti salinan lama yang nyangkut itu. Fix: hanya
+            // tandai `markUndone` kalau delete BENAR-BENAR sukses -- kalau
+            // gagal, entri riwayat SENGAJA dibiarkan "belum selesai" (bukan
+            // silent-mark-done) supaya tetap terlihat & bisa dicoba lagi.
             val deleteOk = current.delete()
-            moveHistoryRepository.markUndone(entry.id)
-            activityLogRepository.add(LogLevel.SUCCESS, "Undo berhasil: \"${entry.fileName}\" dikembalikan (folder kustom).")
-            if (!deleteOk) {
-                activityLogRepository.add(LogLevel.WARNING, "Undo \"${entry.fileName}\": salinan balik sukses, tapi file di PromptVault (folder kustom) gagal dihapus otomatis.")
+            if (deleteOk) {
+                moveHistoryRepository.markUndone(entry.id)
+                activityLogRepository.add(LogLevel.SUCCESS, "Undo berhasil: \"${entry.fileName}\" dikembalikan (folder kustom).")
+            } else {
+                activityLogRepository.add(
+                    LogLevel.WARNING,
+                    "Undo SEBAGIAN untuk \"${entry.fileName}\": salinan berhasil dikembalikan, TAPI file lama di folder kustom gagal dihapus (duplikat, masih ada). Entri riwayat TETAP tersedia -- coba undo lagi, atau hapus manual salinan lama itu."
+                )
             }
             true
         } catch (e: Exception) {
@@ -769,14 +798,22 @@ class FileSorter(
                 return false
             }
 
+            // [Fix P0-3, audit gap 2026-08-16] Pola sama persis dengan
+            // [undoSaf] di atas -- lihat komentar lengkap di sana. `markUndone`
+            // HANYA dipanggil kalau `current.delete()` (hapus salinan di
+            // folder tujuan kustom) benar-benar sukses.
             val deleteOk = current.delete()
-            moveHistoryRepository.markUndone(entry.id)
             try {
                 MediaScannerConnection.scanFile(context, arrayOf(restoreTarget.absolutePath), null, null)
             } catch (_: Exception) { /* non-fatal, sama seperti di moveFile() */ }
-            activityLogRepository.add(LogLevel.SUCCESS, "Undo berhasil: \"${entry.fileName}\" dikembalikan ke Downloads.")
-            if (!deleteOk) {
-                activityLogRepository.add(LogLevel.WARNING, "Undo \"${entry.fileName}\": salinan balik sukses, tapi file di folder tujuan kustom gagal dihapus otomatis.")
+            if (deleteOk) {
+                moveHistoryRepository.markUndone(entry.id)
+                activityLogRepository.add(LogLevel.SUCCESS, "Undo berhasil: \"${entry.fileName}\" dikembalikan ke Downloads.")
+            } else {
+                activityLogRepository.add(
+                    LogLevel.WARNING,
+                    "Undo SEBAGIAN untuk \"${entry.fileName}\": salinan berhasil dikembalikan ke Downloads, TAPI file lama di folder tujuan kustom gagal dihapus (duplikat, masih ada). Entri riwayat TETAP tersedia -- coba undo lagi, atau hapus manual salinan lama itu."
+                )
             }
             true
         } catch (e: Exception) {
@@ -981,7 +1018,29 @@ class FileSorter(
 
     private suspend fun moveFile(file: File, rule: Rule, conflictStrategy: ConflictStrategy): MoveOutcome {
         return try {
+            // [Fix P0-1, audit gap 2026-08-16] Gerbang TERAKHIR sebelum
+            // rule.folderName benar-benar dipakai membangun path filesystem
+            // nyata -- lihat KDoc lengkap di RuleFolderNameValidator.kt utk
+            // kenapa ini WAJIB tetap ada di sini walau AddEditRuleScreen juga
+            // sudah validasi inline (rule lama yang tersimpan sebelum fix ini
+            // ada tidak pernah lolos validasi UI itu).
+            val folderNameError = validateRuleFolderName(rule.folderName)
+            if (folderNameError != null) {
+                activityLogRepository.add(
+                    LogLevel.ERROR,
+                    "Rule \"${rule.folderName}\" punya nama folder tidak valid ($folderNameError) -- \"${file.name}\" dilewati. Perbaiki rule ini di Kelola Rule."
+                )
+                return MoveOutcome.FAILED
+            }
+
             val destDir = File(vaultRootDir, rule.folderName)
+            if (!isContainedIn(destDir, vaultRootDir)) {
+                activityLogRepository.add(
+                    LogLevel.ERROR,
+                    "Rule \"${rule.folderName}\" menghasilkan path di luar folder PromptVault -- \"${file.name}\" dilewati demi keamanan."
+                )
+                return MoveOutcome.FAILED
+            }
             if (!destDir.exists()) destDir.mkdirs()
 
             var destFile = File(destDir, file.name)
@@ -1038,12 +1097,49 @@ class FileSorter(
         }
     }
 
-    private fun copyThenDelete(src: File, dest: File): Boolean {
+    /**
+     * [Fix P0-2, audit gap 2026-08-16 -- PromptVault_real_functional_polish_gap_audit.md]
+     * SEBELUMNYA `src.copyTo(dest, overwrite=false)` menulis LANGSUNG ke
+     * `dest` (nama final) -- kalau copy gagal DI TENGAH JALAN (disk penuh,
+     * I/O error, proses dibunuh OS), `dest` bisa berisi file PARSIAL/korup
+     * yang tertinggal di lokasi final, dan catch block cuma `return false`
+     * TANPA membersihkannya. Scan berikutnya bisa menemukan file rusak itu
+     * sebagai "konflik nama sudah ada" -- padahal sebenarnya bukan hasil
+     * pemindahan yang valid sama sekali.
+     *
+     * Fix: tulis ke file SEMENTARA (nama unik, folder tujuan yang sama --
+     * supaya rename akhir tetap dalam filesystem yang sama/atomik kalau
+     * memungkinkan) dulu, verifikasi copy selesai, BARU rename temp -> nama
+     * final. `src` (sumber) HANYA dihapus SETELAH file tujuan final
+     * terkonfirmasi lengkap. Kalau copy ATAU rename gagal di titik manapun,
+     * file sementara dibersihkan (`runCatching { tempDest.delete() }`) --
+     * `dest` (nama final) tidak PERNAH tersentuh sampai transfer benar-benar
+     * tuntas, jadi tidak ada lagi kemungkinan file parsial nyangkut di nama
+     * final.
+     *
+     * Kegagalan `src.delete()` SENGAJA TETAP tidak menggagalkan fungsi ini
+     * (perilaku lama dipertahankan, konsisten dengan filosofi
+     * [moveFileToSafDestination] "salinan ke tujuan sudah sukses & lengkap,
+     * jangan dilaporkan gagal total") -- tapi sekarang DILOG sebagai
+     * WARNING, bukan didiamkan, supaya duplikat di sumber tetap terlihat di
+     * Activity Log, bukan hilang tanpa jejak.
+     */
+    private suspend fun copyThenDelete(src: File, dest: File): Boolean {
+        val destDir = dest.parentFile ?: return false
+        val tempDest = File(destDir, "${dest.name}.tmp_${UUID.randomUUID()}")
         return try {
-            src.copyTo(dest, overwrite = false)
-            src.delete()
+            src.copyTo(tempDest, overwrite = false)
+            if (!tempDest.renameTo(dest)) {
+                runCatching { tempDest.delete() }
+                activityLogRepository.add(LogLevel.ERROR, "Gagal finalisasi salinan \"${src.name}\" ke \"${dest.name}\" (rename file sementara gagal).")
+                return false
+            }
+            if (!src.delete()) {
+                activityLogRepository.add(LogLevel.WARNING, "\"${dest.name}\" berhasil disalin, tapi berkas asli \"${src.name}\" gagal dihapus (kemungkinan duplikat tertinggal).")
+            }
             true
         } catch (e: Exception) {
+            runCatching { tempDest.delete() }
             false
         }
     }

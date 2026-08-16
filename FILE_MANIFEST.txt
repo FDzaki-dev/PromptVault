@@ -55,6 +55,7 @@ app/src/main/java/com/elprompter/promptvault/ui/theme/Type.kt
 app/src/main/java/com/elprompter/promptvault/util/CrashLogger.kt
 app/src/main/java/com/elprompter/promptvault/util/FileSorter.kt
 app/src/main/java/com/elprompter/promptvault/util/GlobMatcher.kt
+app/src/main/java/com/elprompter/promptvault/util/RuleFolderNameValidator.kt
 app/src/main/java/com/elprompter/promptvault/util/RuleOverlapChecker.kt
 app/src/main/java/com/elprompter/promptvault/worker/AutoSortNotification.kt
 app/src/main/java/com/elprompter/promptvault/worker/AutoSortWorker.kt
@@ -74,6 +75,7 @@ app/src/test/java/com/elprompter/promptvault/util/ExcludePatternTest.kt
 app/src/test/java/com/elprompter/promptvault/util/GlobMatcherTest.kt
 app/src/test/java/com/elprompter/promptvault/util/MimeTypeForFileNameTest.kt
 app/src/test/java/com/elprompter/promptvault/util/MultiPatternAndSizeTest.kt
+app/src/test/java/com/elprompter/promptvault/util/RuleFolderNameValidatorTest.kt
 app/src/test/java/com/elprompter/promptvault/util/RuleOverlapCheckerTest.kt
 build.gradle.kts
 gradle.properties

@@ -34,6 +34,7 @@ import com.elprompter.promptvault.ui.components.VaultActionSheet
 import com.elprompter.promptvault.ui.components.VaultCard
 import com.elprompter.promptvault.ui.components.VaultTopBar
 import com.elprompter.promptvault.util.PatternPreviewResult
+import com.elprompter.promptvault.util.validateRuleFolderName
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -56,6 +57,15 @@ fun AddEditRuleScreen(
     var preview by remember { mutableStateOf<PatternPreviewResult?>(null) }
 
     val scope = rememberCoroutineScope()
+
+    // [Fix P0-1 + P2-2, audit gap 2026-08-16 -- PromptVault_real_functional_polish_gap_audit.md]
+    // SEBELUMNYA hanya `isNotBlank()` dicek di sini -- nama folder tidak
+    // valid (mengandung "/"/"\"/".."/karakter provider-unsafe) baru ketahuan
+    // BELAKANGAN saat file benar-benar dipindahkan (FileSorter.moveFile),
+    // bukan saat rule disimpan. Validator yang sama ([validateRuleFolderName])
+    // dipakai di sini DAN di FileSorter -- lihat KDoc lengkap di
+    // RuleFolderNameValidator.kt kenapa dua lapis ini sama-sama wajib.
+    val folderNameError = if (folderName.isBlank()) null else validateRuleFolderName(folderName)
 
     // Uji pattern secara live ke isi Downloads saat ini (debounce 400ms biar tidak
     // scan folder di tiap ketikan huruf). Ini yang menjawab keluhan "gak jelas kenapa
@@ -86,6 +96,8 @@ fun AddEditRuleScreen(
                 value = folderName,
                 onValueChange = { folderName = it },
                 label = { Text("Nama folder tujuan") },
+                isError = folderNameError != null,
+                supportingText = folderNameError?.let { error -> { Text(error) } },
                 modifier = Modifier.fillMaxWidth()
             )
             OutlinedTextField(
@@ -180,7 +192,7 @@ fun AddEditRuleScreen(
                         }
                     }
                 },
-                enabled = folderName.isNotBlank() && pattern.isNotBlank(),
+                enabled = folderName.isNotBlank() && folderNameError == null && pattern.isNotBlank(),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary, contentColor = MaterialTheme.colorScheme.onSecondary),
                 modifier = Modifier.fillMaxWidth()
             ) { Text("Simpan") }
