@@ -44,6 +44,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.mergeDescendants
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.elprompter.promptvault.ui.MainViewModel
 import com.elprompter.promptvault.ui.components.GroupedList
@@ -171,13 +174,20 @@ fun HomeScreen(
                 animationSpec = tween(TactileTokens.PressAnimationMillis),
                 label = "ctaScale"
             )
+            // [Roadmap 1.2, audit TalkBack -- grup Home] Saat isScanning=true,
+            // konten Box cuma CircularProgressIndicator TANPA teks -- clickable
+            // Modifier di TactileSurface merge semantics anak jadi satu stop,
+            // tapi kalau anaknya tidak punya label sama sekali, TalkBack umumkan
+            // tombol ini KOSONG (cuma "Tombol", tanpa keterangan status).
+            // contentDescription eksplisit override hasil merge kosong itu.
             TactileSurface(
                 onClick = onScanNow,
                 enabled = !isScanning,
                 interactionSource = scanInteraction,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .scale(ctaScale),
+                    .scale(ctaScale)
+                    .semantics { contentDescription = if (isScanning) "Sedang memindai" else "Scan Sekarang" },
                 shape = MaterialTheme.shapes.large,
                 color = colors.primary,
                 elevation = TactileTokens.TactileElevationCta,
@@ -222,7 +232,15 @@ private fun ManifestRow(icon: androidx.compose.ui.graphics.vector.ImageVector, t
     // di dalam string ("  $label   $value") -- rawan tidak konsisten lintas
     // font/locale/rendering. Sekarang pakai Row + Spacer eksplisit berbasis
     // layout, bukan whitespace.
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    // [Roadmap 1.2, audit TalkBack -- grup Home] Row ini bukan clickable,
+    // jadi TIDAK auto-merge semantics -- tanpa `mergeDescendants`, TalkBack
+    // berhenti 2x per baris (Text label lalu Text value terpisah, mis.
+    // "Rule aktif" lalu "5"). `mergeDescendants = true` menggabungkannya jadi
+    // satu stop fokus "Rule aktif 5", lebih natural didengar.
+    Row(
+        modifier = Modifier.semantics(mergeDescendants = true) {},
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(16.dp))
         androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(8.dp))
         Text(

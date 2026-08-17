@@ -35,13 +35,17 @@ sudah berjalan, roadmap ini tidak menambah proses baru di sini.
   (`isTempOrPartialName`, `explainNoMatchByName`, `buildPreviewResult`,
   `nextAvailableFileName`) + `FileSorterPureLogicTest.kt` (12 test case).
 
-### 1.2 Audit aksesibilitas TalkBack menyeluruh
+### 1.2 Audit aksesibilitas TalkBack menyeluruh (progress: 1/4 batch)
 - **Risiko: Rendah** (umumnya nambah `contentDescription`/`Role`, jarang ubah logika) · **Nilai: Tinggi** (app belum pernah diaudit end-to-end pakai screen reader asli, walau sudah ada perbaikan titik seperti hitbox `TactileSwitch` 48dp)
 - Estimasi: 1 batch per grup layar (Home, RuleList/AddEdit, Settings,
   ActivityLog/MoveHistory) -- 4 batch kecil, bukan 1 batch besar
 - Fokus: setiap ikon aksi tanpa label wajib `contentDescription`, urutan
   fokus logis, dan target sentuh minimum 48dp konsisten (pola yang sudah
   dipakai di `TactileSwitch` diterapkan menyeluruh)
+- ~~Batch 1/4 -- grup Home~~ ✅ SELESAI v8.2.0 (`GroupedListRow.kt` role
+  Button, CTA scan contentDescription dinamis, `ManifestRow` merge
+  semantics). Detail lengkap: `CHANGELOG.md` v8.2.0.
+- **Lanjut sesi berikutnya**: Batch 2/4 -- grup RuleList/AddEdit.
 
 ### 1.3 String UI: audit hardcode vs `strings.xml`
 - **Risiko: Rendah** (mechanical, tidak ubah perilaku) · **Nilai: Sedang** (prasyarat WAJIB kalau kelak mau lokalisasi -- lihat Fase 3.3 -- tapi berdiri sendiri juga berguna: memisahkan teks dari logika bikin maintenance lebih rapi)

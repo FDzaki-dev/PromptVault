@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.elprompter.promptvault.ui.theme.TactileTokens
 
@@ -48,10 +49,22 @@ fun GroupedListRow(icon: ImageVector, label: String, tint: Color? = null, onClic
     // walau clickable. Sekarang pakai `clickable` + `LocalIndication.current`
     // (indication default platform, otomatis theme-aware) supaya tap selalu
     // punya sinyal visual jelas selain berpindah layar.
+    // [Roadmap 1.2, audit TalkBack -- grup Home] `role = Role.Button`
+    // ditambahkan supaya TalkBack umumkan "Tombol" saat fokus ke baris ini
+    // (sebelumnya cuma "double tap untuk aktivasi" tanpa peran jelas).
+    // Icon dekoratif di dalam baris ini (kotak ikon warna + chevron) sudah
+    // `contentDescription = null` -- clickable Modifier otomatis merge semua
+    // node semantik anak (termasuk Text label) jadi SATU stop TalkBack, jadi
+    // tidak perlu clearAndSetSemantics manual di sini.
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(interactionSource = interactionSource, indication = LocalIndication.current, onClick = onClick)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = LocalIndication.current,
+                role = Role.Button,
+                onClick = onClick
+            )
             .padding(horizontal = 16.dp, vertical = 13.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

@@ -3,7 +3,41 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
-## STATUS PROJECT: v8.1.0 -- Roadmap Fase 1.1: ekstraksi + unit test logika pure FileSorter -- 2026-08-18
+## STATUS PROJECT: v8.2.0 -- Roadmap Fase 1.2 (batch 1/4): audit TalkBack grup Home -- 2026-08-18
+- Batch pertama dari 4 batch kecil aksesibilitas (Home, RuleList/AddEdit,
+  Settings, ActivityLog/MoveHistory -- per `ROADMAP.md`). Sesi ini HANYA
+  grup Home.
+- **2 file diubah** (`GroupedListRow.kt`, `HomeScreen.kt`), 0 file baru.
+  Temuan & fix:
+  1. `GroupedListRow` (dipakai semua baris menu Home) -- `clickable` tanpa
+     `role`, TalkBack cuma umumkan "double tap untuk aktivasi" tanpa peran.
+     Ditambah `role = Role.Button`. Merge semantics anak (icon+label)
+     otomatis dari `clickable`, tidak perlu ubahan lain.
+  2. CTA "Scan Sekarang" -- saat `isScanning=true`, konten cuma
+     `CircularProgressIndicator` tanpa teks apapun; hasil merge semantics
+     jadi kosong (TalkBack cuma bilang "Tombol", tanpa status). Ditambah
+     `Modifier.semantics { contentDescription = ... }` eksplisit
+     ("Scan Sekarang" / "Sedang memindai") di `TactileSurface` CTA.
+  3. `ManifestRow` (baris "Rule aktif: N" & "Auto-scan: tiap N menit") --
+     `Row` biasa (bukan clickable/toggleable) TIDAK auto-merge semantics,
+     TalkBack berhenti 2x per baris (label lalu value terpisah). Ditambah
+     `Modifier.semantics(mergeDescendants = true) {}` supaya jadi 1 stop
+     fokus per baris.
+- **Tidak disentuh** (sudah aman/di luar scope grup Home): semua
+  `Icon(..., contentDescription = null)` dekoratif yang SUDAH didampingi
+  teks visible (mis. icon di `TextButton` "Lihat detail file yang
+  dilewati") -- itu pola benar (icon redundan terhadap teks, null
+  disengaja). Touch target `TextButton` M3 default (40dp, di bawah 48dp
+  rekomendasi) TIDAK diubah -- itu default Material3 global dipakai di
+  SEMUA layar, bukan gap spesifik Home, ubah itu = scope lebih besar dari
+  1 grup layar (masuk pertimbangan sesi terpisah kalau user minta).
+- `scripts/preflight_check.sh`: 13/13 kategori PASS (kategori 7 direview
+  manual, tidak ada fungsi lokal baru dari batch ini).
+- Roadmap 1.2 TETAP terbuka di `ROADMAP.md` (baru batch 1/4) -- lanjut ke
+  grup RuleList/AddEdit di sesi berikutnya.
+- versionCode 94→95, versionName 8.1.0→8.2.0.
+
+## STATUS PROJECT SEBELUMNYA: v8.1.0 -- Roadmap Fase 1.1: ekstraksi + unit test logika pure FileSorter -- 2026-08-18
 - Item pertama `ROADMAP.md` dikerjakan (low-risk/high-value pertama).
   Detail lengkap 4 fungsi yang diekstrak & alasan bug-for-bug parity ada di
   `CHANGELOG.md` v8.1.0.

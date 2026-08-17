@@ -3,6 +3,29 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.2.0 (2026-08-18) — Roadmap Fase 1.2 (batch 1/4): audit TalkBack grup Home
+
+Batch pertama dari 4 (Home, RuleList/AddEdit, Settings, ActivityLog/MoveHistory).
+2 file diubah, 0 file baru.
+
+- `GroupedListRow.kt`: tambah `role = Role.Button` di `clickable` baris menu
+  (dipakai semua 5 baris menu Home) -- sebelumnya TalkBack cuma umumkan
+  "double tap untuk aktivasi" tanpa peran "Tombol".
+- `HomeScreen.kt`:
+  - CTA "Scan Sekarang": tambah `contentDescription` eksplisit yang berubah
+    sesuai `isScanning` -- sebelumnya saat scanning, konten cuma
+    `CircularProgressIndicator` tanpa teks, hasil merge semantics kosong
+    (TalkBack cuma bilang "Tombol" tanpa status).
+  - `ManifestRow` ("Rule aktif: N", "Auto-scan: tiap N menit"): tambah
+    `Modifier.semantics(mergeDescendants = true)` -- sebelumnya `Row` biasa
+    (bukan clickable) tidak auto-merge, TalkBack berhenti 2x per baris
+    (label lalu value terpisah).
+- Di luar scope batch ini (sengaja tidak disentuh): touch target default
+  `TextButton` M3 (40dp) -- itu default global dipakai semua layar, bukan
+  gap spesifik grup Home.
+- `scripts/preflight_check.sh`: 13/13 PASS.
+- versionCode 94→95, versionName 8.1.0→8.2.0.
+
 ## v8.1.0 (2026-08-18) — Roadmap Fase 1.1: unit test untuk logika inti FileSorter
 
 Item pertama `ROADMAP.md` (low-risk/high-value). 4 fungsi PURE diekstrak
