@@ -5,6 +5,7 @@ FILE_MANIFEST.txt
 MAINTENANCE.md
 PROJECT_STATE.md
 README.md
+ROADMAP.md
 TROUBLESHOOTING.md
 app/build.gradle.kts
 app/proguard-rules.pro
@@ -77,6 +78,7 @@ app/src/main/res/xml/data_extraction_rules.xml
 app/src/main/res/xml/file_paths.xml
 app/src/test/java/com/elprompter/promptvault/data/SettingsRepositoryConstantsTest.kt
 app/src/test/java/com/elprompter/promptvault/util/ExcludePatternTest.kt
+app/src/test/java/com/elprompter/promptvault/util/FileSorterPureLogicTest.kt
 app/src/test/java/com/elprompter/promptvault/util/GlobMatcherTest.kt
 app/src/test/java/com/elprompter/promptvault/util/MimeTypeForFileNameTest.kt
 app/src/test/java/com/elprompter/promptvault/util/MultiPatternAndSizeTest.kt

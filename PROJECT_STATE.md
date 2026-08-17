@@ -3,7 +3,24 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
-## STATUS PROJECT: v8.0.0 -- ROMBAK TOTAL TEMA: Material 3 murni, calm bukan warm, Premium Tactile -- 2026-08-18
+## STATUS PROJECT: v8.1.0 -- Roadmap Fase 1.1: ekstraksi + unit test logika pure FileSorter -- 2026-08-18
+- Item pertama `ROADMAP.md` dikerjakan (low-risk/high-value pertama).
+  Detail lengkap 4 fungsi yang diekstrak & alasan bug-for-bug parity ada di
+  `CHANGELOG.md` v8.1.0.
+- **Batch kecil, risiko rendah**: 1 file produksi diubah (`FileSorter.kt`,
+  murni pindah lokasi fungsi + 1 ekstraksi loop rename), 1 file test baru
+  (`FileSorterPureLogicTest.kt`). TIDAK ada perubahan perilaku produksi
+  yang disengaja -- semua diverifikasi lewat grep referensi + preflight
+  check sebelum ditutup.
+- **Catatan utk sesi depan**: `nextAvailableFileName` masih punya kuirk
+  lama (extensionless file -> trailing dot `"nama_1."`) yang SENGAJA belum
+  diperbaiki (di luar scope batch ini, murni ekstraksi). Kalau user
+  laporkan bug soal ini, root cause & lokasi fix-nya sudah jelas (fungsi
+  ini, top-level di `FileSorter.kt`) -- bukan investigasi baru.
+- Roadmap item 1.1 dicoret dari `ROADMAP.md`, lanjut ke 1.2 (audit
+  aksesibilitas TalkBack) di sesi berikutnya sesuai urutan fase.
+
+## STATUS PROJECT SEBELUMNYA: v8.0.0 -- ROMBAK TOTAL TEMA: Material 3 murni, calm bukan warm, Premium Tactile -- 2026-08-18
 - **Permintaan eksplisit user (sesi ini)**: "Rombak total theme aplikasi
   jadi default Material 3 murni, pendekatan Premium Tactile experience,
   base warna calm bukan warm, tetap sesuai standar WCAG." Detail lengkap

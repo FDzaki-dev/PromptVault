@@ -3,6 +3,36 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.1.0 (2026-08-18) — Roadmap Fase 1.1: unit test untuk logika inti FileSorter
+
+Item pertama `ROADMAP.md` (low-risk/high-value). 4 fungsi PURE diekstrak
+MURNI (perilaku 100% identik, no-op refactor, bukan rewrite) dari method
+private `FileSorter` jadi top-level function -- pola sama persis dgn
+`mimeTypeForFileName` yang sudah ada (unit-testable tanpa
+Context/Robolectric):
+- `isTempOrPartialName` (dulu private instance method)
+- `explainNoMatchByName` (dulu private instance method)
+- `buildPreviewResult` (dulu private instance method)
+- `nextAvailableFileName` -- **satu-satunya yang genuinely baru** (bukan
+  cuma pindah lokasi): loop rename-saat-konflik di `moveFile` dulu inline
+  baca `File.exists()` langsung (tidak bisa diuji terisolasi), sekarang
+  predikat `exists` di-inject caller -- produksi tetap pakai `File.exists()`
+  asli, test pakai `Set<String>` palsu. Bug-for-bug parity dipertahankan
+  SENGAJA (nama file tanpa ekstensi tetap hasilkan trailing dot
+  `"nama_1."`, bukan "diperbaiki" diam-diam -- fix perilaku itu di luar
+  scope batch ini).
+
+`FileSorterPureLogicTest.kt` baru (12 test case): temp-marker detection,
+alasan no-match (exclude/size/no-match), preview pattern match+exclude,
+rename-conflict counter (0/1/banyak konflik + kasus extensionless).
+
+**Tidak disentuh** (di luar cakupan "pure logic"): `scanAndSort`,
+`moveFile` (isi lain), semua jalur SAF/Shizuku -- masih butuh device asli/CI
+seperti sebelumnya, lihat `MAINTENANCE.md`.
+
+Preflight check: 12/13 kategori PASS otomatis, kategori #7 identik daftar
+baseline (0 entri baru). versionCode 93→94, versionName 8.0.0→8.1.0.
+
 ## v8.0.0 (2026-08-18) — Rombak Total Tema: Material 3 Murni
 
 Permintaan eksplisit user: "Rombak total theme aplikasi jadi default

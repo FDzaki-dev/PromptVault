@@ -123,6 +123,91 @@ fun mimeTypeForFileName(name: String): String = when (name.substringAfterLast('.
 }
 
 /**
+ * Pure, top-level (bukan method [FileSorter]) -- pola sama persis dengan
+ * [mimeTypeForFileName] di atas, alasan sama: unit-testable tanpa Context
+ * Android. [Fase 1.1 roadmap, 2026-08-18] Diekstrak MURNI dari isi lama
+ * `FileSorter.isTempOrPartialName` (private instance method) -- perilaku
+ * 100% identik, cuma dipindah keluar class + [TEMP_FILE_MARKERS] ikut jadi
+ * top-level supaya bisa diakses tanpa instance.
+ */
+internal val TEMP_FILE_MARKERS = listOf(
+    ".crdownload", ".tmp", ".part", ".download", ".downloading"
+)
+
+fun isTempOrPartialName(name: String): Boolean {
+    val lowerName = name.lowercase()
+    return TEMP_FILE_MARKERS.any { lowerName.endsWith(it) }
+}
+
+/**
+ * Pure, top-level -- diekstrak MURNI dari `FileSorter.explainNoMatchByName`
+ * (private instance method lama), perilaku 100% identik. [Fase 1.1 roadmap,
+ * 2026-08-18]
+ */
+fun explainNoMatchByName(name: String, sizeKb: Long, rules: List<Rule>): String {
+    val excludedBy = rules.firstOrNull {
+        GlobMatcher.matchesAny(name, it.pattern) && RuleOverlapChecker.isExcluded(name, it)
+    }
+    if (excludedBy != null) {
+        return "Cocok pattern \"${excludedBy.pattern}\" tapi dikecualikan oleh excludePattern \"${excludedBy.excludePattern}\" di rule \"${excludedBy.folderName}\""
+    }
+    val sizeMismatch = rules.firstOrNull {
+        GlobMatcher.matchesAny(name, it.pattern) && !RuleOverlapChecker.matchesSizeConstraint(sizeKb, it)
+    }
+    if (sizeMismatch != null) {
+        val range = listOfNotNull(
+            sizeMismatch.minSizeKb?.let { "min ${it}KB" },
+            sizeMismatch.maxSizeKb?.let { "maks ${it}KB" }
+        ).joinToString(", ")
+        return "Cocok pattern rule \"${sizeMismatch.folderName}\" tapi ukuran file (${sizeKb}KB) di luar batas rule ($range)"
+    }
+    val activePatterns = rules.joinToString(", ") { "\"${it.pattern}\"" }
+    return "Tidak cocok pattern rule manapun (rule aktif: $activePatterns)"
+}
+
+/**
+ * Pure, top-level -- diekstrak MURNI dari `FileSorter.buildPreviewResult`
+ * (private instance method lama), perilaku 100% identik. [Fase 1.1 roadmap,
+ * 2026-08-18]
+ */
+fun buildPreviewResult(candidateNames: List<String>, pattern: String, excludePattern: String): PatternPreviewResult {
+    val matched = candidateNames
+        .filter { GlobMatcher.matchesAny(it, pattern) }
+        .filterNot { excludePattern.isNotBlank() && GlobMatcher.matchesAny(it, excludePattern) }
+    return PatternPreviewResult(candidateNames.size, matched)
+}
+
+/**
+ * Pure, top-level -- diekstrak MURNI dari while-loop RENAME di
+ * `FileSorter.moveFile` (dulu langsung baca `File(destDir, ...).exists()`
+ * di tengah fungsi suspend besar, TIDAK BISA di-unit-test terisolasi).
+ * Sekarang caller (`moveFile`) yang menyediakan predikat `exists` (bisa
+ * `File.exists()` asli DI PRODUKSI, atau `Set<String>` palsu di test) --
+ * fungsi ini sendiri 100% tidak menyentuh filesystem. [Fase 1.1 roadmap,
+ * 2026-08-18]. `substringBeforeLast('.', originalName)`/
+ * `substringAfterLast('.', "")` SENGAJA dipakai (bukan `File(...).nameWithoutExtension`/
+ * `.extension`) supaya fungsi ini tetap Kotlin murni tanpa `java.io.File` --
+ * definisi stdlib keduanya PERSIS sama, lihat `kotlin.io.FilesKt`.
+ */
+fun nextAvailableFileName(originalName: String, exists: (String) -> Boolean): String {
+    if (!exists(originalName)) return originalName
+    val base = originalName.substringBeforeLast('.', originalName)
+    val ext = originalName.substringAfterLast('.', "")
+    var counter = 1
+    var candidate: String
+    do {
+        // Sengaja SELALU "_$counter.$ext" (bahkan kalau ext kosong, hasil
+        // "nama_1." dgn titik trailing) -- ini bug-for-bug parity dgn
+        // perilaku produksi asli (`"${file.nameWithoutExtension}_$counter.${file.extension}"`
+        // tanpa pengecualian ext kosong). TIDAK diperbaiki di batch ini --
+        // itu perubahan perilaku terpisah, di luar scope "ekstrak murni".
+        candidate = "${base}_$counter.$ext"
+        counter++
+    } while (exists(candidate))
+    return candidate
+}
+
+/**
  * Logika inti: scan folder Downloads (SELALU, tidak pernah folder lain --
  * lihat catatan arsitektur di [FileSorter.scanAndSort]), cocokkan tiap file
  * terhadap rule aktif (berurutan sesuai PRIORITAS, mendukung multi-pattern &
@@ -192,19 +277,6 @@ class FileSorter(
      * "prompt.zip.crdownload".
      */
     private fun isTempOrPartialFile(file: File): Boolean = isTempOrPartialName(file.name)
-
-    /**
-     * Versi berbasis nama-saja dari [isTempOrPartialFile]. [SAF v2,
-     * restrukturisasi 2026-08-13] Dulu diekstrak spesifik supaya jalur scanner
-     * SAF (`listCandidateFilesSaf`, kini dihapus -- lihat catatan arsitektur
-     * di [scanAndSort]) bisa reuse logika yang sama; sumber scan sekarang
-     * SELALU Downloads jadi alasan itu tidak lagi relevan, tapi fungsi ini
-     * tetap dipertahankan sebagai versi nama-saja yang lebih generik.
-     */
-    private fun isTempOrPartialName(name: String): Boolean {
-        val lowerName = name.lowercase()
-        return TEMP_FILE_MARKERS.any { lowerName.endsWith(it) }
-    }
 
     /**
      * Dual Stability Guard: sebuah file dianggap "masih ditulis" kalau salah
@@ -1485,28 +1557,6 @@ class FileSorter(
     private fun explainNoMatch(file: File, sizeKb: Long, rules: List<Rule>): String =
         explainNoMatchByName(file.name, sizeKb, rules)
 
-    /** Versi berbasis nama-file dari [explainNoMatch], dipisah supaya generic terhadap nama saja. */
-    private fun explainNoMatchByName(name: String, sizeKb: Long, rules: List<Rule>): String {
-        val excludedBy = rules.firstOrNull {
-            GlobMatcher.matchesAny(name, it.pattern) && RuleOverlapChecker.isExcluded(name, it)
-        }
-        if (excludedBy != null) {
-            return "Cocok pattern \"${excludedBy.pattern}\" tapi dikecualikan oleh excludePattern \"${excludedBy.excludePattern}\" di rule \"${excludedBy.folderName}\""
-        }
-        val sizeMismatch = rules.firstOrNull {
-            GlobMatcher.matchesAny(name, it.pattern) && !RuleOverlapChecker.matchesSizeConstraint(sizeKb, it)
-        }
-        if (sizeMismatch != null) {
-            val range = listOfNotNull(
-                sizeMismatch.minSizeKb?.let { "min ${it}KB" },
-                sizeMismatch.maxSizeKb?.let { "maks ${it}KB" }
-            ).joinToString(", ")
-            return "Cocok pattern rule \"${sizeMismatch.folderName}\" tapi ukuran file (${sizeKb}KB) di luar batas rule ($range)"
-        }
-        val activePatterns = rules.joinToString(", ") { "\"${it.pattern}\"" }
-        return "Tidak cocok pattern rule manapun (rule aktif: $activePatterns)"
-    }
-
     /**
      * Uji pattern include+exclude (belum tentu tersimpan sebagai rule) terhadap
      * isi Downloads AKTIF SAAT INI. Dipakai di layar Tambah/Edit Rule supaya
@@ -1534,13 +1584,6 @@ class FileSorter(
             val names = listCandidateFiles().map { it.name }
             buildPreviewResult(names, pattern, excludePattern)
         }
-
-    private fun buildPreviewResult(candidateNames: List<String>, pattern: String, excludePattern: String): PatternPreviewResult {
-        val matched = candidateNames
-            .filter { GlobMatcher.matchesAny(it, pattern) }
-            .filterNot { excludePattern.isNotBlank() && GlobMatcher.matchesAny(it, excludePattern) }
-        return PatternPreviewResult(candidateNames.size, matched)
-    }
 
     /** Daftar nama file asli (SEMUA ekstensi, sejak fix 2026-08-13) di Downloads, dipakai layar Diagnostik agar user tahu format nama file sebenarnya. */
     fun listDownloadsCandidateFileNames(limit: Int = 100): List<String> {
@@ -1583,11 +1626,8 @@ class FileSorter(
                     ConflictStrategy.SKIP -> return MoveOutcome.SKIPPED_CONFLICT
                     ConflictStrategy.OVERWRITE -> destFile.delete()
                     ConflictStrategy.RENAME -> {
-                        var counter = 1
-                        while (destFile.exists()) {
-                            destFile = File(destDir, "${file.nameWithoutExtension}_$counter.${file.extension}")
-                            counter++
-                        }
+                        val newName = nextAvailableFileName(file.name) { candidateName -> File(destDir, candidateName).exists() }
+                        destFile = File(destDir, newName)
                     }
                 }
             }
@@ -1768,11 +1808,6 @@ class FileSorter(
 
         /** Jeda pengecekan ukuran file untuk Dual Stability Guard (§4). */
         private const val SIZE_CHECK_DELAY_MS = 1_000L
-
-        /** Akhiran nama file dari browser/downloader yang menandakan unduhan belum selesai. */
-        private val TEMP_FILE_MARKERS = listOf(
-            ".crdownload", ".tmp", ".part", ".download", ".downloading"
-        )
 
         /**
          * [Fitur baru 2026-08-17, integrasi Shizuku] Penanda non-URI (bukan
