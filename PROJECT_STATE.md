@@ -3,7 +3,43 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
-## STATUS PROJECT: v7.5.1 -- Info non-blocking: folder tujuan kustom "Documents" langsung overlap dgn folder crash log -- 2026-08-17
+## STATUS PROJECT: v7.5.2 -- FIX crash pertama produksi (UnsupportedOperationException, SingleDocumentFile.listFiles) -- 2026-08-17
+- Crash pertama sepanjang project, user upload log asli
+  (`crash_20260817_174626_f7fac68a.txt`, Infinix X6855/Android 16). Trigger:
+  edit rule sortir -> tekan Scan di beranda.
+- **Root cause**: `findOrCreateChildDirSaf()` & `resolveCanonicalRootDirSaf()`
+  (keduanya di `FileSorter.kt`) rekonstruksi folder ter-cache pakai
+  `DocumentFile.fromSingleUri()` -> selalu `SingleDocumentFile`, yang
+  `listFiles()`-nya UNCONDITIONALLY throw `UnsupportedOperationException`
+  (hardcoded androidx, apapun URI-nya). Objek itu lalu dipakai lagi sbg
+  `parent` di panggilan `findOrCreateChildDirSaf` berikutnya ->
+  `parent.findFile(name)` -> internal `listFiles()` -> crash. Match PERSIS
+  dgn stack trace user (line 846).
+- **Fix**: ganti `fromSingleUri()` -> `DocumentFile.fromTreeUri()` di 2 titik
+  cache reconstruction. URI cache selalu child dari tree yang sama (ada
+  segmen `/tree/`), jadi `fromTreeUri()` bangun ulang `TreeDocumentFile`
+  yang benar & tetap listable.
+- **Bukan disebabkan overlap "Documents" v7.5.1** -- 2 subsistem storage beda
+  (MediaStore CrashLogger vs SAF FileSorter), tidak saling panggil
+  `listFiles()`. Overlap itu tetap valid & tidak diubah (info non-blocking,
+  sudah cukup). Root cause murni salah pilih API `DocumentFile`, independen
+  dari folder mana yang dipilih user -- **berarti bug laten ini sebenarnya
+  ada di SEMUA versi sejak cache-by-Uri diperkenalkan (v7.1.5), bukan
+  regresi baru v7.5.0/v7.5.1** -- baru kena sekarang krn kombinasi
+  cache "dingin" (app dibuka lagi) + tujuan kustom aktif.
+- File diubah (2): `util/FileSorter.kt`, `app/build.gradle.kts` (versi).
+- **Belum diverifikasi user** (fix baru dikirim sesi ini) -- kalau sesi
+  berikutnya user lapor Scan masih crash dgn stack trace SAMA
+  (`SingleDocumentFile.listFiles`), cek dulu apakah v7.5.2 ini benar
+  ter-install sebelum cari root cause baru. Ada 3 titik `fromSingleUri()`
+  lain di `FileSorter.kt` (jalur `undo()`, line ~1211/1217/1282) yang
+  SENGAJA TIDAK disentuh -- itu untuk resolusi file/leaf tunggal (exists/
+  delete/getParentFile), bukan folder yang di-listFiles()/findFile(), jadi
+  bukan bug yang sama.
+- Confidence Rating: fix **95%** (match persis stack trace, minimal &
+  bertarget) -- belum lewat `./gradlew`/device asli (keterbatasan permanen).
+
+## STATUS PROJECT SEBELUMNYA: v7.5.1 -- Info non-blocking: folder tujuan kustom "Documents" langsung overlap dgn folder crash log -- 2026-08-17
 - User konfirmasi eksplisit: folder tujuan kustom aktifnya persis
   "Documents" (bukan subfolder) -- match dgn hipotesis dia sendiri bahwa
   ini overlap dgn `CrashLogger.kt` (`Documents/PromptVault/logs/` via

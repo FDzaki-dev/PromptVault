@@ -828,9 +828,24 @@ class FileSorter(
     private suspend fun findOrCreateChildDirSaf(parent: DocumentFile, name: String, cacheKey: String): DocumentFile? {
         // Langkah 1: coba URI hasil cache dulu -- resolusi 1 dokumen spesifik by
         // Uri, BUKAN query listing by-nama yang rentan stale (root cause fix ini).
+        //
+        // [FIX crash_20260817_174626, UnsupportedOperationException] SEBELUMNYA
+        // pakai `DocumentFile.fromSingleUri()` di sini -- itu SELALU mengembalikan
+        // SingleDocumentFile, yang `listFiles()`-nya UNCONDITIONALLY throw
+        // UnsupportedOperationException (bukan cuma kalau URI-nya benar-benar
+        // bukan folder -- hardcoded di androidx untuk SEMUA instance). `cached`
+        // hasil cache di sini lalu dipakai lagi sebagai `parent` di pemanggilan
+        // [findOrCreateChildDirSaf] berikutnya (mis. subfolder rule di bawah root
+        // vault), yang manggil `parent.findFile(name)` -> internal `listFiles()`
+        // -> crash persis di titik ini. `DocumentFile.fromTreeUri()` yang benar:
+        // URI cache di sini SELALU berasal dari `.uri` milik TreeDocumentFile
+        // (child hasil `findFile()`/`createDirectory()` dari root tree yang sama),
+        // jadi sudah mengandung segmen `/tree/`. `fromTreeUri()` mengekstrak
+        // document-id dari situ & membangun TreeDocumentFile yang benar --
+        // listFiles()/findFile()/createDirectory() TETAP berfungsi normal.
         settingsRepository.getCachedFolderUri(cacheKey)?.let { cachedUriStr ->
             try {
-                val cached = DocumentFile.fromSingleUri(context, Uri.parse(cachedUriStr))
+                val cached = DocumentFile.fromTreeUri(context, Uri.parse(cachedUriStr))
                 if (cached != null && cached.isDirectory && cached.exists()) return cached
             } catch (e: Exception) {
                 // URI cache basi/tidak valid (mis. folder dihapus manual) -- lanjut jalur normal di bawah, JANGAN gagal di sini.
@@ -976,9 +991,14 @@ class FileSorter(
      *    terpecah walau providernya sempat "nakal" sekali.
      */
     private suspend fun resolveCanonicalRootDirSaf(parent: DocumentFile): DocumentFile? {
+        // [FIX crash_20260817_174626, sama persis dengan fix di findOrCreateChildDirSaf
+        // -- lihat KDoc lengkap di sana] `fromSingleUri()` -> SingleDocumentFile ->
+        // `listFiles()` unconditionally throw. Root vault yang diresolusi lewat cache
+        // di sini dipakai sbg `parent` untuk `findOrCreateChildDirSaf` subfolder rule
+        // berikutnya -> crash. `fromTreeUri()` mengembalikan TreeDocumentFile yang benar.
         settingsRepository.getCachedFolderUri(SAF_ROOT_CACHE_KEY)?.let { cachedUriStr ->
             try {
-                val cached = DocumentFile.fromSingleUri(context, Uri.parse(cachedUriStr))
+                val cached = DocumentFile.fromTreeUri(context, Uri.parse(cachedUriStr))
                 if (cached != null && cached.isDirectory && cached.exists()) return cached
             } catch (e: Exception) {
                 // Cache basi -- lanjut deteksi di bawah.

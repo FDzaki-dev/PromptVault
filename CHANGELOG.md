@@ -3,6 +3,46 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v7.5.2 -- FIX crash pertama produksi: UnsupportedOperationException saat scan ke tujuan kustom SAF (2026-08-17)
+User lapor crash pertama sepanjang project (log `crash_20260817_174626_f7fac68a.txt`,
+device Infinix X6855, Android 16) -- terjadi persis saat tekan Scan setelah
+edit rule. Stack trace: `SingleDocumentFile.listFiles` -> `DocumentFile.findFile`
+-> `FileSorter.findOrCreateChildDirSaf:846`.
+
+**Root cause**: `findOrCreateChildDirSaf()` dan `resolveCanonicalRootDirSaf()`
+merekonstruksi folder ter-cache pakai `DocumentFile.fromSingleUri()`. Fungsi
+itu SELALU menghasilkan `SingleDocumentFile`, yang `listFiles()`-nya
+unconditionally `throw UnsupportedOperationException` (hardcoded di androidx,
+BUKAN bergantung apakah URI-nya folder asli atau bukan). Objek "cached" itu
+lalu dipakai lagi sbg `parent` di panggilan `findOrCreateChildDirSaf`
+berikutnya (subfolder rule di bawah root vault) -> `parent.findFile(name)` ->
+crash. Cache-by-Uri (v7.1.5) sendiri sudah benar secara desain, tinggal salah
+pilih fungsi rekonstruksi.
+
+**Fix (1 file, 2 titik)**: `FileSorter.kt` -- `fromSingleUri()` diganti
+`DocumentFile.fromTreeUri()` di kedua titik rekonstruksi cache. URI yang
+di-cache SELALU berasal dari `.uri` child `TreeDocumentFile` (mengandung
+segmen `/tree/`), jadi `fromTreeUri()` membangun ulang `TreeDocumentFile`
+yang benar -- `listFiles()`/`findFile()`/`createDirectory()` tetap normal.
+
+**Terkait v7.5.1**: user memang pakai folder tujuan kustom = "Documents"
+(overlap dgn `Documents/PromptVault/logs/` milik `CrashLogger.kt`, sudah
+diberi info non-blocking di v7.5.1) -- overlap ITU SENDIRI bukan penyebab
+crash ini (2 subsistem storage beda, tidak saling panggil `listFiles()` satu
+sama lain), tapi kemungkinan memperbesar peluang cache folder sempat "dingin"/
+dibaca ulang (app dibuka lagi setelah lama) sehingga jalur `fromSingleUri()`
+yang buggy ini lebih sering terpakai dibanding kalau selalu createDirectory()
+baru. Root cause sebenarnya murni salah pilih API DocumentFile, independen
+dari lokasi folder yang dipilih user.
+
+**Batas jujur**: belum lewat `./gradlew`/device asli (keterbatasan permanen
+lingkungan Claude). Fix ini defensif & spesifik match stack trace yang
+diberikan user (bukan tebakan luas) -- **user WAJIB verifikasi**: edit rule
+lalu tekan Scan berkali-kali ke folder tujuan kustom yang sama, pastikan
+tidak crash lagi & subfolder rule tetap konsisten (tidak duplikat).
+
+versionCode 91->92, versionName 7.5.1->7.5.2.
+
 ## v7.5.1 -- Info non-blocking: folder tujuan kustom = "Documents" langsung overlap dgn folder crash log (2026-08-17)
 User (setelah diskusi root cause v7.5.0) tanya & KONFIRMASI: folder tujuan
 kustom yang dia pakai persis "Documents" (root storage utama), bukan
