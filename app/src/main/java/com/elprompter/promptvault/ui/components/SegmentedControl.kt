@@ -18,16 +18,16 @@ import androidx.compose.ui.unit.dp
 import com.elprompter.promptvault.ui.theme.TactileTokens
 
 /**
- * Segmented control ala iOS (pil berisi, bukan garis bawah Material) --
+ * Segmented control (pil berisi, bukan garis bawah tab Material biasa) --
  * lebih jelas mana yang aktif, dan terasa lebih "sentuh" di layar sempit.
- * Semua warna theme-aware supaya kontrasnya tetap benar di dark mode.
+ * Semua warna theme-aware supaya kontrasnya tetap benar.
  *
- * v7.0.0 -- Neumorphism -> Glassmorphism (KEMBALI): wadah track sekarang
- * [GlassPanel] `recessed = true` (alur konsisten dengan track
- * `TactileSwitch`) supaya terbaca sebagai "slot" -- pilihan aktif digambar
- * sebagai pil [GlassPanel] TIMBUL kecil di atasnya (border+highlight+shadow
- * standar, [TactileTokens.GlassElevationControl]), pilihan tidak-aktif rata
- * tanpa shadow. Warna `colors.primary`/`colors.surfaceVariant` TIDAK berubah.
+ * v8.0.0 -- Glassmorphism -> Material 3 murni: wadah track sekarang
+ * [TactileSurface] `recessed = true` (Surface M3 baku, tonal+shadow
+ * elevation, TANPA border kaca) supaya terbaca sebagai "slot" -- pilihan
+ * aktif digambar sebagai pil [TactileSurface] TIMBUL kecil di atasnya
+ * ([TactileTokens.TactileElevationControl]), pilihan tidak-aktif rata tanpa
+ * elevasi. Warna `colors.primary`/`colors.surfaceVariant` TIDAK berubah.
  */
 @Composable
 fun SegmentedControl(options: List<String>, selectedIndex: Int, onSelect: (Int) -> Unit) {
@@ -41,7 +41,7 @@ fun SegmentedControl(options: List<String>, selectedIndex: Int, onSelect: (Int) 
     // caller) supaya selalu ada 1 segment terpilih selama `options` tidak
     // kosong -- hardening, belum ada laporan bug aktif dari ini.
     val effectiveIndex = if (options.isEmpty()) -1 else selectedIndex.coerceIn(0, options.lastIndex)
-    GlassPanel(
+    TactileSurface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         color = colors.surfaceVariant,
@@ -52,11 +52,11 @@ fun SegmentedControl(options: List<String>, selectedIndex: Int, onSelect: (Int) 
                 val selected = index == effectiveIndex
                 val interactionSource = remember { MutableInteractionSource() }
                 if (selected) {
-                    GlassPanel(
+                    TactileSurface(
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(10.dp),
                         color = colors.primary,
-                        elevation = TactileTokens.GlassElevationControl,
+                        elevation = TactileTokens.TactileElevationControl,
                         onClick = { onSelect(index) },
                         interactionSource = interactionSource
                     ) {
@@ -72,7 +72,7 @@ fun SegmentedControl(options: List<String>, selectedIndex: Int, onSelect: (Int) 
                     // [Fix audit P2 #UI-19, 2026-08-15] Sebelumnya segment TIDAK
                     // terpilih benar-benar NOL feedback tekan (indication=null,
                     // tanpa scale) -- beda dari segment terpilih yang otomatis
-                    // dapat ripple bawaan `GlassPanel(onClick=...)`. Bukan sekadar
+                    // dapat ripple bawaan `TactileSurface(onClick=...)`. Bukan sekadar
                     // "beda gaya" (ripple di list biasa vs scale di kontrol
                     // tactile itu memang pola desain sengaja, lihat dokumentasi
                     // `PressScale.kt`) -- ini gap NYATA: segment ini sama sekali

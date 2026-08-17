@@ -59,8 +59,6 @@ fun SettingsScreen(
     onConflictStrategySelected: (ConflictStrategy) -> Unit,
     currentScanConcurrency: Int,
     onScanConcurrencySelected: (Int) -> Unit,
-    useAltTheme: Boolean,
-    onUseAltThemeChanged: (Boolean) -> Unit,
     onExportRequested: suspend () -> String,
     onImportRequested: (String, (Boolean, Int) -> Unit) -> Unit,
     safTreeUri: String?,
@@ -150,33 +148,10 @@ fun SettingsScreen(
                 }
             }
 
-            // [Fitur baru, v7.1.0] Toggle tema -- ON/OFF antara 2 preset TETAP
-            // (Deep Navy+Brass default / Charcoal+Copper alternatif), BUKAN
-            // color picker bebas -- lihat javadoc lengkap di Theme.kt/Color.kt.
-            Text("Tema", style = MaterialTheme.typography.titleMedium)
-            Text(
-                if (useAltTheme) {
-                    "Charcoal + Copper aktif. Matikan untuk kembali ke Deep Navy + Brass (default)."
-                } else {
-                    "Deep Navy + Brass (default) aktif. Nyalakan untuk pindah ke preset alternatif Charcoal + Copper."
-                },
-                style = MaterialTheme.typography.bodySmall
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    if (useAltTheme) "Charcoal + Copper" else "Deep Navy + Brass",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                TactileSwitch(
-                    checked = useAltTheme,
-                    onCheckedChange = onUseAltThemeChanged,
-                    accentColor = colors.primary
-                )
-            }
+            // v8.0.0 -- Toggle tema (2 preset kustom) DIHAPUS TOTAL, seksi
+            // "Tema" ikut dihapus dari Pengaturan -- app sekarang SATU
+            // ColorScheme Material 3 murni, tidak ada lagi yang dipilih user
+            // di sini (lihat Theme.kt/Color.kt).
 
             Text("Kalau Nama File Sudah Ada di Tujuan", style = MaterialTheme.typography.titleMedium)
             Text(

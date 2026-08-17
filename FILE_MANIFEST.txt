@@ -32,12 +32,12 @@ app/src/main/java/com/elprompter/promptvault/shizuku/ShizukuManager.kt
 app/src/main/java/com/elprompter/promptvault/ui/MainViewModel.kt
 app/src/main/java/com/elprompter/promptvault/ui/Navigation.kt
 app/src/main/java/com/elprompter/promptvault/ui/components/EmptyState.kt
-app/src/main/java/com/elprompter/promptvault/ui/components/GlassPanel.kt
 app/src/main/java/com/elprompter/promptvault/ui/components/GroupedListRow.kt
 app/src/main/java/com/elprompter/promptvault/ui/components/PressScale.kt
 app/src/main/java/com/elprompter/promptvault/ui/components/RuleCard.kt
 app/src/main/java/com/elprompter/promptvault/ui/components/SegmentedControl.kt
 app/src/main/java/com/elprompter/promptvault/ui/components/SortedStamp.kt
+app/src/main/java/com/elprompter/promptvault/ui/components/TactileSurface.kt
 app/src/main/java/com/elprompter/promptvault/ui/components/TactileSwitch.kt
 app/src/main/java/com/elprompter/promptvault/ui/components/VaultActionSheet.kt
 app/src/main/java/com/elprompter/promptvault/ui/components/VaultCard.kt

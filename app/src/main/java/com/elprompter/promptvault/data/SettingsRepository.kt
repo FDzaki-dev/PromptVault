@@ -35,7 +35,6 @@ class SettingsRepository(private val context: Context) {
     private val conflictKey = stringPreferencesKey("conflict_strategy")
     private val safTreeUriKey = stringPreferencesKey("saf_tree_uri")
     private val scanConcurrencyKey = intPreferencesKey("scan_concurrency")
-    private val useAltThemeKey = booleanPreferencesKey("use_alt_theme")
     // [Fitur baru 2026-08-17, integrasi Shizuku] Path filesystem absolut
     // (BUKAN content:// URI -- Shizuku bypass SAF sepenuhnya) folder tujuan
     // kustom via Shizuku. `useShizukuKey` menentukan mode ini AKTIF atau
@@ -79,27 +78,10 @@ class SettingsRepository(private val context: Context) {
         const val DEFAULT_SCAN_CONCURRENCY = 6
         val ALLOWED_SCAN_CONCURRENCY = listOf(2, 4, 6, 8, 12)
 
-        /**
-         * [Fitur baru, 2026-08-15] Toggle tema di Pengaturan -- SATU switch
-         * ON/OFF antara 2 preset TETAP (bukan color picker bebas, sesuai
-         * pilihan eksplisit user lewat pertanyaan klarifikasi). `false`
-         * (default) = Deep Navy + Brass (v7.0.0, current). `true` = preset
-         * alternatif "Charcoal + Copper" (BARU, dirancang sesi ini --
-         * BUKAN mengembalikan palet lama manapun, hex Platinum/Ruby v6.0.0
-         * sudah dihapus total & TIDAK tercatat presisi di mana pun utk
-         * direkonstruksi dgn aman, lihat Color.kt utk detail & perhitungan
-         * WCAG lengkap kedua preset).
-         *
-         * [Pelajaran v2.16.0, WAJIB dihormati] `ThemeMode` lama (SYSTEM/
-         * LIGHT/DARK) DIHAPUS TOTAL krn togglenya TIDAK PERNAH benar-benar
-         * mengubah apa pun (`PromptVaultTheme` hardcode 1 skema, parameter
-         * diabaikan) -- UI yang "berbohong". Toggle INI BEDA: `PromptVaultTheme`
-         * (Theme.kt) SEKARANG benar-benar `@Composable` yang membaca
-         * parameter ini secara reaktif & memilih `ColorScheme` berbeda --
-         * diverifikasi manual di setiap file yang disentuh batch ini,
-         * BUKAN switch UI kosong seperti insiden v2.16.0.
-         */
-        const val DEFAULT_USE_ALT_THEME = false
+        // v8.0.0 -- Toggle tema `useAltTheme` (2026-08-15, 2 preset tetap)
+        // DIHAPUS TOTAL bersama seluruh key/flow/getter/setter-nya (lihat
+        // Theme.kt/Color.kt): rombak total ke "default Material 3 murni" =
+        // SATU ColorScheme baku, bukan lagi toggle antar 2 preset kustom.
     }
 
     val intervalMinutesFlow: Flow<Int> = context.promptVaultDataStore.data.map { prefs ->
@@ -208,17 +190,6 @@ class SettingsRepository(private val context: Context) {
     suspend fun setScanConcurrency(value: Int) {
         val safe = if (value in ALLOWED_SCAN_CONCURRENCY) value else DEFAULT_SCAN_CONCURRENCY
         context.promptVaultDataStore.edit { prefs -> prefs[scanConcurrencyKey] = safe }
-    }
-
-    /** Lihat dokumentasi lengkap di [DEFAULT_USE_ALT_THEME]. */
-    val useAltThemeFlow: Flow<Boolean> = context.promptVaultDataStore.data.map { prefs ->
-        prefs[useAltThemeKey] ?: DEFAULT_USE_ALT_THEME
-    }
-
-    suspend fun getUseAltTheme(): Boolean = useAltThemeFlow.first()
-
-    suspend fun setUseAltTheme(value: Boolean) {
-        context.promptVaultDataStore.edit { prefs -> prefs[useAltThemeKey] = value }
     }
 
     /**

@@ -19,43 +19,24 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import com.elprompter.promptvault.ui.theme.GlassSurfaceElevated
 import com.elprompter.promptvault.ui.theme.TactileTokens
 
 /**
- * Satu baris menu ala grouped list iOS Settings: ikon berwarna di kotak
+ * Satu baris menu ala grouped list Settings: ikon berwarna di kotak
  * membulat, label, chevron di kanan. Dipakai berkelompok di dalam GroupedList.
  * tint = null berarti pakai warna primary tema secara otomatis (theme-aware);
- * boleh dioverride eksplisit (mis. Amber/tertiary) lewat MaterialTheme.colorScheme.
+ * boleh dioverride eksplisit (mis. tertiary) lewat MaterialTheme.colorScheme.
  *
- * v3.0.1 -- fix pelanggaran bab 18 spesifikasi tema ("Glow forbidden: Every
- * icon"): sebelumnya SETIAP baris menu (bukan cuma yang selected/focused)
- * punya `Modifier.shadow()` berwarna tint yang terlihat sebagai glow
- * permanen -- 4 glow tampil bersamaan tiap kali Home dibuka, jelas
- * melanggar golden rule "user notice glass/AMOLED dulu, bukan glow".
- * Diganti kotak ikon glass datar (bab 4/7/14: tint hanya lewat fill alpha
- * rendah + border rambut, TANPA shadow berwarna) -- identitas warna per
- * menu tetap ada lewat isi & border, bukan lewat cahaya yang menyala.
- *
- * v4.0.0 -- "ultra immersive depth/3D" (permintaan eksplisit user, MENGGANTI
- * keputusan v3.0.1 di atas soal shadow): kotak ikon sekarang dapat elevasi
- * NYATA tapi kecil & NETRAL, shadow bawaan Material3 -- bukan `spotColor`
- * berwarna tint -- supaya tetap beda dari "glow" yang dilarang bab 18 (glow =
- * cahaya BERWARNA menyala; ini cuma bayangan abu-abu netral kecil, sinyal
- * "terangkat", bukan "menyala").
- *
- * v7.0.0 -- Neumorphism -> Glassmorphism (KEMBALI, permintaan eksplisit
- * user): kotak ikon sekarang pakai `GlassPanel` (border kaca + shadow
- * tunggal + highlight, lihat `GlassPanel.kt`) menggantikan
- * `NeumorphicSurface`. Border [GlassBorder] otomatis KEMBALI ADA (default
- * `GlassPanel`) -- "tepi kaca" adalah ciri Glassmorphism, bukan lagi
- * dihindari seperti era Neumorphism v5.0.0. Tint warna per-menu (bab "menu
- * tidak monoton satu warna") TETAP dipertahankan PERSIS SAMA lewat overlay
- * gradient tint [resolvedTint] di dalam Surface, tidak berubah.
+ * v8.0.0 -- Glassmorphism -> Material 3 murni: kotak ikon sekarang
+ * `TactileSurface` (Surface M3 baku, tonal+shadow elevation, TANPA border
+ * hairline kaca), warna dasar `colorScheme.surfaceContainerHigh` (peran M3
+ * baku). Overlay dua-stop gradient tint diganti fill SOLID alpha rendah --
+ * gradient bevel adalah bahasa Glassmorphism, bukan M3; identitas warna
+ * per-menu (bab "menu tidak monoton satu warna") tetap ada lewat fill tint
+ * + ikon, hanya teknik overlay-nya yang disederhanakan.
  */
 @Composable
 fun GroupedListRow(icon: ImageVector, label: String, tint: Color? = null, onClick: () -> Unit) {
@@ -74,18 +55,14 @@ fun GroupedListRow(icon: ImageVector, label: String, tint: Color? = null, onClic
             .padding(horizontal = 16.dp, vertical = 13.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        GlassPanel(
+        TactileSurface(
             modifier = Modifier.size(30.dp),
             shape = MaterialTheme.shapes.small,
-            color = GlassSurfaceElevated,
-            elevation = TactileTokens.GlassElevationControl
+            color = colors.surfaceContainerHigh,
+            elevation = TactileTokens.TactileElevationControl
         ) {
             Box(
-                modifier = Modifier.background(
-                    Brush.linearGradient(
-                        colors = listOf(resolvedTint.copy(alpha = 0.22f), resolvedTint.copy(alpha = 0.12f))
-                    )
-                ),
+                modifier = Modifier.background(resolvedTint.copy(alpha = 0.16f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(icon, contentDescription = null, tint = resolvedTint, modifier = Modifier.size(16.dp))

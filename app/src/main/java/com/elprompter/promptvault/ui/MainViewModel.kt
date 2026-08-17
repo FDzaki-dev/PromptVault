@@ -77,13 +77,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             state.asStateFlow()
         }
 
-    /** Lihat dokumentasi lengkap di SettingsRepository.DEFAULT_USE_ALT_THEME. */
-    val useAltTheme: StateFlow<Boolean> = settingsRepository.useAltThemeFlow
-        .let { flow ->
-            val state = MutableStateFlow(SettingsRepository.DEFAULT_USE_ALT_THEME)
-            viewModelScope.launch { flow.collect { state.value = it } }
-            state.asStateFlow()
-        }
 
     /** [SAF] URI folder TUJUAN kustom aktif (tree URI, `null` = belum diset / tujuan tetap Downloads/PromptVault). Sumber scan SELALU Downloads, lihat FileSorter.scanAndSort. */
     val safTreeUri: StateFlow<String?> = settingsRepository.safTreeUriFlow
@@ -259,10 +252,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     /** [Technical debt #4] Lihat dokumentasi lengkap di SettingsRepository.setScanConcurrency. */
     fun setScanConcurrency(value: Int) {
         viewModelScope.launch { settingsRepository.setScanConcurrency(value) }
-    }
-
-    fun setUseAltTheme(value: Boolean) {
-        viewModelScope.launch { settingsRepository.setUseAltTheme(value) }
     }
 
     /** [Fitur baru 2026-08-17, integrasi Shizuku] Minta izin Shizuku -- no-op aman kalau Shizuku belum terpasang/jalan (lihat ShizukuManager.requestPermission). */

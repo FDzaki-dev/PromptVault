@@ -3,7 +3,54 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
-## STATUS PROJECT: v7.5.2 -- FIX crash pertama produksi (UnsupportedOperationException, SingleDocumentFile.listFiles) -- 2026-08-17
+## STATUS PROJECT: v8.0.0 -- ROMBAK TOTAL TEMA: Material 3 murni, calm bukan warm, Premium Tactile -- 2026-08-18
+- **Permintaan eksplisit user (sesi ini)**: "Rombak total theme aplikasi
+  jadi default Material 3 murni, pendekatan Premium Tactile experience,
+  base warna calm bukan warm, tetap sesuai standar WCAG." Detail lengkap
+  perubahan file & angka kontras WCAG ada di CHANGELOG.md v8.0.0 -- ringkasan
+  keputusan arsitektur di bawah.
+- **Atomic change**: 19 file tersentuh (batch limit 10 dilampaui dgn
+  justifikasi eksplisit -- color tokens, primitif tactile, dan penghapusan
+  toggle preset saling terikat erat, kompilasi gagal kalau diterapkan
+  parsial).
+- **Keputusan #1 -- Glassmorphism dihapus total**: `GlassPanel.kt` (border
+  kaca+gradient highlight+shadow kustom) DIHAPUS, diganti `TactileSurface.kt`
+  (Surface M3 baku: `tonalElevation`+`shadowElevation`, TANPA border/bevel
+  dekoratif -- itu bukan bahasa visual M3). Ini pengganti langsung, bukan
+  refactor nama saja -- visualnya berubah (tidak ada lagi hairline glass
+  border di semua kartu/kontrol).
+- **Keputusan #2 -- toggle preset ganda `useAltTheme` DIHAPUS TOTAL**
+  (bukan direvisi/direkolor): "default Material 3 murni" berarti SATU
+  ColorScheme baku, bukan 2 preset kustom (Deep Navy+Brass / Charcoal+Copper,
+  v7.1.0) untuk dipilih user. Infra ikut dihapus: `SettingsRepository`
+  (key/flow/getter/setter), `MainViewModel` (StateFlow/setter), seksi "Tema"
+  di `SettingsScreen`, `SideEffect` reaktif status/nav bar di `MainActivity`.
+  **Kalau user MINTA toggle tema balik di sesi depan**: ini PENGHAPUSAN FITUR
+  SENGAJA sesi ini, bukan bug -- tanya dulu preset seperti apa yang diinginkan,
+  jangan asal restore v7.1.0 (paletnya sudah tidak sesuai syarat "calm").
+- **Keputusan #3 -- dark-only TIDAK diubah**: keputusan v3.0.0 dipertahankan
+  murni krn user minta rombak WARNA/TEMA, bukan minta Light mode baru. Kalau
+  App Widget/dsb butuh Light mode kelak, itu scope terpisah, bukan bagian
+  dari "Material 3 murni" yang diminta sesi ini.
+- **Keputusan #4 -- warna semantik (tertiary=warning amber, error=merah)
+  SENGAJA TIDAK ikut hue calm murni**: konvensi universal, porsi kecil/aksen
+  saja, bukan "base warna dominan" yang jadi syarat user. Base/dominan
+  (background, 5-tingkat surfaceContainer, primary CTA) 100% cool/calm (seed
+  biru H222).
+- **WCAG**: semua pasangan teks/ikon dihitung manual (relative luminance
+  formula W3C, script python di sesi ini, sama metode dgn audit 2026-08-16
+  sebelumnya) -- lulus AA (>=4.5:1 teks, >=3:1 batas grafis 1.4.11) di
+  worst-case (surface paling terang). Container fill (~1.8-2:1 vs root
+  background) TIDAK melanggar 1.4.11 -- selalu dipakai sbg bentuk jelas
+  (kotak ikon bulat) di dalam TactileSurface yang sudah py shadow sendiri,
+  bukan blok warna mengambang tanpa bentuk (precedent sama dgn audit
+  GlassHighlight sebelumnya).
+- Preflight check `scripts/preflight_check.sh`: 12/13 kategori PASS otomatis,
+  kategori #7 (review manual fungsi lokal) diperiksa manual, tidak ada
+  temuan baru dari batch ini.
+- versionCode 92→93, versionName 7.5.2→8.0.0.
+
+## STATUS PROJECT SEBELUMNYA: v7.5.2 -- FIX crash pertama produksi (UnsupportedOperationException, SingleDocumentFile.listFiles) -- 2026-08-17
 - Crash pertama sepanjang project, user upload log asli
   (`crash_20260817_174626_f7fac68a.txt`, Infinix X6855/Android 16). Trigger:
   edit rule sortir -> tekan Scan di beranda.

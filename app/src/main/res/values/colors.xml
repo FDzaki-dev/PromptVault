@@ -1,13 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- v7.0.0: Neumorphism to Glassmorphism. pv_amoled_background diisi
-         hex Deep Navy (#0B132B, sesuai Color.kt#AmoledBackground, nama
-         token TIDAK diubah supaya MainActivity.kt protected asset tidak
-         perlu disentuh). pv_platinum_accent diganti pv_brass_accent, ikut
-         re-palette Color.kt#BrassAccent (aksen tombol utama, permintaan
-         eksplisit user). Token ini TIDAK direferensikan XML lain saat ini
-         (cek grep sebelum edit), tetap disamakan supaya tidak jadi sisa
-         hex basi kalau kelak dipakai. -->
-    <color name="pv_amoled_background">#0B132B</color>
-    <color name="pv_brass_accent">#B5A642</color>
+    <!-- v8.0.0: rombak total ke Material 3 murni (calm, bukan warm), lihat
+         Color.kt. pv_amoled_background diisi hex sesuai Color.kt#AppBackground
+         (biru-gelap calm, ganti Deep Navy #0B132B lama). pv_brass_accent
+         diganti pv_primary_accent, ikut Color.kt#Primary. Token TIDAK
+         direferensikan XML lain saat ini (cek grep sebelum edit), tetap
+         disamakan supaya tidak jadi sisa hex basi. -->
+    <color name="pv_amoled_background">#0D0E12</color>
+    <color name="pv_primary_accent">#98AEE1</color>
 </resources>

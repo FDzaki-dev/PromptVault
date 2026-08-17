@@ -46,9 +46,9 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import com.elprompter.promptvault.ui.MainViewModel
-import com.elprompter.promptvault.ui.components.GlassPanel
 import com.elprompter.promptvault.ui.components.GroupedList
 import com.elprompter.promptvault.ui.components.GroupedListRow
+import com.elprompter.promptvault.ui.components.TactileSurface
 import com.elprompter.promptvault.ui.components.VaultCard
 import com.elprompter.promptvault.ui.theme.TactileTokens
 import com.elprompter.promptvault.ui.theme.VaultTheme
@@ -75,13 +75,12 @@ fun HomeScreen(
     onOpenPanduan: () -> Unit
 ) {
     val colors = MaterialTheme.colorScheme
-    // [v7.0.0] Riwayat panjang Insiden #9/#10 (baseColor vs wash gradient,
-    // lihat PROJECT_STATE.md) sepenuhnya MOOT sekarang: `GlassPanel`
-    // (pengganti `NeumorphicSurface`, lihat `GlassPanel.kt`) tidak lagi
-    // pakai teknik shadow-caster yang butuh `baseColor` "menyamar" dengan
-    // latar -- shadow-nya `Modifier.shadow` standar, valid di atas latar
-    // solid ATAUPUN gradient. Latar layar ini tetap solid `colors.background`
-    // (konsisten dgn seluruh app), bukan krn keterbatasan teknik lagi.
+    // [v8.0.0] Riwayat panjang Insiden #9/#10 (baseColor vs wash gradient,
+    // lihat PROJECT_STATE.md) sepenuhnya MOOT: `TactileSurface` (Surface M3
+    // baku, pengganti `GlassPanel`, lihat `TactileSurface.kt`) tidak pakai
+    // teknik shadow-caster sama sekali -- `shadowElevation`/`tonalElevation`
+    // Compose asli, valid di atas latar apapun. Latar layar ini tetap solid
+    // `colors.background` (konsisten dgn seluruh app).
     val haptics = LocalHapticFeedback.current
     val snackbarHostState = remember { SnackbarHostState() }
     // Warna Snackbar yang SEDANG tayang di-snapshot terpisah dari scanFeedback
@@ -123,11 +122,9 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .background(colors.background)
-                // [v7.0.0] Latar tetap solid `colors.background` (Deep Navy)
-                // -- bukan lagi keterbatasan teknik shadow (`GlassPanel`
-                // valid di atas latar apapun), murni konsisten dgn 12 layar
-                // lain di app + instruksi eksplisit user: Navy dominan 60-70%
-                // sebagai latar, bukan wash gradient/tekstur.
+                // [v8.0.0] Latar tetap solid `colors.background` (biru-calm
+                // gelap, lihat Color.kt) -- konsisten dgn seluruh layar app,
+                // bukan wash gradient/tekstur.
         ) {
         // UI-01 fix: Column body Home sekarang scrollable (verticalScroll).
         // Sebelumnya fillMaxSize() tanpa scroll -- di layar pendek/landscape/
@@ -162,14 +159,11 @@ fun HomeScreen(
                 }
             }
 
-            // v7.0.0 -- Neumorphism -> Glassmorphism (KEMBALI, permintaan
-            // eksplisit user "ultra buggy"): `GlassPanel` dgn shadow tunggal
-            // standar ([TactileTokens.GlassElevationCta]) saat idle, `recessed
-            // = scanPressed` saat ditekan (shadow hilang, terasa "masuk").
-            // Blend gradient Ruby->Platinum (v6.0.0) DIHAPUS TOTAL -- CTA
-            // sekarang SATU warna solid Brass saja (`colors.primary` ==
-            // `colors.secondary`, keduanya `BrassAccent`, lihat Theme.kt),
-            // sesuai instruksi eksplisit "aksen tombol utama" tunggal.
+            // v8.0.0 -- Glassmorphism -> Material 3 murni: `TactileSurface`
+            // dgn tonal+shadow elevation M3 baku ([TactileTokens.TactileElevationCta],
+            // == elevasi default FAB M3) saat idle, `recessed = scanPressed`
+            // saat ditekan (elevasi hilang, terasa "masuk"). CTA warna solid
+            // `colors.primary` (biru calm, lihat Theme.kt).
             val scanInteraction = remember { MutableInteractionSource() }
             val scanPressed by scanInteraction.collectIsPressedAsState()
             val ctaScale by animateFloatAsState(
@@ -177,7 +171,7 @@ fun HomeScreen(
                 animationSpec = tween(TactileTokens.PressAnimationMillis),
                 label = "ctaScale"
             )
-            GlassPanel(
+            TactileSurface(
                 onClick = onScanNow,
                 enabled = !isScanning,
                 interactionSource = scanInteraction,
@@ -186,7 +180,7 @@ fun HomeScreen(
                     .scale(ctaScale),
                 shape = MaterialTheme.shapes.large,
                 color = colors.primary,
-                elevation = TactileTokens.GlassElevationCta,
+                elevation = TactileTokens.TactileElevationCta,
                 recessed = scanPressed
             ) {
                 Box(

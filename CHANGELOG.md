@@ -3,6 +3,48 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.0.0 (2026-08-18) — Rombak Total Tema: Material 3 Murni
+
+Permintaan eksplisit user: "Rombak total theme aplikasi jadi default
+Material 3 murni, pendekatan Premium Tactile experience, base warna calm
+bukan warm, tetap sesuai standar WCAG." Atomic change, 19 file tersentuh
+(1 file baru, 1 dihapus) -- batch limit 10 file dilampaui dgn justifikasi:
+seluruh perubahan saling terikat erat, kompilasi gagal kalau parsial.
+
+**Dihapus total:**
+- `GlassPanel.kt` (primitif Glassmorphism: border kaca, gradient highlight,
+  shadow warna kustom) → diganti `TactileSurface.kt` (Surface M3 baku,
+  `tonalElevation`+`shadowElevation`)
+- Toggle preset ganda `useAltTheme` (Deep Navy+Brass / Charcoal+Copper,
+  v7.1.0) beserta seluruh infra-nya (`SettingsRepository` key/flow/setter,
+  `MainViewModel` StateFlow/setter, seksi "Tema" di `SettingsScreen`,
+  `SideEffect` reaktif di `MainActivity`) -- "default M3 murni" = SATU
+  ColorScheme baku, bukan 2 preset kustom untuk dipilih
+- Semua token literal `Glass*`/`Brass*`/`Copper*`/`Charcoal*`/
+  `AmoledBackground`
+
+**Diganti/ditambah:**
+- `Color.kt`: 1 skema tonal M3 (seed biru calm H222 utk primary/neutral,
+  amber H42 KHUSUS warning, merah H8 utk error). Semua pasangan teks/ikon
+  diverifikasi WCAG manual (relative luminance W3C) -- lihat komentar
+  kontras per grup warna di file
+- `Shapes.kt`: skala corner radius baku M3 (4/8/12/16/28dp), dari skala
+  kustom 8/12/16/20/28dp ("kesan iOS") sebelumnya
+- `Type.kt`: 15-style type scale baku M3, dari gaya kustom "Apple large
+  title" sebelumnya
+- `TactileTokens.kt`: token elevasi `Glass*` → `Tactile*`, dikalibrasi ke
+  nilai M3 Elevation Level asli (1dp/3dp/6dp; 6dp = elevasi default FAB
+  M3 baku, dipakai utk CTA)
+- `colors.xml`: `pv_amoled_background` & `pv_brass_accent`→`pv_primary_accent`
+  diupdate ke hex baru selaras `Color.kt`
+
+**Dark-only tidak diubah** (keputusan v3.0.0 dipertahankan -- user minta
+rombak warna/tema, bukan Light mode baru).
+
+versionCode 92→93, versionName 7.5.2→8.0.0. Preflight check: 12/13 kategori
+lulus otomatis, 1 kategori (#7, review manual fungsi lokal) diperiksa manual
+-- tidak ada temuan baru dari batch ini.
+
 ## v7.5.2b -- Docs-only: README/TROUBLESHOOTING ketinggalan selama saga SAF & duplikasi (2026-08-17)
 User minta lanjut beresin dokumen Markdown yang terbengkalai (fokus dev
 sesi-sesi sebelumnya habis di krisis SAF/duplikasi & crash). Tidak ada

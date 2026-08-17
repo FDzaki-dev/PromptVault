@@ -14,7 +14,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
@@ -33,10 +32,11 @@ import com.elprompter.promptvault.ui.theme.TactileTokens
  * Dipanggil lewat Crossfade di tiap layar supaya transisi kosong<->berisi
  * halus, bukan potongan tiba-tiba.
  *
- * v7.0.0 -- Neumorphism -> Glassmorphism (KEMBALI): lingkaran ikon sekarang
- * [GlassPanel] timbul kecil ([TactileTokens.GlassElevationControl], border+
- * highlight+shadow standar), konsisten dengan kotak ikon `GroupedListRow` &
- * thumb `TactileSwitch`. Warna aksen per layar (`accentColor`/
+ * v8.0.0 -- Glassmorphism -> Material 3 murni: lingkaran ikon sekarang
+ * [TactileSurface] timbul kecil ([TactileTokens.TactileElevationControl],
+ * Surface M3 baku), konsisten dengan kotak ikon `GroupedListRow` & thumb
+ * `TactileSwitch`. Overlay gradient tint diganti fill solid alpha rendah
+ * (sama pola dgn `GroupedListRow`). Warna aksen per layar (`accentColor`/
  * `accentContainerColor`) TIDAK berubah.
  */
 @Composable
@@ -55,18 +55,14 @@ fun EmptyState(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        GlassPanel(
+        TactileSurface(
             modifier = Modifier.size(56.dp),
             shape = RoundedCornerShape(16.dp),
             color = accentContainerColor,
-            elevation = TactileTokens.GlassElevationControl
+            elevation = TactileTokens.TactileElevationControl
         ) {
             Box(
-                modifier = Modifier.background(
-                    Brush.linearGradient(
-                        colors = listOf(accentColor.copy(alpha = 0.20f), accentColor.copy(alpha = 0.08f))
-                    )
-                ),
+                modifier = Modifier.background(accentColor.copy(alpha = 0.14f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(icon, contentDescription = null, tint = accentColor, modifier = Modifier.size(28.dp))

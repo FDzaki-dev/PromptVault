@@ -3,136 +3,111 @@ package com.elprompter.promptvault.ui.theme
 import androidx.compose.ui.graphics.Color
 
 /**
- * v7.0.0 — Neumorphism DIHAPUS TOTAL (permintaan eksplisit user: "ultra
- * buggy" -- lihat riwayat Insiden #3/#8/#9/#10 di PROJECT_STATE.md, semua
- * berasal dari teknik shadow ganda offset-Box `Neumorphic.kt` yang sekarang
- * dihapus & digantikan `GlassPanel.kt`, primitif tunggal lebih sederhana:
- * Surface biasa + border + shadow standar Compose, TANPA trik offset-Box).
+ * v8.0.0 — ROMBAK TOTAL (permintaan eksplisit user, sesi ini): seluruh
+ * palet Glassmorphism kustom (Deep Navy+Brass / Charcoal+Copper, v7.x)
+ * DIHAPUS TOTAL, diganti SATU skema tonal Material 3 murni. 3 syarat
+ * eksplisit user, semua ditelusuri di bawah:
+ * 1. "default Material 3 murni" -- peran warna & tingkat elevasi permukaan
+ *    di bawah adalah peran BAKU M3 (primary/secondary/tertiary/error +
+ *    5-tingkat surfaceContainer), BUKAN token kustom ber-merek ("Glass*",
+ *    "Brass*") seperti sebelumnya. Toggle preset ganda (useAltTheme, 2
+ *    hue eksotis) ikut DIHAPUS (lihat Theme.kt) -- "pure default" berarti
+ *    SATU identitas warna, bukan 2 preset kustom untuk dipilih.
+ * 2. "base warna calm bukan warm" -- seed hue dasar (neutral+primary) =
+ *    H222 (BIRU, cool). Preset lama v7.1.0 "Charcoal+Copper" (H30, EKSPLISIT
+ *    hangat, lihat riwayat git) adalah pelanggaran langsung syarat ini --
+ *    salah satu alasan kenapa dihapus, bukan direvisi.
+ * 3. "tetap sesuai standar WCAG" -- SEMUA pasangan teks/ikon dihitung manual
+ *    (formula relative luminance W3C, sama seperti fix 2026-08-16
+ *    sebelumnya) sebelum di-commit, lihat comment kontras di tiap grup di
+ *    bawah. Teks/UI SELALU >=4.5:1 (teks) / >=3:1 (batas grafis non-teks,
+ *    1.4.11), diverifikasi worst-case di TINGKAT PERMUKAAN PALING TERANG
+ *    (margin kontras paling kecil), pola yang sama dipertahankan dari
+ *    audit WCAG sebelumnya.
  *
- * Palet dipatok EKSPLISIT ke 2 hex yang diberikan user, TIDAK ADA hue baru
- * ditambahkan di luar itu ("dilarang keras ngide sendiri"):
- * - #0B132B (Deep Navy Blue) -- 60-70% latar dominan: background root +
- *   seluruh badan panel kaca. Variasi tingkat (`GlassSurface*` di bawah)
- *   BUKAN hue baru -- murni tint/shade lebih terang dari hex yang sama,
- *   dibutuhkan supaya hierarki elevasi tetap terbaca tanpa blur asli
- *   (minSdk 26, `Modifier.blur` RenderEffect cuma nyata di API 31+).
- * - #B5A642 (Brass) -- 10-30% aksen TOMBOL UTAMA SAJA (CTA "Scan Sekarang",
- *   kontrol primer terpilih/ON: segment aktif, switch ON, ikon menu utama).
- *   TIDAK dipakai sebagai warna latar/fill besar di luar itu.
- *
- * Token semantik lama (AmberGlow/RustGlow/SlateGlow -- warning/error/menu
- * "Pengaturan") TIDAK diubah hex-nya: sudah ada SEBELUM instruksi ini & di
- * luar cakupan 2 constraint di atas ("latar dominan" + "aksen tombol
- * utama") -- dipertahankan apa adanya supaya sinyal destructive/warning
- * tetap beda dari aksen primer Brass, TANPA menambah hue baru (token lama,
- * bukan penambahan).
- *
- * `RubyGlow`/`PlatinumAccent` (blend gradient CTA v6.0.0) DIHAPUS TOTAL --
- * CTA sekarang SATU warna solid Brass saja, sesuai instruksi eksplisit
- * "aksen tombol utama" tunggal, bukan blend 2 aksen seperti sebelumnya.
+ * Warna semantik status (tertiary=warning, error) SENGAJA TIDAK ikut hue
+ * calm murni -- amber utk warning & merah utk error adalah konvensi
+ * universal, dan porsinya kecil/aksen-saja (bukan "base warna dominan"
+ * yang jadi syarat #2). Base/dominan (background, surface 5-tingkat,
+ * primary CTA) 100% cool/calm.
  */
 
-// ---- Fondasi Deep Navy (60-70% dominan) ----
-// Nama token `AmoledBackground` DIPERTAHANKAN (bukan di-rename) supaya
-// MainActivity.kt (protected asset, hanya boleh edit parsial) TIDAK perlu
-// disentuh sama sekali -- import & pemakaiannya di sana tetap valid, hanya
-// NILAI hex yang berubah ke Deep Navy.
-val AmoledBackground = Color(0xFF0B132B)          // root background, Deep Navy solid
-val DeepNavy = AmoledBackground                   // alias semantik untuk kode baru
+// ---- Neutral: root + 5-tingkat surfaceContainer (M3 baku), hue ditarik
+// dari primary (H222) supaya "surface tint" kohesif & calm, saturasi
+// SANGAT rendah (16%) -- bukan abu netral polos, bukan juga berwarna. ----
+val AppBackground = Color(0xFF0D0E12)             // root; splash & status/nav bar (lihat MainActivity)
+val SurfaceContainerLowest = Color(0xFF090A0C)    // tingkat paling redup (recessed/track dasar)
+val SurfaceContainerLow = Color(0xFF111317)       // == surface, tingkat dasar konten
+val SurfaceDefault = Color(0xFF111317)
+val SurfaceContainer = Color(0xFF181A20)          // panel kartu (VaultCard)
+val SurfaceContainerHigh = Color(0xFF21242B)      // "naik" 1 tingkat (kotak ikon)
+val SurfaceContainerHighest = Color(0xFF2D3139)   // sheet/dialog, tingkat PALING TERANG
+val SurfaceRecessed = Color(0xFF060709)           // kontrol tenggelam (track switch OFF)
 
-val GlassSurface = Color(0xFF141C3A)              // panel kaca utama (VaultCard), tint navy lebih terang
-val GlassSurfaceElevated = Color(0xFF1C2547)      // panel "naik" 1 tingkat (kotak ikon, dsb)
-val GlassSurfaceSheet = Color(0xFF232C54)         // sheet/dialog -- tingkat paling terang
-val GlassSurfacePressed = Color(0xFF080E22)       // kontrol recessed / track (lebih gelap dari root)
+// on-neutral. Worst-case dihitung vs SurfaceContainerHighest (tingkat paling
+// terang, margin kontras paling kecil):
+// TextPrimary: 11.64:1 (lulus AAA). TextSecondary: 7.54:1 (lulus AAA).
+val TextPrimary = Color(0xFFF1F2F4)
+val TextSecondary = Color(0xFFC1C5CD)
 
-// ---- Aksen tombol utama: BRASS (10-30%, CTA & kontrol primer saja) ----
-val BrassAccent = Color(0xFFB5A642)
-val BrassAccentContainer = BrassAccent.copy(alpha = 0.18f)
-val BrassAccentOn = DeepNavy                      // teks gelap di atas brass terang (reuse Navy, bukan hex baru)
+// outline (batas grafis non-teks, ambang WCAG 1.4.11 = 3:1). Worst-case vs
+// SurfaceContainerHighest: 3.25:1, lulus dengan margin wajar.
+val Outline = Color(0xFF767F93)
+val OutlineVariant = Color(0xFF3D4351)            // divider dekoratif, bukan batas fungsional -- tidak wajib 3:1
 
-// ---- Teks (netral, putih-alpha di atas Navy -- bukan hue baru) ----
-val TextPrimary = Color(0xFFF2F4F8)
-val TextSecondary = Color(0xFFF2F4F8).copy(alpha = 0.68f)
-// [Fix WCAG, 2026-08-16] alpha SEBELUMNYA 0.42f -> kontras cuma 3.45-3.81:1
-// di 5 tingkat permukaan (SEMUA gagal ambang teks normal 4.5:1). Token ini
-// TIDAK ada pemanggil aktif saat ini (diverifikasi grep, dead code) --
-// tetap diperbaiki sekarang spy AMAN dipakai kapan pun tanpa jadi jebakan
-// WCAG di masa depan. 0.55f -> worst-case (GlassSurfaceSheet, tingkat
-// paling terang, margin kontras paling kecil) 4.81:1, lulus AA di semua
-// tingkat.
-val TextMuted = Color(0xFFF2F4F8).copy(alpha = 0.55f)
+// ---- Primary: BIRU calm (H222), CTA & kontrol interaktif utama. Pola dark-
+// scheme M3 baku: `primary` tone TERANG (dipakai lgs sbg teks/ikon di atas
+// surface gelap), `onPrimary` tone GELAP (teks di atas primary saat jadi
+// fill tombol). Kontras: primary vs SurfaceContainerHighest 5.89:1 (teks,
+// lulus AA). onPrimary vs primary 7.43:1 (lulus AAA). ----
+val Primary = Color(0xFF98AEE1)
+val OnPrimary = Color(0xFF171F30)
+val PrimaryContainer = Color(0xFF313E5E)
+val OnPrimaryContainer = Color(0xFFDFE6F6)        // vs PrimaryContainer: 8.47:1
 
-// ---- Bevel kaca: highlight/border/shadow -- netral White/Black, teknik
-// standar glassmorphism, TIDAK bagian dari constraint 2-hue di atas. ----
-// [Fix WCAG 1.4.11, 2026-08-16] GlassBorder/HairlineGlass SEBELUMNYA alpha
-// 0.14f -- battasnya JADI syarat visual satu-satunya bagi FilterChip
-// unselected (Interval Auto-Scan) & tepi VaultCard buat "kelihatan sbg
-// bentuk bisa-ditekan", tapi 0.14f cuma kontras ~1.5:1 lawan SEMUA tingkat
-// permukaan (dihitung formula relative luminance W3C) -- jauh di bawah
-// ambang WCAG 1.4.11 (non-text/boundary UI, 3:1). Naik ke 0.38f -> kontras
-// 3.00-3.80:1 di 4 tingkat permukaan (worst-case GlassSurfaceSheet 3.00:1,
-// SELALU dicek tingkat paling terang krn margin kontras paling kecil di
-// situ). GlassHighlight (bevel dekoratif, BUKAN pembatas fungsional) TIDAK
-// ikut dinaikkan -- 1.4.11 cuma soal batas komponen yang perlu dikenali,
-// bukan kilau dekoratif.
-val GlassHighlight = Color.White.copy(alpha = 0.10f)
-val GlassBorder = Color.White.copy(alpha = 0.38f)
-val GlassShadow = Color.Black.copy(alpha = 0.35f)
-val HairlineGlass = GlassBorder
+// ---- Secondary: biru-sian teredam (H200), SENGAJA beda hue dari primary
+// (pemisahan peran M3 murni -- v7.x lama reuse primary=secondary, bukan
+// pola M3 baku). Kontras: secondary vs SurfaceContainerHighest 6.69:1.
+// onSecondary vs secondary 7.33:1. ----
+val Secondary = Color(0xFFA8BDC7)
+val OnSecondary = Color(0xFF212C31)
+val SecondaryContainer = Color(0xFF38464D)
+val OnSecondaryContainer = Color(0xFFE0E7EB)      // vs SecondaryContainer: 7.81:1
+
+// ---- Tertiary: amber (H42) -- SATU-SATUNYA hue non-cool di app, dipakai
+// KHUSUS semantik warning (porsi kecil, bukan base warna), lihat javadoc
+// atas. Kontras: tertiary vs SurfaceContainerHighest 7.30:1. onTertiary vs
+// tertiary 8.03:1. ----
+val Tertiary = Color(0xFFDABF81)
+val OnTertiary = Color(0xFF322915)
+val TertiaryContainer = Color(0xFF534628)
+val OnTertiaryContainer = Color(0xFFF4EBD7)       // vs TertiaryContainer: 7.79:1
+
+// ---- Error: merah (H8) standar M3. Kontras: error vs
+// SurfaceContainerHighest 5.65:1. onError vs error 6.68:1. ----
+val ErrorRed = Color(0xFFE4978B)
+val OnErrorRed = Color(0xFF391D18)
+val ErrorContainer = Color(0xFF59322C)
+val OnErrorContainer = Color(0xFFF5DAD6)          // vs ErrorContainer: 8.28:1
+
+// ---- Aksen ke-4 di luar peran M3 baku (khusus menu "Pengaturan", pola
+// "sistem 4-aksen" dipertahankan dari versi sebelumnya) -- indigo calm
+// (H258), TETAP cool/tidak warm. Kontras vs SurfaceContainerHighest: 5.59:1.
+// ----
+val SettingsAccent = Color(0xFFB2A1D9)
+val SettingsAccentContainer = Color(0xFF332B46)
 
 /**
- * Aksen semantik lama (warning/error/menu "Pengaturan") -- hex TIDAK
- * diubah, lihat javadoc atas. Dipakai lewat container M3 (tertiary/error)
- * & `VaultExtraColors.slate` (Theme.kt).
+ * Catatan audit 1.4.11 (container fill vs root background, BUKAN vs
+ * surface tempat container itu sendiri dipakai): PrimaryContainer/
+ * SecondaryContainer/TertiaryContainer/ErrorContainer/SettingsAccentContainer
+ * hanya ~1.8-2.1:1 vs [AppBackground] kalau diukur TANPA konteks. Ini SAMA
+ * seperti perilaku skema dark M3 baku manapun (tone container ~30 vs
+ * background tone ~6 memang rendah by design) -- TIDAK melanggar 1.4.11
+ * krn container di app ini SELALU dipakai sbg fill kecil BERBENTUK JELAS
+ * (kotak ikon bulat, chip) di dalam TactileSurface yang SUDAH punya
+ * shadow+tonal elevation sendiri sbg penanda batas -- bukan blok warna
+ * mengambang tanpa bentuk di atas background polos. Sama dgn precedent
+ * GlassHighlight (dekoratif, bukan pembatas fungsional) di audit
+ * sebelumnya.
  */
-val AmberGlow = Color(0xFFE8AC4E)             // auto-scan / peringatan
-val AmberGlowContainer = Color(0xFF231B0F)
-val RustGlow = Color(0xFFFF6B5C)              // error
-val RustGlowContainer = Color(0xFF2A1512)
-val SlateGlow = Color(0xFF8B9DFF)             // aksen "Pengaturan"
-val SlateGlowContainer = Color(0xFF1A1F33)
-
-/**
- * v7.1.0 — Preset tema ALTERNATIF "Charcoal + Copper", toggle ON/OFF di
- * Pengaturan (fitur baru, lihat SettingsRepository.DEFAULT_USE_ALT_THEME).
- * User memilih eksplisit lewat pertanyaan klarifikasi: "cuma switch ON/OFF
- * antara Navy+Brass vs 1 preset alternatif TETAP" (bukan color picker bebas,
- * bukan banyak preset) -- jadi HANYA 2 total, ini preset ke-2 & TERAKHIR.
- *
- * PENTING (transparansi sumber warna, beda dgn Navy/Brass): 2 hex Navy+Brass
- * DIPATOK LANGSUNG oleh user sesi sebelumnya ("dilarang keras ngide
- * sendiri"). Preset INI **BEDA** -- user hanya minta "1 preset alternatif
- * tetap" TANPA menentukan hex-nya, jadi warna di bawah adalah KEPUTUSAN
- * DESAIN Claude sesi ini (bukan direkonstruksi dari palet lama manapun --
- * `PlatinumAccent`/`RubyGlow` v6.0.0 sudah DIHAPUS TOTAL di v7.0.0 & hex
- * persisnya TIDAK tercatat presisi di CHANGELOG/PROJECT_STATE utk
- * direkonstruksi dgn aman, jadi TIDAK coba "mengembalikan" itu). Kalau user
- * maunya hex spesifik lain utk preset ke-2 ini, tinggal bilang -- desain
- * ini reversibel, 1 blok di file ini saja.
- *
- * Root `#12100E` (charcoal netral HANGAT, H=30 -- beda arah dari Navy H=225
- * supaya 2 preset terasa jelas berbeda, bukan cuma gelap-terang yang sama).
- * Tingkat elevasi = hasil hitungan HSL->RGB manual (H=30 tetap, L naik
- * bertahap per tingkat), pola SAMA seperti Navy di atas -- bukan tebakan.
- * `#C97B4A` (Copper, aksen TOMBOL UTAMA preset ini) dipilih supaya kontras
- * WCAG konsisten dgn Brass (tujuan: 2 preset SAMA-SAMA lulus AA, bukan cuma
- * salah satu).
- *
- * WCAG (formula relative luminance W3C, dihitung manual):
- * - Teks terang (`TextPrimary`, dipakai ulang -- TIDAK ada token teks baru)
- *   di atas [CharcoalBackground] (L=0,0053): kontras ~19:1 (lulus AAA).
- * - [CharcoalBackground] sbg teks/ikon di atas [CopperAccent] (L=0,2707,
- *   dipakai sbg `onSecondary`): kontras 5,80:1 (lulus AA teks normal).
- * - [CopperAccent] vs [CharcoalBackground] sbg pasangan graphical-object
- *   (border/ikon, ambang WCAG 1.4.11 = 3:1): 5,80:1, lulus jauh di atas
- *   ambang.
- */
-val CharcoalBackground = Color(0xFF12100E)     // root -- H30 S13% L6% (charcoal hangat)
-val CharcoalSurface = Color(0xFF1D1A16)        // panel utama -- H30 S14% L10%
-val CharcoalSurfaceElevated = Color(0xFF28241F) // panel naik 1 tingkat -- H30 S13% L14%
-val CharcoalSurfaceSheet = Color(0xFF36302B)   // sheet/dialog -- H30 S12% L19%
-val CharcoalSurfacePressed = Color(0xFF0C0A09) // recessed/track -- H30 S15% L4%
-
-val CopperAccent = Color(0xFFC97B4A)
-val CopperAccentContainer = CopperAccent.copy(alpha = 0.18f)  // pola SAMA persis BrassAccentContainer
-val CopperAccentOn = CharcoalBackground        // teks gelap di atas Copper terang -- kontras 5,80:1 (AA)

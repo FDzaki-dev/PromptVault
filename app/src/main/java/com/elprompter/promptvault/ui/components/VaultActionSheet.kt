@@ -21,19 +21,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
-import com.elprompter.promptvault.ui.theme.GlassSurfacePressed
 
 /**
- * Pengganti AlertDialog kotak di tengah layar -- muncul dari bawah seperti
- * action sheet iOS. Untuk konfirmasi aksi (hapus, undo, dsb) yang butuh
+ * Pengganti AlertDialog kotak di tengah layar -- muncul dari bawah sebagai
+ * action sheet. Untuk konfirmasi aksi (hapus, undo, dsb) yang butuh
  * perhatian penuh tapi tetap terasa ringan, bukan modal yang "mengunci" layar.
  * containerColor pakai surfaceVariant (lapisan "terangkat") supaya sheet
  * terasa mengambang di atas layar, terutama kontras jelas di dark mode.
  *
- * v7.0.0 -- Neumorphism -> Glassmorphism (KEMBALI): grabber pill tetap
- * bentuk cekung di tengah-atas ([GlassPanel] `recessed = true`, isi
- * [GlassSurfacePressed]) -- pola drag-handle standar, sekarang lewat
- * primitif Glass yang sama dengan seluruh app.
+ * v8.0.0 -- Glassmorphism -> Material 3 murni: grabber pill tetap bentuk
+ * cekung di tengah-atas ([TactileSurface] `recessed = true`, isi
+ * `colorScheme.surfaceContainerLowest`, peran M3 baku) -- pola drag-handle
+ * standar, sekarang lewat primitif Surface M3 yang sama dengan seluruh app.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,12 +59,12 @@ fun VaultActionSheet(
         tonalElevation = 0.dp
     ) {
         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            GlassPanel(
+            TactileSurface(
                 modifier = Modifier
                     .padding(top = 10.dp, bottom = 4.dp)
                     .size(width = 36.dp, height = 4.dp),
                 shape = RoundedCornerShape(50),
-                color = GlassSurfacePressed,
+                color = colors.surfaceContainerLowest,
                 recessed = true,
                 content = {}
             )

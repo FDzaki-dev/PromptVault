@@ -42,7 +42,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.rememberCoroutineScope
@@ -78,9 +77,8 @@ import com.elprompter.promptvault.ui.screens.PanduanScreen
 import com.elprompter.promptvault.ui.screens.RuleListScreen
 import com.elprompter.promptvault.ui.screens.SettingsScreen
 import com.elprompter.promptvault.ui.screens.SkippedFilesScreen
-import com.elprompter.promptvault.ui.theme.AmoledBackground
+import com.elprompter.promptvault.ui.theme.AppBackground
 import com.elprompter.promptvault.ui.theme.PromptVaultTheme
-import com.elprompter.promptvault.ui.theme.resolveBackgroundColor
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -142,31 +140,17 @@ class MainActivity : ComponentActivity() {
         // sistem terang. Ini mencegah chrome sistem "bocor" jadi terang saat
         // konten di baliknya sudah pasti AMOLED gelap.
         enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.dark(AmoledBackground.toArgb()),
-            navigationBarStyle = SystemBarStyle.dark(AmoledBackground.toArgb())
+            statusBarStyle = SystemBarStyle.dark(AppBackground.toArgb()),
+            navigationBarStyle = SystemBarStyle.dark(AppBackground.toArgb())
         )
 
         setContent {
-            // v2.16.0 -- ThemeMode (Terang/Sistem/Gelap) dihapus total, lihat
-            // SettingsRepository & Theme.kt.
-            // v7.1.0 -- `PromptVaultTheme` SEKARANG punya parameter
-            // `useAltTheme` (toggle Pengaturan, BENAR-BENAR reaktif -- lihat
-            // catatan panjang di Theme.kt kenapa ini beda dari ThemeMode lama
-            // yang dihapus). `SideEffect` di bawah menyusul supaya status/nav
-            // bar (disetel sekali lewat enableEdgeToEdge SEBELUM state
-            // DataStore ini termuat) ikut diperbarui begitu preferensi asli
-            // selesai dibaca ATAU user toggle switch-nya di Pengaturan --
-            // tanpa ini, chrome sistem bisa "nyangkut" di preset lama walau
-            // konten Compose sudah pindah preset.
-            val useAltTheme by viewModel.useAltTheme.collectAsStateWithLifecycle()
-            SideEffect {
-                val bg = resolveBackgroundColor(useAltTheme).toArgb()
-                enableEdgeToEdge(
-                    statusBarStyle = SystemBarStyle.dark(bg),
-                    navigationBarStyle = SystemBarStyle.dark(bg)
-                )
-            }
-            PromptVaultTheme(useAltTheme = useAltTheme) {
+            // v2.16.0 -- ThemeMode (Terang/Sistem/Gelap) dihapus total.
+            // v8.0.0 -- toggle preset ganda `useAltTheme` (v7.1.0) DIHAPUS
+            // TOTAL (rombak tema ke Material 3 murni, lihat Theme.kt) --
+            // status/nav bar sekarang statis `AppBackground`, tidak perlu
+            // `SideEffect` reaktif lagi (cuma 1 warna, tidak pernah berubah).
+            PromptVaultTheme {
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     PromptVaultRoot(
                         viewModel = viewModel,
@@ -390,7 +374,6 @@ private fun PromptVaultRoot(
             val scanConcurrency by viewModel.scanConcurrency.collectAsStateWithLifecycle()
             val safTreeUri by viewModel.safTreeUri.collectAsStateWithLifecycle()
             val safAccessLost by viewModel.safAccessLost.collectAsStateWithLifecycle()
-            val useAltThemeSetting by viewModel.useAltTheme.collectAsStateWithLifecycle()
             val shizukuStatus by viewModel.shizukuStatus.collectAsStateWithLifecycle()
             val shizukuDestPath by viewModel.shizukuDestPath.collectAsStateWithLifecycle()
             val useShizuku by viewModel.useShizuku.collectAsStateWithLifecycle()
@@ -401,8 +384,6 @@ private fun PromptVaultRoot(
                 onConflictStrategySelected = { viewModel.setConflictStrategy(it) },
                 currentScanConcurrency = scanConcurrency,
                 onScanConcurrencySelected = { viewModel.setScanConcurrency(it) },
-                useAltTheme = useAltThemeSetting,
-                onUseAltThemeChanged = { viewModel.setUseAltTheme(it) },
                 onExportRequested = { viewModel.exportRulesJson() },
                 onImportRequested = { text, cb -> viewModel.importRulesJson(text, cb) },
                 safTreeUri = safTreeUri,
