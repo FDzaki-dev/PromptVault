@@ -74,6 +74,7 @@ import com.elprompter.promptvault.ui.screens.AddEditRuleScreen
 import com.elprompter.promptvault.ui.screens.DiagnosticsScreen
 import com.elprompter.promptvault.ui.screens.HomeScreen
 import com.elprompter.promptvault.ui.screens.OnboardingScreen
+import com.elprompter.promptvault.ui.screens.PanduanScreen
 import com.elprompter.promptvault.ui.screens.RuleListScreen
 import com.elprompter.promptvault.ui.screens.SettingsScreen
 import com.elprompter.promptvault.ui.screens.SkippedFilesScreen
@@ -323,8 +324,12 @@ private fun PromptVaultRoot(
                 onOpenLog = { navController.navigate(Routes.ACTIVITY_LOG) },
                 onOpenSettings = { navController.navigate(Routes.SETTINGS) },
                 onOpenDiagnostics = { navController.navigate(Routes.DIAGNOSTICS) },
-                onOpenSkippedFiles = { navController.navigate(Routes.SKIPPED_FILES) }
+                onOpenSkippedFiles = { navController.navigate(Routes.SKIPPED_FILES) },
+                onOpenPanduan = { navController.navigate(Routes.PANDUAN) }
             )
+        }
+        composable(Routes.PANDUAN) {
+            PanduanScreen(onBack = { navController.popBackStack() })
         }
         composable(Routes.RULES) {
             val rules by viewModel.rules.collectAsStateWithLifecycle()
@@ -411,6 +416,7 @@ private fun PromptVaultRoot(
                 onShizukuDestPathChanged = { viewModel.setShizukuDestPath(it) },
                 onRequestShizukuPermission = { viewModel.requestShizukuPermission() },
                 onRefreshShizukuStatus = { viewModel.refreshShizukuStatus() },
+                onOpenPanduan = { navController.navigate(Routes.PANDUAN) },
                 onBack = { navController.popBackStack() }
             )
         }

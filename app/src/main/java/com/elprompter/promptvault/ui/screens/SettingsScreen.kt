@@ -14,6 +14,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -74,6 +75,12 @@ fun SettingsScreen(
     onShizukuDestPathChanged: (String) -> Unit,
     onRequestShizukuPermission: () -> Unit,
     onRefreshShizukuStatus: () -> Unit,
+    // [Fitur baru, batch "Panduan User Baru" 2026-08-17] Entry point kedua ke
+    // PanduanScreen (yang pertama ada di grouped menu Home) -- ditaruh di
+    // sini juga krn Pengaturan adalah layar yang paling sering dibuka user
+    // saat setup awal (SAF/Shizuku/konflik/interval), konteks paling wajar
+    // utk menawarkan "baca panduan lengkap" tanpa harus balik ke Home dulu.
+    onOpenPanduan: () -> Unit,
     onBack: () -> Unit
 ) {
     var exportedText by remember { mutableStateOf<String?>(null) }
@@ -111,6 +118,21 @@ fun SettingsScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // [Fitur baru, batch "Panduan User Baru" 2026-08-17] Lihat komentar
+            // param onOpenPanduan di atas -- kartu ini SENGAJA ditaruh paling
+            // atas (sebelum kartu pengaturan teknis apapun) supaya user yang
+            // bingung soal makna kartu-kartu di bawah (SAF/Shizuku/konflik)
+            // langsung lihat jalan ke penjelasan lengkap duluan, bukan setelah
+            // scroll melewati semuanya.
+            OutlinedButton(
+                onClick = onOpenPanduan,
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.tertiary),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Filled.HelpOutline, contentDescription = null, modifier = Modifier.size(18.dp))
+                Text(" Buka Panduan Penggunaan")
+            }
+
             Text("Interval Auto-Scan", style = MaterialTheme.typography.titleMedium)
             Text(
                 "Seberapa sering PromptVault memindai Downloads di latar belakang. " +

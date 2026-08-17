@@ -3,6 +3,61 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v7.4.0 -- Panduan User Baru: onboarding dirombak total + layar Panduan persisten baru (2026-08-17)
+User menyoroti: setelah rentetan perombakan besar (Shizuku, sweep-select-undo,
+warning banner root-folder, dst di v7.3.0), user BARU nyaris tidak punya cara
+mempelajari mekanisme app secara utuh -- gap ini harus ditutup tuntas.
+
+**Root cause**: satu-satunya penjelasan mekanisme app adalah `OnboardingScreen`
+yang HANYA tampil SEKALI SEUMUR HIDUP (gated `onboardingDone` di DataStore),
+isinya pun basi (4 langkah generik, sama sekali tidak menyebut SAF vs
+Shizuku, strategi konflik nama file, atau Undo) -- sudah tertinggal jauh dari
+fitur aktual app sejak v7.2.0/v7.3.0. Sekali user menekan "Mulai" atau
+lupa detailnya, tidak ada jalan balik di dalam app.
+
+**Perubahan (6 file diubah + 1 file baru, Atomic Change -- onboarding,
+entry point baru di 2 layar, dan wiring navigasi di MainActivity saling
+tergantung, tidak bisa dipecah batch tanpa membuat build gagal di tengah)**:
+- REWRITE `ui/screens/OnboardingScreen.kt`: 4 -> 7 langkah, urut sesuai alur
+  pemakaian nyata (selamat datang -> rule -> izin -> ke mana file disortir
+  + warning root-folder tidak auto-dibuat -> strategi konflik nama ->
+  auto-sort & notifikasi -> undo + pointer ke Panduan). Struktur wizard
+  step-by-step & animasi Crossfade lama DIPERTAHANKAN, cuma konten yang
+  diperluas.
+- BARU `ui/screens/PanduanScreen.kt`: versi REFERENSI (satu halaman scroll,
+  bukan wizard) dari materi onboarding yang sama, plus 2 poin troubleshooting
+  cepat (file tidak masuk folder yang diharapkan, dst). Bisa dibuka BERKALI-KALI
+  kapan saja tanpa reset status onboarding -- inilah penutup gap utamanya.
+  WarningBanner root-folder di-reuse persis sama dengan yang di SettingsScreen
+  (satu sumber kebenaran, bukan teks duplikat yang bisa saling kontradiksi).
+- `ui/Navigation.kt`: route baru `Routes.PANDUAN`.
+- `ui/screens/HomeScreen.kt`: param baru `onOpenPanduan`, 1 `GroupedListRow`
+  baru "Panduan Penggunaan" di grouped menu (antara "Kelola Rule" dan
+  "Riwayat Aktivitas") -- tint SENGAJA reuse `colors.tertiary` (Amber),
+  BUKAN aksen ke-5 baru (sistem warna app dibatasi 4 aksen, lihat Color.kt).
+- `ui/screens/SettingsScreen.kt`: param baru `onOpenPanduan`, tombol "Buka
+  Panduan Penggunaan" di paling atas Column (sebelum kartu Interval
+  Auto-Scan) -- entry point kedua, krn Pengaturan adalah layar paling sering
+  dibuka user saat setup awal (SAF/Shizuku/konflik).
+- `MainActivity.kt` (protected asset, edit parsial): import `PanduanScreen`,
+  `composable(Routes.PANDUAN)` baru, `onOpenPanduan` diteruskan ke pemanggilan
+  `HomeScreen(...)` dan `SettingsScreen(...)` yang sudah ada. Tidak ada
+  logika permission/lifecycle yang disentuh.
+- `app/build.gradle.kts`: versi saja.
+
+**Yang SENGAJA tidak diubah**: tidak menyentuh P0/P1/P2 dari audit fungsional
+(`PromptVault_real_functional_polish_gap_audit.md`, 2026-08-16) -- itu bug
+fungsional di FileSorter/undo/worker, scope batch ini murni gap informasi ke
+user, tidak dicampur supaya masing-masing tetap Atomic Change yang jelas.
+
+`preflight_check.sh` 13/13 lolos (kategori 1 keseimbangan kurung, 3 delegate
+import, 4 import duplikat, 6 warna literal, semua bersih di file baru/diubah).
+Confidence Rating: **90%** (perubahan UI-only + wiring navigasi murni,
+tidak menyentuh FileSorter/DataStore/worker sama sekali -- risiko regresi
+fungsional nyaris nol; belum lewat `./gradlew`/device asli seperti biasa,
+lihat batasan jujur standar di tiap entri PROJECT_STATE.md).
+versionCode 88->89, versionName 7.3.0->7.4.0.
+
 ## v7.3.0 -- 3 permintaan eksplisit user: integrasi Shizuku, sweep-select-to-undo, warning eksplisit root tidak auto-dibuat (2026-08-17)
 User minta 3 hal sekaligus di 1 sesi: (1) integrasi Shizuku "100%" bukan
 tempelan, (2) fitur pilih-banyak-sapu-jari buat undo massal biar "gak

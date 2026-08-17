@@ -48,6 +48,7 @@ app/src/main/java/com/elprompter/promptvault/ui/screens/AddEditRuleScreen.kt
 app/src/main/java/com/elprompter/promptvault/ui/screens/DiagnosticsScreen.kt
 app/src/main/java/com/elprompter/promptvault/ui/screens/HomeScreen.kt
 app/src/main/java/com/elprompter/promptvault/ui/screens/OnboardingScreen.kt
+app/src/main/java/com/elprompter/promptvault/ui/screens/PanduanScreen.kt
 app/src/main/java/com/elprompter/promptvault/ui/screens/RuleListScreen.kt
 app/src/main/java/com/elprompter/promptvault/ui/screens/SettingsScreen.kt
 app/src/main/java/com/elprompter/promptvault/ui/screens/SkippedFilesScreen.kt

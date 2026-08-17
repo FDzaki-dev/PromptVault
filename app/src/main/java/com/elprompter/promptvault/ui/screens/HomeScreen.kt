@@ -19,6 +19,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Rule
 import androidx.compose.material.icons.filled.Schedule
@@ -66,7 +67,12 @@ fun HomeScreen(
     onOpenLog: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenDiagnostics: () -> Unit,
-    onOpenSkippedFiles: () -> Unit
+    onOpenSkippedFiles: () -> Unit,
+    // [Fitur baru, batch "Panduan User Baru" 2026-08-17] Jalan pintas paling
+    // discoverable ke PanduanScreen -- ditaruh di grouped menu Home (bukan
+    // cuma di Pengaturan) supaya user baru yang belum pernah buka Pengaturan
+    // sama sekali tetap gampang menemukan referensi lengkap kapan saja.
+    onOpenPanduan: () -> Unit
 ) {
     val colors = MaterialTheme.colorScheme
     // [v7.0.0] Riwayat panjang Insiden #9/#10 (baseColor vs wash gradient,
@@ -199,6 +205,13 @@ fun HomeScreen(
             GroupedList(
                 rows = listOf(
                     { GroupedListRow(Icons.Filled.Rule, "Kelola Rule", colors.primary, onOpenRules) },
+                    // [Fitur baru, batch "Panduan User Baru" 2026-08-17] Tint
+                    // pakai colors.tertiary (Amber) -- SENGAJA reuse aksen yang
+                    // sama dgn "Riwayat Aktivitas" di bawah, BUKAN aksen ke-5
+                    // baru. Sistem warna app dibatasi 4 aksen (primary/
+                    // tertiary/error/slate, lihat Color.kt & EmptyState.kt),
+                    // menambah aksen ke-5 melanggar standar itu.
+                    { GroupedListRow(Icons.Filled.HelpOutline, "Panduan Penggunaan", colors.tertiary, onOpenPanduan) },
                     { GroupedListRow(Icons.Filled.History, "Riwayat Aktivitas & Undo", colors.tertiary, onOpenLog) },
                     { GroupedListRow(Icons.Filled.Settings, "Pengaturan", extraColors.slate, onOpenSettings) },
                     { GroupedListRow(Icons.Filled.BugReport, "Diagnostik", colors.error, onOpenDiagnostics) }
