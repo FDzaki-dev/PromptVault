@@ -247,6 +247,27 @@ fun SettingsScreen(
                             style = MaterialTheme.typography.bodySmall,
                             color = colors.primary
                         )
+                        // [Baru 2026-08-17 v2, temuan user saat diskusi duplikat
+                        // root] Kalau folder yang dipilih adalah "Documents" ITU
+                        // SENDIRI (bukan subfolder di dalamnya) -- path fisiknya
+                        // SAMA PERSIS dengan "Documents/PromptVault/logs/" yang
+                        // dipakai CrashLogger.kt (lewat MediaStore, subsistem
+                        // BEDA dari SAF). Dua subsistem storage berbeda menulis
+                        // ke folder bernama sama di lokasi sama -> potensi
+                        // staleness silang tambahan. resolveCanonicalRootDirSaf
+                        // di FileSorter SUDAH menangani (konvergen otomatis kalau
+                        // sampai terjadi duplikat) -- ini cuma info pencegahan
+                        // supaya user TAHU opsinya, bukan blocking/error.
+                        if (isSafRootDocumentsFolder(safTreeUri)) {
+                            Text(
+                                "ℹ Folder ini juga dipakai buat menyimpan crash log internal app " +
+                                    "(di subfolder \"PromptVault/logs\"). Sudah ada penanganan otomatis kalau " +
+                                    "sampai bentrok, tapi kalau mau pisah total, pilih subfolder di dalam " +
+                                    "Documents (bukan Documents-nya langsung).",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = colors.tertiary
+                            )
+                        }
                         // [fix audit P0 #1/#2, 2026-08-12] Sebelumnya akses hilang
                         // cuma ketahuan diam-diam lewat Log setelah scan gagal --
                         // sekarang ditampilkan LANGSUNG di kartu ini (dicek reaktif
@@ -486,4 +507,23 @@ private fun friendlySafFolderLabel(treeUri: String): String {
     val root = treeSegment.substring(0, colonIndex).ifBlank { "?" }
     val path = treeSegment.substring(colonIndex + 1).ifBlank { "/" }
     return "$path ($root)"
+}
+
+/**
+ * [Baru 2026-08-17 v2] `true` kalau [treeUri] menunjuk PERSIS ke folder
+ * "Documents" di storage utama (path relatif == "Documents", root == "primary"),
+ * BUKAN subfolder di dalamnya. Dipakai [SettingsScreen] utk info non-blocking
+ * soal folder ini jg dipakai CrashLogger.kt -- lihat KDoc di titik pemanggilan.
+ * Parsing sengaja reuse pola yang sama dengan [friendlySafFolderLabel] (bukan
+ * fungsi baru dari nol) supaya konsisten kalau format URI provider berubah.
+ */
+private fun isSafRootDocumentsFolder(treeUri: String): Boolean {
+    val decoded = runCatching { Uri.decode(treeUri) }.getOrDefault(treeUri)
+    val treeSegment = decoded.substringAfterLast("/tree/", missingDelimiterValue = decoded)
+        .substringBefore("/document/")
+    val colonIndex = treeSegment.indexOf(':')
+    if (colonIndex < 0) return false
+    val root = treeSegment.substring(0, colonIndex)
+    val path = treeSegment.substring(colonIndex + 1).trim('/')
+    return root == "primary" && path.equals("Documents", ignoreCase = true)
 }

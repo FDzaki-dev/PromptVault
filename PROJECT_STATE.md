@@ -3,7 +3,21 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
-## STATUS PROJECT: v7.5.0 -- Auto-buat folder root "PromptVault" di tujuan kustom SAF DIKEMBALIKAN (permintaan langsung user) + lapis anti-duplikat baru -- 2026-08-17
+## STATUS PROJECT: v7.5.1 -- Info non-blocking: folder tujuan kustom "Documents" langsung overlap dgn folder crash log -- 2026-08-17
+- User konfirmasi eksplisit: folder tujuan kustom aktifnya persis
+  "Documents" (bukan subfolder) -- match dgn hipotesis dia sendiri bahwa
+  ini overlap dgn `CrashLogger.kt` (`Documents/PromptVault/logs/` via
+  MediaStore, subsistem beda dari SAF).
+- `SettingsScreen.kt`: `isSafRootDocumentsFolder()` baru, tampilkan 1 baris
+  info (bukan warning merah) di kartu Folder Tujuan Kustom kalau kondisi
+  ini terdeteksi. TIDAK mengubah `CrashLogger.kt` (spek baku lintas
+  project, di luar scope) atau `FileSorter.kt` (mekanisme self-heal
+  `resolveCanonicalRootDirSaf` v7.5.0 SUDAH cukup, apapun sumber stale-nya).
+- `preflight_check.sh` 13/13 lolos. Confidence: integritas paket 100%,
+  perubahan UI info-only murni (tidak sentuh logika scan/data).
+- versionCode 90->91, versionName 7.5.0->7.5.1.
+
+## STATUS PROJECT SEBELUMNYA: v7.5.0 -- Auto-buat folder root "PromptVault" di tujuan kustom SAF DIKEMBALIKAN (permintaan langsung user) + lapis anti-duplikat baru -- 2026-08-17
 - Trigger: user tanya apakah duplikasi folder root (riwayat v2.19.2 s/d
   v7.1.6 di bawah) berkorelasi dgn fitur "Folder Tujuan Kustom" di
   screenshot Pengaturan -- dikonfirmasi YA (sudah terdokumentasi lengkap,

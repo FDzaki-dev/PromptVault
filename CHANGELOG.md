@@ -3,6 +3,31 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v7.5.1 -- Info non-blocking: folder tujuan kustom = "Documents" langsung overlap dgn folder crash log (2026-08-17)
+User (setelah diskusi root cause v7.5.0) tanya & KONFIRMASI: folder tujuan
+kustom yang dia pakai persis "Documents" (root storage utama), bukan
+subfolder. Ini overlap PERSIS dengan `CrashLogger.kt` yang nulis ke
+`Documents/PromptVault/logs/` lewat MediaStore -- subsistem storage BEDA
+dari SAF yang dipakai FileSorter buat folder tujuan kustom.
+
+**Perubahan (1 file)**:
+- `ui/screens/SettingsScreen.kt`: BARU `isSafRootDocumentsFolder()` (reuse
+  pola parsing `friendlySafFolderLabel`) -- deteksi kalau `safTreeUri`
+  persis root "Documents" storage utama. Kalau `true`, tampilkan 1 baris
+  info (`colors.tertiary`, BUKAN error/warning merah -- ini bukan masalah
+  yang wajib ditindak) di kartu Folder Tujuan Kustom: menjelaskan overlap
+  dgn crash log + `resolveCanonicalRootDirSaf` (v7.5.0) sudah menangani
+  otomatis kalau bentrok, plus opsi pisah total (pilih subfolder).
+- TIDAK mengubah `CrashLogger.kt` (path `Documents/PromptVault/logs/`
+  adalah spek baku project ini utk SEMUA app, bukan bug lokal PromptVault
+  -- ubah sepihak berisiko inkonsistensi lintas project) maupun logika
+  `FileSorter.kt` (mekanisme self-heal v7.5.0 sudah cukup menangani
+  skenario overlap ini, apapun subsistem yang bikin stale-nya).
+
+`preflight_check.sh` 13/13 lolos. Confidence: integritas paket 100%; ini
+murni penambahan UI info non-blocking (tidak menyentuh alur data/logika
+scan), risiko regresi minimal.
+
 ## v7.5.0 -- Auto-buat folder root "PromptVault" di tujuan kustom SAF DIKEMBALIKAN + lapis anti-duplikat baru (2026-08-17)
 User minta balik: fitur auto-buat root "PromptVault" (dihapus v7.2.0 karena
 duplikat "(N)" berulang) dikembalikan, DENGAN syarat duplikat tidak boleh
