@@ -38,6 +38,24 @@
   bukan bug yang sama.
 - Confidence Rating: fix **95%** (match persis stack trace, minimal &
   bertarget) -- belum lewat `./gradlew`/device asli (keterbatasan permanen).
+- **Verifikasi ulang (user tanya eksplisit): apakah fix ini bisa mengembalikan
+  insiden duplikat folder "(N)" lama (v7.1.x-v7.5.0)?** TIDAK. Fix HANYA ganti
+  cara baca-balik `DocumentFile` dari URI cache -- TIDAK menyentuh
+  `createDirectory()` maupun logika duplikat sama sekali. 2 lapis proteksi
+  duplikat lama tetap utuh & tidak disentuh: (1) resolusi folder rule tetap
+  SERIAL sebelum `async{}` fan-out di `resolveSafRuleDestinations` (proteksi
+  UTAMA thd race antar-coroutine, bukan cache), (2) self-healing
+  `resolveCanonicalRootDirSaf` (konvergen kalau provider SAF sendiri sampai
+  bikin >1 folder cocok pola). Faktanya: SEBELUM fix, cache root yang
+  berhasil dibaca (`fromSingleUri`) itu sendiri TIDAK memicu duplikat --
+  crash baru terjadi 1 langkah setelahnya, saat objek itu dipakai sbg
+  `parent` utk `findFile()` folder rule (baris 846) -- artinya crash ini
+  SELALU terjadi SEBELUM kode sempat sampai ke `createDirectory()`. Tidak
+  pernah ada jalur di mana bug lama ini bisa menghasilkan folder ganda; dia
+  cuma bikin app mati lebih dulu. SESUDAH fix, `findFile()` justru jadi
+  BERHASIL (bukan crash) -- kalau folder rule sudah ada, langsung KETEMU &
+  dipakai ulang (bukan `createDirectory()` baru), jadi fix ini MEMPERKUAT
+  anti-duplikat, bukan melemahkannya.
 
 ## STATUS PROJECT SEBELUMNYA: v7.5.1 -- Info non-blocking: folder tujuan kustom "Documents" langsung overlap dgn folder crash log -- 2026-08-17
 - User konfirmasi eksplisit: folder tujuan kustom aktifnya persis
