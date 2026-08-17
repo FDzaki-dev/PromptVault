@@ -3,6 +3,29 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.3.0 (2026-08-18) — Roadmap Fase 1.2 (batch 2/4): audit TalkBack grup RuleList/AddEdit
+
+Batch kedua dari 4. 3 file diubah, 0 file baru.
+
+- `RuleCard.kt`: 5 kontrol per baris (Naik/Turun prioritas, Switch, Edit,
+  Hapus) sekarang sisipkan `rule.folderName` di `contentDescription` --
+  sebelumnya generik ("Edit", "Hapus"), ambigu saat TalkBack navigasi
+  banyak rule berurutan di list.
+- `TactileSwitch.kt`: tambah parameter opsional `contentDescription: String?
+  = null` (default null, TIDAK ubah pemanggil existing di `SettingsScreen`).
+  `RuleCard` isi dengan "Rule <nama>".
+- `AddEditRuleScreen.kt`: field "Nama folder tujuan" -- tambah
+  `Modifier.semantics { error(folderNameError) }` kondisional saat
+  `isError=true`. Sebelumnya `isError` cuma visual, pesan `supportingText`
+  tidak diumumkan TalkBack.
+- **Catatan verifikasi**: `import ...semantics.error` dipakai PERTAMA KALI
+  sesi ini (belum ada precedent compile sukses di codebase, beda dari
+  `contentDescription`/`Role` yang sudah terbukti di v8.2.1). Kalau CI
+  lapor unresolved reference lagi, root cause sudah jelas di baris import
+  ini.
+- `scripts/preflight_check.sh`: 13/13 PASS.
+- versionCode 96→97, versionName 8.2.1→8.3.0.
+
 ## v8.2.1 (2026-08-18) — FIX build gagal CI (Unresolved reference: mergeDescendants)
 
 CI `compileDebugKotlin` gagal di v8.2.0. Root cause: `import

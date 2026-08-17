@@ -27,6 +27,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.error
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.elprompter.promptvault.data.Rule
 import com.elprompter.promptvault.data.SaveRuleCheck
@@ -98,7 +100,21 @@ fun AddEditRuleScreen(
                 label = { Text("Nama folder tujuan") },
                 isError = folderNameError != null,
                 supportingText = folderNameError?.let { error -> { Text(error) } },
-                modifier = Modifier.fillMaxWidth()
+                // [Roadmap 1.2, audit TalkBack -- grup RuleList/AddEdit]
+                // `isError=true` HANYA mengubah warna border (visual) --
+                // teks di `supportingText` TIDAK otomatis diumumkan TalkBack
+                // sbg pesan error, cuma dibaca sbg teks statis biasa (kalau
+                // fokus lewat situ). `Modifier.semantics { error(...) }`
+                // menandai node ini SECARA EKSPLISIT sbg invalid + pesannya,
+                // TalkBack lalu umumkan "Invalid input: <pesan>" saat field
+                // ini fokus -- tanpa user harus geser fokus ke supportingText.
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(
+                        if (folderNameError != null) {
+                            Modifier.semantics { error(folderNameError) }
+                        } else Modifier
+                    )
             )
             OutlinedTextField(
                 value = pattern,

@@ -3,7 +3,49 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
-## STATUS PROJECT: v8.2.1 -- FIX build gagal CI (Unresolved reference: mergeDescendants, HomeScreen.kt) -- 2026-08-18
+## STATUS PROJECT: v8.3.0 -- Roadmap Fase 1.2 (batch 2/4): audit TalkBack grup RuleList/AddEdit -- 2026-08-18
+- Batch kedua dari 4 (setelah Home v8.2.0/v8.2.1). Sesi ini grup
+  RuleList/AddEdit.
+- **3 file diubah** (`TactileSwitch.kt`, `RuleCard.kt`,
+  `AddEditRuleScreen.kt`), 0 file baru. Temuan & fix:
+  1. `RuleCard` -- 5 kontrol identik (Naik/Turun prioritas, Switch, Edit,
+     Hapus) BERULANG per baris di `LazyColumn`, semua pakai
+     `contentDescription` generik ("Edit", "Hapus", dst) TANPA identitas
+     item. TalkBack navigasi list panjang jadi ambigu ("Edit, Tombol" x N
+     rule, tidak jelas rule mana). Semua 5 kontrol sekarang sisipkan
+     `rule.folderName` di label (mis. "Edit rule Invoice").
+  2. `TactileSwitch` (dipakai `RuleCard` DAN `SettingsScreen`) -- TIDAK
+     punya `contentDescription` sama sekali, cuma `role = Role.Switch`
+     (TalkBack cuma umumkan "Switch, aktif/nonaktif" tanpa konteks). Tambah
+     parameter opsional `contentDescription: String? = null` (default
+     null = perilaku lama TIDAK berubah di `SettingsScreen`, satu switch
+     berdiri sendiri sudah py label teks sendiri di luar). `RuleCard` isi
+     parameter ini ("Rule <nama>"), `SettingsScreen` TIDAK disentuh (di
+     luar scope batch ini, giliran batch 3/4).
+  3. `AddEditRuleScreen` -- field "Nama folder tujuan" `isError=true` HANYA
+     mengubah warna border (visual), pesan di `supportingText` TIDAK
+     otomatis diumumkan TalkBack sbg error. Tambah
+     `Modifier.semantics { error(folderNameError) }` kondisional -- pola
+     resmi Compose utk tandai node invalid + pesan errornya sekaligus.
+- **Tidak disentuh** (di luar scope batch ini): field `pattern`/
+  `excludePattern`/min-max ukuran di layar sama TIDAK py validasi
+  `isError` sama sekali (murni optional/no validation by design saat ini,
+  bukan gap aksesibilitas -- tidak ada state error utk diumumkan).
+- **CATATAN VERIFIKASI PENTING**: `import androidx.compose.ui.semantics.error`
+  baru dipakai PERTAMA KALI di codebase ini sesi ini (beda dari
+  `contentDescription`/`Role`/`semantics` yang sudah terbukti compile sukses
+  di v8.2.1). `scripts/preflight_check.sh` (regex-based, BUKAN compiler
+  asli) tidak bisa validasi keberadaan symbol package -- kalau CI lapor
+  "Unresolved reference: error" lagi (pola PERSIS insiden v8.2.0
+  `mergeDescendants`), root cause & lokasi sudah jelas: baris import ini di
+  `AddEditRuleScreen.kt`, bukan investigasi baru.
+- `scripts/preflight_check.sh`: 13/13 PASS (kategori 7 direview manual,
+  tidak ada fungsi lokal baru relevan).
+- Roadmap 1.2 TETAP terbuka (2/4) -- lanjut grup Settings di sesi
+  berikutnya.
+- versionCode 96→97, versionName 8.2.1→8.3.0.
+
+## STATUS PROJECT SEBELUMNYA: v8.2.1 -- FIX build gagal CI (Unresolved reference: mergeDescendants, HomeScreen.kt) -- 2026-08-18
 - User upload log CI `compileDebugKotlin FAILED` dari build v8.2.0.
   **Root cause**: `import androidx.compose.ui.semantics.mergeDescendants`
   di `HomeScreen.kt` -- `mergeDescendants` BUKAN symbol top-level yang bisa

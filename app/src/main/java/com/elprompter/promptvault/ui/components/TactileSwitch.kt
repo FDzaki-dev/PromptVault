@@ -21,6 +21,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.elprompter.promptvault.ui.theme.TactileTokens
 
@@ -45,7 +47,15 @@ fun TactileSwitch(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
-    accentColor: Color = MaterialTheme.colorScheme.primary
+    accentColor: Color = MaterialTheme.colorScheme.primary,
+    // [Roadmap 1.2, audit TalkBack -- grup RuleList/AddEdit] Opsional --
+    // default null berarti perilaku LAMA tidak berubah (Settings.kt, satu
+    // switch berdiri sendiri, label sudah ada teks di sebelahnya via
+    // GroupedSettingsRow-nya sendiri). WAJIB diisi kalau switch ini salah
+    // satu dari BANYAK kontrol identik berulang di list (RuleCard) -- tanpa
+    // ini TalkBack cuma umumkan "Switch, aktif/nonaktif" tanpa tahu punya
+    // rule yang mana.
+    contentDescription: String? = null
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
@@ -73,6 +83,11 @@ fun TactileSwitch(
     Box(
         modifier = modifier
             .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+            .then(
+                if (contentDescription != null) {
+                    Modifier.semantics { this.contentDescription = contentDescription }
+                } else Modifier
+            )
             .toggleable(
                 value = checked,
                 interactionSource = interactionSource,
