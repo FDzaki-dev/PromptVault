@@ -2,6 +2,7 @@ package com.elprompter.promptvault
 
 import android.app.Application
 import com.elprompter.promptvault.data.LegacyDataMigration
+import com.elprompter.promptvault.shizuku.ShizukuManager
 import com.elprompter.promptvault.util.CrashLogger
 import com.elprompter.promptvault.worker.AutoSortNotification
 import com.elprompter.promptvault.worker.WorkScheduler
@@ -21,6 +22,14 @@ class PromptVaultApp : Application() {
         // sekali di awal proses app -- idempoten, murah, dan memastikan channel
         // sudah ada SEBELUM worker pertama kali butuh setForeground().
         AutoSortNotification.ensureChannel(this)
+        // [Fitur baru 2026-08-17, integrasi Shizuku] Daftar listener binder
+        // SEKALI seumur proses -- murah & idempoten (guard di ShizukuManager
+        // sendiri), sama filosofi dgn AutoSortNotification.ensureChannel di
+        // atas. TIDAK meminta izin di sini -- itu aksi eksplisit user lewat
+        // tombol di kartu "Mode Shizuku" (SettingsScreen), bukan otomatis
+        // saat app dibuka (konsisten dgn prinsip minta izin saat relevan,
+        // lihat POST_NOTIFICATIONS di MainActivity.kt).
+        ShizukuManager.init(this)
         // [Technical debt #3, dieksekusi 2026-08-13] Migrasi best-effort SEKALI
         // SEUMUR INSTALL dari data lama pre-Room v2.2.0 (kalau ada) -- lihat
         // dokumentasi lengkap soal batasan & keamanannya di LegacyDataMigration.kt.

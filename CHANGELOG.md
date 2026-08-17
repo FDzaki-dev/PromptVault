@@ -3,6 +3,122 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v7.3.0 -- 3 permintaan eksplisit user: integrasi Shizuku, sweep-select-to-undo, warning eksplisit root tidak auto-dibuat (2026-08-17)
+User minta 3 hal sekaligus di 1 sesi: (1) integrasi Shizuku "100%" bukan
+tempelan, (2) fitur pilih-banyak-sapu-jari buat undo massal biar "gak
+ribet", (3) peringatan sejelas-jelasnya bahwa folder root tujuan kustom
+TIDAK otomatis dibuat aplikasi.
+
+**1. Integrasi Shizuku (fitur baru, menyentuh 9 file + 4 file baru, Atomic
+Change -- 1 fitur kohesif, tidak bisa dipecah tanpa membuat build gagal
+di tengah)**:
+- BARU: `shizuku/IFileOpsService.aidl` (kontrak IPC: exists/isDirectory/
+  mkdirs/moveFile/deleteFile/fileLength/ping/destroy, semua path filesystem
+  absolut polos bukan content:// URI), `shizuku/FileOpsUserService.kt`
+  (implementasi Stub yang JALAN DI PROSES SHIZUKU, UID shell/adb atau root
+  tergantung backend aktif user -- `moveFile` pakai pola temp-file-lalu-rename
+  yang SAMA dengan `copyThenDelete` fix P0-2 2026-08-16, supaya kelas bug
+  "file parsial nyangkut" yang sudah pernah diperbaiki di jalur lokal TIDAK
+  terulang di jalur privileged baru ini), `shizuku/ShizukuManager.kt`
+  (singleton lifecycle binder/permission/service, StateFlow status:
+  NOT_INSTALLED/NOT_RUNNING/PERMISSION_DENIED/BINDING/READY/ERROR).
+- `app/build.gradle.kts`: `dev.rikka.shizuku:api:13.1.5` +
+  `dev.rikka.shizuku:provider:13.1.5`, `buildFeatures.aidl = true`.
+- `AndroidManifest.xml`: deklarasi manual `<provider android:name="rikka.shizuku.ShizukuProvider">`
+  (authorities pakai applicationId, WAJIB dideklarasikan app-side, tidak
+  otomatis dari manifest library).
+- `PromptVaultApp.kt`: `ShizukuManager.init(this)` sekali di `onCreate()`
+  (daftar listener binder, TIDAK minta izin otomatis -- izin diminta
+  eksplisit lewat tombol user di Pengaturan, konsisten prinsip "minta izin
+  saat relevan" yang sudah dipakai utk POST_NOTIFICATIONS).
+- `SettingsRepository.kt`: `shizukuDestPathKey` (path absolut) +
+  `useShizukuKey` (toggle) -- SALING EKSKLUSIF dengan `safTreeUriKey` by
+  design, bukan campur/prioritas implisit.
+- `FileSorter.kt`: cabang BARU `scanAndSortViaShizuku()` dicek PALING AWAL
+  di `scanAndSort()` (sebelum cabang SAF) kalau `useShizuku=true`. Konsisten
+  dengan ARSITEKTUR yang sudah jadi pelajaran permanen: sumber scan TETAP
+  SELALU Downloads, Shizuku HANYA tujuan. Subfolder RULE di-resolve SEKALI
+  SERIAL sebelum pemrosesan paralel (`resolveShizukuRuleDestinations` --
+  PROAKTIF menghindari kelas bug race "folder duplikat" yang sudah pernah
+  terjadi di SAF 2026-08-13, BUKAN ditemukan lewat insiden baru). Root
+  folder TIDAK PERNAH dibuat -- HANYA divalidasi ADA lewat IPC, scan
+  DIHENTIKAN + pesan error eksplisit kalau tidak ada (persis pola
+  AccessLost SAF: tidak pernah silent-fallback ke Downloads). `undo()`
+  dapat cabang baru dicek PALING AWAL: `destUri` berprefix palsu
+  `"shizuku://"` (bukan skema URI asli, penanda saja, pola identik prefix
+  `content://` utk SAF -- TIDAK butuh kolom/skema Room baru).
+- `MainViewModel.kt`: expose `shizukuStatus`/`shizukuDestPath`/`useShizuku`
+  StateFlow + `requestShizukuPermission()`/`refreshShizukuStatus()`/
+  `setShizukuDestPath()`/`setUseShizuku()`.
+- `SettingsScreen.kt`: kartu baru "Mode Shizuku (Lanjutan)" -- toggle,
+  status berwarna, tombol "Minta Izin Shizuku"/"Cek Ulang Status", input
+  path absolut (hanya tampil kalau toggle ON), + `WarningBanner` (lihat
+  poin 3 di bawah).
+- **Batas jujur (WAJIB dibaca sebelum klaim "Shizuku jalan")**: kode ini
+  BELUM PERNAH lewat `./gradlew`/device asli/aplikasi Shizuku sungguhan --
+  sandbox sesi ini tidak punya Android SDK/Gradle/Shizuku terpasang,
+  konsisten dgn seluruh riwayat kode SAF project ini (lihat Insiden #7,
+  PROJECT_STATE.md). Ditulis seketat mungkin dari permukaan API publik
+  `dev.rikka.shizuku:api` yang terdokumentasi, TAPI kalau CI/build gagal di
+  file `shizuku/`, itu BUKAN tanda ditulis ceroboh -- itu justru risiko yang
+  sudah didokumentasikan eksplisit di sini sejak awal.
+
+**2. Sweep-select-to-undo (fitur baru, `ActivityLogScreen.kt` -- rewrite
+penuh file, `MainViewModel.kt`, `MainActivity.kt`)**:
+- Tab "Undo Pemindahan" sekarang punya mode seleksi-banyak: tekan-lama 1
+  baris -> masuk mode seleksi, LALU sapukan jari ke baris lain (drag,
+  `detectDragGestures` di atas `Box` pembungkus LazyColumn, posisi tiap
+  baris direkam via `onGloballyPositioned`+`boundsInWindow()`) utk
+  toggle-pilih banyak baris SEKALIGUS tanpa tap satu-satu -- pola familiar
+  ala Gmail/Files/Galeri. Checkbox per baris + tap biasa tetap berfungsi
+  sbg alternatif non-sapuan. Top bar berubah jadi "N dipilih" + tombol
+  "Undo Terpilih (N)" + tombol Batal.
+- `MainViewModel.undoMultiple()` baru -- undo BANYAK entri sekuensial (bukan
+  paralel, volume biasanya kecil dari seleksi manual), return
+  (sukses, gagal), dipakai lewat konfirmasi `VaultActionSheet` yang sama
+  persis dgn undo tunggal (1 langkah konfirmasi terakhir sebelum eksekusi
+  batch, bukan langsung jalan).
+- Hint 1 baris ditampilkan di atas list Undo (saat TIDAK dalam mode
+  seleksi) supaya fitur ini tidak perlu ditemukan sendiri oleh user.
+- **Batas jujur**: gestur sapuan lintas-elemen custom seperti ini juga
+  BELUM PERNAH diuji device asli (sandbox tanpa Compose preview/emulator).
+
+**3. Warning eksplisit "root tidak auto-dibuat" (`WarningBanner.kt` baru,
+`SettingsScreen.kt`)**:
+- Komponen `WarningBanner` baru (ikon + warna `colors.error`, bukan sekadar
+  info) dipakai di KEDUA kartu tujuan kustom -- SAF (sudah ada sejak
+  v7.2.0, tapi SEBELUMNYA cuma tercatat di dokumentasi teknis
+  PROJECT_STATE.md/CHANGELOG.md, TIDAK ditampilkan di UI) dan Shizuku
+  (baru). Pesan eksplisit: aplikasi TIDAK PERNAH membuat folder root
+  tujuan kustom secara otomatis -- user WAJIB membuatnya sendiri lewat file
+  manager LEBIH DULU. Bukan cuma teks pasif -- `FileSorter` (kedua jalur)
+  MENOLAK scan dengan pesan error eksplisit kalau root belum ada, bukan
+  membuatkannya diam-diam (perilaku ini SUDAH ada sejak v7.2.0 utk SAF,
+  DITERAPKAN SAMA PERSIS ke jalur Shizuku baru).
+
+File diubah (9) + 4 baru: `app/build.gradle.kts`, `AndroidManifest.xml`,
+`PromptVaultApp.kt`, `data/SettingsRepository.kt`, `util/FileSorter.kt`,
+`ui/MainViewModel.kt`, `MainActivity.kt`, `ui/screens/SettingsScreen.kt`,
+`ui/screens/ActivityLogScreen.kt` (rewrite penuh); BARU
+`shizuku/IFileOpsService.aidl`, `shizuku/FileOpsUserService.kt`,
+`shizuku/ShizukuManager.kt`, `ui/components/WarningBanner.kt`.
+`scripts/preflight_check.sh` 13/13 lolos.
+
+Confidence Rating: **70%** -- SENGAJA lebih rendah dari batch-batch biasa.
+Perubahan dokumentasi/UI-teks (poin 3) & pola undo batch sekuensial (poin
+2, arsitekturnya straightforward) confidence tinggi; TAPI integrasi Shizuku
+(poin 1) & gestur sapuan custom (poin 2) adalah 2 permukaan API yang BELUM
+PERNAH dipakai di project ini SAMA SEKALI sebelumnya (beda dari SAF yang
+setidaknya sudah py 7+ iterasi pengalaman) -- keduanya BELUM lewat
+`./gradlew`/device asli. **User WAJIB verifikasi**: (1) build CI hijau
+(prioritas #1 -- dependency Shizuku & AIDL codegen adalah risiko compile
+paling nyata di batch ini), (2) kartu Mode Shizuku muncul & status
+berubah sesuai kondisi Shizuku di HP (belum pasang/sudah pasang tapi belum
+izin/siap), (3) sapuan jari di tab Undo benar-benar memilih banyak baris,
+tidak "kalah" oleh scroll LazyColumn, (4) warning banner tampil jelas di
+kedua kartu tujuan kustom.
+versionCode 87->88, versionName 7.2.0->7.3.0.
+
 ## v7.2.0 -- PERUBAHAN ARSITEKTUR: app BERHENTI bikin folder root "PromptVault" sendiri di folder tujuan kustom (2026-08-17)
 Setelah 2 ronde mitigasi (v7.1.5 cache-Uri, v7.1.6 retry+instrumentasi) TIDAK
 berhasil membuktikan/menyingkirkan tuntas laporan duplikat "PromptVault (N)"

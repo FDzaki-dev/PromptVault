@@ -22,8 +22,8 @@ android {
         applicationId = "com.elprompter.promptvault"
         minSdk = 26
         targetSdk = 34
-        versionCode = 87
-        versionName = "7.2.0"
+        versionCode = 88
+        versionName = "7.3.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -60,6 +60,10 @@ android {
     }
     buildFeatures {
         compose = true
+        // [Fitur baru 2026-08-17, integrasi Shizuku] Wajib true supaya
+        // app/src/main/aidl/.../IFileOpsService.aidl digenerate jadi
+        // Stub/Proxy Kotlin oleh AGP -- lihat shizuku/ package.
+        aidl = true
     }
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.14"
@@ -103,6 +107,17 @@ dependencies {
     ksp("androidx.room:room-compiler:2.6.1")
 
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+
+    // [Fitur baru 2026-08-17, integrasi Shizuku -- permintaan eksplisit user]
+    // "api" = kelas Shizuku/ShizukuBinderWrapper/UserServiceArgs dkk, dipakai
+    // ShizukuManager.kt. "provider" = ShizukuProvider (dideklarasikan manual
+    // di AndroidManifest.xml, authorities pakai applicationId) supaya app ini
+    // BISA menerima binder dari Shizuku (baik dari Shizuku Manager app biasa
+    // MAUPUN dari mode `adb shell` langsung). Versi 13.1.5 dipilih (rilis
+    // stabil terakhir yang dikenal luas dipakai per akhir masa training) --
+    // BELUM diverifikasi lewat Gradle asli (tidak ada akses network di sini).
+    implementation("dev.rikka.shizuku:api:13.1.5")
+    implementation("dev.rikka.shizuku:provider:13.1.5")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")

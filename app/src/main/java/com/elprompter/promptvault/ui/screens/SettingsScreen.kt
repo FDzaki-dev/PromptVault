@@ -42,9 +42,11 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import com.elprompter.promptvault.data.ConflictStrategy
 import com.elprompter.promptvault.data.SettingsRepository
+import com.elprompter.promptvault.shizuku.ShizukuManager
 import com.elprompter.promptvault.ui.components.TactileSwitch
 import com.elprompter.promptvault.ui.components.VaultCard
 import com.elprompter.promptvault.ui.components.VaultTopBar
+import com.elprompter.promptvault.ui.components.WarningBanner
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
@@ -64,6 +66,14 @@ fun SettingsScreen(
     safAccessLost: Boolean,
     onPickSafFolder: () -> Unit,
     onClearSafFolder: () -> Unit,
+    // [Fitur baru 2026-08-17, integrasi Shizuku]
+    shizukuStatus: ShizukuManager.Status,
+    shizukuDestPath: String?,
+    useShizuku: Boolean,
+    onUseShizukuChanged: (Boolean) -> Unit,
+    onShizukuDestPathChanged: (String) -> Unit,
+    onRequestShizukuPermission: () -> Unit,
+    onRefreshShizukuStatus: () -> Unit,
     onBack: () -> Unit
 ) {
     var exportedText by remember { mutableStateOf<String?>(null) }
@@ -207,6 +217,18 @@ fun SettingsScreen(
                             "kembali menyimpan hasil sortir ke Downloads/PromptVault.",
                         style = MaterialTheme.typography.bodySmall
                     )
+                    // [Fitur baru 2026-08-17, permintaan eksplisit user --
+                    // "berikan warning sejelas-jelasnya"] SEJAK v7.2.0 app
+                    // TIDAK LAGI membuat folder root "PromptVault" sendiri di
+                    // dalam folder yang dipilih lewat picker di bawah --
+                    // sebelumnya cuma disebut di dokumentasi teknis
+                    // (PROJECT_STATE.md/CHANGELOG.md), sekarang ditampilkan
+                    // LANGSUNG di UI supaya tidak mungkin terlewat.
+                    WarningBanner(
+                        "Folder yang kamu pilih lewat \"Pilih Folder\"/\"Ganti Folder\" di bawah HARUS SUDAH " +
+                            "ADA secara fisik -- aplikasi ini TIDAK PERNAH membuat folder root itu sendiri. " +
+                            "Buat dulu foldernya sendiri lewat file manager, baru pilih di sini."
+                    )
                     if (safTreeUri != null) {
                         Text(
                             "Folder aktif: ${friendlySafFolderLabel(safTreeUri)}",
@@ -242,6 +264,85 @@ fun SettingsScreen(
                             onClick = onPickSafFolder,
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primary)
                         ) { Text("Pilih Folder") }
+                    }
+                }
+            }
+
+            // [Fitur baru 2026-08-17, integrasi Shizuku -- permintaan eksplisit
+            // user] Alternatif folder tujuan kustom yang bypass SAF/Scoped
+            // Storage sepenuhnya lewat proses privileged Shizuku (lihat
+            // shizuku/ShizukuManager.kt & FileSorter.scanAndSortViaShizuku).
+            // SALING EKSKLUSIF dengan kartu SAF di atas -- kalau `useShizuku`
+            // aktif, FileSorter TIDAK menyentuh cabang SAF sama sekali.
+            VaultCard(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Mode Shizuku (Lanjutan)", style = MaterialTheme.typography.titleMedium)
+                        TactileSwitch(checked = useShizuku, onCheckedChange = onUseShizukuChanged, accentColor = colors.primary)
+                    }
+                    Text(
+                        "Pakai izin privileged dari aplikasi Shizuku (bukan SAF) untuk menulis ke folder " +
+                            "tujuan kustom -- termasuk lokasi yang biasanya diblokir Scoped Storage. Butuh " +
+                            "aplikasi Shizuku terpasang & jalan (root ATAU wireless debugging/adb) di HP kamu.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+
+                    val (statusLabel, statusColor) = when (shizukuStatus) {
+                        ShizukuManager.Status.READY -> "Siap digunakan" to colors.primary
+                        ShizukuManager.Status.BINDING -> "Menyambungkan..." to colors.tertiary
+                        ShizukuManager.Status.PERMISSION_DENIED -> "Izin belum diberikan" to colors.error
+                        ShizukuManager.Status.NOT_RUNNING -> "Shizuku belum jalan / belum terpasang" to colors.error
+                        ShizukuManager.Status.NOT_INSTALLED -> "Status belum dicek" to colors.onSurfaceVariant
+                        ShizukuManager.Status.ERROR -> "Gagal menyambung ke Shizuku" to colors.error
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Status: $statusLabel", style = MaterialTheme.typography.bodySmall, color = statusColor)
+                    }
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (shizukuStatus != ShizukuManager.Status.READY) {
+                            OutlinedButton(
+                                onClick = onRequestShizukuPermission,
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primary)
+                            ) { Text("Minta Izin Shizuku") }
+                        }
+                        OutlinedButton(
+                            onClick = onRefreshShizukuStatus,
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.onSurfaceVariant)
+                        ) { Text("Cek Ulang Status") }
+                    }
+
+                    if (useShizuku) {
+                        // [Fitur baru 2026-08-17, permintaan eksplisit user --
+                        // "berikan warning sejelas-jelasnya"] Sama seperti
+                        // kartu SAF di atas: SATU peringatan yang TIDAK BOLEH
+                        // terlewat -- root folder Shizuku juga TIDAK PERNAH
+                        // dibuat otomatis (lihat FileSorter.scanAndSortViaShizuku,
+                        // yang MENOLAK scan kalau root belum ada, bukan
+                        // membuatnya diam-diam).
+                        WarningBanner(
+                            "Path folder di bawah HARUS SUDAH ADA secara fisik di storage -- aplikasi ini " +
+                                "TIDAK PERNAH membuat folder root itu sendiri lewat Shizuku. Buat dulu " +
+                                "foldernya sendiri lewat file manager (contoh: /storage/emulated/0/PromptVaultShizuku), " +
+                                "baru isi path yang PERSIS SAMA di sini. Kalau folder belum ada, scan akan " +
+                                "GAGAL dengan pesan error, bukan membuatkan foldernya."
+                        )
+                        var pathText by remember(shizukuDestPath) { mutableStateOf(shizukuDestPath.orEmpty()) }
+                        OutlinedTextField(
+                            value = pathText,
+                            onValueChange = { pathText = it },
+                            label = { Text("Path absolut folder tujuan") },
+                            placeholder = { Text("/storage/emulated/0/NamaFolderKamu") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedButton(
+                            onClick = { onShizukuDestPathChanged(pathText) },
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primary)
+                        ) { Text("Simpan Path") }
                     }
                 }
             }

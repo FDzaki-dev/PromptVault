@@ -59,6 +59,20 @@
             android:exported="false"
             tools:node="merge" />
 
+        <!-- [Fitur baru 2026-08-17, integrasi Shizuku] Provider ini WAJIB
+             dideklarasikan manual (authorities pakai applicationId, tidak
+             bisa datang dari manifest library begitu saja) supaya app bisa
+             menerima binder Shizuku, baik lewat Shizuku Manager (root/
+             wireless debugging) maupun `adb shell` langsung. Lihat
+             shizuku/ShizukuManager.kt untuk sisi konsumsinya. -->
+        <provider
+            android:name="rikka.shizuku.ShizukuProvider"
+            android:authorities="${applicationId}.shizuku"
+            android:multiprocess="false"
+            android:enabled="true"
+            android:exported="true"
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

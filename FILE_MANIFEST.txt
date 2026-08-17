@@ -9,6 +9,7 @@ TROUBLESHOOTING.md
 app/build.gradle.kts
 app/proguard-rules.pro
 app/src/main/AndroidManifest.xml
+app/src/main/aidl/com/elprompter/promptvault/shizuku/IFileOpsService.aidl
 app/src/main/java/com/elprompter/promptvault/MainActivity.kt
 app/src/main/java/com/elprompter/promptvault/PromptVaultApp.kt
 app/src/main/java/com/elprompter/promptvault/data/ActivityLogEntry.kt
@@ -26,6 +27,8 @@ app/src/main/java/com/elprompter/promptvault/data/db/AppDatabase.kt
 app/src/main/java/com/elprompter/promptvault/data/db/Converters.kt
 app/src/main/java/com/elprompter/promptvault/data/db/MoveHistoryDao.kt
 app/src/main/java/com/elprompter/promptvault/data/db/MoveHistoryEntity.kt
+app/src/main/java/com/elprompter/promptvault/shizuku/FileOpsUserService.kt
+app/src/main/java/com/elprompter/promptvault/shizuku/ShizukuManager.kt
 app/src/main/java/com/elprompter/promptvault/ui/MainViewModel.kt
 app/src/main/java/com/elprompter/promptvault/ui/Navigation.kt
 app/src/main/java/com/elprompter/promptvault/ui/components/EmptyState.kt
@@ -39,6 +42,7 @@ app/src/main/java/com/elprompter/promptvault/ui/components/TactileSwitch.kt
 app/src/main/java/com/elprompter/promptvault/ui/components/VaultActionSheet.kt
 app/src/main/java/com/elprompter/promptvault/ui/components/VaultCard.kt
 app/src/main/java/com/elprompter/promptvault/ui/components/VaultTopBar.kt
+app/src/main/java/com/elprompter/promptvault/ui/components/WarningBanner.kt
 app/src/main/java/com/elprompter/promptvault/ui/screens/ActivityLogScreen.kt
 app/src/main/java/com/elprompter/promptvault/ui/screens/AddEditRuleScreen.kt
 app/src/main/java/com/elprompter/promptvault/ui/screens/DiagnosticsScreen.kt

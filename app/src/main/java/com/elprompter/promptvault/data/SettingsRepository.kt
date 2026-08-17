@@ -36,6 +36,14 @@ class SettingsRepository(private val context: Context) {
     private val safTreeUriKey = stringPreferencesKey("saf_tree_uri")
     private val scanConcurrencyKey = intPreferencesKey("scan_concurrency")
     private val useAltThemeKey = booleanPreferencesKey("use_alt_theme")
+    // [Fitur baru 2026-08-17, integrasi Shizuku] Path filesystem absolut
+    // (BUKAN content:// URI -- Shizuku bypass SAF sepenuhnya) folder tujuan
+    // kustom via Shizuku. `useShizukuKey` menentukan mode ini AKTIF atau
+    // tidak -- kalau true, FileSorter SAMA SEKALI tidak menyentuh cabang SAF
+    // lama (lihat FileSorter.scanAndSort), jadi kedua mode ini SALING
+    // EKSKLUSIF by design (bukan campur/prioritas implisit).
+    private val shizukuDestPathKey = stringPreferencesKey("shizuku_dest_path")
+    private val useShizukuKey = booleanPreferencesKey("use_shizuku")
 
     companion object {
         const val DEFAULT_INTERVAL_MINUTES = 15
@@ -211,5 +219,39 @@ class SettingsRepository(private val context: Context) {
 
     suspend fun setUseAltTheme(value: Boolean) {
         context.promptVaultDataStore.edit { prefs -> prefs[useAltThemeKey] = value }
+    }
+
+    /**
+     * [Fitur baru 2026-08-17, integrasi Shizuku] Lihat dokumentasi lengkap
+     * di [shizukuDestPathKey]/[useShizukuKey] di atas.
+     *
+     * **PERINGATAN WAJIB DIBACA USER (permintaan eksplisit 2026-08-17)**:
+     * path di sini HARUS berupa folder yang SUDAH ADA secara fisik di
+     * storage device -- app INI TIDAK PERNAH membuat folder root secara
+     * otomatis lewat Shizuku (persis pelajaran yang sama dengan folder
+     * tujuan kustom SAF sejak v7.2.0, lihat [FileSorter.resolveSafRuleDestinations]).
+     * User WAJIB membuat folder itu sendiri lewat file manager SEBELUM
+     * mengisi path ini -- kalau belum ada, [FileSorter] akan MENOLAK scan
+     * dengan pesan error eksplisit, BUKAN membuatkannya diam-diam.
+     */
+    val shizukuDestPathFlow: Flow<String?> = context.promptVaultDataStore.data.map { prefs -> prefs[shizukuDestPathKey] }
+
+    suspend fun getShizukuDestPath(): String? = shizukuDestPathFlow.first()
+
+    suspend fun setShizukuDestPath(path: String) {
+        context.promptVaultDataStore.edit { prefs -> prefs[shizukuDestPathKey] = path.trim() }
+    }
+
+    suspend fun clearShizukuDestPath() {
+        context.promptVaultDataStore.edit { prefs -> prefs.remove(shizukuDestPathKey) }
+    }
+
+    /** `true` = tujuan kustom lewat Shizuku aktif (mengesampingkan cabang SAF lama sepenuhnya). Default `false`, nol regresi untuk user yang tidak pernah menyentuh fitur ini. */
+    val useShizukuFlow: Flow<Boolean> = context.promptVaultDataStore.data.map { prefs -> prefs[useShizukuKey] ?: false }
+
+    suspend fun getUseShizuku(): Boolean = useShizukuFlow.first()
+
+    suspend fun setUseShizuku(value: Boolean) {
+        context.promptVaultDataStore.edit { prefs -> prefs[useShizukuKey] = value }
     }
 }

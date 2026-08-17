@@ -14,6 +14,7 @@ import com.elprompter.promptvault.data.Rule
 import com.elprompter.promptvault.data.RuleRepository
 import com.elprompter.promptvault.data.SaveRuleCheck
 import com.elprompter.promptvault.data.SettingsRepository
+import com.elprompter.promptvault.shizuku.ShizukuManager
 import com.elprompter.promptvault.util.FileSorter
 import com.elprompter.promptvault.util.PatternPreviewResult
 import com.elprompter.promptvault.util.SkippedFileInfo
@@ -115,6 +116,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     }
                 }
             }
+            state.asStateFlow()
+        }
+
+    /** [Fitur baru 2026-08-17, integrasi Shizuku] Status binder/permission -- langsung dari singleton, sudah StateFlow. */
+    val shizukuStatus: StateFlow<ShizukuManager.Status> = ShizukuManager.status
+
+    /** [Fitur baru 2026-08-17, integrasi Shizuku] `null` = belum diisi -- lihat peringatan lengkap di SettingsRepository.shizukuDestPathFlow. */
+    val shizukuDestPath: StateFlow<String?> = settingsRepository.shizukuDestPathFlow
+        .let { flow ->
+            val state = MutableStateFlow<String?>(null)
+            viewModelScope.launch { flow.collect { state.value = it } }
+            state.asStateFlow()
+        }
+
+    /** [Fitur baru 2026-08-17, integrasi Shizuku] `true` = tujuan kustom lewat Shizuku aktif, mengesampingkan cabang SAF. */
+    val useShizuku: StateFlow<Boolean> = settingsRepository.useShizukuFlow
+        .let { flow ->
+            val state = MutableStateFlow(false)
+            viewModelScope.launch { flow.collect { state.value = it } }
             state.asStateFlow()
         }
 
@@ -245,6 +265,33 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch { settingsRepository.setUseAltTheme(value) }
     }
 
+    /** [Fitur baru 2026-08-17, integrasi Shizuku] Minta izin Shizuku -- no-op aman kalau Shizuku belum terpasang/jalan (lihat ShizukuManager.requestPermission). */
+    fun requestShizukuPermission() = ShizukuManager.requestPermission()
+
+    /** [Fitur baru 2026-08-17, integrasi Shizuku] Cek ulang status manual, mis. setelah user balik dari app Shizuku Manager. */
+    fun refreshShizukuStatus() = ShizukuManager.refreshStatus()
+
+    /**
+     * [Fitur baru 2026-08-17, integrasi Shizuku] Simpan path folder tujuan
+     * Shizuku APA ADANYA (trim spasi saja, lihat SettingsRepository) --
+     * TIDAK divalidasi/dibuat di sini. Validasi keberadaan folder terjadi
+     * saat scan ([FileSorter.scanAndSortViaShizuku]), BUKAN saat disimpan --
+     * user boleh isi path folder yang BELUM dibuat dulu, lalu buat foldernya
+     * belakangan lewat file manager, baru scan. Peringatan lengkap ada di
+     * kartu "Mode Shizuku" (SettingsScreen).
+     */
+    fun setShizukuDestPath(path: String) {
+        viewModelScope.launch { settingsRepository.setShizukuDestPath(path) }
+    }
+
+    fun clearShizukuDestPath() {
+        viewModelScope.launch { settingsRepository.clearShizukuDestPath() }
+    }
+
+    fun setUseShizuku(value: Boolean) {
+        viewModelScope.launch { settingsRepository.setUseShizuku(value) }
+    }
+
     /**
      * [SAF, syarat (c) Insiden #7] Simpan folder kustom baru dari hasil
      * `ActivityResultContracts.OpenDocumentTree()` di MainActivity.
@@ -323,6 +370,27 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      */
     suspend fun undoMove(entry: MoveHistoryEntry): Boolean =
         withContext(Dispatchers.IO) { fileSorter.undo(entry) }
+
+    /**
+     * [Fitur baru 2026-08-17 -- "sweep-select to undo", permintaan eksplisit
+     * user] Undo BANYAK entri sekaligus, dipanggil dari mode seleksi-sapuan
+     * di ActivityLogScreen (drag jari di atas beberapa baris utk pilih,
+     * bukan tap tombol Undo satu-satu). SENGAJA sekuensial (bukan
+     * `async`/paralel spt scan) -- volume undo batch biasanya kecil (user
+     * pilih manual lewat sapuan jari, bukan ratusan file spt scan), dan
+     * sekuensial menghindari kompleksitas tambahan menggabungkan hasil
+     * paralel utk kasus yang tidak butuh performa setinggi itu. Mengembalikan
+     * (jumlah sukses, jumlah gagal) -- UI menampilkan ringkasan, bukan
+     * per-file (detail tetap ada di tab Log seperti biasa).
+     */
+    suspend fun undoMultiple(entries: List<MoveHistoryEntry>): Pair<Int, Int> = withContext(Dispatchers.IO) {
+        var success = 0
+        var failed = 0
+        for (entry in entries) {
+            if (fileSorter.undo(entry)) success++ else failed++
+        }
+        success to failed
+    }
 
     suspend fun exportRulesJson(): String = ruleRepository.exportAsJson()
 

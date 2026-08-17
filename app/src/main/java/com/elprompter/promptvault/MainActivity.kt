@@ -375,6 +375,7 @@ private fun PromptVaultRoot(
                 logEntries = logEntries,
                 undoableHistory = history,
                 onUndo = { entry -> viewModel.undoMove(entry) },
+                onUndoMultiple = { entries -> viewModel.undoMultiple(entries) },
                 onBack = { navController.popBackStack() }
             )
         }
@@ -385,6 +386,9 @@ private fun PromptVaultRoot(
             val safTreeUri by viewModel.safTreeUri.collectAsStateWithLifecycle()
             val safAccessLost by viewModel.safAccessLost.collectAsStateWithLifecycle()
             val useAltThemeSetting by viewModel.useAltTheme.collectAsStateWithLifecycle()
+            val shizukuStatus by viewModel.shizukuStatus.collectAsStateWithLifecycle()
+            val shizukuDestPath by viewModel.shizukuDestPath.collectAsStateWithLifecycle()
+            val useShizuku by viewModel.useShizuku.collectAsStateWithLifecycle()
             SettingsScreen(
                 currentIntervalMinutes = interval,
                 onIntervalSelected = { viewModel.setIntervalMinutes(it) },
@@ -400,6 +404,13 @@ private fun PromptVaultRoot(
                 safAccessLost = safAccessLost,
                 onPickSafFolder = onPickSafFolder,
                 onClearSafFolder = { viewModel.clearSafTreeUri() },
+                shizukuStatus = shizukuStatus,
+                shizukuDestPath = shizukuDestPath,
+                useShizuku = useShizuku,
+                onUseShizukuChanged = { viewModel.setUseShizuku(it) },
+                onShizukuDestPathChanged = { viewModel.setShizukuDestPath(it) },
+                onRequestShizukuPermission = { viewModel.requestShizukuPermission() },
+                onRefreshShizukuStatus = { viewModel.refreshShizukuStatus() },
                 onBack = { navController.popBackStack() }
             )
         }

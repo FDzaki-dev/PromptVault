@@ -3,7 +3,69 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
-## STATUS PROJECT: v7.2.0 -- PERUBAHAN ARSITEKTUR: app berhenti bikin folder root "PromptVault" sendiri di folder tujuan kustom (permintaan langsung user) -- 2026-08-17
+## STATUS PROJECT: v7.3.0 -- 3 permintaan eksplisit user: integrasi Shizuku, sweep-select-to-undo, warning eksplisit root tidak auto-dibuat -- 2026-08-17
+- User minta 3 hal SEKALIGUS di 1 sesi (tidak dipecah batch, dikerjakan sbg
+  1 Atomic Change krn saling terkait scope "tujuan kustom" & "UX undo"):
+  (1) "aplikasi Wajib terintegrasi 100% dengan shizuku", (2) fitur
+  sweep-select-to-undo "biar gak ribet buat user", (3) warning sejelas-
+  jelasnya bahwa folder root tujuan kustom TIDAK otomatis dibuat app.
+- **Integrasi Shizuku**: BARU package `shizuku/` (3 file: `IFileOpsService.aidl`
+  kontrak IPC path-absolut, `FileOpsUserService.kt` implementasi Stub yang
+  jalan di PROSES SHIZUKU (UID shell/adb atau root), `ShizukuManager.kt`
+  singleton lifecycle binder/permission). `FileSorter.scanAndSort()` dapat
+  cabang BARU `scanAndSortViaShizuku()` -- dicek PALING AWAL, SALING
+  EKSKLUSIF dgn cabang SAF (toggle `useShizuku` di Settings). Arsitektur
+  ikut pola yang SUDAH jadi pelajaran permanen project ini: sumber scan
+  TETAP SELALU Downloads, Shizuku HANYA tujuan (SAMA seperti SAF, lihat
+  restrukturisasi SAF_FINAL_VERDICT_FIX 2026-08-13 di entri lama). Subfolder
+  RULE di-resolve SEKALI SERIAL sebelum diproses paralel -- PROAKTIF
+  menghindari kelas bug race "folder duplikat" yang PERNAH terjadi nyata
+  di SAF (bukan ditemukan lewat insiden baru kali ini, tapi pelajaran lama
+  DITERAPKAN LEBIH DULU sebelum bug yang sama sempat terjadi di jalur baru).
+  `undo()` dapat cabang baru via prefix palsu `"shizuku://"` di `destUri`
+  (pola identik prefix `content://` SAF -- TIDAK perlu skema Room baru,
+  DB Schema/DAO protected asset TIDAK disentuh sama sekali).
+- **Sweep-select-to-undo**: `ActivityLogScreen.kt` REWRITE PENUH (bukan
+  edit parsial -- terlalu banyak state/gesture baru saling terkait utk
+  di-patch bagian per bagian dgn aman). Tab Undo: tekan-lama 1 baris ->
+  mode seleksi, LALU sapukan jari (drag) ke baris lain utk toggle-pilih
+  banyak sekaligus (`detectDragGestures` + `onGloballyPositioned` rekam
+  posisi tiap baris) -- checkbox & tap biasa tetap ada sbg alternatif.
+  `MainViewModel.undoMultiple()` baru (sekuensial, bukan paralel -- volume
+  seleksi manual biasanya kecil), dikonfirmasi lewat `VaultActionSheet`
+  yang sama dgn undo tunggal sebelum eksekusi.
+- **Warning root tidak auto-dibuat**: komponen `WarningBanner.kt` baru
+  (ikon+`colors.error`, bukan sekadar info pasif) dipasang di KEDUA kartu
+  tujuan kustom Settings -- SAF (perilaku "root tidak auto-dibuat" SUDAH
+  ada sejak v7.2.0 tapi SEBELUMNYA cuma tercatat di dokumentasi teknis,
+  TIDAK pernah ditampilkan ke user di UI -- gap ini yang ditutup sekarang)
+  dan Shizuku (baru, perilaku SAMA PERSIS diterapkan sejak awal: app
+  MENOLAK scan dgn pesan error eksplisit kalau root belum ada, TIDAK PERNAH
+  membuatkannya diam-diam).
+- File diubah (9) + 4 baru -- lihat CHANGELOG.md v7.3.0 utk daftar lengkap
+  per-file. `preflight_check.sh` 13/13 lolos.
+- **Batas jujur, WAJIB dibaca sebelum sesi berikutnya klaim "Shizuku
+  jalan"**: Shizuku (poin 1) & gestur sapuan custom (poin 2) adalah DUA
+  permukaan API yang BELUM PERNAH dipakai project ini SAMA SEKALI sebelum
+  batch ini -- beda dari SAF yang setidaknya sudah py 7+ iterasi
+  pengalaman nyata (lihat Insiden #7). BELUM lewat `./gradlew`/device
+  asli/aplikasi Shizuku sungguhan sama sekali. Kalau CI/build gagal di
+  `shizuku/` atau gestur sapuan "kalah" oleh scroll LazyColumn di device
+  asli, itu BUKAN tanda ditulis ceroboh -- itu risiko yang SUDAH
+  didokumentasikan eksplisit di sini sejak awal, tindak lanjuti dgn fix
+  bertarget (kirim log error), BUKAN menghapus fitur tanpa didiskusikan
+  dulu ke user (pelajaran sama dgn Insiden #7 SAF).
+- Confidence Rating: **70%** (sengaja lebih rendah dari batch biasa --
+  lihat rincian lengkap per-poin di CHANGELOG.md v7.3.0). **User WAJIB
+  verifikasi**: (1) build CI hijau (prioritas #1 -- dependency Shizuku +
+  AIDL codegen = risiko compile paling nyata di batch ini), (2) kartu Mode
+  Shizuku di Pengaturan menampilkan status yang benar sesuai kondisi
+  Shizuku di HP, (3) sapuan jari di tab Undo Pemindahan benar-benar
+  memilih banyak baris tanpa kalah oleh scroll, (4) warning banner tampil
+  jelas & mudah dibaca di kedua kartu tujuan kustom (SAF & Shizuku).
+- versionCode 87->88, versionName 7.2.0->7.3.0.
+
+## STATUS PROJECT SEBELUMNYA: v7.2.0 -- PERUBAHAN ARSITEKTUR: app berhenti bikin folder root "PromptVault" sendiri di folder tujuan kustom (permintaan langsung user) -- 2026-08-17
 - Setelah 2 ronde mitigasi (v7.1.5, v7.1.6) tidak berhasil membuktikan/
   menyingkirkan tuntas duplikat "PromptVault (N)" -- user minta hilangkan
   pemicunya langsung: app TIDAK LAGI `createDirectory("PromptVault")`.

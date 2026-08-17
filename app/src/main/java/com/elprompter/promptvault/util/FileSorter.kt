@@ -15,6 +15,8 @@ import com.elprompter.promptvault.data.MoveHistoryRepository
 import com.elprompter.promptvault.data.Rule
 import com.elprompter.promptvault.data.RuleRepository
 import com.elprompter.promptvault.data.SettingsRepository
+import com.elprompter.promptvault.shizuku.IFileOpsService
+import com.elprompter.promptvault.shizuku.ShizukuManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -47,7 +49,25 @@ data class ScanResult(
      * terbaca) -- dua kegagalan ini butuh pesan & tindakan pemulihan yang
      * beda buat user (fix izin storage vs pilih ulang folder kustom).
      */
-    val safAccessLost: Boolean = false
+    val safAccessLost: Boolean = false,
+    /**
+     * [Fitur baru 2026-08-17, integrasi Shizuku] `true` HANYA kalau mode
+     * Shizuku aktif tapi service belum ter-bind (Shizuku belum jalan/izin
+     * belum diberikan/masih proses binding). Sengaja field TERPISAH dari
+     * [shizukuRootMissing] -- dua kegagalan ini butuh tindakan pemulihan
+     * beda buat user (buka Shizuku Manager & beri izin vs buat folder
+     * secara manual), pola yang SAMA dengan pemisahan [safAccessLost] dari
+     * "NotConfigured" di [FileSorter.resolveSafDestinationRoot].
+     */
+    val shizukuNotReady: Boolean = false,
+    /**
+     * [Fitur baru 2026-08-17, integrasi Shizuku] `true` kalau mode Shizuku
+     * aktif, service SIAP, TAPI folder root yang diisi user di Pengaturan
+     * belum ada secara fisik di storage. App SENGAJA TIDAK PERNAH membuat
+     * folder ini sendiri -- lihat KDoc [FileSorter.resolveShizukuRuleDestinations]
+     * & peringatan eksplisit di SettingsScreen.
+     */
+    val shizukuRootMissing: Boolean = false
 )
 
 /** Hasil uji-coba pattern terhadap isi Downloads saat ini, dipakai di layar Tambah/Edit Rule. */
@@ -120,7 +140,12 @@ class FileSorter(
     private val ruleRepository: RuleRepository,
     private val activityLogRepository: ActivityLogRepository,
     private val moveHistoryRepository: MoveHistoryRepository,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    // [Fitur baru 2026-08-17, integrasi Shizuku] Lambda, bukan instance
+    // langsung -- ShizukuManager.service bisa berubah (null -> ready) SETELAH
+    // FileSorter dibuat, jadi setiap pemakaian WAJIB membaca ulang lewat
+    // lambda ini, bukan snapshot yang di-capture sekali di constructor.
+    private val shizukuServiceProvider: () -> IFileOpsService? = { ShizukuManager.service }
 ) {
 
     private val downloadsDir: File
@@ -257,6 +282,14 @@ class FileSorter(
      *   scan mana" ke "tulis hasil ke mana", di [processCandidate].
      */
     suspend fun scanAndSort(): ScanResult = scanMutex.withLock {
+        // [Fitur baru 2026-08-17, integrasi Shizuku] Titik cabang PALING
+        // AWAL -- mode Shizuku & mode SAF SALING EKSKLUSIF by design (lihat
+        // SettingsRepository.useShizukuFlow). Kalau aktif, cabang SAF di
+        // bawah SAMA SEKALI tidak dieksekusi -- tidak ada campur logika 2
+        // mode custom-destination dalam 1 scan.
+        if (settingsRepository.getUseShizuku()) {
+            return@withLock scanAndSortViaShizuku()
+        }
         // Titik cabang TUNGGAL untuk resolusi folder TUJUAN kustom -- AMAN
         // dipanggil dari MainViewModel MAUPUN AutoSortWorker tanpa perubahan
         // apa pun di kedua caller itu, karena signature scanAndSort() TIDAK
@@ -346,6 +379,317 @@ class FileSorter(
      */
     suspend fun checkSafAccessLost(): Boolean = withContext(Dispatchers.IO) {
         resolveSafDestinationRoot() is SafDestinationResolution.AccessLost
+    }
+
+    // ========================================================================
+    // [Fitur baru 2026-08-17, integrasi Shizuku] Jalur tujuan kustom PRIVILEGED
+    // via Shizuku -- alternatif SAF, dipilih user lewat toggle "Mode Shizuku"
+    // (SettingsScreen), SALING EKSKLUSIF dengan cabang SAF (lihat percabangan
+    // di scanAndSort). Path SELALU filesystem absolut polos (bukan content://
+    // URI), dieksekusi proses Shizuku (FileOpsUserService, UID shell/root) --
+    // bisa menulis ke lokasi yang mungkin ditolak Scoped Storage kalau
+    // dipanggil langsung dari proses app ini, TANPA dialog picker SAF.
+    // ========================================================================
+
+    /**
+     * Analog [scanAndSortToDestination], tujuan lewat [IFileOpsService] IPC.
+     * Sumber scan TETAP SELALU Downloads ([listCandidateFiles]) -- konsisten
+     * dengan pelajaran permanen project ini: SAF/Shizuku HANYA tujuan, bukan
+     * sumber scan alternatif (lihat Insiden SAF_FINAL_VERDICT_FIX 2026-08-13).
+     */
+    private suspend fun scanAndSortViaShizuku(): ScanResult = withContext(Dispatchers.IO) {
+        val service = shizukuServiceProvider()
+        if (service == null) {
+            activityLogRepository.add(
+                LogLevel.ERROR,
+                "Mode Shizuku aktif tapi service belum siap (Shizuku belum jalan / izin belum diberikan / masih proses menyambung). " +
+                    "Buka Pengaturan > Mode Shizuku untuk cek status & minta izin."
+            )
+            return@withContext ScanResult(0, 0, foldersUnreadable = false, overlapWarnings = emptyList(), shizukuNotReady = true)
+        }
+
+        val rootPath = settingsRepository.getShizukuDestPath()
+        if (rootPath.isNullOrBlank()) {
+            activityLogRepository.add(LogLevel.ERROR, "Mode Shizuku aktif tapi folder tujuan belum diisi di Pengaturan.")
+            return@withContext ScanResult(0, 0, foldersUnreadable = false, overlapWarnings = emptyList(), shizukuNotReady = true)
+        }
+
+        // [Requirement eksplisit user, 2026-08-17] App TIDAK PERNAH membuat
+        // folder ROOT ini sendiri -- HANYA memvalidasi keberadaannya lewat
+        // IPC. Kalau tidak ada, scan BERHENTI dengan pesan eksplisit -- TIDAK
+        // fallback diam-diam ke Downloads/PromptVault, pola sama persis
+        // dengan AccessLost SAF di resolveSafDestinationRoot.
+        val rootExists = try { service.exists(rootPath) } catch (e: Exception) { false }
+        if (!rootExists) {
+            activityLogRepository.add(
+                LogLevel.ERROR,
+                "Folder tujuan Shizuku \"$rootPath\" TIDAK DITEMUKAN. Aplikasi ini TIDAK PERNAH membuat folder root " +
+                    "secara otomatis -- buat folder itu sendiri lewat file manager dulu (persis path yang kamu isi di " +
+                    "Pengaturan), baru scan lagi. Scan DIHENTIKAN, tidak fallback ke Downloads."
+            )
+            return@withContext ScanResult(0, 0, foldersUnreadable = false, overlapWarnings = emptyList(), shizukuRootMissing = true)
+        }
+        val rootIsDir = try { service.isDirectory(rootPath) } catch (e: Exception) { false }
+        if (!rootIsDir) {
+            activityLogRepository.add(LogLevel.ERROR, "Folder tujuan Shizuku \"$rootPath\" ada, tapi itu FILE, bukan folder. Perbaiki path di Pengaturan.")
+            return@withContext ScanResult(0, 0, foldersUnreadable = false, overlapWarnings = emptyList(), shizukuRootMissing = true)
+        }
+
+        val rules = ruleRepository.getRules().filter { it.enabled }
+        val conflictStrategy = settingsRepository.getConflictStrategy()
+
+        if (!downloadsDir.exists() || !downloadsDir.canRead()) {
+            activityLogRepository.add(LogLevel.ERROR, "Folder Downloads tidak terbaca. Cek izin penyimpanan.")
+            return@withContext ScanResult(0, 0, foldersUnreadable = true, overlapWarnings = emptyList())
+        }
+        if (rules.isEmpty()) {
+            activityLogRepository.add(LogLevel.INFO, "Scan dijalankan, tapi belum ada rule aktif.")
+            return@withContext ScanResult(0, 0, foldersUnreadable = false, overlapWarnings = emptyList())
+        }
+
+        val candidateFiles = listCandidateFiles()
+        if (candidateFiles.isEmpty()) {
+            activityLogRepository.add(LogLevel.INFO, "Scan selesai: tidak ada file baru yang cocok pattern rule manapun.")
+            return@withContext ScanResult(0, 0, foldersUnreadable = false, overlapWarnings = emptyList())
+        }
+
+        // [Pelajaran WAJIB dari race-fix SAF 2026-08-13, diterapkan proaktif
+        // di jalur BARU ini -- lihat resolveSafRuleDestinations untuk root
+        // cause lengkap kelas bug "folder duplikat"] Subfolder RULE
+        // di-resolve SEKALI, SERIAL, DI SINI -- SEBELUM file diproses
+        // paralel di bawah, karena mkdirs() via IPC TIDAK dijamin idempoten
+        // lintas panggilan concurrent.
+        val ruleDestPaths = resolveShizukuRuleDestinations(service, rootPath, rules)
+
+        val semaphore = Semaphore(settingsRepository.getScanConcurrency())
+        val results = candidateFiles.map { file ->
+            async { semaphore.withPermit { processCandidateShizuku(file, rules, conflictStrategy, service, ruleDestPaths) } }
+        }.awaitAll()
+
+        var moved = 0
+        var skipped = 0
+        val overlapWarnings = mutableListOf<String>()
+        val skippedDetails = mutableListOf<SkippedFileInfo>()
+        for (result in results) {
+            result.overlapWarning?.let { overlapWarnings.add(it) }
+            when (result) {
+                is CandidateOutcome.Moved -> moved++
+                is CandidateOutcome.Skipped -> {
+                    skipped++
+                    skippedDetails.add(result.info)
+                }
+            }
+        }
+
+        val summary = if (skipped > 0) {
+            "Scan selesai: $moved file dipindahkan, $skipped dilewati. Buka \"Detail File Dilewati\" untuk lihat nama filenya."
+        } else {
+            "Scan selesai: $moved file dipindahkan, $skipped dilewati."
+        }
+        activityLogRepository.add(LogLevel.SUCCESS, summary)
+
+        ScanResult(moved, skipped, foldersUnreadable = false, overlapWarnings = overlapWarnings, skippedDetails = skippedDetails)
+    }
+
+    /**
+     * Analog [resolveSafRuleDestinations], via IPC Shizuku. HANYA membuat
+     * subfolder RULE di dalam [rootPath] -- TIDAK PERNAH memanggil `mkdirs`
+     * untuk [rootPath] itu sendiri (root sudah divalidasi ADA sebelum
+     * fungsi ini dipanggil, lihat [scanAndSortViaShizuku]).
+     */
+    private suspend fun resolveShizukuRuleDestinations(
+        service: IFileOpsService,
+        rootPath: String,
+        rules: List<Rule>
+    ): Map<String, String?> {
+        val resolved = mutableMapOf<String, String?>()
+        for (rule in rules.distinctBy { it.folderName }) {
+            val folderNameError = validateRuleFolderName(rule.folderName)
+            if (folderNameError != null) {
+                activityLogRepository.add(
+                    LogLevel.ERROR,
+                    "Rule \"${rule.folderName}\" punya nama folder tidak valid ($folderNameError) -- folder tujuan Shizuku untuk rule ini dilewati."
+                )
+                resolved[rule.folderName] = null
+                continue
+            }
+            val childPath = "$rootPath${File.separator}${rule.folderName}"
+            val ok = try {
+                (service.exists(childPath) && service.isDirectory(childPath)) || service.mkdirs(childPath)
+            } catch (e: Exception) {
+                false
+            }
+            if (!ok) {
+                activityLogRepository.add(LogLevel.ERROR, "Gagal membuat/membuka folder tujuan \"${rule.folderName}\" di folder Shizuku.")
+                resolved[rule.folderName] = null
+            } else {
+                resolved[rule.folderName] = childPath
+            }
+        }
+        return resolved
+    }
+
+    /** Analog [processCandidate], jalur Shizuku. */
+    private suspend fun processCandidateShizuku(
+        file: File,
+        rules: List<Rule>,
+        conflictStrategy: ConflictStrategy,
+        service: IFileOpsService,
+        ruleDestPaths: Map<String, String?>
+    ): CandidateOutcome {
+        val sizeKb = file.sizeKb()
+        val matches = RuleOverlapChecker.matchingRules(file.name, sizeKb, rules)
+        if (matches.isEmpty()) {
+            return CandidateOutcome.Skipped(SkippedFileInfo(file.name, explainNoMatch(file, sizeKb, rules)))
+        }
+        if (isLikelyStillWriting(file)) {
+            return CandidateOutcome.Skipped(
+                SkippedFileInfo(file.name, "Ditunda: file baru saja berubah, kemungkinan masih ditulis/didownload. Akan dicoba lagi scan berikutnya.")
+            )
+        }
+        var overlapWarning: String? = null
+        if (matches.size > 1) {
+            overlapWarning = "\"${file.name}\" cocok dengan ${matches.size} rule (${matches.joinToString { it.folderName }}). " +
+                "Dipindahkan memakai rule prioritas tertinggi: \"${matches.first().folderName}\"."
+            activityLogRepository.add(LogLevel.WARNING, overlapWarning)
+        }
+        val rule = matches.first()
+        val destDirPath = ruleDestPaths[rule.folderName]
+        if (destDirPath == null) {
+            return CandidateOutcome.Skipped(
+                SkippedFileInfo(file.name, "Folder tujuan \"${rule.folderName}\" di folder Shizuku gagal dibuat/dibuka (lihat Log)."),
+                overlapWarning
+            )
+        }
+        val outcome = moveFileViaShizuku(file, rule, conflictStrategy, service, destDirPath)
+        return when (outcome) {
+            MoveOutcome.MOVED -> CandidateOutcome.Moved(overlapWarning)
+            MoveOutcome.SKIPPED_CONFLICT -> CandidateOutcome.Skipped(
+                SkippedFileInfo(file.name, "Sudah ada file dengan nama sama di folder Shizuku/${rule.folderName}/ (strategi konflik: Lewati)"),
+                overlapWarning
+            )
+            MoveOutcome.FAILED -> CandidateOutcome.Skipped(
+                SkippedFileInfo(file.name, "Gagal dipindahkan (lihat Log untuk detail error)"),
+                overlapWarning
+            )
+        }
+    }
+
+    /**
+     * Analog [moveFileToSafDestination], via IPC Shizuku. `destUri` yang
+     * disimpan ke [MoveHistoryEntry] diberi prefix [SHIZUKU_URI_PREFIX] --
+     * BUKAN URI asli, cuma penanda supaya [undo] tahu harus lewat
+     * [undoShizuku], pola identik dengan prefix `content://` untuk entri SAF.
+     */
+    private suspend fun moveFileViaShizuku(
+        file: File,
+        rule: Rule,
+        conflictStrategy: ConflictStrategy,
+        service: IFileOpsService,
+        destDirPath: String
+    ): MoveOutcome {
+        return try {
+            var targetName = file.name
+            var targetPath = "$destDirPath${File.separator}$targetName"
+            val existsAtTarget = try { service.exists(targetPath) } catch (e: Exception) { false }
+            if (existsAtTarget) {
+                when (conflictStrategy) {
+                    ConflictStrategy.SKIP -> return MoveOutcome.SKIPPED_CONFLICT
+                    ConflictStrategy.OVERWRITE -> {
+                        val deleted = try { service.deleteFile(targetPath) } catch (e: Exception) { false }
+                        if (!deleted) {
+                            activityLogRepository.add(LogLevel.ERROR, "Gagal menimpa \"$targetName\" di folder Shizuku (hapus file lama gagal).")
+                            return MoveOutcome.FAILED
+                        }
+                    }
+                    ConflictStrategy.RENAME -> {
+                        val base = file.nameWithoutExtension
+                        val ext = file.extension
+                        var counter = 1
+                        while (try { service.exists(targetPath) } catch (e: Exception) { true }) {
+                            targetName = if (ext.isNotEmpty()) "${base}_$counter.$ext" else "${base}_$counter"
+                            targetPath = "$destDirPath${File.separator}$targetName"
+                            counter++
+                        }
+                    }
+                }
+            }
+
+            val originalParent = file.parentFile?.absolutePath ?: downloadsDir.absolutePath
+            val moved = try { service.moveFile(file.absolutePath, targetPath) } catch (e: Exception) { false }
+            if (!moved) {
+                activityLogRepository.add(LogLevel.ERROR, "Gagal memindahkan \"${file.name}\" ke folder Shizuku (IPC menolak/error).")
+                return MoveOutcome.FAILED
+            }
+
+            moveHistoryRepository.record(
+                MoveHistoryEntry(
+                    id = UUID.randomUUID().toString(),
+                    timestampMillis = System.currentTimeMillis(),
+                    fileName = targetName,
+                    originalParentUri = originalParent,
+                    destUri = "$SHIZUKU_URI_PREFIX$targetPath",
+                    ruleFolderName = rule.folderName
+                )
+            )
+            activityLogRepository.add(LogLevel.SUCCESS, "\"${file.name}\" -> folder Shizuku/${rule.folderName}/")
+            MoveOutcome.MOVED
+        } catch (e: Exception) {
+            activityLogRepository.add(LogLevel.ERROR, "Error memindahkan \"${file.name}\" (folder Shizuku): ${e.message}")
+            MoveOutcome.FAILED
+        }
+    }
+
+    /**
+     * Analog [undoSafDestination], via IPC Shizuku -- lihat dispatcher di
+     * [undo]. [IFileOpsService.moveFile] SUDAH atomik (rename-atau-copy+delete
+     * digabung di 1 panggilan IPC, lihat FileOpsUserService.kt), jadi BEDA
+     * dari [undoSaf]/[undoSafDestination]: tidak ada state "Undo SEBAGIAN"
+     * terpisah di sini -- kalau IPC bilang gagal, TIDAK ADA perubahan (file
+     * masih di lokasi awal), aman dicoba lagi tanpa risiko duplikat.
+     */
+    private suspend fun undoShizuku(entry: MoveHistoryEntry): Boolean {
+        val service = shizukuServiceProvider()
+        if (service == null) {
+            activityLogRepository.add(LogLevel.ERROR, "Undo gagal: service Shizuku belum siap. Buka Pengaturan > Mode Shizuku, pastikan status Siap, lalu coba lagi.")
+            return false
+        }
+        return try {
+            val currentPath = entry.destUri.removePrefix(SHIZUKU_URI_PREFIX)
+            val currentExists = try { service.exists(currentPath) } catch (e: Exception) { false }
+            if (!currentExists) {
+                activityLogRepository.add(LogLevel.ERROR, "Undo gagal: \"${entry.fileName}\" sudah tidak ada di folder Shizuku.")
+                return false
+            }
+
+            val originalDir = File(entry.originalParentUri)
+            if (!originalDir.exists()) originalDir.mkdirs()
+
+            var restoreTarget = File(originalDir, entry.fileName)
+            var counter = 1
+            while (restoreTarget.exists()) {
+                val base = entry.fileName.substringBeforeLast('.', entry.fileName)
+                val ext = entry.fileName.substringAfterLast('.', "")
+                restoreTarget = File(originalDir, if (ext.isNotEmpty()) "${base}_restored_$counter.$ext" else "${base}_restored_$counter")
+                counter++
+            }
+
+            val moved = try { service.moveFile(currentPath, restoreTarget.absolutePath) } catch (e: Exception) { false }
+            if (!moved) {
+                activityLogRepository.add(LogLevel.ERROR, "Undo gagal: tidak bisa memindahkan \"${entry.fileName}\" kembali dari folder Shizuku.")
+                return false
+            }
+            try {
+                MediaScannerConnection.scanFile(context, arrayOf(restoreTarget.absolutePath), null, null)
+            } catch (_: Exception) { /* non-fatal, sama seperti di moveFile() */ }
+
+            moveHistoryRepository.markUndone(entry.id)
+            activityLogRepository.add(LogLevel.SUCCESS, "Undo berhasil: \"${entry.fileName}\" dikembalikan ke Downloads.")
+            true
+        } catch (e: Exception) {
+            activityLogRepository.add(LogLevel.ERROR, "Error saat undo \"${entry.fileName}\" (folder Shizuku): ${e.message}")
+            false
+        }
     }
 
     /**
@@ -1252,6 +1596,12 @@ class FileSorter(
      * begitu ketahuan, sebelum sempat di-package.
      */
     suspend fun undo(entry: MoveHistoryEntry): Boolean {
+        // [Fitur baru 2026-08-17, integrasi Shizuku] Dicek PALING AWAL --
+        // prefix palsu (bukan skema URI asli, cuma penanda), lihat
+        // moveFileViaShizuku()/SHIZUKU_URI_PREFIX.
+        if (entry.destUri.startsWith(SHIZUKU_URI_PREFIX)) {
+            return undoShizuku(entry)
+        }
         if (entry.destUri.startsWith("content://")) {
             return if (entry.originalParentUri.startsWith("content://")) {
                 undoSaf(entry) // legacy: sumber & tujuan dulu sama-sama SAF
@@ -1312,5 +1662,15 @@ class FileSorter(
         private val TEMP_FILE_MARKERS = listOf(
             ".crdownload", ".tmp", ".part", ".download", ".downloading"
         )
+
+        /**
+         * [Fitur baru 2026-08-17, integrasi Shizuku] Penanda non-URI (bukan
+         * skema `content://` asli) yang di-prepend ke [MoveHistoryEntry.destUri]
+         * untuk entri yang dipindahkan lewat jalur Shizuku -- supaya [undo]
+         * bisa membedakannya dari path lokal biasa TANPA butuh kolom/skema
+         * Room baru (pola sama persis dengan cara prefix `content://`
+         * membedakan entri SAF, lihat KDoc [undo]).
+         */
+        private const val SHIZUKU_URI_PREFIX = "shizuku://"
     }
 }
