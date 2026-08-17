@@ -3,6 +3,22 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.4.0 (2026-08-18) — Roadmap Fase 1.2 (batch 3/4): audit TalkBack grup Settings
+
+Batch ketiga dari 4. 1 file diubah, 0 file baru.
+
+- `SettingsScreen.kt`: `TactileSwitch` "Mode Shizuku (Lanjutan)" diisi
+  `contentDescription = "Mode Shizuku"` (parameter opsional ditambah
+  v8.3.0, sesi ini dipakai di sini) -- sebelumnya TalkBack cuma umumkan
+  "Switch, aktif/nonaktif" tanpa label.
+- Diaudit & TIDAK diubah (sudah compliant): icon dekoratif
+  HelpOutline/ContentCopy (redundan thd teks visible), semua `FilterChip`
+  (M3 baku, selectable state otomatis), `VaultTopBar` (sudah py
+  contentDescription "Kembali" sejak awal), baris status Shizuku (1 Text,
+  tidak ada isu merge).
+- `scripts/preflight_check.sh`: 13/13 PASS.
+- versionCode 97→98, versionName 8.3.0→8.4.0.
+
 ## v8.3.0 (2026-08-18) — Roadmap Fase 1.2 (batch 2/4): audit TalkBack grup RuleList/AddEdit
 
 Batch kedua dari 4. 3 file diubah, 0 file baru.

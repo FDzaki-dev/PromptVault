@@ -3,7 +3,38 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
-## STATUS PROJECT: v8.3.0 -- Roadmap Fase 1.2 (batch 2/4): audit TalkBack grup RuleList/AddEdit -- 2026-08-18
+## STATUS PROJECT: v8.4.0 -- Roadmap Fase 1.2 (batch 3/4): audit TalkBack grup Settings -- 2026-08-18
+- Batch ketiga dari 4 (setelah Home v8.2.x, RuleList/AddEdit v8.3.0). Sesi
+  ini grup Settings.
+- **1 file diubah** (`SettingsScreen.kt`), 0 file baru. Satu-satunya gap
+  nyata: `TactileSwitch` "Mode Shizuku (Lanjutan)" belum diisi
+  `contentDescription` (parameter opsionalnya baru ditambah v8.3.0 tapi
+  cuma dipakai `RuleCard`, belum di sini) -- TalkBack cuma umumkan "Switch,
+  aktif/nonaktif" tanpa label. Diisi `contentDescription = "Mode Shizuku"`
+  (label statis, BUKAN interpolasi seperti `RuleCard` -- switch ini
+  satu-satunya di layar, tidak berulang di list, jadi tidak perlu
+  identitas dinamis).
+- **Sudah diaudit, TIDAK perlu diubah** (temuan negatif dicatat biar sesi
+  depan tidak audit ulang layar yang sama):
+  - `Icon(HelpOutline, contentDescription = null)` & `Icon(ContentCopy,
+    contentDescription = null)` -- keduanya di dalam tombol yang SUDAH py
+    teks visible di sebelahnya ("Buka Panduan Penggunaan", "Salin JSON").
+    `null` disengaja (ikon redundan terhadap teks), pola sama dgn audit
+    Home/RuleList sebelumnya.
+  - Semua `FilterChip` (interval, conflict strategy, scan concurrency) --
+    komponen M3 baku, `selectable`+state "dipilih" sudah otomatis
+    diumumkan TalkBack, tidak perlu sentuhan manual.
+  - `VaultTopBar` (dipakai semua layar bukan-Home) -- tombol back SUDAH py
+    `contentDescription = "Kembali"` sejak awal, tidak ada gap.
+  - Baris "Status: $statusLabel" -- `Row` isinya cuma 1 `Text`, tidak ada
+    isu merge semantics (beda dari kasus `ManifestRow` di Home yg py 2
+    `Text` terpisah).
+- `scripts/preflight_check.sh`: 13/13 PASS.
+- Roadmap 1.2 TETAP terbuka (3/4) -- lanjut grup ActivityLog/MoveHistory
+  (batch TERAKHIR) di sesi berikutnya.
+- versionCode 97→98, versionName 8.3.0→8.4.0.
+
+## STATUS PROJECT SEBELUMNYA: v8.3.0 -- Roadmap Fase 1.2 (batch 2/4): audit TalkBack grup RuleList/AddEdit -- 2026-08-18
 - Batch kedua dari 4 (setelah Home v8.2.0/v8.2.1). Sesi ini grup
   RuleList/AddEdit.
 - **3 file diubah** (`TactileSwitch.kt`, `RuleCard.kt`,

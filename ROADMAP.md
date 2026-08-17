@@ -49,7 +49,11 @@ sudah berjalan, roadmap ini tidak menambah proses baru di sini.
   (`TactileSwitch.kt` param contentDescription opsional, `RuleCard.kt`
   label per-item di 5 kontrol, `AddEditRuleScreen.kt` semantics error()
   utk field folder). Detail lengkap: `CHANGELOG.md` v8.3.0.
-- **Lanjut sesi berikutnya**: Batch 3/4 -- grup Settings.
+- ~~Batch 3/4 -- grup Settings~~ ✅ SELESAI v8.4.0 (`SettingsScreen.kt`
+  contentDescription switch Mode Shizuku; sisanya sudah diaudit &
+  compliant). Detail lengkap: `CHANGELOG.md` v8.4.0.
+- **Lanjut sesi berikutnya**: Batch 4/4 (TERAKHIR) -- grup
+  ActivityLog/MoveHistory.
 
 ### 1.3 String UI: audit hardcode vs `strings.xml`
 - **Risiko: Rendah** (mechanical, tidak ubah perilaku) · **Nilai: Sedang** (prasyarat WAJIB kalau kelak mau lokalisasi -- lihat Fase 3.3 -- tapi berdiri sendiri juga berguna: memisahkan teks dari logika bikin maintenance lebih rapi)
