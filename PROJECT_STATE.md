@@ -3,7 +3,49 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
-## STATUS PROJECT: v7.4.0 -- Panduan User Baru: onboarding dirombak total + layar Panduan persisten baru -- 2026-08-17
+## STATUS PROJECT: v7.5.0 -- Auto-buat folder root "PromptVault" di tujuan kustom SAF DIKEMBALIKAN (permintaan langsung user) + lapis anti-duplikat baru -- 2026-08-17
+- Trigger: user tanya apakah duplikasi folder root (riwayat v2.19.2 s/d
+  v7.1.6 di bawah) berkorelasi dgn fitur "Folder Tujuan Kustom" di
+  screenshot Pengaturan -- dikonfirmasi YA (sudah terdokumentasi lengkap,
+  bukan penemuan baru), lalu user minta root cause-nya dibalik lagi:
+  kembalikan auto-buat root, TAPI jangan sampai duplikat "(N)" terulang.
+- **Bukan revert v7.2.0 begitu saja** -- 2 mitigasi lama (v7.1.5 cache-Uri,
+  v7.1.6 retry+instrumentasi) TERBUKTI belum cukup dulu utk root (walau
+  terbukti cukup utk subfolder rule, DIPERTAHANKAN). Ditambah lapis yang
+  BELUM pernah dicoba: `resolveCanonicalRootDirSaf()` di `FileSorter.kt` --
+  kalau listing SAF menemukan >1 folder cocok pola
+  `PromptVault`/`PromptVault (N)`, app TIDAK pilih random: prioritas nama
+  persis tanpa akhiran, fallback paling lama (`lastModified()`), log
+  WARNING ke Activity Log, folder lain TIDAK disentuh/dihapus (bukan aksi
+  destruktif otomatis). Sejak titik itu SEMUA scan konvergen ke 1 folder
+  yang sama (di-cache) -- self-healing, bukan cuma prevention seperti
+  percobaan-percobaan sebelumnya. `findOrCreateChildDirSaf` retry juga
+  diperkuat (200ms -> 200ms+500ms bertahap).
+- 3 file dokumentasi UI (`SettingsScreen.kt`, `PanduanScreen.kt`,
+  `OnboardingScreen.kt`) yang sebelumnya (v7.3.0) eksplisit bilang "root
+  TIDAK PERNAH auto-dibuat" untuk SAF, disesuaikan -- klaim itu sekarang
+  HANYA berlaku utk mode Shizuku (TIDAK disentuh/tidak diminta user kali
+  ini, tetap manual root sesuai desain aslinya).
+- File diubah (4): `util/FileSorter.kt`, `ui/screens/SettingsScreen.kt`,
+  `ui/screens/PanduanScreen.kt`, `ui/screens/OnboardingScreen.kt`,
+  `app/build.gradle.kts` (versi). `preflight_check.sh` 13/13 lolos.
+- **Batas jujur**: mekanisme deteksi+konvergensi BARU, belum diuji skenario
+  provider SAF OEM nyata yang benar-benar bikin duplikat lagi. Desainnya
+  defensif by design (tidak mungkin memperburuk drpd insiden lama -- kalau
+  gagal pun, app konsisten ke 1 folder + warning, bukan menyebar file diam-
+  diam). BELUM lewat `./gradlew`/device asli (keterbatasan permanen
+  lingkungan kerja Claude, dicatat konsisten tiap sesi sejak awal project).
+  **User WAJIB verifikasi**: (1) build CI hijau, (2) folder tujuan kustom
+  BARU (kosong) -> scan -> subfolder "PromptVault" muncul otomatis, (3)
+  scan berkali-kali (manual + auto-sort) ke folder SAMA -> pastikan HANYA
+  1 folder "PromptVault" yang terisi terus, TIDAK ada "(1)"/"(2)" baru
+  muncul -- ini test definitif yang gagal dibuktikan 2 kali di v7.1.x dulu.
+- Confidence Rating: integritas paket/ZIP **100%** (preflight 13/13, semua
+  protected assets utuh) -- perilaku fungsional anti-duplikat di device OEM
+  nyata **~75%** (di luar kendali sandbox, lihat CHANGELOG.md v7.5.0).
+- versionCode 89->90, versionName 7.4.0->7.5.0.
+
+## STATUS PROJECT SEBELUMNYA: v7.4.0 -- Panduan User Baru: onboarding dirombak total + layar Panduan persisten baru -- 2026-08-17
 - User menyoroti gap: setelah perombakan besar v7.3.0 (Shizuku, sweep-
   select-undo, warning banner), user BARU nyaris tidak punya cara pelajari
   mekanisme app -- "tangani hingga tuntas". Root cause: `OnboardingScreen`

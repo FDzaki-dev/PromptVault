@@ -78,7 +78,7 @@ private val steps = listOf(
     OnboardingStep(
         Icons.Filled.HelpOutline,
         "Ke mana file disortir?",
-        "Default: Downloads/PromptVault/<nama rule>/, dibuat otomatis. Kalau kamu pilih folder tujuan kustom (SAF, di Pengaturan) atau mode Shizuku (lanjutan) -- folder ROOT-nya HARUS SUDAH ADA lebih dulu, dibuat manual lewat file manager. PromptVault TIDAK PERNAH membuat folder root kustom itu sendiri; kalau belum ada, scan akan gagal dengan pesan error yang jelas, bukan membuatkannya diam-diam."
+        "Default: Downloads/PromptVault/<nama rule>/, dibuat otomatis. Folder tujuan kustom (SAF, di Pengaturan) juga otomatis dibuatkan subfolder \"PromptVault\" di dalamnya -- tidak perlu setup manual. Kekecualian: mode Shizuku (lanjutan) -- folder ROOT-nya HARUS SUDAH ADA lebih dulu, dibuat manual lewat file manager; kalau belum ada, scan akan gagal dengan pesan error yang jelas, bukan membuatkannya diam-diam."
     ),
     OnboardingStep(
         Icons.Filled.CompareArrows,

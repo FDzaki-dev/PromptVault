@@ -127,10 +127,10 @@ fun mimeTypeForFileName(name: String): String = when (name.substringAfterLast('.
  * lihat catatan arsitektur di [FileSorter.scanAndSort]), cocokkan tiap file
  * terhadap rule aktif (berurutan sesuai PRIORITAS, mendukung multi-pattern &
  * filter ukuran), lalu pindahkan ke Downloads/PromptVault/<folderName>/ ATAU,
- * kalau user sudah memilih folder tujuan kustom lewat SAF, LANGSUNG ke <folder
- * kustom>/<folderName>/ (SEJAK 2026-08-17, app tidak lagi bikin subfolder
- * "PromptVault" sendiri di dalam folder kustom -- lihat KDoc
- * [FileSorter.resolveSafRuleDestinations]) -- dan catat riwayat untuk undo.
+ * kalau user sudah memilih folder tujuan kustom lewat SAF, ke <folder
+ * kustom>/PromptVault/<folderName>/ (root "PromptVault" DIBUAT OTOMATIS lagi
+ * sejak 2026-08-17 v2, dengan lapis anti-duplikat baru -- lihat KDoc
+ * [FileSorter.resolveCanonicalRootDirSaf]) -- dan catat riwayat untuk undo.
  *
  * Prinsip "expert-level file organizer": setiap file yang TIDAK dipindahkan harus
  * bisa dijelaskan alasannya secara spesifik ke user, bukan cuma angka "dilewati".
@@ -751,8 +751,9 @@ class FileSorter(
             return@withContext ScanResult(0, 0, foldersUnreadable = false, overlapWarnings = emptyList())
         }
 
-        // [SAF, race-fix 2026-08-13 -- lihat dokumentasi lengkap di
-        // resolveSafRuleDestinations()] Folder tujuan SAF (root "PromptVault" +
+        // [SAF, race-fix 2026-08-13, root dikembalikan 2026-08-17 v2 -- lihat
+        // dokumentasi lengkap di resolveSafRuleDestinations()/
+        // resolveCanonicalRootDirSaf()] Folder tujuan SAF (root "PromptVault" +
         // subfolder tiap rule) di-resolve SEKALI DI SINI, SERIAL, SEBELUM file
         // diproses paralel di bawah -- BUKAN lagi per-file di dalam
         // moveFileToSafDestination() seperti sebelumnya (sumber duplikat folder).
@@ -835,12 +836,20 @@ class FileSorter(
                 // URI cache basi/tidak valid (mis. folder dihapus manual) -- lanjut jalur normal di bawah, JANGAN gagal di sini.
             }
         }
-        // Langkah 2: fallback -- query listing by-nama, dengan 1x retry+delay
-        // singkat kalau hasil pertama null (mitigasi dugaan listing stale
-        // sesaat pasca-create scan sebelumnya -- lihat KDoc di atas).
+        // Langkah 2: fallback -- query listing by-nama, dengan retry+delay
+        // BERTAHAP (200ms lalu 500ms, sebelumnya cuma 1x200ms) kalau hasil
+        // pertama null -- mitigasi listing stale sesaat pasca-create scan
+        // sebelumnya (lihat KDoc di atas). Diperkuat 2026-08-17 saat root
+        // "PromptVault" dikembalikan (lihat [resolveCanonicalRootDirSaf]):
+        // window race paling rawan justru saat root BELUM PERNAH ada sama
+        // sekali (cache masih kosong), jadi retry lebih sabar di titik ini.
         var existing = parent.findFile(name)
         if (existing == null) {
             delay(200)
+            existing = parent.findFile(name)
+        }
+        if (existing == null) {
+            delay(500)
             existing = parent.findFile(name)
         }
         if (existing != null) {
@@ -928,9 +937,91 @@ class FileSorter(
      * menulis LANGSUNG ke root (tanpa subfolder "PromptVault" lagi) --
      * kalau mau lanjutin struktur lama, tinggal arahkan SAF picker ke folder
      * "PromptVault" yang sudah ada itu sendiri (bukan parent-nya).
+     *
+     * [Keputusan Arsitektur 2026-08-17 v2 -- DIBALIK lagi, PERMINTAAN LANGSUNG
+     * USER] Keputusan di atas (berhenti total bikin root) DIBATALKAN atas
+     * permintaan eksplisit user: fitur auto-buat root dikembalikan, TAPI kali
+     * ini lewat [resolveCanonicalRootDirSaf] yang menambah lapis deteksi+
+     * konvergensi duplikat yang BELUM ADA di percobaan v7.1.5/v7.1.6 dulu
+     * (lihat KDoc lengkap di fungsi itu). Baris `findOrCreateChildDirSaf(...,
+     * "PromptVault", ...)` di bawah AKTIF LAGI, tapi dipanggil TIDAK LANGSUNG --
+     * lewat `resolveCanonicalRootDirSaf` di [resolveSafRuleDestinations].
      */
+    /**
+     * [Keputusan Arsitektur 2026-08-17 v2 -- PERMINTAAN LANGSUNG USER: kembalikan
+     * fitur auto-buat folder root "PromptVault", TAPI jangan sampai duplikat
+     * "(N)" terulang] Root cause asli (KDoc [resolveSafRuleDestinations] di
+     * bawah) sudah ditutup untuk race ANTAR-coroutine (resolusi serial) DAN
+     * dikuatkan lagi di [findOrCreateChildDirSaf] (cache-by-Uri + retry
+     * bertahap). Yang BELUM pernah dicoba sebelumnya: lapis SELF-HEALING ini --
+     * bukan cuma mencegah duplikat baru, tapi mendeteksi & mengonvergensikan
+     * kalau provider SAF (di luar kendali app, mis. staleness cache FUSE/
+     * indexing OEM tertentu) tetap menghasilkan >1 folder cocok pola
+     * "PromptVault"/"PromptVault (N)":
+     * 1. Cache-by-Uri dicoba dulu (jalur cepat, sama seperti biasa).
+     * 2. Kalau cache kosong/basi: LIST children [parent] sekali, cari SEMUA
+     *    folder yang cocok regex `^PromptVault(\s\(\d+\))?$`.
+     * 3. 0 hasil -> lanjut jalur normal [findOrCreateChildDirSaf] (buat baru).
+     * 4. 1 hasil -> itu kanonik, cache & pakai.
+     * 5. >1 hasil (provider SUDAH terlanjur duplikat di luar kendali app) ->
+     *    JANGAN pilih random/pertama. Prioritas: (a) nama PERSIS "PromptVault"
+     *    tanpa akhiran kalau ada, (b) kalau tidak ada, folder ber-`lastModified()`
+     *    PALING AWAL (asumsi: yang pertama dibuat = yang paling mungkin sudah
+     *    berisi riwayat file lama). Dicatat WARNING eksplisit ke Activity Log
+     *    (nama semua folder yang ditemukan) supaya user tahu ada folder liar
+     *    yang perlu digabung manual -- app TIDAK menghapus/memindah isi folder
+     *    lain secara otomatis (aksi destruktif tanpa izin eksplisit, di luar
+     *    scope batch ini). Sejak titik ini, SEMUA scan berikutnya konsisten
+     *    memakai kanonik yang sama (di-cache), jadi folder tidak makin
+     *    terpecah walau providernya sempat "nakal" sekali.
+     */
+    private suspend fun resolveCanonicalRootDirSaf(parent: DocumentFile): DocumentFile? {
+        settingsRepository.getCachedFolderUri(SAF_ROOT_CACHE_KEY)?.let { cachedUriStr ->
+            try {
+                val cached = DocumentFile.fromSingleUri(context, Uri.parse(cachedUriStr))
+                if (cached != null && cached.isDirectory && cached.exists()) return cached
+            } catch (e: Exception) {
+                // Cache basi -- lanjut deteksi di bawah.
+            }
+        }
+
+        val candidates = try {
+            parent.listFiles().filter { it.isDirectory && it.name != null && SAF_ROOT_DUPLICATE_REGEX.matches(it.name!!) }
+        } catch (e: Exception) {
+            emptyList()
+        }
+
+        return when {
+            candidates.size == 1 -> {
+                val only = candidates.first()
+                settingsRepository.setCachedFolderUri(SAF_ROOT_CACHE_KEY, only.uri.toString())
+                only
+            }
+            candidates.size > 1 -> {
+                val canonical = candidates.firstOrNull { it.name == SAF_ROOT_FOLDER_NAME }
+                    ?: candidates.minByOrNull { it.lastModified() }
+                    ?: candidates.first()
+                activityLogRepository.add(
+                    LogLevel.ERROR,
+                    "Ditemukan ${candidates.size} folder \"$SAF_ROOT_FOLDER_NAME\" di folder tujuan kustom " +
+                        "(${candidates.joinToString(", ") { it.name ?: "?" }}) -- kemungkinan sisa duplikat lama " +
+                        "dari provider SAF. Scan ini & seterusnya HANYA memakai \"${canonical.name}\", folder lain " +
+                        "TIDAK disentuh -- gabungkan isinya manual lewat file manager kalau perlu."
+                )
+                settingsRepository.setCachedFolderUri(SAF_ROOT_CACHE_KEY, canonical.uri.toString())
+                canonical
+            }
+            else -> findOrCreateChildDirSaf(parent, SAF_ROOT_FOLDER_NAME, cacheKey = SAF_ROOT_CACHE_KEY)
+        }
+    }
+
+    /** Riwayat lengkap "root dihapus lalu dikembalikan lagi" ada di KDoc besar di atas [resolveCanonicalRootDirSaf]. */
     private suspend fun resolveSafRuleDestinations(destinationRoot: DocumentFile, rules: List<Rule>): Map<String, DocumentFile?> {
-        val vaultRootDoc = destinationRoot
+        val vaultRootDoc = resolveCanonicalRootDirSaf(destinationRoot)
+        if (vaultRootDoc == null) {
+            activityLogRepository.add(LogLevel.ERROR, "Gagal membuat/membuka folder root \"$SAF_ROOT_FOLDER_NAME\" di folder tujuan kustom.")
+            return rules.associate { it.folderName to null }
+        }
         val resolved = mutableMapOf<String, DocumentFile?>()
         for (rule in rules.distinctBy { it.folderName }) {
             // [Fix P0-1, audit gap 2026-08-16] Invarian yang SAMA dengan
@@ -1672,5 +1763,16 @@ class FileSorter(
          * membedakan entri SAF, lihat KDoc [undo]).
          */
         private const val SHIZUKU_URI_PREFIX = "shizuku://"
+
+        /**
+         * [Dikembalikan 2026-08-17 v2, lihat KDoc [resolveCanonicalRootDirSaf]]
+         * Nama folder root yang di-auto-create app di dalam folder tujuan
+         * kustom SAF. Regex-nya SENGAJA match nama asli TANPA akhiran juga
+         * (bukan cuma varian "(N)") supaya deteksi duplikat konsisten dengan
+         * kasus "cuma 1 folder, nama persis benar" (candidates.size == 1).
+         */
+        private const val SAF_ROOT_FOLDER_NAME = "PromptVault"
+        private const val SAF_ROOT_CACHE_KEY = "PromptVault"
+        private val SAF_ROOT_DUPLICATE_REGEX = Regex("^PromptVault(\\s\\(\\d+\\))?$")
     }
 }

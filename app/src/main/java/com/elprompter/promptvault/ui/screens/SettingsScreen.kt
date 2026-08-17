@@ -236,20 +236,10 @@ fun SettingsScreen(
                         "File tetap DIPINDAI dari Downloads seperti biasa. Folder ini cuma menentukan " +
                             "KE MANA hasil sortir disimpan (lewat Storage Access Framework) -- cocok " +
                             "untuk folder di kartu SD atau folder khusus lain. Kosongkan lagi untuk " +
-                            "kembali menyimpan hasil sortir ke Downloads/PromptVault.",
+                            "kembali menyimpan hasil sortir ke Downloads/PromptVault. App otomatis membuat " +
+                            "subfolder \"PromptVault\" di dalam folder yang kamu pilih -- kamu tidak perlu " +
+                            "membuatnya manual.",
                         style = MaterialTheme.typography.bodySmall
-                    )
-                    // [Fitur baru 2026-08-17, permintaan eksplisit user --
-                    // "berikan warning sejelas-jelasnya"] SEJAK v7.2.0 app
-                    // TIDAK LAGI membuat folder root "PromptVault" sendiri di
-                    // dalam folder yang dipilih lewat picker di bawah --
-                    // sebelumnya cuma disebut di dokumentasi teknis
-                    // (PROJECT_STATE.md/CHANGELOG.md), sekarang ditampilkan
-                    // LANGSUNG di UI supaya tidak mungkin terlewat.
-                    WarningBanner(
-                        "Folder yang kamu pilih lewat \"Pilih Folder\"/\"Ganti Folder\" di bawah HARUS SUDAH " +
-                            "ADA secara fisik -- aplikasi ini TIDAK PERNAH membuat folder root itu sendiri. " +
-                            "Buat dulu foldernya sendiri lewat file manager, baru pilih di sini."
                     )
                     if (safTreeUri != null) {
                         Text(

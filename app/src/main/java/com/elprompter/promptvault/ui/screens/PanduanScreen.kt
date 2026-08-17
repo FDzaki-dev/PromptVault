@@ -81,15 +81,16 @@ fun PanduanScreen(onBack: () -> Unit) {
                 title = "3. Ke mana file disortir?",
                 body = "Default: Downloads/PromptVault/<nama rule>/, dibuat otomatis, tidak perlu " +
                     "setup apapun. Dua opsi lanjutan di Pengaturan kalau kamu butuh tujuan lain: " +
-                    "\"Folder Tujuan Kustom\" (SAF, termasuk kartu SD) atau \"Mode Shizuku\" " +
-                    "(butuh aplikasi Shizuku terpasang & jalan)."
+                    "\"Folder Tujuan Kustom\" (SAF, termasuk kartu SD -- subfolder \"PromptVault\" " +
+                    "dibuat otomatis juga di dalamnya) atau \"Mode Shizuku\" (butuh aplikasi Shizuku " +
+                    "terpasang & jalan)."
             )
             WarningBanner(
-                "Untuk KEDUA opsi lanjutan di atas: folder ROOT tujuan HARUS SUDAH ADA secara " +
-                    "fisik SEBELUM dipilih/diisi di Pengaturan -- buat dulu sendiri lewat file " +
-                    "manager. PromptVault TIDAK PERNAH membuat folder root kustom itu sendiri. " +
-                    "Kalau folder belum ada, scan akan GAGAL dengan pesan error yang jelas, bukan " +
-                    "membuatkannya diam-diam."
+                "Khusus Mode Shizuku: folder ROOT tujuan HARUS SUDAH ADA secara fisik SEBELUM " +
+                    "diisi di Pengaturan -- buat dulu sendiri lewat file manager. PromptVault TIDAK " +
+                    "PERNAH membuat folder root lewat Shizuku sendiri. Kalau folder belum ada, scan " +
+                    "akan GAGAL dengan pesan error yang jelas, bukan membuatkannya diam-diam. (Folder " +
+                    "Tujuan Kustom via SAF di atas beda -- root-nya DIBUAT OTOMATIS.)"
             )
 
             PanduanSection(

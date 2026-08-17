@@ -3,6 +3,60 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v7.5.0 -- Auto-buat folder root "PromptVault" di tujuan kustom SAF DIKEMBALIKAN + lapis anti-duplikat baru (2026-08-17)
+User minta balik: fitur auto-buat root "PromptVault" (dihapus v7.2.0 karena
+duplikat "(N)" berulang) dikembalikan, DENGAN syarat duplikat tidak boleh
+terulang. Bukan sekadar revert v7.2.0 -- ditambah lapis proteksi yang BELUM
+pernah dicoba di v7.1.5/v7.1.6 dulu.
+
+**Perubahan (4 file, Atomic Change -- logika + SEMUA salinan dokumentasi
+UI yang menyebut "root tidak auto-dibuat" saling terkait, harus konsisten
+sekaligus)**:
+- `util/FileSorter.kt`:
+  - BARU `resolveCanonicalRootDirSaf()`: dipanggil sekali di awal
+    `resolveSafRuleDestinations()`. Cache-by-Uri dulu (cepat) -> kalau
+    kosong, LIST & cocokkan children ke regex `^PromptVault(\s\(\d+\))?$`
+    -> 0 hasil = buat baru (lewat `findOrCreateChildDirSaf` yang sudah ada),
+    1 hasil = pakai itu, **>1 hasil = pilih kanonik (prioritas nama persis
+    "PromptVault", fallback `lastModified()` paling awal), log WARNING
+    eksplisit ke Activity Log, folder lain TIDAK disentuh/dihapus**. Ini
+    lapis SELF-HEALING baru: kalaupun provider SAF sempat "nakal" bikin
+    folder ganda (di luar kendali app), scan berikutnya tetap konvergen ke
+    SATU folder, tidak makin pecah.
+  - `findOrCreateChildDirSaf()`: retry diperkuat dari 1x200ms jadi
+    200ms+500ms bertahap -- window race paling rawan adalah saat root
+    BELUM PERNAH ada (cache kosong), jadi retry lebih sabar di titik itu.
+  - `resolveSafRuleDestinations()`: `vaultRootDoc` sekarang hasil
+    `resolveCanonicalRootDirSaf()`, bukan `destinationRoot` mentah lagi.
+- `ui/screens/SettingsScreen.kt`: `WarningBanner` "TIDAK PERNAH membuat
+  folder root" di kartu Folder Tujuan Kustom (SAF) DIHAPUS, diganti 1
+  kalimat info di deskripsi kartu: subfolder "PromptVault" dibuat otomatis.
+  Kartu Shizuku TIDAK diubah -- mode Shizuku TETAP tidak auto-buat root
+  (di luar scope permintaan user kali ini).
+- `ui/screens/PanduanScreen.kt` & `ui/screens/OnboardingScreen.kt`: teks
+  yang dulu bilang "KEDUA opsi lanjutan (SAF & Shizuku) tidak auto-buat
+  root" dipecah -- SAF sekarang disebut auto-buat, warning "root harus
+  sudah ada" dipersempit khusus untuk Shizuku saja.
+- `app/build.gradle.kts`: versionCode 89->90, versionName 7.4.0->7.5.0.
+
+**Batas jujur**: mekanisme deteksi+konvergensi (poin 5 di atas) BARU, belum
+pernah diuji skenario nyata provider SAF OEM yang benar-benar bikin
+duplikat lagi -- desainnya defensif (tidak bisa memperburuk keadaan: kalau
+providernya nakal sekali, app langsung konsisten pakai 1 folder & warning
+ke user, bukan diam-diam menyebar file ke banyak folder seperti insiden
+lama). `preflight_check.sh` 13/13 lolos. Belum lewat `./gradlew`/device asli.
+**User WAJIB verifikasi**: (1) build CI hijau, (2) pilih folder tujuan
+kustom BARU (kosong) -> scan -> subfolder "PromptVault" muncul otomatis
+tanpa perlu dibuat manual, (3) scan berkali-kali (manual & tunggu
+auto-sort) ke folder yang SAMA -> pastikan HANYA SATU folder "PromptVault"
+yang bertambah isi, tidak ada "(1)"/"(2)" baru.
+Confidence Rating (integritas paket/struktur ZIP): **100%** -- semua
+protected assets utuh, preflight 13/13. Confidence Rating (perilaku
+fungsional fix anti-duplikat di device OEM nyata, di luar kendali sandbox
+ini): **~75%** -- desain lebih kuat dari 2 percobaan sebelumnya, tapi
+sifat provider SAF pihak ketiga tetap tidak bisa dipastikan 100% tanpa
+device asli.
+
 ## v7.4.0 -- Panduan User Baru: onboarding dirombak total + layar Panduan persisten baru (2026-08-17)
 User menyoroti: setelah rentetan perombakan besar (Shizuku, sweep-select-undo,
 warning banner root-folder, dst di v7.3.0), user BARU nyaris tidak punya cara
