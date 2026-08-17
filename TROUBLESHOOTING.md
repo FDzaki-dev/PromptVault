@@ -42,3 +42,41 @@ perintah diagnostik+perbaikan dalam satu paste (sudah jadi standar respons).
 3. Setelah scan, kalau ada file dilewati, buka **Detail File Dilewati** di
    Home -- setiap file dikasih alasan spesifik (tidak cocok pattern / kena
    exclude / di luar batas ukuran / diduga masih ditulis / konflik nama).
+
+## 5. Folder Tujuan Kustom (SAF) bikin folder "PromptVault (1)" duplikat
+
+Riwayat panjang (v2.19.2 s/d v7.5.0, detail lengkap di `PROJECT_STATE.md`).
+Ringkas:
+- **Kalau masih pakai versi < 7.5.0**: update dulu ke versi terbaru --
+  duplikat lama disebabkan race antar-coroutine + listing SAF stale, sudah
+  ditutup total sejak v7.5.0 (resolusi folder serial + self-healing
+  `resolveCanonicalRootDirSaf`).
+- **Kalau sudah di versi terbaru tapi masih lihat folder "(1)"/"(2)" lama**:
+  itu SISA dari sebelum update, app TIDAK menghapusnya otomatis (aksi
+  destruktif di luar scope). Gabungkan isinya manual lewat file manager,
+  lalu biarkan 1 folder "PromptVault" saja -- scan berikutnya akan konsisten
+  pakai folder itu terus (dicek & di-log otomatis di Log Aktivitas kalau app
+  masih menemukan >1).
+- **Folder tujuan kustom persis "Documents"**: folder root "PromptVault" app
+  akan fisik sama persis dengan `Documents/PromptVault/` yang juga dipakai
+  crash logger internal (lihat #6 di bawah) -- bukan bug, cuma 2 subsistem
+  beda numpuk di lokasi sama. App kasih info non-blocking soal ini di kartu
+  Folder Tujuan Kustom (Pengaturan). Kalau mau pisah total, pilih SUBFOLDER
+  di dalam Documents, bukan Documents-nya langsung.
+
+## 6. App crash saat tekan Scan
+
+Sejak v7.5.2, crash pertama sepanjang project (`UnsupportedOperationException`
+di `FileSorter.findOrCreateChildDirSaf`) sudah di-fix -- update ke versi
+terbaru dulu kalau masih kena ini.
+
+Kalau app masih crash setelah update:
+1. Buka **Diagnostik** di app -- daftar crash log tersimpan otomatis
+   (`Documents/PromptVault/logs/crash_*.txt`, MediaStore, tidak butuh izin
+   storage legacy), tanpa perlu ADB/Logcat.
+2. Upload file crash log itu langsung ke chat Claude -- lebih akurat
+   dibanding deskripsi gejala, dan JADI PRIORITAS pertama sebelum Claude
+   minta Logcat manual (`adb logcat`).
+3. Retention otomatis FIFO maks 50 log -- kalau butuh log lama yang sudah
+   kehapus, tidak bisa dipulihkan, screenshot/salin isinya dulu kalau perlu
+   disimpan lebih lama.

@@ -3,6 +3,21 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v7.5.2b -- Docs-only: README/TROUBLESHOOTING ketinggalan selama saga SAF & duplikasi (2026-08-17)
+User minta lanjut beresin dokumen Markdown yang terbengkalai (fokus dev
+sesi-sesi sebelumnya habis di krisis SAF/duplikasi & crash). Tidak ada
+perubahan kode/logic.
+
+- `README.md`: header versi basi (v7.4.0) -> v7.5.2.
+- `TROUBLESHOOTING.md`: 0 entri soal SAF/duplikasi folder & crash app
+  meski itu saga terbesar project (v2.19.2-v7.5.2) -- ditambah §5 (folder
+  "PromptVault (1)" duplikat, cara resolusi + kondisi "Documents" overlap)
+  dan §6 (app crash saat Scan, cara pakai Diagnostik/crash log internal
+  ketimbang minta Logcat manual).
+- `preflight_check.sh` 13/13 lolos. versionCode/versionName TIDAK berubah
+  (docs-only, no behavior change -- akhiran "b" cuma penanda batch di
+  changelog, bukan versi rilis baru).
+
 ## v7.5.2 -- FIX crash pertama produksi: UnsupportedOperationException saat scan ke tujuan kustom SAF (2026-08-17)
 User lapor crash pertama sepanjang project (log `crash_20260817_174626_f7fac68a.txt`,
 device Infinix X6855, Android 16) -- terjadi persis saat tekan Scan setelah

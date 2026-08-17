@@ -1,4 +1,4 @@
-# PromptVault v7.4.0
+# PromptVault v7.5.2
 
 App Android offline untuk merapikan otomatis file (ekstensi apa saja) di folder
 Downloads ke folder tujuan, berdasarkan rule pattern yang kamu buat sendiri.
