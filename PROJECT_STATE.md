@@ -3,7 +3,31 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
-## STATUS PROJECT: v8.2.0 -- Roadmap Fase 1.2 (batch 1/4): audit TalkBack grup Home -- 2026-08-18
+## STATUS PROJECT: v8.2.1 -- FIX build gagal CI (Unresolved reference: mergeDescendants, HomeScreen.kt) -- 2026-08-18
+- User upload log CI `compileDebugKotlin FAILED` dari build v8.2.0.
+  **Root cause**: `import androidx.compose.ui.semantics.mergeDescendants`
+  di `HomeScreen.kt` -- `mergeDescendants` BUKAN symbol top-level yang bisa
+  di-import, itu named parameter dari `Modifier.semantics(mergeDescendants
+  = Boolean, properties = ...)`. Import ilegal ini lolos
+  `scripts/preflight_check.sh` (script itu cek keseimbangan kurung/delegate/
+  duplikat import/dll via regex Python, BUKAN compiler Kotlin asli -- tidak
+  bisa deteksi "symbol tidak exist di package tsb", ini gap struktural sama
+  dgn yang sudah dicatat di `MAINTENANCE.md`/Fase 0 roadmap, bukan bug baru
+  di script).
+- **Fix**: hapus baris import yang salah. Baris pemakaian
+  `Modifier.semantics(mergeDescendants = true) {}` di `ManifestRow` tidak
+  perlu import apapun selain `semantics` itu sendiri (sudah ada).
+- 1 file diubah (`HomeScreen.kt`, hapus 1 baris import). Sisa perubahan
+  v8.2.0 (role Button di `GroupedListRow`, contentDescription CTA scan)
+  TIDAK terpengaruh, tetap seperti semula.
+- Laporan lain di log (`problems-report.html`): semua `severity: WARNING`
+  (deprecation Gradle 10 notice bawaan AGP/Gradle wrapper, bukan dari kode
+  project) -- tidak menyebabkan build gagal, tidak ditindak sesi ini.
+- **Belum diverifikasi CI** -- fix baru dikirim sesi ini, tunggu run
+  berikutnya hijau sebelum ditutup permanen.
+- versionCode 95→96, versionName 8.2.0→8.2.1.
+
+## STATUS PROJECT SEBELUMNYA: v8.2.0 -- Roadmap Fase 1.2 (batch 1/4): audit TalkBack grup Home -- 2026-08-18
 - Batch pertama dari 4 batch kecil aksesibilitas (Home, RuleList/AddEdit,
   Settings, ActivityLog/MoveHistory -- per `ROADMAP.md`). Sesi ini HANYA
   grup Home.

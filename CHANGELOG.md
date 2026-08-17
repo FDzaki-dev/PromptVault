@@ -3,6 +3,18 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.2.1 (2026-08-18) — FIX build gagal CI (Unresolved reference: mergeDescendants)
+
+CI `compileDebugKotlin` gagal di v8.2.0. Root cause: `import
+androidx.compose.ui.semantics.mergeDescendants` di `HomeScreen.kt` --
+`mergeDescendants` itu named parameter `Modifier.semantics(...)`, bukan
+symbol yang bisa di-import. Fix: hapus baris import salah itu (1 file
+diubah). Sisa fitur v8.2.0 (role Button, contentDescription CTA) tidak
+berubah. Warning lain di log CI (`problems-report.html`) semua
+`severity: WARNING` (deprecation Gradle 10 bawaan AGP), bukan penyebab gagal.
+
+versionCode 95→96, versionName 8.2.0→8.2.1.
+
 ## v8.2.0 (2026-08-18) — Roadmap Fase 1.2 (batch 1/4): audit TalkBack grup Home
 
 Batch pertama dari 4 (Home, RuleList/AddEdit, Settings, ActivityLog/MoveHistory).
