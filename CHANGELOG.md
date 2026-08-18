@@ -3,6 +3,23 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.3.0-ci (2026-08-18) — FIX: Stale Run Guard di build.yml (anti-desync "Latest" release)
+
+Debug session: user lapor "GitHub Release macet, masih app lama padahal fitur
+baru selesai compile". Investigasi `gh run`/`gh release list` nemuin akar
+masalah: re-run job Actions dari commit LAMA (v8.2.0, run 3209) sempat
+jalan setelah v8.3.0 & v8.4.0 sudah publish -- `softprops/action-gh-release`
+nandain v8.2.0 sebagai "Latest" (job hijau/sukses, bukan gagal, jadi gak
+kelihatan di tab Actions).
+
+**Fix**: step "Stale run guard (anti-desync)" ditambah di `build.yml` persis
+setelah Checkout. Bandingkan `git ls-remote origin refs/heads/main` vs
+`$GITHUB_SHA` -- kalau beda (stale re-run), `exit 1` sebelum compile/publish.
+
+Tidak ada perubahan app (versionCode/versionName tetap 96/8.3.0). File
+tersentuh: `.github/workflows/build.yml` saja (protected asset, edit
+parsial 1 step). Immediate action user: `gh release edit v8.3.0 --latest`.
+
 ## v8.3.0 (2026-08-18) — Roadmap Fase 1.3 (batch 1/N): ekstraksi string cluster "Kelola Rule"
 
 Item ketiga `ROADMAP.md`, batch pertama dari beberapa (sesuai catatan

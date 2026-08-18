@@ -18,6 +18,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # [fix 2026-08-18] Stale Run Guard (Anti-Desync): kejadian nyata --
+      # re-run job LAMA (commit v8.2.0) sempat jalan SETELAH v8.3.0/v8.4.0
+      # sudah dipublish. softprops/action-gh-release default nge-tandain
+      # release yang baru dipublish sebagai "Latest", walau versinya lebih
+      # rendah -- sidebar repo jadi nunjuk APK usang. Bandingkan SHA commit
+      # yang sedang di-build dengan tip `main` SAAT INI di remote; kalau beda
+      # (stale re-run / re-run manual dari commit lama), batalkan sebelum
+      # buang waktu compile & sebelum publish release usang.
+      - name: Stale run guard (anti-desync)
+        run: |
+          set -euo pipefail
+          REMOTE_SHA=$(git ls-remote origin refs/heads/main | cut -f1)
+          echo "Commit yang di-build : $GITHUB_SHA"
+          echo "Tip main saat ini    : $REMOTE_SHA"
+          if [ "$REMOTE_SHA" != "$GITHUB_SHA" ]; then
+            echo "::error::Stale re-run terdeteksi -- commit ini bukan tip main terbaru. Dibatalkan supaya tidak publish APK usang / menimpa flag 'Latest' release yang lebih baru."
+            exit 1
+          fi
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:

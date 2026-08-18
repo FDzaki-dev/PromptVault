@@ -3,7 +3,24 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
-## STATUS PROJECT: v8.3.0 -- Roadmap Fase 1.3 (batch 1/N): ekstraksi string cluster "Kelola Rule" -- 2026-08-18
+## STATUS PROJECT: v8.3.0 -- FIX CI: Stale Run Guard di build.yml (anti-desync "Latest" release) -- 2026-08-18
+- **Bug nyata**: `gh run 3209` (build commit lama v8.2.0) sempat re-run
+  SETELAH v8.3.0 & v8.4.0 sudah publish -- `softprops/action-gh-release`
+  nge-tandain v8.2.0 sebagai "Latest" (default `make_latest`), sidebar repo
+  jadi nunjuk APK usang walau job hijau/sukses & fitur baru sudah compile.
+- **Fix**: step baru "Stale run guard (anti-desync)" ditambah persis setelah
+  Checkout -- `git ls-remote origin refs/heads/main` dibanding `$GITHUB_SHA`.
+  Kalau beda (stale re-run), `exit 1` sebelum compile & sebelum publish.
+- **Immediate action user**: `gh release edit v8.3.0 --latest` (release
+  v8.3.0 sudah ada, cuma flag "Latest"-nya yang ketiban v8.2.0).
+- Tidak ada perubahan kode aplikasi/UI -- versionCode/versionName TETAP
+  96/8.3.0 (murni infra CI). File tersentuh: `.github/workflows/build.yml`
+  (protected asset, edit parsial: 1 step baru ditambah).
+- Release ganjil `v8.4.0` (published ~6 jam sebelum sesi ini, gak match
+  history commit lokal) BELUM diinvestigasi -- kemungkinan sisa eksperimen
+  lain. Jangan dipakai sampai dicek asalnya di batch berikutnya.
+
+## STATUS PROJECT SEBELUMNYA: v8.3.0 -- Roadmap Fase 1.3 (batch 1/N): ekstraksi string cluster "Kelola Rule" -- 2026-08-18
 - Item ketiga `ROADMAP.md`, batch PERTAMA dari beberapa (roadmap sendiri
   bilang "bertahap per layar" -- ini bukan item yang selesai 1 batch seperti
   1.1/1.2). Detail lengkap di `CHANGELOG.md` v8.3.0.
