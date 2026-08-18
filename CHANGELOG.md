@@ -3,79 +3,38 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
-## v8.4.0 (2026-08-18) — Roadmap Fase 1.2 (batch 3/4): audit TalkBack grup Settings
+## v8.2.0 (2026-08-18) — Roadmap Fase 1.2: audit aksesibilitas TalkBack menyeluruh
 
-Batch ketiga dari 4. 1 file diubah, 0 file baru.
+Item kedua `ROADMAP.md`. Audit MENYELURUH (bukan cuma 1 layar) atas semua
+`Icon`/`IconButton`/elemen clickable custom di app -- 1 file diubah, karena
+gap nyata yang ditemukan HANYA ada di 1 komponen (efisien, sesuai moto
+low-risk/high-value: tidak menyentuh yang sudah benar).
 
-- `SettingsScreen.kt`: `TactileSwitch` "Mode Shizuku (Lanjutan)" diisi
-  `contentDescription = "Mode Shizuku"` (parameter opsional ditambah
-  v8.3.0, sesi ini dipakai di sini) -- sebelumnya TalkBack cuma umumkan
-  "Switch, aktif/nonaktif" tanpa label.
-- Diaudit & TIDAK diubah (sudah compliant): icon dekoratif
-  HelpOutline/ContentCopy (redundan thd teks visible), semua `FilterChip`
-  (M3 baku, selectable state otomatis), `VaultTopBar` (sudah py
-  contentDescription "Kembali" sejak awal), baris status Shizuku (1 Text,
-  tidak ada isu merge).
-- `scripts/preflight_check.sh`: 13/13 PASS.
-- versionCode 97→98, versionName 8.3.0→8.4.0.
+**Diaudit (9 layar + semua komponen bersama)**: `HomeScreen`,
+`RuleListScreen`, `AddEditRuleScreen`, `SettingsScreen`, `ActivityLogScreen`,
+`SkippedFilesScreen`, `DiagnosticsScreen`, `OnboardingScreen`,
+`PanduanScreen`, `MainActivity`, + `RuleCard`/`GroupedListRow`/`EmptyState`/
+`WarningBanner`/`VaultTopBar`/`TactileSwitch`.
 
-## v8.3.0 (2026-08-18) — Roadmap Fase 1.2 (batch 2/4): audit TalkBack grup RuleList/AddEdit
+**Temuan**: label `contentDescription` SUDAH benar di semua 17 titik Icon/
+IconButton yang diperiksa (ikon aksi standalone sudah berlabel jelas --
+"Kembali", "Naikkan prioritas", "Salin Log", dst; `contentDescription = null`
+HANYA dipakai pada ikon dekoratif yang selalu berdampingan teks, pola yang
+sudah benar). Target sentuh 48dp juga sudah terpenuhi di semua tempat KECUALI
+1: **`SegmentedControl`** (dipakai tab "Log"/"Undo Pemindahan" di
+`ActivityLogScreen`).
 
-Batch kedua dari 4. 3 file diubah, 0 file baru.
+**2 fix di `SegmentedControl.kt`** (murni aditif, TIDAK menyentuh
+`onClick`/`interactionSource`/`pressScale` yang sudah teruji):
+1. Tidak ada semantics `selected`/`Role.Tab` sama sekali -- screen reader
+   cuma baca label polos tanpa tahu tab mana yang aktif. Ditambah
+   `Modifier.semantics { role = Role.Tab; selected = ... }` per segmen +
+   `Modifier.selectableGroup()` di Row induk.
+2. Tinggi target sentuh ~38dp (padding vertikal 9dp), di bawah standar
+   Android 48dp. Padding dinaikkan ke 14dp (14+14+lineHeight20dp=48dp).
 
-- `RuleCard.kt`: 5 kontrol per baris (Naik/Turun prioritas, Switch, Edit,
-  Hapus) sekarang sisipkan `rule.folderName` di `contentDescription` --
-  sebelumnya generik ("Edit", "Hapus"), ambigu saat TalkBack navigasi
-  banyak rule berurutan di list.
-- `TactileSwitch.kt`: tambah parameter opsional `contentDescription: String?
-  = null` (default null, TIDAK ubah pemanggil existing di `SettingsScreen`).
-  `RuleCard` isi dengan "Rule <nama>".
-- `AddEditRuleScreen.kt`: field "Nama folder tujuan" -- tambah
-  `Modifier.semantics { error(folderNameError) }` kondisional saat
-  `isError=true`. Sebelumnya `isError` cuma visual, pesan `supportingText`
-  tidak diumumkan TalkBack.
-- **Catatan verifikasi**: `import ...semantics.error` dipakai PERTAMA KALI
-  sesi ini (belum ada precedent compile sukses di codebase, beda dari
-  `contentDescription`/`Role` yang sudah terbukti di v8.2.1). Kalau CI
-  lapor unresolved reference lagi, root cause sudah jelas di baris import
-  ini.
-- `scripts/preflight_check.sh`: 13/13 PASS.
-- versionCode 96→97, versionName 8.2.1→8.3.0.
-
-## v8.2.1 (2026-08-18) — FIX build gagal CI (Unresolved reference: mergeDescendants)
-
-CI `compileDebugKotlin` gagal di v8.2.0. Root cause: `import
-androidx.compose.ui.semantics.mergeDescendants` di `HomeScreen.kt` --
-`mergeDescendants` itu named parameter `Modifier.semantics(...)`, bukan
-symbol yang bisa di-import. Fix: hapus baris import salah itu (1 file
-diubah). Sisa fitur v8.2.0 (role Button, contentDescription CTA) tidak
-berubah. Warning lain di log CI (`problems-report.html`) semua
-`severity: WARNING` (deprecation Gradle 10 bawaan AGP), bukan penyebab gagal.
-
-versionCode 95→96, versionName 8.2.0→8.2.1.
-
-## v8.2.0 (2026-08-18) — Roadmap Fase 1.2 (batch 1/4): audit TalkBack grup Home
-
-Batch pertama dari 4 (Home, RuleList/AddEdit, Settings, ActivityLog/MoveHistory).
-2 file diubah, 0 file baru.
-
-- `GroupedListRow.kt`: tambah `role = Role.Button` di `clickable` baris menu
-  (dipakai semua 5 baris menu Home) -- sebelumnya TalkBack cuma umumkan
-  "double tap untuk aktivasi" tanpa peran "Tombol".
-- `HomeScreen.kt`:
-  - CTA "Scan Sekarang": tambah `contentDescription` eksplisit yang berubah
-    sesuai `isScanning` -- sebelumnya saat scanning, konten cuma
-    `CircularProgressIndicator` tanpa teks, hasil merge semantics kosong
-    (TalkBack cuma bilang "Tombol" tanpa status).
-  - `ManifestRow` ("Rule aktif: N", "Auto-scan: tiap N menit"): tambah
-    `Modifier.semantics(mergeDescendants = true)` -- sebelumnya `Row` biasa
-    (bukan clickable) tidak auto-merge, TalkBack berhenti 2x per baris
-    (label lalu value terpisah).
-- Di luar scope batch ini (sengaja tidak disentuh): touch target default
-  `TextButton` M3 (40dp) -- itu default global dipakai semua layar, bukan
-  gap spesifik grup Home.
-- `scripts/preflight_check.sh`: 13/13 PASS.
-- versionCode 94→95, versionName 8.1.0→8.2.0.
+Preflight check: 12/13 kategori PASS otomatis, kategori #7 identik daftar
+baseline (0 entri baru). versionCode 94→95, versionName 8.1.0→8.2.0.
 
 ## v8.1.0 (2026-08-18) — Roadmap Fase 1.1: unit test untuk logika inti FileSorter
 

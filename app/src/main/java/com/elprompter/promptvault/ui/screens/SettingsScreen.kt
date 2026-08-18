@@ -290,18 +290,7 @@ fun SettingsScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text("Mode Shizuku (Lanjutan)", style = MaterialTheme.typography.titleMedium)
-                        // [Roadmap 1.2, audit TalkBack -- grup Settings]
-                        // Row ini bukan clickable, jadi Text di sebelah kiri
-                        // TIDAK ikut ke-merge ke semantics Switch (beda dari
-                        // RuleCard yang isi rule.folderName krn iterasi list --
-                        // di sini cukup label statis "Mode Shizuku" karena
-                        // switch ini SATU-SATUNYA di layar, tidak berulang).
-                        TactileSwitch(
-                            checked = useShizuku,
-                            onCheckedChange = onUseShizukuChanged,
-                            accentColor = colors.primary,
-                            contentDescription = "Mode Shizuku"
-                        )
+                        TactileSwitch(checked = useShizuku, onCheckedChange = onUseShizukuChanged, accentColor = colors.primary)
                     }
                     Text(
                         "Pakai izin privileged dari aplikasi Shizuku (bukan SAF) untuk menulis ke folder " +

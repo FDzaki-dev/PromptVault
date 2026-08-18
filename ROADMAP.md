@@ -35,25 +35,11 @@ sudah berjalan, roadmap ini tidak menambah proses baru di sini.
   (`isTempOrPartialName`, `explainNoMatchByName`, `buildPreviewResult`,
   `nextAvailableFileName`) + `FileSorterPureLogicTest.kt` (12 test case).
 
-### 1.2 Audit aksesibilitas TalkBack menyeluruh (progress: 1/4 batch)
-- **Risiko: Rendah** (umumnya nambah `contentDescription`/`Role`, jarang ubah logika) · **Nilai: Tinggi** (app belum pernah diaudit end-to-end pakai screen reader asli, walau sudah ada perbaikan titik seperti hitbox `TactileSwitch` 48dp)
-- Estimasi: 1 batch per grup layar (Home, RuleList/AddEdit, Settings,
-  ActivityLog/MoveHistory) -- 4 batch kecil, bukan 1 batch besar
-- Fokus: setiap ikon aksi tanpa label wajib `contentDescription`, urutan
-  fokus logis, dan target sentuh minimum 48dp konsisten (pola yang sudah
-  dipakai di `TactileSwitch` diterapkan menyeluruh)
-- ~~Batch 1/4 -- grup Home~~ ✅ SELESAI v8.2.0/v8.2.1 (`GroupedListRow.kt`
-  role Button, CTA scan contentDescription dinamis, `ManifestRow` merge
-  semantics). Detail lengkap: `CHANGELOG.md` v8.2.0/v8.2.1.
-- ~~Batch 2/4 -- grup RuleList/AddEdit~~ ✅ SELESAI v8.3.0
-  (`TactileSwitch.kt` param contentDescription opsional, `RuleCard.kt`
-  label per-item di 5 kontrol, `AddEditRuleScreen.kt` semantics error()
-  utk field folder). Detail lengkap: `CHANGELOG.md` v8.3.0.
-- ~~Batch 3/4 -- grup Settings~~ ✅ SELESAI v8.4.0 (`SettingsScreen.kt`
-  contentDescription switch Mode Shizuku; sisanya sudah diaudit &
-  compliant). Detail lengkap: `CHANGELOG.md` v8.4.0.
-- **Lanjut sesi berikutnya**: Batch 4/4 (TERAKHIR) -- grup
-  ActivityLog/MoveHistory.
+### ~~1.2 Audit aksesibilitas TalkBack menyeluruh~~ ✅ SELESAI v8.2.0
+- Lihat `CHANGELOG.md` v8.2.0. Audit 9 layar + semua komponen bersama --
+  gap nyata cuma di `SegmentedControl` (semantics `selected`/`Role.Tab` +
+  target sentuh 38dp→48dp), sisanya sudah compliant. Selesai 1 batch
+  (bukan 4 seperti estimasi awal di bawah).
 
 ### 1.3 String UI: audit hardcode vs `strings.xml`
 - **Risiko: Rendah** (mechanical, tidak ubah perilaku) · **Nilai: Sedang** (prasyarat WAJIB kalau kelak mau lokalisasi -- lihat Fase 3.3 -- tapi berdiri sendiri juga berguna: memisahkan teks dari logika bikin maintenance lebih rapi)

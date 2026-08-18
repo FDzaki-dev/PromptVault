@@ -108,10 +108,10 @@ fun RuleCard(
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 IconButton(onClick = onMoveUp, enabled = canMoveUp, modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)) {
-                    Icon(Icons.Filled.KeyboardArrowUp, contentDescription = "Naikkan prioritas ${rule.folderName}", tint = if (canMoveUp) colors.primary else colors.onSurfaceVariant)
+                    Icon(Icons.Filled.KeyboardArrowUp, contentDescription = "Naikkan prioritas", tint = if (canMoveUp) colors.primary else colors.onSurfaceVariant)
                 }
                 IconButton(onClick = onMoveDown, enabled = canMoveDown, modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)) {
-                    Icon(Icons.Filled.KeyboardArrowDown, contentDescription = "Turunkan prioritas ${rule.folderName}", tint = if (canMoveDown) colors.primary else colors.onSurfaceVariant)
+                    Icon(Icons.Filled.KeyboardArrowDown, contentDescription = "Turunkan prioritas", tint = if (canMoveDown) colors.primary else colors.onSurfaceVariant)
                 }
                 TactileSwitch(
                     checked = rule.enabled,
@@ -119,14 +119,13 @@ fun RuleCard(
                         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                         onToggleEnabled(it)
                     },
-                    accentColor = colors.primary,
-                    contentDescription = "Rule ${rule.folderName}"
+                    accentColor = colors.primary
                 )
                 IconButton(onClick = onEdit, modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)) {
-                    Icon(Icons.Filled.Edit, contentDescription = "Edit rule ${rule.folderName}", tint = colors.onSurfaceVariant)
+                    Icon(Icons.Filled.Edit, contentDescription = "Edit", tint = colors.onSurfaceVariant)
                 }
                 IconButton(onClick = onDelete, modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)) {
-                    Icon(Icons.Filled.Delete, contentDescription = "Hapus rule ${rule.folderName}", tint = colors.onSurfaceVariant)
+                    Icon(Icons.Filled.Delete, contentDescription = "Hapus", tint = colors.onSurfaceVariant)
                 }
             }
         }

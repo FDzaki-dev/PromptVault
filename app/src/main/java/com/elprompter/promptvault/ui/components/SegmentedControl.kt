@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -13,6 +14,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.elprompter.promptvault.ui.theme.TactileTokens
@@ -28,6 +33,18 @@ import com.elprompter.promptvault.ui.theme.TactileTokens
  * aktif digambar sebagai pil [TactileSurface] TIMBUL kecil di atasnya
  * ([TactileTokens.TactileElevationControl]), pilihan tidak-aktif rata tanpa
  * elevasi. Warna `colors.primary`/`colors.surfaceVariant` TIDAK berubah.
+ *
+ * [Roadmap Fase 1.2, 2026-08-18] 2 fix TalkBack/touch-target, KEDUANYA
+ * ADITIF (tidak menyentuh `onClick`/`interactionSource`/`pressScale` yang
+ * sudah teruji, nol risiko regresi interaksi):
+ * 1. Dulu TIDAK ADA semantics `selected`/`Role.Tab` sama sekali -- screen
+ *    reader cuma baca label polos ("Log", "Undo Pemindahan") tanpa pernah
+ *    bilang mana yang aktif atau bahwa ini grup pilihan tunggal. Ditambah
+ *    `Modifier.semantics { role = Role.Tab; selected = ... }` per segmen +
+ *    `Modifier.selectableGroup()` di Row induk.
+ * 2. Padding vertikal tiap segmen 9dp -> 14dp (tinggi total ~38dp -> 48dp,
+ *    titleSmall lineHeight 20dp + 14+14 = 48dp) -- di bawah standar target
+ *    sentuh minimum Android (48dp) sebelumnya.
  */
 @Composable
 fun SegmentedControl(options: List<String>, selectedIndex: Int, onSelect: (Int) -> Unit) {
@@ -47,13 +64,15 @@ fun SegmentedControl(options: List<String>, selectedIndex: Int, onSelect: (Int) 
         color = colors.surfaceVariant,
         recessed = true
     ) {
-        Row(modifier = Modifier.padding(3.dp)) {
+        Row(modifier = Modifier.padding(3.dp).selectableGroup()) {
             options.forEachIndexed { index, label ->
                 val selected = index == effectiveIndex
                 val interactionSource = remember { MutableInteractionSource() }
                 if (selected) {
                     TactileSurface(
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .semantics { role = Role.Tab; this.selected = true },
                         shape = RoundedCornerShape(10.dp),
                         color = colors.primary,
                         elevation = TactileTokens.TactileElevationControl,
@@ -65,7 +84,7 @@ fun SegmentedControl(options: List<String>, selectedIndex: Int, onSelect: (Int) 
                             color = colors.onPrimary,
                             style = MaterialTheme.typography.titleSmall,
                             textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 9.dp)
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp)
                         )
                     }
                 } else {
@@ -82,12 +101,13 @@ fun SegmentedControl(options: List<String>, selectedIndex: Int, onSelect: (Int) 
                     Box(
                         modifier = Modifier
                             .weight(1f)
+                            .semantics { role = Role.Tab; this.selected = false }
                             .pressScale(interactionSource)
                             .clickable(
                                 interactionSource = interactionSource,
                                 indication = null
                             ) { onSelect(index) }
-                            .padding(vertical = 9.dp),
+                            .padding(vertical = 14.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(label, color = colors.primary, style = MaterialTheme.typography.titleSmall)

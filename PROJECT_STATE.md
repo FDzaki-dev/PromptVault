@@ -3,136 +3,24 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
-## STATUS PROJECT: v8.4.0 -- Roadmap Fase 1.2 (batch 3/4): audit TalkBack grup Settings -- 2026-08-18
-- Batch ketiga dari 4 (setelah Home v8.2.x, RuleList/AddEdit v8.3.0). Sesi
-  ini grup Settings.
-- **1 file diubah** (`SettingsScreen.kt`), 0 file baru. Satu-satunya gap
-  nyata: `TactileSwitch` "Mode Shizuku (Lanjutan)" belum diisi
-  `contentDescription` (parameter opsionalnya baru ditambah v8.3.0 tapi
-  cuma dipakai `RuleCard`, belum di sini) -- TalkBack cuma umumkan "Switch,
-  aktif/nonaktif" tanpa label. Diisi `contentDescription = "Mode Shizuku"`
-  (label statis, BUKAN interpolasi seperti `RuleCard` -- switch ini
-  satu-satunya di layar, tidak berulang di list, jadi tidak perlu
-  identitas dinamis).
-- **Sudah diaudit, TIDAK perlu diubah** (temuan negatif dicatat biar sesi
-  depan tidak audit ulang layar yang sama):
-  - `Icon(HelpOutline, contentDescription = null)` & `Icon(ContentCopy,
-    contentDescription = null)` -- keduanya di dalam tombol yang SUDAH py
-    teks visible di sebelahnya ("Buka Panduan Penggunaan", "Salin JSON").
-    `null` disengaja (ikon redundan terhadap teks), pola sama dgn audit
-    Home/RuleList sebelumnya.
-  - Semua `FilterChip` (interval, conflict strategy, scan concurrency) --
-    komponen M3 baku, `selectable`+state "dipilih" sudah otomatis
-    diumumkan TalkBack, tidak perlu sentuhan manual.
-  - `VaultTopBar` (dipakai semua layar bukan-Home) -- tombol back SUDAH py
-    `contentDescription = "Kembali"` sejak awal, tidak ada gap.
-  - Baris "Status: $statusLabel" -- `Row` isinya cuma 1 `Text`, tidak ada
-    isu merge semantics (beda dari kasus `ManifestRow` di Home yg py 2
-    `Text` terpisah).
-- `scripts/preflight_check.sh`: 13/13 PASS.
-- Roadmap 1.2 TETAP terbuka (3/4) -- lanjut grup ActivityLog/MoveHistory
-  (batch TERAKHIR) di sesi berikutnya.
-- versionCode 97→98, versionName 8.3.0→8.4.0.
-
-## STATUS PROJECT SEBELUMNYA: v8.3.0 -- Roadmap Fase 1.2 (batch 2/4): audit TalkBack grup RuleList/AddEdit -- 2026-08-18
-- Batch kedua dari 4 (setelah Home v8.2.0/v8.2.1). Sesi ini grup
-  RuleList/AddEdit.
-- **3 file diubah** (`TactileSwitch.kt`, `RuleCard.kt`,
-  `AddEditRuleScreen.kt`), 0 file baru. Temuan & fix:
-  1. `RuleCard` -- 5 kontrol identik (Naik/Turun prioritas, Switch, Edit,
-     Hapus) BERULANG per baris di `LazyColumn`, semua pakai
-     `contentDescription` generik ("Edit", "Hapus", dst) TANPA identitas
-     item. TalkBack navigasi list panjang jadi ambigu ("Edit, Tombol" x N
-     rule, tidak jelas rule mana). Semua 5 kontrol sekarang sisipkan
-     `rule.folderName` di label (mis. "Edit rule Invoice").
-  2. `TactileSwitch` (dipakai `RuleCard` DAN `SettingsScreen`) -- TIDAK
-     punya `contentDescription` sama sekali, cuma `role = Role.Switch`
-     (TalkBack cuma umumkan "Switch, aktif/nonaktif" tanpa konteks). Tambah
-     parameter opsional `contentDescription: String? = null` (default
-     null = perilaku lama TIDAK berubah di `SettingsScreen`, satu switch
-     berdiri sendiri sudah py label teks sendiri di luar). `RuleCard` isi
-     parameter ini ("Rule <nama>"), `SettingsScreen` TIDAK disentuh (di
-     luar scope batch ini, giliran batch 3/4).
-  3. `AddEditRuleScreen` -- field "Nama folder tujuan" `isError=true` HANYA
-     mengubah warna border (visual), pesan di `supportingText` TIDAK
-     otomatis diumumkan TalkBack sbg error. Tambah
-     `Modifier.semantics { error(folderNameError) }` kondisional -- pola
-     resmi Compose utk tandai node invalid + pesan errornya sekaligus.
-- **Tidak disentuh** (di luar scope batch ini): field `pattern`/
-  `excludePattern`/min-max ukuran di layar sama TIDAK py validasi
-  `isError` sama sekali (murni optional/no validation by design saat ini,
-  bukan gap aksesibilitas -- tidak ada state error utk diumumkan).
-- **CATATAN VERIFIKASI PENTING**: `import androidx.compose.ui.semantics.error`
-  baru dipakai PERTAMA KALI di codebase ini sesi ini (beda dari
-  `contentDescription`/`Role`/`semantics` yang sudah terbukti compile sukses
-  di v8.2.1). `scripts/preflight_check.sh` (regex-based, BUKAN compiler
-  asli) tidak bisa validasi keberadaan symbol package -- kalau CI lapor
-  "Unresolved reference: error" lagi (pola PERSIS insiden v8.2.0
-  `mergeDescendants`), root cause & lokasi sudah jelas: baris import ini di
-  `AddEditRuleScreen.kt`, bukan investigasi baru.
-- `scripts/preflight_check.sh`: 13/13 PASS (kategori 7 direview manual,
-  tidak ada fungsi lokal baru relevan).
-- Roadmap 1.2 TETAP terbuka (2/4) -- lanjut grup Settings di sesi
-  berikutnya.
-- versionCode 96→97, versionName 8.2.1→8.3.0.
-
-## STATUS PROJECT SEBELUMNYA: v8.2.1 -- FIX build gagal CI (Unresolved reference: mergeDescendants, HomeScreen.kt) -- 2026-08-18
-- User upload log CI `compileDebugKotlin FAILED` dari build v8.2.0.
-  **Root cause**: `import androidx.compose.ui.semantics.mergeDescendants`
-  di `HomeScreen.kt` -- `mergeDescendants` BUKAN symbol top-level yang bisa
-  di-import, itu named parameter dari `Modifier.semantics(mergeDescendants
-  = Boolean, properties = ...)`. Import ilegal ini lolos
-  `scripts/preflight_check.sh` (script itu cek keseimbangan kurung/delegate/
-  duplikat import/dll via regex Python, BUKAN compiler Kotlin asli -- tidak
-  bisa deteksi "symbol tidak exist di package tsb", ini gap struktural sama
-  dgn yang sudah dicatat di `MAINTENANCE.md`/Fase 0 roadmap, bukan bug baru
-  di script).
-- **Fix**: hapus baris import yang salah. Baris pemakaian
-  `Modifier.semantics(mergeDescendants = true) {}` di `ManifestRow` tidak
-  perlu import apapun selain `semantics` itu sendiri (sudah ada).
-- 1 file diubah (`HomeScreen.kt`, hapus 1 baris import). Sisa perubahan
-  v8.2.0 (role Button di `GroupedListRow`, contentDescription CTA scan)
-  TIDAK terpengaruh, tetap seperti semula.
-- Laporan lain di log (`problems-report.html`): semua `severity: WARNING`
-  (deprecation Gradle 10 notice bawaan AGP/Gradle wrapper, bukan dari kode
-  project) -- tidak menyebabkan build gagal, tidak ditindak sesi ini.
-- **Belum diverifikasi CI** -- fix baru dikirim sesi ini, tunggu run
-  berikutnya hijau sebelum ditutup permanen.
-- versionCode 95→96, versionName 8.2.0→8.2.1.
-
-## STATUS PROJECT SEBELUMNYA: v8.2.0 -- Roadmap Fase 1.2 (batch 1/4): audit TalkBack grup Home -- 2026-08-18
-- Batch pertama dari 4 batch kecil aksesibilitas (Home, RuleList/AddEdit,
-  Settings, ActivityLog/MoveHistory -- per `ROADMAP.md`). Sesi ini HANYA
-  grup Home.
-- **2 file diubah** (`GroupedListRow.kt`, `HomeScreen.kt`), 0 file baru.
-  Temuan & fix:
-  1. `GroupedListRow` (dipakai semua baris menu Home) -- `clickable` tanpa
-     `role`, TalkBack cuma umumkan "double tap untuk aktivasi" tanpa peran.
-     Ditambah `role = Role.Button`. Merge semantics anak (icon+label)
-     otomatis dari `clickable`, tidak perlu ubahan lain.
-  2. CTA "Scan Sekarang" -- saat `isScanning=true`, konten cuma
-     `CircularProgressIndicator` tanpa teks apapun; hasil merge semantics
-     jadi kosong (TalkBack cuma bilang "Tombol", tanpa status). Ditambah
-     `Modifier.semantics { contentDescription = ... }` eksplisit
-     ("Scan Sekarang" / "Sedang memindai") di `TactileSurface` CTA.
-  3. `ManifestRow` (baris "Rule aktif: N" & "Auto-scan: tiap N menit") --
-     `Row` biasa (bukan clickable/toggleable) TIDAK auto-merge semantics,
-     TalkBack berhenti 2x per baris (label lalu value terpisah). Ditambah
-     `Modifier.semantics(mergeDescendants = true) {}` supaya jadi 1 stop
-     fokus per baris.
-- **Tidak disentuh** (sudah aman/di luar scope grup Home): semua
-  `Icon(..., contentDescription = null)` dekoratif yang SUDAH didampingi
-  teks visible (mis. icon di `TextButton` "Lihat detail file yang
-  dilewati") -- itu pola benar (icon redundan terhadap teks, null
-  disengaja). Touch target `TextButton` M3 default (40dp, di bawah 48dp
-  rekomendasi) TIDAK diubah -- itu default Material3 global dipakai di
-  SEMUA layar, bukan gap spesifik Home, ubah itu = scope lebih besar dari
-  1 grup layar (masuk pertimbangan sesi terpisah kalau user minta).
-- `scripts/preflight_check.sh`: 13/13 kategori PASS (kategori 7 direview
-  manual, tidak ada fungsi lokal baru dari batch ini).
-- Roadmap 1.2 TETAP terbuka di `ROADMAP.md` (baru batch 1/4) -- lanjut ke
-  grup RuleList/AddEdit di sesi berikutnya.
-- versionCode 94→95, versionName 8.1.0→8.2.0.
+## STATUS PROJECT: v8.2.0 -- Roadmap Fase 1.2: audit aksesibilitas TalkBack menyeluruh -- 2026-08-18
+- Item kedua `ROADMAP.md` dikerjakan & **selesai dalam 1 batch** (bukan 4
+  batch per-layar seperti estimasi awal roadmap) -- audit menyeluruh
+  langsung di sesi ini menemukan app SUDAH compliant di hampir semua titik
+  (label ikon, target sentuh), gap nyata cuma 1 komponen. Detail lengkap di
+  `CHANGELOG.md` v8.2.0.
+- **Gap yang ditemukan & diperbaiki**: `SegmentedControl.kt` (tab Log/Undo
+  Pemindahan di `ActivityLogScreen`) -- (1) tidak ada semantics
+  `selected`/`Role.Tab`, (2) target sentuh ~38dp (di bawah standar 48dp).
+  Kedua fix murni aditif (`Modifier.semantics`/`.selectableGroup()`/naikkan
+  padding), TIDAK menyentuh `onClick`/`interactionSource` yang sudah teruji.
+- **Catatan utk sesi depan**: `ROADMAP.md` item 1.2 tadinya diestimasi "4
+  batch per grup layar" -- itu ESTIMASI AWAL yang ternyata terlalu
+  pesimis, bukan proses yang harus diikuti persis. Kalau nemu roadmap item
+  lain yang estimasinya juga overshoot, audit dulu SEBELUM asumsi perlu
+  banyak batch -- kadang app memang sudah lebih rapi dari perkiraan.
+- Roadmap item 1.2 dicoret dari `ROADMAP.md`, lanjut ke 1.3 (audit string
+  hardcode vs `strings.xml`) di sesi berikutnya sesuai urutan fase.
 
 ## STATUS PROJECT SEBELUMNYA: v8.1.0 -- Roadmap Fase 1.1: ekstraksi + unit test logika pure FileSorter -- 2026-08-18
 - Item pertama `ROADMAP.md` dikerjakan (low-risk/high-value pertama).
