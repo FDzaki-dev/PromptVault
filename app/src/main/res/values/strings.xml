@@ -6,4 +6,58 @@
     <string name="auto_sort_channel_desc">Status pemindaian otomatis file di folder Downloads</string>
     <string name="auto_sort_notif_title">Auto-sort berjalan</string>
     <string name="auto_sort_notif_text">PromptVault sedang menyortir file di Downloads</string>
+
+    <!-- [Roadmap Fase 1.3, 2026-08-18] Ekstraksi MURNI (bukan lokalisasi
+         — lihat ROADMAP.md item 3.3 terpisah utk itu), nilai string TETAP
+         Bahasa Indonesia, cuma dipindah dari literal Kotlin ke sini.
+         Batch pertama: cluster "Kelola Rule" (AddEditRuleScreen, RuleListScreen,
+         RuleCard), layar lain menyusul di batch terpisah (lihat catatan
+         "bertahap per layar" di ROADMAP.md). -->
+
+    <!-- Aksi generik, dipakai lintas layar (tombol/contentDescription "Simpan"/"Edit"/"Hapus") -->
+    <string name="action_save">Simpan</string>
+    <string name="action_edit">Edit</string>
+    <string name="action_delete">Hapus</string>
+
+    <!-- AddEditRuleScreen.kt -->
+    <string name="rule_edit_title_add">Tambah Rule</string>
+    <string name="rule_edit_title_edit">Edit Rule</string>
+    <string name="rule_edit_folder_label">Nama folder tujuan</string>
+    <string name="rule_edit_pattern_label">Pattern (mis. invoice_*.zip)</string>
+    <string name="rule_edit_pattern_hint">Gunakan * untuk banyak karakter dan ? untuk satu karakter. Contoh: *.txt, laporan_*.zip</string>
+    <string name="rule_edit_exclude_label">Kecualikan pattern ini (opsional)</string>
+    <string name="rule_edit_exclude_hint">File yang cocok pattern utama TAPI juga cocok pattern kecuali ini tidak akan dipindahkan. Contoh: pattern *.zip, kecualikan backup_*.zip.</string>
+    <string name="rule_edit_size_filter_title">Filter Ukuran File (opsional)</string>
+    <string name="rule_edit_min_kb_label">Min (KB)</string>
+    <string name="rule_edit_max_kb_label">Maks (KB)</string>
+    <string name="rule_edit_size_hint">Kosongkan kalau tidak perlu batasan ukuran. Contoh pakai: hindari file kosong (min 1 KB) atau hindari file raksasa yang bikin auto-scan lama (maks 50000 KB).</string>
+    <string name="rule_edit_preview_summary">%1$d dari %2$d file di Downloads cocok pattern ini</string>
+    <string name="rule_edit_preview_empty">Tidak ada yang cocok. Cek lagi ejaan/format pattern-nya, atau buka Diagnostik untuk lihat nama file asli di Downloads.</string>
+    <string name="rule_edit_preview_bullet">• %1$s</string>
+    <string name="rule_edit_preview_more">+ %1$d file lainnya</string>
+    <string name="rule_edit_confirm_title">Perlu konfirmasi</string>
+    <string name="rule_edit_confirm_duplicate">Pattern \"%1$s\" sudah dipakai rule \"%2$s\". Timpa rule tersebut?</string>
+    <string name="rule_edit_confirm_overlap">Pattern ini bisa tumpang tindih dengan: %1$s. File yang cocok di keduanya akan memakai rule yang lebih dulu terdaftar. Tetap simpan?</string>
+    <string name="rule_edit_confirm_button">Tetap Simpan</string>
+
+    <!-- RuleListScreen.kt -->
+    <string name="rule_list_title">Kelola Rule</string>
+    <string name="rule_list_add_cd">Tambah rule</string>
+    <string name="rule_list_saved_snackbar">Rule \"%1$s\" disimpan</string>
+    <string name="rule_list_priority_hint">Urutan di bawah = prioritas. Kalau satu file cocok lebih dari satu rule, rule paling atas yang menang.</string>
+    <string name="rule_list_search_label">Cari rule (nama folder / pattern)</string>
+    <string name="rule_list_empty_title">Belum ada rule</string>
+    <string name="rule_list_empty_message">Tekan tombol + di kanan bawah untuk membuat rule pertamamu.</string>
+    <string name="rule_list_not_found_title">Tidak ditemukan</string>
+    <string name="rule_list_not_found_message">Tidak ada rule yang cocok dengan pencarian \"%1$s\".</string>
+    <string name="rule_list_delete_title">Hapus rule?</string>
+    <string name="rule_list_delete_message">Rule \"%1$s\" (%2$s) akan dihapus. Tindakan ini tidak bisa dibatalkan.</string>
+    <string name="rule_list_deleted_snackbar">Rule \"%1$s\" dihapus</string>
+
+    <!-- RuleCard.kt -->
+    <string name="rule_card_priority_label">PRIORITAS #%1$d</string>
+    <string name="rule_card_exclude_prefix">kecuali: %1$s</string>
+    <string name="rule_card_overlap_warning">⚠ tumpang tindih dengan rule lain</string>
+    <string name="rule_card_move_up_cd">Naikkan prioritas</string>
+    <string name="rule_card_move_down_cd">Turunkan prioritas</string>
 </resources>

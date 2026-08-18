@@ -22,9 +22,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.elprompter.promptvault.R
 import com.elprompter.promptvault.data.Rule
 
 @Composable
@@ -59,7 +61,7 @@ fun RuleCard(
             // -- sebelumnya .uppercase() paksa, kini nama tampil apa adanya,
             // label "PRIORITAS #n" tetap kecil/uppercase krn itu memang
             // label, bukan identitas nama folder).
-            Text("PRIORITAS #$priority", style = MaterialTheme.typography.labelSmall, color = colors.onSurfaceVariant)
+            Text(stringResource(R.string.rule_card_priority_label, priority), style = MaterialTheme.typography.labelSmall, color = colors.onSurfaceVariant)
             Text(
                 rule.folderName,
                 style = MaterialTheme.typography.titleMedium,
@@ -76,7 +78,7 @@ fun RuleCard(
             )
             if (rule.excludePattern.isNotBlank()) {
                 Text(
-                    "kecuali: ${rule.excludePattern}",
+                    stringResource(R.string.rule_card_exclude_prefix, rule.excludePattern),
                     style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
                     color = colors.onSurfaceVariant,
                     maxLines = 2,
@@ -85,7 +87,7 @@ fun RuleCard(
             }
             if (hasOverlapWarning) {
                 Text(
-                    "⚠ tumpang tindih dengan rule lain",
+                    stringResource(R.string.rule_card_overlap_warning),
                     color = colors.tertiary,
                     style = MaterialTheme.typography.labelSmall
                 )
@@ -108,10 +110,10 @@ fun RuleCard(
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 IconButton(onClick = onMoveUp, enabled = canMoveUp, modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)) {
-                    Icon(Icons.Filled.KeyboardArrowUp, contentDescription = "Naikkan prioritas", tint = if (canMoveUp) colors.primary else colors.onSurfaceVariant)
+                    Icon(Icons.Filled.KeyboardArrowUp, contentDescription = stringResource(R.string.rule_card_move_up_cd), tint = if (canMoveUp) colors.primary else colors.onSurfaceVariant)
                 }
                 IconButton(onClick = onMoveDown, enabled = canMoveDown, modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)) {
-                    Icon(Icons.Filled.KeyboardArrowDown, contentDescription = "Turunkan prioritas", tint = if (canMoveDown) colors.primary else colors.onSurfaceVariant)
+                    Icon(Icons.Filled.KeyboardArrowDown, contentDescription = stringResource(R.string.rule_card_move_down_cd), tint = if (canMoveDown) colors.primary else colors.onSurfaceVariant)
                 }
                 TactileSwitch(
                     checked = rule.enabled,
@@ -122,10 +124,10 @@ fun RuleCard(
                     accentColor = colors.primary
                 )
                 IconButton(onClick = onEdit, modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)) {
-                    Icon(Icons.Filled.Edit, contentDescription = "Edit", tint = colors.onSurfaceVariant)
+                    Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.action_edit), tint = colors.onSurfaceVariant)
                 }
                 IconButton(onClick = onDelete, modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)) {
-                    Icon(Icons.Filled.Delete, contentDescription = "Hapus", tint = colors.onSurfaceVariant)
+                    Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.action_delete), tint = colors.onSurfaceVariant)
                 }
             }
         }

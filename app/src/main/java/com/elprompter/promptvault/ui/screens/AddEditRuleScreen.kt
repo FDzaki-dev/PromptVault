@@ -27,7 +27,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.elprompter.promptvault.R
 import com.elprompter.promptvault.data.Rule
 import com.elprompter.promptvault.data.SaveRuleCheck
 import com.elprompter.promptvault.ui.components.VaultActionSheet
@@ -81,7 +83,7 @@ fun AddEditRuleScreen(
 
     Scaffold(
         topBar = {
-            VaultTopBar(title = if (existingRule == null) "Tambah Rule" else "Edit Rule", onBack = onCancel)
+            VaultTopBar(title = if (existingRule == null) stringResource(R.string.rule_edit_title_add) else stringResource(R.string.rule_edit_title_edit), onBack = onCancel)
         }
     ) { padding ->
         Column(
@@ -95,7 +97,7 @@ fun AddEditRuleScreen(
             OutlinedTextField(
                 value = folderName,
                 onValueChange = { folderName = it },
-                label = { Text("Nama folder tujuan") },
+                label = { Text(stringResource(R.string.rule_edit_folder_label)) },
                 isError = folderNameError != null,
                 supportingText = folderNameError?.let { error -> { Text(error) } },
                 modifier = Modifier.fillMaxWidth()
@@ -103,46 +105,44 @@ fun AddEditRuleScreen(
             OutlinedTextField(
                 value = pattern,
                 onValueChange = { pattern = it },
-                label = { Text("Pattern (mis. invoice_*.zip)") },
+                label = { Text(stringResource(R.string.rule_edit_pattern_label)) },
                 modifier = Modifier.fillMaxWidth()
             )
             Text(
-                "Gunakan * untuk banyak karakter dan ? untuk satu karakter. Contoh: *.txt, laporan_*.zip",
+                stringResource(R.string.rule_edit_pattern_hint),
                 style = MaterialTheme.typography.bodySmall
             )
 
             OutlinedTextField(
                 value = excludePattern,
                 onValueChange = { excludePattern = it },
-                label = { Text("Kecualikan pattern ini (opsional)") },
+                label = { Text(stringResource(R.string.rule_edit_exclude_label)) },
                 modifier = Modifier.fillMaxWidth()
             )
             Text(
-                "File yang cocok pattern utama TAPI juga cocok pattern kecuali ini tidak akan dipindahkan. " +
-                    "Contoh: pattern *.zip, kecualikan backup_*.zip.",
+                stringResource(R.string.rule_edit_exclude_hint),
                 style = MaterialTheme.typography.bodySmall
             )
 
-            Text("Filter Ukuran File (opsional)", style = MaterialTheme.typography.titleSmall)
+            Text(stringResource(R.string.rule_edit_size_filter_title), style = MaterialTheme.typography.titleSmall)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = minSizeKbText,
                     onValueChange = { minSizeKbText = it.filter { c -> c.isDigit() } },
-                    label = { Text("Min (KB)") },
+                    label = { Text(stringResource(R.string.rule_edit_min_kb_label)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.weight(1f)
                 )
                 OutlinedTextField(
                     value = maxSizeKbText,
                     onValueChange = { maxSizeKbText = it.filter { c -> c.isDigit() } },
-                    label = { Text("Maks (KB)") },
+                    label = { Text(stringResource(R.string.rule_edit_max_kb_label)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.weight(1f)
                 )
             }
             Text(
-                "Kosongkan kalau tidak perlu batasan ukuran. Contoh pakai: hindari file kosong (min 1 KB) " +
-                    "atau hindari file raksasa yang bikin auto-scan lama (maks 50000 KB).",
+                stringResource(R.string.rule_edit_size_hint),
                 style = MaterialTheme.typography.bodySmall
             )
 
@@ -151,22 +151,22 @@ fun AddEditRuleScreen(
                 VaultCard(modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(12.dp)) {
                         Text(
-                            "${p.matchedFileNames.size} dari ${p.totalCandidateFiles} file di Downloads cocok pattern ini",
+                            stringResource(R.string.rule_edit_preview_summary, p.matchedFileNames.size, p.totalCandidateFiles),
                             style = MaterialTheme.typography.titleSmall
                         )
                         if (p.matchedFileNames.isEmpty() && p.totalCandidateFiles > 0) {
                             Text(
-                                "Tidak ada yang cocok. Cek lagi ejaan/format pattern-nya, atau buka Diagnostik untuk lihat nama file asli di Downloads.",
+                                stringResource(R.string.rule_edit_preview_empty),
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }
                         LazyColumn(modifier = Modifier.heightIn(max = 180.dp)) {
                             items(p.matchedFileNames.take(10)) { name ->
-                                Text("• $name", style = MaterialTheme.typography.bodySmall)
+                                Text(stringResource(R.string.rule_edit_preview_bullet, name), style = MaterialTheme.typography.bodySmall)
                             }
                         }
                         if (p.matchedFileNames.size > 10) {
-                            Text("+ ${p.matchedFileNames.size - 10} file lainnya", style = MaterialTheme.typography.labelSmall)
+                            Text(stringResource(R.string.rule_edit_preview_more, p.matchedFileNames.size - 10), style = MaterialTheme.typography.labelSmall)
                         }
                     }
                 }
@@ -195,7 +195,7 @@ fun AddEditRuleScreen(
                 enabled = folderName.isNotBlank() && folderNameError == null && pattern.isNotBlank(),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary, contentColor = MaterialTheme.colorScheme.onSecondary),
                 modifier = Modifier.fillMaxWidth()
-            ) { Text("Simpan") }
+            ) { Text(stringResource(R.string.action_save)) }
         }
     }
 
@@ -205,17 +205,16 @@ fun AddEditRuleScreen(
         val message = when (check) {
             is SaveRuleCheck.DuplicatePattern ->
                 // Konfirmasi sebelum menimpa pattern yang sama (fitur lengkap).
-                "Pattern \"${rule.pattern}\" sudah dipakai rule \"${check.existing.folderName}\". Timpa rule tersebut?"
+                stringResource(R.string.rule_edit_confirm_duplicate, rule.pattern, check.existing.folderName)
             is SaveRuleCheck.OverlapsWithOthers ->
                 // Peringatan rule tumpang tindih sebelum disimpan (fitur lengkap).
-                "Pattern ini bisa tumpang tindih dengan: ${check.overlapping.joinToString { it.folderName }}. " +
-                    "File yang cocok di keduanya akan memakai rule yang lebih dulu terdaftar. Tetap simpan?"
+                stringResource(R.string.rule_edit_confirm_overlap, check.overlapping.joinToString { it.folderName })
             SaveRuleCheck.Ok -> ""
         }
         VaultActionSheet(
-            title = "Perlu konfirmasi",
+            title = stringResource(R.string.rule_edit_confirm_title),
             message = message,
-            confirmLabel = "Tetap Simpan",
+            confirmLabel = stringResource(R.string.rule_edit_confirm_button),
             onConfirm = {
                 // Batch [duplicate-fix]: untuk DuplicatePattern, "Tetap Simpan" harus
                 // benar-benar menimpa (hapus rule lama, id-nya beda dari rule baru).

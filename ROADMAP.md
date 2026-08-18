@@ -41,9 +41,19 @@ sudah berjalan, roadmap ini tidak menambah proses baru di sini.
   target sentuh 38dp→48dp), sisanya sudah compliant. Selesai 1 batch
   (bukan 4 seperti estimasi awal di bawah).
 
-### 1.3 String UI: audit hardcode vs `strings.xml`
+### 1.3 String UI: audit hardcode vs `strings.xml` -- 🔶 SEDANG BERJALAN (batch 1/N selesai, v8.3.0)
+- **Selesai**: cluster "Kelola Rule" (`AddEditRuleScreen.kt`,
+  `RuleListScreen.kt`, `RuleCard.kt`) -- lihat `CHANGELOG.md` v8.3.0.
+- **Sisa** (independen, urutan bebas, masing-masing 1 batch terpisah):
+  `SettingsScreen.kt` (~22 literal, terbesar), `DiagnosticsScreen.kt` (~15),
+  `PanduanScreen.kt` (~9 paragraf besar, karakter beda -- pertimbangkan
+  batch tersendiri), `HomeScreen.kt`, `OnboardingScreen.kt`,
+  `ActivityLogScreen.kt`, `SkippedFilesScreen.kt`, `MainActivity.kt` (dialog
+  izin/error).
+- **Baca dulu sebelum lanjut**: catatan teknis `stringResource()` vs
+  `Context.getString()` + aturan XML comment di `CHANGELOG.md` v8.3.0 --
+  jangan re-investigasi dari nol.
 - **Risiko: Rendah** (mechanical, tidak ubah perilaku) · **Nilai: Sedang** (prasyarat WAJIB kalau kelak mau lokalisasi -- lihat Fase 3.3 -- tapi berdiri sendiri juga berguna: memisahkan teks dari logika bikin maintenance lebih rapi)
-- Estimasi: bertahap per layar, beberapa batch kecil
 - **Catatan low-risk**: kerjakan HANYA ekstraksi string, JANGAN sekalian
   terjemahkan -- itu scope Fase 3.3 terpisah
 

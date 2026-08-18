@@ -32,7 +32,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.elprompter.promptvault.R
 import com.elprompter.promptvault.data.Rule
 import com.elprompter.promptvault.ui.MainViewModel
 import com.elprompter.promptvault.ui.components.VaultActionSheet
@@ -60,6 +63,12 @@ fun RuleListScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val colors = MaterialTheme.colorScheme
+    // [Roadmap Fase 1.3, 2026-08-18] `stringResource()` HANYA valid di
+    // konteks composable langsung -- `LaunchedEffect`/`onConfirm` di bawah
+    // adalah lambda yang dieksekusi BELAKANGAN (bukan saat komposisi), jadi
+    // WAJIB pakai `context.getString(...)` (fungsi biasa, bukan @Composable)
+    // utk string dinamis di dalamnya, bukan `stringResource()`.
+    val context = LocalContext.current
 
     // v2.16.0 -- technical debt closure: konfirmasi sukses simpan rule (baru
     // ATAU edit) dari AddEditRuleScreen. Dikonsumsi di SINI (bukan di layar
@@ -68,7 +77,7 @@ fun RuleListScreen(
     LaunchedEffect(ruleSaveFeedback?.eventId) {
         val feedback = ruleSaveFeedback ?: return@LaunchedEffect
         onRuleSaveFeedbackConsumed()
-        snackbarHostState.showSnackbar("Rule \"${feedback.folderName}\" disimpan")
+        snackbarHostState.showSnackbar(context.getString(R.string.rule_list_saved_snackbar, feedback.folderName))
     }
 
     val filtered = remember(rules, query) {
@@ -81,7 +90,7 @@ fun RuleListScreen(
     val reorderEnabled = query.isBlank()
 
     Scaffold(
-        topBar = { VaultTopBar(title = "Kelola Rule", onBack = onBack) },
+        topBar = { VaultTopBar(title = stringResource(R.string.rule_list_title), onBack = onBack) },
         snackbarHost = {
             SnackbarHost(snackbarHostState) { data ->
                 Snackbar(snackbarData = data, containerColor = colors.primary, contentColor = colors.onPrimary)
@@ -89,7 +98,7 @@ fun RuleListScreen(
         },
         floatingActionButton = {
             FloatingActionButton(onClick = onAddRule, containerColor = colors.primary, contentColor = colors.onPrimary) {
-                Icon(Icons.Filled.Add, contentDescription = "Tambah rule")
+                Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.rule_list_add_cd))
             }
         }
     ) { padding ->
@@ -98,13 +107,13 @@ fun RuleListScreen(
             .padding(padding)
             .padding(16.dp)) {
             Text(
-                "Urutan di bawah = prioritas. Kalau satu file cocok lebih dari satu rule, rule paling atas yang menang.",
+                stringResource(R.string.rule_list_priority_hint),
                 style = MaterialTheme.typography.bodySmall
             )
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },
-                label = { Text("Cari rule (nama folder / pattern)") },
+                label = { Text(stringResource(R.string.rule_list_search_label)) },
                 modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
             )
 
@@ -113,16 +122,16 @@ fun RuleListScreen(
                     if (rules.isEmpty()) {
                         EmptyState(
                             icon = Icons.Filled.PlaylistAdd,
-                            title = "Belum ada rule",
-                            message = "Tekan tombol + di kanan bawah untuk membuat rule pertamamu.",
+                            title = stringResource(R.string.rule_list_empty_title),
+                            message = stringResource(R.string.rule_list_empty_message),
                             accentColor = colors.primary,
                             accentContainerColor = colors.primaryContainer
                         )
                     } else {
                         EmptyState(
                             icon = Icons.Filled.SearchOff,
-                            title = "Tidak ditemukan",
-                            message = "Tidak ada rule yang cocok dengan pencarian \"$query\".",
+                            title = stringResource(R.string.rule_list_not_found_title),
+                            message = stringResource(R.string.rule_list_not_found_message, query),
                             accentColor = colors.primary,
                             accentContainerColor = colors.primaryContainer
                         )
@@ -164,14 +173,14 @@ fun RuleListScreen(
 
     pendingDelete?.let { rule ->
         VaultActionSheet(
-            title = "Hapus rule?",
-            message = "Rule \"${rule.folderName}\" (${rule.pattern}) akan dihapus. Tindakan ini tidak bisa dibatalkan.",
-            confirmLabel = "Hapus",
+            title = stringResource(R.string.rule_list_delete_title),
+            message = stringResource(R.string.rule_list_delete_message, rule.folderName, rule.pattern),
+            confirmLabel = stringResource(R.string.action_delete),
             isDestructive = true,
             onConfirm = {
                 onDeleteRule(rule)
                 pendingDelete = null
-                scope.launch { snackbarHostState.showSnackbar("Rule \"${rule.folderName}\" dihapus") }
+                scope.launch { snackbarHostState.showSnackbar(context.getString(R.string.rule_list_deleted_snackbar, rule.folderName)) }
             },
             onDismiss = { pendingDelete = null }
         )

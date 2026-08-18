@@ -3,7 +3,31 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
-## STATUS PROJECT: v8.2.0 -- Roadmap Fase 1.2: audit aksesibilitas TalkBack menyeluruh -- 2026-08-18
+## STATUS PROJECT: v8.3.0 -- Roadmap Fase 1.3 (batch 1/N): ekstraksi string cluster "Kelola Rule" -- 2026-08-18
+- Item ketiga `ROADMAP.md`, batch PERTAMA dari beberapa (roadmap sendiri
+  bilang "bertahap per layar" -- ini bukan item yang selesai 1 batch seperti
+  1.1/1.2). Detail lengkap di `CHANGELOG.md` v8.3.0.
+- **Cakupan batch ini**: `AddEditRuleScreen.kt`, `RuleListScreen.kt`,
+  `RuleCard.kt` (cluster "Kelola Rule") + 35 string resource baru di
+  `strings.xml`.
+- **Sisa utk batch lanjutan** (independen, urutan bebas): `SettingsScreen.kt`
+  (~22 literal, TERBESAR), `DiagnosticsScreen.kt` (~15), `PanduanScreen.kt`
+  (~9 PARAGRAF BESAR, bukan literal pendek -- beda karakter dari yang lain,
+  pertimbangkan batch tersendiri), `HomeScreen.kt`, `OnboardingScreen.kt`
+  (termasuk data class `steps` -- cek strukturnya dulu sebelum ekstrak),
+  `ActivityLogScreen.kt`, `SkippedFilesScreen.kt`, `MainActivity.kt`
+  (dialog izin & error).
+- **Catatan teknis WAJIB dibaca sebelum lanjut batch berikutnya**: aturan
+  `stringResource()` vs `Context.getString()` (composable vs lambda
+  belakangan) ada di `CHANGELOG.md` v8.3.0 -- baca itu dulu, jangan
+  re-investigasi dari nol tiap batch. Juga: XML comment TIDAK BOLEH
+  mengandung `--` literal (dobel-hyphen) di mana pun, termasuk lintas baris
+  -- validasi selalu pakai `python3 -c "import xml.dom.minidom as m;
+  m.parse('app/src/main/res/values/strings.xml')"` sebelum preflight check.
+- Roadmap item 1.3 TETAP di `ROADMAP.md` (belum dicoret, masih ada batch
+  lanjutan) -- ditandai "batch 1/N selesai" saja.
+
+## STATUS PROJECT SEBELUMNYA: v8.2.0 -- Roadmap Fase 1.2: audit aksesibilitas TalkBack menyeluruh -- 2026-08-18
 - Item kedua `ROADMAP.md` dikerjakan & **selesai dalam 1 batch** (bukan 4
   batch per-layar seperti estimasi awal roadmap) -- audit menyeluruh
   langsung di sesi ini menemukan app SUDAH compliant di hampir semua titik

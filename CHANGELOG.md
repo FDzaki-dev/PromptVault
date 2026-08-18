@@ -3,6 +3,46 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.3.0 (2026-08-18) — Roadmap Fase 1.3 (batch 1/N): ekstraksi string cluster "Kelola Rule"
+
+Item ketiga `ROADMAP.md`, batch pertama dari beberapa (sesuai catatan
+roadmap "bertahap per layar"). Cakupan: `AddEditRuleScreen.kt`,
+`RuleListScreen.kt`, `RuleCard.kt` -- MURNI ekstraksi (bukan lokalisasi,
+nilai string tetap Bahasa Indonesia), 35 string resource baru di
+`strings.xml` + 3 generik lintas-layar (`action_save`/`action_edit`/
+`action_delete`).
+
+**Detail teknis penting** (relevan utk batch string lanjutan di layar lain):
+`stringResource()` HANYA valid dipanggil langsung di badan fungsi
+`@Composable` atau di dalam lambda yang JUGA `@Composable` (mis. `label = {
+Text(...) }` milik `OutlinedTextField`, atau argumen `title`/`message` yang
+dievaluasi inline saat memanggil composable lain). **TIDAK valid** di dalam
+lambda yang dieksekusi belakangan/non-composable: `LaunchedEffect { }`,
+`onClick = { }`, `onConfirm = { }`. Untuk 2 kasus itu (snackbar di
+`LaunchedEffect` & di `onConfirm` hapus rule, `RuleListScreen.kt`), dipakai
+`LocalContext.current.getString(R.string.xxx, args)` sebagai gantinya --
+`Context.getString()` fungsi biasa, bukan `@Composable`, jadi aman dipanggil
+di mana saja asal ada referensi `Context`.
+
+String dengan data dinamis pakai format positional Android baku (`%1$s`/
+`%2$d`, dicek tipe argumen cocok Int/String) -- termasuk 3 kasus tricky:
+`rule_edit_preview_summary` (2 argumen Int), `rule_edit_confirm_duplicate`
+(2 argumen String dari 2 rule berbeda), `rule_list_delete_message` (2
+argumen String dari 1 rule yang sama). XML comment sempat 1x salah (`--`
+literal di dalam `<!-- -->`, terlarang di spec XML) -- ketahuan lewat
+validasi `python3 -c "xml.dom.minidom.parse(...)"` sebelum commit, sudah
+diperbaiki (diganti em dash `—`).
+
+**Layar lain (Settings 22 literal, Diagnostics 15, Panduan 9 paragraf besar,
+Home/Onboarding/ActivityLog/SkippedFiles/MainActivity) BELUM disentuh** --
+menyusul di batch 1.3 berikutnya, urutan bebas (independen satu sama lain,
+tidak ada dependency antar layar).
+
+Preflight check: 12/13 kategori PASS otomatis (kategori 10 -- well-formedness
+XML -- eksplisit mengonfirmasi `strings.xml` valid setelah fix di atas),
+kategori #7 identik daftar baseline. versionCode 95→96, versionName
+8.2.0→8.3.0.
+
 ## v8.2.0 (2026-08-18) — Roadmap Fase 1.2: audit aksesibilitas TalkBack menyeluruh
 
 Item kedua `ROADMAP.md`. Audit MENYELURUH (bukan cuma 1 layar) atas semua
