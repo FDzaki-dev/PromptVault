@@ -3,6 +3,19 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
+## FIX CI: GitHub Releases page nempel di versi lama walau build sukses -- 2026-08-18
+- **Gejala user**: Actions run hijau semua (Artifact selalu ada), tapi tab
+  Releases repo nunjuk versi LAMA sebagai "Latest".
+- **Sebab**: `softprops/action-gh-release` UPDATE release yang tag-nya sudah
+  ada (bukan create baru) kalau versionName sempat tidak naik antar push;
+  GitHub urut "Latest" dari `created_at`, jadi update ke release lama tidak
+  otomatis pindahin flag walau APK di dalamnya sudah yang terbaru.
+- **Fix** (`.github/workflows/build.yml`): tambah `make_latest: true` eksplisit
+  di step Publish, PLUS step baru sesudahnya `gh release edit v<versi>
+  --latest` yang paksa ulang flag tiap run sukses, terlepas dari riwayat
+  created_at. Tidak ada perubahan versionName/versionCode (murni CI, no app
+  code change).
+
 ## STATUS PROJECT: v8.4.0 -- FITUR BARU: "Selamatkan Uninstall" (deteksi & restore config lama dari folder SAF) -- 2026-08-18
 - **Permintaan eksplisit user**: kalau app tidak sengaja ke-uninstall lalu
   diinstal ulang, dan user memilih folder tujuan kustom SAF yang SAMA

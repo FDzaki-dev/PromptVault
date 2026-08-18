@@ -150,8 +150,24 @@ jobs:
           name: PromptVault v${{ steps.version.outputs.version }}
           files: out/*.apk
           generate_release_notes: true
+          make_latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # [fix 2026-08-18b] Gejala nyata: Releases page nunjuk versi lama walau
+      # build baru SUKSES hijau. Sebab: kalau tag sudah pernah ada (re-run /
+      # versionName sempat tidak naik), action di atas UPDATE release lama,
+      # bukan create baru -- flag "Latest" GitHub kadang tidak ikut pindah
+      # karena diurut dari created_at, bukan dari nomor versi. Paksa ulang di
+      # sini pakai gh CLI supaya release versi ini SELALU jadi "Latest",
+      # terlepas dari kapan dia dibuat/di-update.
+      - name: Force-flag this release as Latest (anti-stuck)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh release edit "v${{ steps.version.outputs.version }}" --latest --repo "${{ github.repository }}"
+          echo "Latest release dipaksa ke v${{ steps.version.outputs.version }}"
 
       - name: Upload build log on failure
         if: failure()
