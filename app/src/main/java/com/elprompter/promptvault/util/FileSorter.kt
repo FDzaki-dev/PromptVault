@@ -21,6 +21,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
@@ -870,6 +871,13 @@ class FileSorter(
         // penulisan lokal yang menyebabkan entri "hantu" ini muncul.
         if (destinationRoot == null) {
             cleanupGhostMediaStoreEntries()
+        } else {
+            // [Fitur baru 2026-08-18, "selamatkan uninstall"] lihat KDoc
+            // lengkap di syncConfigBackupToSafRoot()/VaultConfigBackup.
+            // destinationRoot di sini SUDAH pasti punya root vault "PromptVault"
+            // (baru saja dipakai resolveSafRuleDestinations() di atas), jadi
+            // aman pakai varian peek-only (TIDAK createDirectory() lagi).
+            syncConfigBackupToSafRoot(destinationRoot)
         }
 
         ScanResult(moved, skipped, foldersUnreadable = false, overlapWarnings = overlapWarnings, skippedDetails = skippedDetails)
@@ -1137,6 +1145,147 @@ class FileSorter(
             resolved[rule.folderName] = dir
         }
         return resolved
+    }
+
+    // ========================================================================
+    // [Fitur baru 2026-08-18, "selamatkan uninstall" -- permintaan eksplisit
+    // user] Uninstall Android menghapus TOTAL data privat app (rule di
+    // DataStore, log & riwayat pemindahan di Room) -- SATU-SATUNYA yang
+    // selamat adalah file yang ditulis DI LUAR sandbox app, yaitu di folder
+    // tujuan kustom SAF (kalau dikonfigurasi). 2 bagian: (1) TULIS cermin
+    // config ke root vault SAF secara opportunistic (grup fungsi ini), (2)
+    // BACA & TAWARKAN restore saat user memilih folder SAF yang SAMA lagi
+    // (juga grup ini, dipanggil [MainViewModel] SEBELUM scan pertama).
+    // Detail lengkap format file & alasan desain: lihat KDoc [VaultConfigBackup].
+    //
+    // SENGAJA TIDAK ada implementasi kedua yang independen untuk resolusi
+    // root "PromptVault" -- baik jalur tulis ([peekCanonicalRootDirSaf])
+    // maupun jalur baca ([peekVaultBackup]) reuse constant/pola SAMA dengan
+    // [resolveCanonicalRootDirSaf]/[findOrCreateChildDirSaf] yang SUDAH ADA
+    // (pelajaran permanen Insiden #7: "reuse jalur yang sama, jangan tulis
+    // ulang manual per modul").
+    // ========================================================================
+
+    private suspend fun buildCurrentBackupPayload(): VaultConfigBackup.Payload = VaultConfigBackup.buildPayload(
+        appVersionName = runCatching {
+            context.packageManager.getPackageInfo(context.packageName, 0).versionName
+        }.getOrNull() ?: "?",
+        rulesJson = ruleRepository.exportAsJson(),
+        intervalMinutes = settingsRepository.getIntervalMinutes(),
+        conflictStrategy = settingsRepository.getConflictStrategy().name,
+        scanConcurrency = settingsRepository.getScanConcurrency(),
+        log = activityLogRepository.logFlow.first(),
+        history = moveHistoryRepository.historyFlow.first()
+    )
+
+    /**
+     * `destinationRoot` di sini SUDAH resolved (`SafDestinationResolution.
+     * Active.root`), BUKAN root vault "PromptVault" itu sendiri --
+     * [peekCanonicalRootDirSaf] yang mencari subfolder itu. PEEK-ONLY (TIDAK
+     * PERNAH createDirectory()) -- root vault WAJIB sudah ada secara fisik
+     * SEBELUM fungsi ini menulis apa pun; kalau belum (folder baru/belum
+     * pernah discan), no-op diam-diam, BUKAN dipaksa dibuat lebih awal cuma
+     * gara-gara sinkronisasi backup config.
+     */
+    private suspend fun syncConfigBackupToSafRoot(destinationRoot: DocumentFile) {
+        try {
+            val vaultRootDoc = peekCanonicalRootDirSaf(destinationRoot) ?: return
+            VaultConfigBackup.writeBackup(context, vaultRootDoc, buildCurrentBackupPayload())
+        } catch (e: Exception) {
+            // best-effort -- JANGAN PERNAH mengganggu alur scan/simpan rule utama.
+        }
+    }
+
+    /**
+     * Entry point PUBLIK dipanggil [MainViewModel] reaktif setiap rule
+     * berubah (lihat wiring lengkap di sana) -- caller tidak punya
+     * `DocumentFile` root di tangan, cuma tahu "SAF sedang dikonfigurasi
+     * atau tidak", jadi fungsi ini resolve dulu sebelum delegasi ke
+     * [syncConfigBackupToSafRoot]. Self-contained `withContext(Dispatchers.IO)`
+     * -- caller TIDAK perlu membungkus sendiri (konsisten pola [checkSafAccessLost]).
+     */
+    suspend fun syncConfigBackupToSaf(): Unit = withContext(Dispatchers.IO) {
+        val root = (resolveSafDestinationRoot() as? SafDestinationResolution.Active)?.root ?: return@withContext
+        syncConfigBackupToSafRoot(root)
+    }
+
+    /**
+     * Peek-only analog [resolveCanonicalRootDirSaf] -- BEDA KRITIS: TIDAK
+     * PERNAH `createDirectory()` kalau root belum ada, dan TIDAK menulis ke
+     * cache ([SettingsRepository.setCachedFolderUri]). SENGAJA biarkan
+     * [resolveCanonicalRootDirSaf] (dipanggil scan pertama berikutnya) jadi
+     * SATU-SATUNYA penulis cache & SATU-SATUNYA yang boleh membuat folder --
+     * fungsi ini murni "lihat dulu, jangan ubah apa-apa".
+     */
+    private suspend fun peekCanonicalRootDirSaf(parent: DocumentFile): DocumentFile? {
+        settingsRepository.getCachedFolderUri(SAF_ROOT_CACHE_KEY)?.let { cachedUriStr ->
+            try {
+                val cached = DocumentFile.fromTreeUri(context, Uri.parse(cachedUriStr))
+                if (cached != null && cached.isDirectory && cached.exists()) return cached
+            } catch (e: Exception) {
+                // Cache basi -- lanjut deteksi di bawah.
+            }
+        }
+        val candidates = try {
+            parent.listFiles().filter { it.isDirectory && it.name != null && SAF_ROOT_DUPLICATE_REGEX.matches(it.name!!) }
+        } catch (e: Exception) {
+            emptyList()
+        }
+        return when {
+            candidates.isEmpty() -> null
+            candidates.size == 1 -> candidates.first()
+            else -> candidates.firstOrNull { it.name == SAF_ROOT_FOLDER_NAME }
+                ?: candidates.minByOrNull { it.lastModified() }
+                ?: candidates.first()
+        }
+    }
+
+    /**
+     * [Fitur baru 2026-08-18, "selamatkan uninstall"] Dipanggil
+     * [MainViewModel] SEGERA setelah user memilih folder tujuan kustom SAF
+     * lewat picker (SEBELUM scan pertama apa pun) -- skenario yang dituju:
+     * install ulang app (rule/log/setting lokal SUDAH hilang, itu perilaku
+     * OS, tidak bisa dihindari) lalu user memilih folder LAMA yang masih
+     * berisi banyak file dari instalasi sebelumnya. `null` = tidak ada
+     * apa-apa untuk direstore (folder benar-benar baru, ATAU root vault ada
+     * tapi tidak pernah ada backup -- mis. dari versi app SEBELUM fitur ini
+     * ada, ATAU folder tanpa root vault sama sekali) -- caller membaca
+     * `null` sbg "lanjut normal seperti biasa", BUKAN sebagai error yang
+     * perlu ditampilkan.
+     */
+    suspend fun peekVaultBackup(destinationRoot: DocumentFile): VaultConfigBackup.Payload? = withContext(Dispatchers.IO) {
+        val vaultRootDoc = peekCanonicalRootDirSaf(destinationRoot) ?: return@withContext null
+        val payload = VaultConfigBackup.tryReadBackup(context, vaultRootDoc) ?: return@withContext null
+        payload.takeIf { VaultConfigBackup.isPayloadWorthOffering(it) }
+    }
+
+    data class VaultRestoreResult(val rulesRestored: Int, val logRestored: Int, val historyRestored: Int)
+
+    /**
+     * Terapkan payload backup yang SUDAH DIKONFIRMASI user mau dipakai
+     * (lihat [MainViewModel.confirmVaultRestore]) -- dipanggil PERSIS SEKALI
+     * per konfirmasi, TIDAK reaktif/otomatis. Rule: merge by-id lewat
+     * [RuleRepository.importFromJson] yang SUDAH ADA (bukan implementasi
+     * restore kedua) -- di instalasi baru (0 rule lokal) hasilnya otomatis =
+     * full restore. Log & riwayat: insert lewat DAO yang SUDAH pakai
+     * `OnConflictStrategy.REPLACE` (dedupe otomatis by-id kalau user tidak
+     * sengaja konfirmasi 2x, bukan mekanisme baru yang perlu ditulis lagi).
+     */
+    suspend fun applyVaultRestore(payload: VaultConfigBackup.Payload): VaultRestoreResult = withContext(Dispatchers.IO) {
+        val ruleOutcome = ruleRepository.importFromJson(payload.rulesJson)
+        settingsRepository.setIntervalMinutes(payload.settings.intervalMinutes)
+        runCatching { ConflictStrategy.valueOf(payload.settings.conflictStrategy) }
+            .getOrNull()
+            ?.let { settingsRepository.setConflictStrategy(it) }
+        settingsRepository.setScanConcurrency(payload.settings.scanConcurrency)
+        activityLogRepository.restoreEntries(payload.activityLog)
+        moveHistoryRepository.restoreEntries(payload.moveHistory)
+        activityLogRepository.add(
+            LogLevel.SUCCESS,
+            "Konfigurasi lama dipulihkan dari folder tujuan kustom (${VaultConfigBackup.BACKUP_FILE_NAME}): " +
+                "${ruleOutcome.importedCount} rule, ${payload.activityLog.size} log, ${payload.moveHistory.size} riwayat pemindahan."
+        )
+        VaultRestoreResult(ruleOutcome.importedCount, payload.activityLog.size, payload.moveHistory.size)
     }
 
     /**

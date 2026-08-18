@@ -374,6 +374,8 @@ private fun PromptVaultRoot(
             val scanConcurrency by viewModel.scanConcurrency.collectAsStateWithLifecycle()
             val safTreeUri by viewModel.safTreeUri.collectAsStateWithLifecycle()
             val safAccessLost by viewModel.safAccessLost.collectAsStateWithLifecycle()
+            // [Fitur baru 2026-08-18, "selamatkan uninstall"] lihat KDoc lengkap di MainViewModel.
+            val vaultRestoreOffer by viewModel.vaultRestoreOffer.collectAsStateWithLifecycle()
             val shizukuStatus by viewModel.shizukuStatus.collectAsStateWithLifecycle()
             val shizukuDestPath by viewModel.shizukuDestPath.collectAsStateWithLifecycle()
             val useShizuku by viewModel.useShizuku.collectAsStateWithLifecycle()
@@ -390,6 +392,9 @@ private fun PromptVaultRoot(
                 safAccessLost = safAccessLost,
                 onPickSafFolder = onPickSafFolder,
                 onClearSafFolder = { viewModel.clearSafTreeUri() },
+                vaultRestoreOffer = vaultRestoreOffer,
+                onConfirmVaultRestore = { viewModel.confirmVaultRestore() },
+                onDismissVaultRestore = { viewModel.dismissVaultRestoreOffer() },
                 shizukuStatus = shizukuStatus,
                 shizukuDestPath = shizukuDestPath,
                 useShizuku = useShizuku,

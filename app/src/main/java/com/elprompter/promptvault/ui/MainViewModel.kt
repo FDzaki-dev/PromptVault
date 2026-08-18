@@ -3,6 +3,7 @@ package com.elprompter.promptvault.ui
 import android.app.Application
 import android.content.Intent
 import android.net.Uri
+import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.elprompter.promptvault.data.ActivityLogEntry
@@ -18,11 +19,13 @@ import com.elprompter.promptvault.shizuku.ShizukuManager
 import com.elprompter.promptvault.util.FileSorter
 import com.elprompter.promptvault.util.PatternPreviewResult
 import com.elprompter.promptvault.util.SkippedFileInfo
+import com.elprompter.promptvault.util.VaultConfigBackup
 import com.elprompter.promptvault.worker.WorkScheduler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -38,6 +41,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         .let { flow ->
             val state = MutableStateFlow<List<Rule>>(emptyList())
             viewModelScope.launch { flow.collect { state.value = it } }
+            // [Fitur baru 2026-08-18, "selamatkan uninstall"] Tiap rule
+            // berubah (tambah/edit/hapus/reorder/toggle) DAN folder tujuan
+            // kustom SAF aktif, tulis ulang cermin backup config
+            // (VaultConfigBackup) secara opportunistic -- best-effort,
+            // FileSorter.syncConfigBackupToSaf() SENGAJA menelan semua error
+            // sendiri (lihat KDoc di sana), jadi tidak ada try-catch di sini.
+            // drop(1): lewati emisi PERTAMA (nilai awal MutableStateFlow di
+            // atas, SEBELUM ruleRepository.rulesFlow sempat memuat data asli
+            // dari DataStore) -- bukan perubahan nyata dari user.
+            viewModelScope.launch {
+                state.asStateFlow().drop(1).collect {
+                    if (settingsRepository.getSafTreeUri() != null) fileSorter.syncConfigBackupToSaf()
+                }
+            }
             state.asStateFlow()
         }
 
@@ -308,6 +325,64 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             if (previous != null && previous != uri.toString()) {
                 releaseSafPermission(previous)
             }
+            // [Fitur baru 2026-08-18, "selamatkan uninstall"] Lihat KDoc
+            // lengkap FileSorter.peekVaultBackup(). Dipanggil PERSIS SEKALI,
+            // segera setelah URI baru sukses tersimpan -- BUKAN reaktif
+            // berulang.
+            detectVaultRestoreOffer(uri)
+        }
+    }
+
+    /**
+     * [Fitur baru 2026-08-18, "selamatkan uninstall" -- permintaan eksplisit
+     * user] Ringkasan UI-facing dari [FileSorter.peekVaultBackup] -- payload
+     * mentah ([VaultConfigBackup.Payload]) SENGAJA TIDAK diekspos ke
+     * Composable (pemisahan layer UI/domain); disimpan privat di
+     * [pendingVaultRestorePayload], hanya angka ringkasan yang sampai ke
+     * [com.elprompter.promptvault.ui.screens.SettingsScreen].
+     */
+    data class VaultRestoreOfferUi(
+        val rootFolderLabel: String,
+        val savedAtEpochMillis: Long,
+        val ruleCount: Int,
+        val logCount: Int,
+        val historyCount: Int
+    )
+
+    private var pendingVaultRestorePayload: VaultConfigBackup.Payload? = null
+
+    private val _vaultRestoreOffer = MutableStateFlow<VaultRestoreOfferUi?>(null)
+    val vaultRestoreOffer: StateFlow<VaultRestoreOfferUi?> = _vaultRestoreOffer.asStateFlow()
+
+    private fun detectVaultRestoreOffer(treeUri: Uri) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val app = getApplication<Application>()
+            val parent = DocumentFile.fromTreeUri(app, treeUri) ?: return@launch
+            val payload = fileSorter.peekVaultBackup(parent) ?: return@launch
+            pendingVaultRestorePayload = payload
+            _vaultRestoreOffer.value = VaultRestoreOfferUi(
+                rootFolderLabel = parent.name ?: "folder tujuan kustom",
+                savedAtEpochMillis = payload.savedAtEpochMillis,
+                ruleCount = VaultConfigBackup.countRules(payload.rulesJson),
+                logCount = payload.activityLog.size,
+                historyCount = payload.moveHistory.size
+            )
+        }
+    }
+
+    /** User pilih "Mulai Kosong Saja" pada dialog tawaran restore -- buang tawaran, TIDAK mengubah data apa pun. */
+    fun dismissVaultRestoreOffer() {
+        pendingVaultRestorePayload = null
+        _vaultRestoreOffer.value = null
+    }
+
+    /** User pilih "Pulihkan Konfigurasi Lama" -- lihat FileSorter.applyVaultRestore untuk detail penerapannya. */
+    fun confirmVaultRestore() {
+        val payload = pendingVaultRestorePayload ?: return
+        viewModelScope.launch {
+            fileSorter.applyVaultRestore(payload)
+            pendingVaultRestorePayload = null
+            _vaultRestoreOffer.value = null
         }
     }
 

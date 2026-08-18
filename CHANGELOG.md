@@ -3,6 +3,95 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.4.0 (2026-08-18) — FITUR BARU: "Selamatkan Uninstall" — deteksi & restore config lama dari folder tujuan kustom SAF
+
+Permintaan eksplisit user: kalau app tidak sengaja ter-uninstall lalu
+diinstal ulang, dan user memilih folder tujuan kustom SAF yang SAMA (masih
+berisi banyak file lama), app HARUS mendeteksi root folder yang sudah
+pernah dibuat sebelumnya (bukan bikin duplikat baru) DAN menawarkan restore
+config yang ikut hilang saat uninstall (rule, log, riwayat pemindahan, dsb).
+
+**Bagian anti-duplikat folder**: SUDAH matang sejak v7.5.0/v8.x lewat
+`FileSorter.resolveCanonicalRootDirSaf()` (self-healing regex+cache) —
+TIDAK diulang/ditulis ulang di sini, sesuai pelajaran permanen Insiden #7.
+Batch ini murni menambah lapisan BARU di atasnya: cermin/manifest config.
+
+**Desain**: file JSON tersembunyi `.promptvault_config_backup.json`
+(konstanta `VaultConfigBackup.BACKUP_FILE_NAME`) ditulis di root vault
+"PromptVault" yang sama — berisi rule (string JSON, reuse
+`RuleRepository.exportAsJson()`/`importFromJson()` yang sudah ada, bukan
+skema baru), setting relevan (interval/conflict strategy/scan concurrency),
+serta snapshot log aktivitas & riwayat pemindahan (masing-masing dibatasi
+200 entri terbaru). BARU `util/VaultConfigBackup.kt` — murni I/O
+serialisasi + 2 fungsi pure logic (`isPayloadWorthOffering`/`countRules`,
+di-unit-test di `VaultConfigBackupTest.kt`).
+
+**Tulis (opportunistic, best-effort)**: `FileSorter.syncConfigBackupToSaf()`
+dipanggil dari 2 titik — (1) `MainViewModel` reaktif tiap rule berubah
+(`rules` StateFlow, `drop(1)` supaya emisi awal tidak memicu sync palsu),
+kalau folder SAF aktif; (2) `scanAndSortToDestination()` sendiri, setelah
+tiap scan sukses ke tujuan SAF. Root vault TIDAK PERNAH dibuat lebih awal
+cuma gara-gara sinkronisasi backup — dipakai varian peek-only
+(`peekCanonicalRootDirSaf`, TIDAK pernah `createDirectory()`), root
+"asli" tetap HANYA dibuat lewat jalur normal (`resolveCanonicalRootDirSaf`,
+dipanggil scan). Kegagalan tulis SELALU ditelan diam-diam (try-catch) —
+bukan gerbang yang boleh menggagalkan scan/simpan rule utama.
+
+**Baca & tawarkan (SEKALI, dipicu picker)**: `MainViewModel.setSafTreeUri()`
+memanggil `detectVaultRestoreOffer()` PERSIS SEKALI segera setelah URI baru
+tersimpan (BUKAN reaktif berulang tiap buka Pengaturan). Kalau
+`FileSorter.peekVaultBackup()` menemukan backup non-kosong, dialog
+`VaultActionSheet` (reuse komponen konfirmasi standar app, BUKAN
+`AlertDialog` baru) muncul di `SettingsScreen` menampilkan ringkasan
+(jumlah rule/log/riwayat + tanggal backup) dengan 2 pilihan: "Pulihkan
+Konfigurasi Lama" atau "Mulai Kosong Saja".
+
+**Restore**: `FileSorter.applyVaultRestore()` — rule lewat
+`RuleRepository.importFromJson()` yang sudah ada (merge by-id, di instalasi
+baru = full restore otomatis); log & riwayat lewat `restoreEntries()` baru
+di `ActivityLogRepository`/`MoveHistoryRepository` (insert via
+`OnConflictStrategy.REPLACE` yang SUDAH ADA di DAO — dedupe otomatis
+by-id, aman dipanggil 2x). Riwayat pemindahan (`MoveHistoryEntry`) SENGAJA
+tetap direstore walau `destUri`/`originalParentUri` SAF berpotensi stale
+pasca-reinstall — `FileSorter.undo()` SUDAH punya lapis try-catch/
+verifikasi yang matang dari riwayat pengerasan berulang (v7.1.4 P0-3,
+v7.1.9 OVERWRITE-delete, dst.), jadi kegagalan undo pada entri lama tetap
+gagal DENGAN AMAN (hasil eksplisit, bukan crash), bukan risiko baru.
+
+**Scope SENGAJA terbatas mode SAF saja** (bukan Shizuku) — Shizuku pakai
+path manual, tidak ada titik "pilih folder" alami untuk memicu deteksi.
+
+File diubah (6) + 2 baru: `util/FileSorter.kt` (6 fungsi baru + 1 hook di
+`scanAndSortToDestination`), `data/ActivityLogRepository.kt`/
+`data/MoveHistoryRepository.kt` (`restoreEntries` + mapper), `ui/MainViewModel.kt`
+(StateFlow tawaran + detect/confirm/dismiss + hook reaktif), `ui/screens/SettingsScreen.kt`
+(3 param baru + dialog `VaultActionSheet`), `MainActivity.kt` (protected
+asset, edit parsial: 1 `collectAsStateWithLifecycle` + 3 param diteruskan),
+`app/build.gradle.kts` (versi). BARU: `util/VaultConfigBackup.kt`,
+`app/src/test/.../util/VaultConfigBackupTest.kt`.
+
+Preflight check: 13/13 kategori PASS. **BELUM PERNAH lewat `./gradlew`
+asli/device asli** (konsisten seluruh riwayat project) — risiko tambahan
+di batch ini: (1) I/O `DocumentFile.createFile`/`openOutputStream` untuk
+file JSON BELUM pernah dipakai project ini sebelumnya (SAF sebelumnya
+hanya untuk memindahkan file user, bukan menulis manifest app sendiri),
+(2) reactive `rules.drop(1).collect{}` di `MainViewModel` adalah pola baru
+(StateFlow custom, bukan `Flow.combine`/`debounce` — sengaja dihindari
+karena butuh anotasi eksperimental yang belum ada preseden di project ini).
+**User WAJIB verifikasi**: (1) build CI hijau, (2) pilih folder SAF baru
+(kosong) → isi rule → cek file `.promptvault_config_backup.json` muncul
+di root "PromptVault" setelah scan pertama, (3) uninstall app (atau clear
+data) → install ulang → pilih folder SAF yang SAMA → dialog "Konfigurasi
+Lama Ditemukan" muncul dengan angka yang benar → konfirmasi → rule/log
+lama kembali muncul di Kelola Rule/Riwayat Aktivitas, (4) pilih "Mulai
+Kosong Saja" → pastikan TIDAK ada data yang berubah & root folder tetap
+dipakai (bukan folder baru "(1)").
+
+Confidence Rating: **80%** (arsitektur reuse jalur SAF yang sudah matang +
+DAO conflict-replace yang sudah ada, tapi 2 permukaan I/O di atas baru
+pertama kali dipakai project ini — lihat poin risiko di atas — turun dari
+90%+ standar batch reuse-berat sampai lolos verifikasi CI/device pertama).
+
 ## v8.3.0-ci (2026-08-18) — FIX: Stale Run Guard di build.yml (anti-desync "Latest" release)
 
 Debug session: user lapor "GitHub Release macet, masih app lama padahal fitur

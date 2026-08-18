@@ -44,11 +44,16 @@ import androidx.compose.ui.unit.dp
 import com.elprompter.promptvault.data.ConflictStrategy
 import com.elprompter.promptvault.data.SettingsRepository
 import com.elprompter.promptvault.shizuku.ShizukuManager
+import com.elprompter.promptvault.ui.MainViewModel
 import com.elprompter.promptvault.ui.components.TactileSwitch
+import com.elprompter.promptvault.ui.components.VaultActionSheet
 import com.elprompter.promptvault.ui.components.VaultCard
 import com.elprompter.promptvault.ui.components.VaultTopBar
 import com.elprompter.promptvault.ui.components.WarningBanner
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -65,6 +70,12 @@ fun SettingsScreen(
     safAccessLost: Boolean,
     onPickSafFolder: () -> Unit,
     onClearSafFolder: () -> Unit,
+    // [Fitur baru 2026-08-18, "selamatkan uninstall"] Tawaran restore
+    // config lama (rule/log/riwayat) terdeteksi di folder tujuan kustom
+    // yang baru dipilih -- lihat FileSorter.peekVaultBackup/MainViewModel.
+    vaultRestoreOffer: MainViewModel.VaultRestoreOfferUi?,
+    onConfirmVaultRestore: () -> Unit,
+    onDismissVaultRestore: () -> Unit,
     // [Fitur baru 2026-08-17, integrasi Shizuku]
     shizukuStatus: ShizukuManager.Status,
     shizukuDestPath: String?,
@@ -93,6 +104,28 @@ fun SettingsScreen(
     // pola identik dgn tombol "Salin Log" di ActivityLogScreen (Insiden #6).
     val clipboardManager: ClipboardManager = LocalClipboardManager.current
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // [Fitur baru 2026-08-18, "selamatkan uninstall"] Ditampilkan SEGERA
+    // setelah user memilih folder tujuan kustom yang TERNYATA sudah pernah
+    // dipakai app ini sebelumnya (root vault "PromptVault" + cermin backup
+    // config masih ada di dalamnya) -- skenario utama: install ulang app.
+    // Reuse VaultActionSheet yang sudah ada (pola konfirmasi standar app
+    // ini), BUKAN AlertDialog baru.
+    vaultRestoreOffer?.let { offer ->
+        val fmt = remember { SimpleDateFormat("dd MMM yyyy HH:mm", Locale("id", "ID")) }
+        VaultActionSheet(
+            title = "Konfigurasi Lama Ditemukan",
+            message = "Folder \"${offer.rootFolderLabel}\" ini sudah pernah dipakai PromptVault " +
+                "sebelumnya (backup tersimpan ${fmt.format(Date(offer.savedAtEpochMillis))}): " +
+                "${offer.ruleCount} rule, ${offer.logCount} log aktivitas, ${offer.historyCount} riwayat " +
+                "pemindahan. Root folder ini TIDAK akan dibuat ulang/duplikat -- kalau kamu baru saja " +
+                "install ulang app, pulihkan konfigurasi lamanya di sini.",
+            confirmLabel = "Pulihkan Konfigurasi Lama",
+            dismissLabel = "Mulai Kosong Saja",
+            onConfirm = onConfirmVaultRestore,
+            onDismiss = onDismissVaultRestore
+        )
+    }
 
     @Composable
     fun chipColors(dangerAccent: Boolean = false) = FilterChipDefaults.filterChipColors(

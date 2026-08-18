@@ -50,6 +50,23 @@ class MoveHistoryRepository(context: Context) {
 
     suspend fun getUndoableEntries(): List<MoveHistoryEntry> =
         dao.getUndoable().map { it.toDomain() }
+
+    /**
+     * [Fitur baru 2026-08-18, "selamatkan uninstall"] Restore entri dari
+     * backup SAF (lihat [com.elprompter.promptvault.util.VaultConfigBackup])
+     * -- dedupe otomatis by-id lewat `OnConflictStrategy.REPLACE` yang SUDAH
+     * ADA di [dao.insert] (lihat [MoveHistoryDao]), BUKAN mekanisme baru.
+     * Best-effort: entri yang di-restore TETAP tunduk pada [FileSorter.undo]
+     * yang sudah ada -- kalau `destUri`/`originalParentUri` provider ternyata
+     * sudah tidak valid lagi (provider ganti document-id, dsb), `undo()`
+     * SUDAH terbukti gagal dgn aman (try-catch + hasil eksplisit, BUKAN
+     * crash) lewat riwayat pengerasan berulang di FileSorter -- bukan risiko
+     * baru yang perlu ditangani khusus di sini.
+     */
+    suspend fun restoreEntries(entries: List<MoveHistoryEntry>) {
+        entries.forEach { dao.insert(it.toEntity()) }
+        if (entries.isNotEmpty()) dao.trimToMax(MAX_ENTRIES)
+    }
 }
 
 private fun MoveHistoryEntity.toDomain() = MoveHistoryEntry(

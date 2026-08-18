@@ -62,9 +62,29 @@ class ActivityLogRepository(context: Context) {
     suspend fun clear() {
         dao.clearAll()
     }
+
+    /**
+     * [Fitur baru 2026-08-18, "selamatkan uninstall"] Restore entri dari
+     * backup SAF (lihat [com.elprompter.promptvault.util.VaultConfigBackup])
+     * -- dedupe otomatis by-id lewat `OnConflictStrategy.REPLACE` yang SUDAH
+     * ADA di [dao.insert] (lihat [ActivityLogDao]), BUKAN mekanisme baru.
+     * Aman dipanggil berkali-kali (idempoten) kalau user tidak sengaja
+     * konfirmasi restore 2x.
+     */
+    suspend fun restoreEntries(entries: List<ActivityLogEntry>) {
+        entries.forEach { dao.insert(it.toEntity()) }
+        if (entries.isNotEmpty()) dao.trimToMax(MAX_ENTRIES)
+    }
 }
 
 private fun ActivityLogEntity.toDomain() = ActivityLogEntry(
+    id = id,
+    timestampMillis = timestampMillis,
+    level = level,
+    message = message
+)
+
+private fun ActivityLogEntry.toEntity() = ActivityLogEntity(
     id = id,
     timestampMillis = timestampMillis,
     level = level,
