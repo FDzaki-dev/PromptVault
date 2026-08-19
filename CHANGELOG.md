@@ -3,6 +3,18 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.5.0c (2026-08-19) — COMPILE-FIX: `this@MainActivity` unresolved di `PromptVaultRoot`
+
+CI run berikutnya: manifest fix (v8.5.0b) terkonfirmasi lolos, tapi
+`compileDebugKotlin FAILED` — `Unresolved reference: @MainActivity` di
+`MainActivity.kt:416`. `installApk(this@MainActivity, ...)` dipanggil dari
+`PromptVaultRoot()`, fungsi `@Composable` top-level yang BUKAN member class
+`MainActivity` — label itu tidak eksis di scope tersebut. Fix: pakai
+`context` lokal (`LocalContext.current`, sudah ada di scope) — `installApk()`
+memang cuma butuh `Context`. 1 baris, nol perubahan logika lain.
+versionCode/versionName TIDAK naik (tetap 98/8.5.0). Belum diverifikasi CI
+hijau.
+
 ## v8.5.0b (2026-08-19) — COMPILE-FIX: `"--"` di komentar `AndroidManifest.xml`
 
 CI run #108 FAILED: `SAXParseException: "--" is not permitted within comments`,

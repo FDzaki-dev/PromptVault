@@ -413,7 +413,7 @@ private fun PromptVaultRoot(
                 onCheckForUpdate = { viewModel.checkForUpdate() },
                 onDismissUpdateCheck = { viewModel.dismissUpdateCheck() },
                 onDownloadUpdate = { asset -> viewModel.downloadUpdate(asset) },
-                onInstallUpdate = { filePath -> installApk(this@MainActivity, filePath) },
+                onInstallUpdate = { filePath -> installApk(context, filePath) },
                 onBack = { navController.popBackStack() }
             )
         }

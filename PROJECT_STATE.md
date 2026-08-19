@@ -3,6 +3,13 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
+## v8.5.0c COMPILE-FIX -- `this@MainActivity` unresolved di `PromptVaultRoot` (2026-08-19)
+- **Gejala**: user upload `build-failure-log-v8_5_0__1_.zip`. Manifest fix (v8.5.0b) TERKONFIRMASI berhasil (`processDebugManifest` lolos), tapi `:app:compileDebugKotlin FAILED` -- `Unresolved reference: @MainActivity` di `MainActivity.kt:416`, titik `onInstallUpdate` kartu updater baru.
+- **Root cause**: `installApk(this@MainActivity, filePath)` dipanggil di dalam `PromptVaultRoot()` -- `@Composable private fun` TOP-LEVEL (baris 181), BUKAN method di dalam `class MainActivity` (baris 90) -- label `this@MainActivity` tidak eksis di scope itu, compiler benar menolaknya.
+- **Fix**: ganti ke `installApk(context, filePath)` -- `installApk()` cuma butuh `Context` biasa (bukan Activity), dan `val context = LocalContext.current` SUDAH ADA di scope `PromptVaultRoot` (baris 189), reuse langsung. 1 baris, nol perubahan logika lain.
+- **versionCode/versionName TIDAK naik** (tetap 98/8.5.0) -- compile-fix, bukan fitur baru.
+- **Belum diverifikasi CI hijau** -- WAJIB dicek run Actions berikutnya. Kalau masih gagal, kirim log baru.
+
 ## v8.5.0b COMPILE-FIX -- "--" di komentar XML AndroidManifest.xml (2026-08-19)
 - **Gejala**: user upload `build-failure-log-v8_5_0.zip`. `:app:processDebugMainManifest FAILED` -- `SAXParseException: The string "--" is not permitted within comments`, baris 21 `AndroidManifest.xml` (komentar baru fitur in-app updater v8.5.0, poin INTERNET/REQUEST_INSTALL_PACKAGES).
 - **KELAS BUG BERULANG** (4x sekarang: v2.6.0, v2.24.1, v7.0.0/Insiden non-fatal, sekarang v8.5.0) -- pelajaran permanen "jangan pakai `--` di komentar XML manapun" TIDAK otomatis dicek AI saat menulis komentar baru; `preflight_check.sh` kategori #10 (well-formedness XML) MENANGKAP ini dgn benar tapi HANYA setelah CI compile, karena kategori #10 butuh Gradle utk generate merged manifest -- gap-nya ada di titik PENULISAN komentar, bukan di preflight.
