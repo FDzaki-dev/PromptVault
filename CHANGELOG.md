@@ -3,6 +3,36 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.6.0 (2026-08-19) — Roadmap Fase 1.3 (batch 2/N): ekstraksi string `SettingsScreen.kt`
+
+Lanjutan item ketiga `ROADMAP.md` setelah cluster "Kelola Rule" (v8.3.0).
+Cakupan: `SettingsScreen.kt` (layar terbesar dari sisa daftar, estimasi awal
+~22 literal — realisasinya 70 string resource baru karena estimasi awal
+tidak menghitung 6 status Shizuku + seluruh kartu updater v8.5.0 yang belum
+ada saat roadmap ditulis). MURNI ekstraksi, nilai string tetap sama persis,
+tidak ada perubahan perilaku.
+
+**Pola non-composable-lambda** (3 titik, konsisten catatan teknis v8.3.0):
+snackbar "disalin ke clipboard" jalan di dalam `scope.launch{}` dan hasil
+import (`onImportRequested` callback) BUKAN scope `@Composable` — dipakai
+`context.getString()` (`LocalContext.current`, val baru `context` di scope
+fungsi) untuk pesan sukses import (butuh count dinamis saat callback jalan),
+sedangkan 2 pesan gagal/kosong `import` di-resolve LEBIH AWAL sebagai
+`stringResource()` di badan composable lalu ditangkap closure-nya (lebih
+sederhana daripada `context.getString()` karena isinya statis).
+
+**Insiden minor sendiri, langsung ketangkap**: komentar XML baru sempat
+pakai `--` lagi (kelas bug berulang yang sama persis dengan v8.5.0b) —
+ketahuan preflight kategori #10 SEBELUM commit, diganti `;`. Tidak
+menyentuh string *content* (`--` di isi `<string>` aman, restriksi XML
+cuma berlaku di dalam `<!-- -->`).
+
+Preflight: 13/13 kategori PASS. versionCode 98→99, versionName 8.5.0→8.6.0.
+
+**Sisa Fase 1.3** (independen, urutan bebas): `DiagnosticsScreen.kt` (~15),
+`PanduanScreen.kt`, `HomeScreen.kt`, `OnboardingScreen.kt`,
+`ActivityLogScreen.kt`, `SkippedFilesScreen.kt`, `MainActivity.kt`.
+
 ## v8.5.0c (2026-08-19) — COMPILE-FIX: `this@MainActivity` unresolved di `PromptVaultRoot`
 
 CI run berikutnya: manifest fix (v8.5.0b) terkonfirmasi lolos, tapi

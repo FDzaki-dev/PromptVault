@@ -3,6 +3,23 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
+## v8.6.0 -- Roadmap Fase 1.3 batch 2/N: ekstraksi string `SettingsScreen.kt` (2026-08-19)
+- **Konfirmasi**: v8.5.0c (fix `this@MainActivity`) sudah CI hijau (run #110,
+  commit `161ca4d`, dikonfirmasi user via screenshot). Ditutup, tidak perlu
+  tindakan lanjutan.
+- Lanjut item roadmap Fase 1.3 (sedang berjalan sejak v8.3.0): 70 string
+  resource baru (`settings_*`) menggantikan literal Kotlin di
+  `SettingsScreen.kt` -- MURNI ekstraksi, nilai teks tidak berubah.
+- Detail teknis lengkap ada di `CHANGELOG.md` v8.6.0 (pola
+  `context.getString()` vs `stringResource()` ditangkap-lebih-awal utk
+  callback non-composable, insiden minor `--` di komentar XML ketangkap
+  preflight sebelum commit).
+- **Belum diverifikasi CI hijau** -- WAJIB dicek run Actions berikutnya
+  setelah push.
+- **Sisa Fase 1.3**: DiagnosticsScreen, PanduanScreen, HomeScreen,
+  OnboardingScreen, ActivityLogScreen, SkippedFilesScreen, MainActivity
+  (dialog izin/error) -- urutan bebas, independen satu sama lain.
+
 ## v8.5.0c COMPILE-FIX -- `this@MainActivity` unresolved di `PromptVaultRoot` (2026-08-19)
 - **Gejala**: user upload `build-failure-log-v8_5_0__1_.zip`. Manifest fix (v8.5.0b) TERKONFIRMASI berhasil (`processDebugManifest` lolos), tapi `:app:compileDebugKotlin FAILED` -- `Unresolved reference: @MainActivity` di `MainActivity.kt:416`, titik `onInstallUpdate` kartu updater baru.
 - **Root cause**: `installApk(this@MainActivity, filePath)` dipanggil di dalam `PromptVaultRoot()` -- `@Composable private fun` TOP-LEVEL (baris 181), BUKAN method di dalam `class MainActivity` (baris 90) -- label `this@MainActivity` tidak eksis di scope itu, compiler benar menolaknya.

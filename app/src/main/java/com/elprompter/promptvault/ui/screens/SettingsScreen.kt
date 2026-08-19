@@ -42,8 +42,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
+import com.elprompter.promptvault.R
 import com.elprompter.promptvault.data.ConflictStrategy
 import com.elprompter.promptvault.data.SettingsRepository
 import com.elprompter.promptvault.shizuku.ShizukuManager
@@ -117,6 +120,7 @@ fun SettingsScreen(
     // pola identik dgn tombol "Salin Log" di ActivityLogScreen (Insiden #6).
     val clipboardManager: ClipboardManager = LocalClipboardManager.current
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
 
     // [Fitur baru 2026-08-18, "selamatkan uninstall"] Ditampilkan SEGERA
     // setelah user memilih folder tujuan kustom yang TERNYATA sudah pernah
@@ -127,14 +131,17 @@ fun SettingsScreen(
     vaultRestoreOffer?.let { offer ->
         val fmt = remember { SimpleDateFormat("dd MMM yyyy HH:mm", Locale("id", "ID")) }
         VaultActionSheet(
-            title = "Konfigurasi Lama Ditemukan",
-            message = "Folder \"${offer.rootFolderLabel}\" ini sudah pernah dipakai PromptVault " +
-                "sebelumnya (backup tersimpan ${fmt.format(Date(offer.savedAtEpochMillis))}): " +
-                "${offer.ruleCount} rule, ${offer.logCount} log aktivitas, ${offer.historyCount} riwayat " +
-                "pemindahan. Root folder ini TIDAK akan dibuat ulang/duplikat -- kalau kamu baru saja " +
-                "install ulang app, pulihkan konfigurasi lamanya di sini.",
-            confirmLabel = "Pulihkan Konfigurasi Lama",
-            dismissLabel = "Mulai Kosong Saja",
+            title = stringResource(R.string.settings_restore_title),
+            message = stringResource(
+                R.string.settings_restore_message,
+                offer.rootFolderLabel,
+                fmt.format(Date(offer.savedAtEpochMillis)),
+                offer.ruleCount,
+                offer.logCount,
+                offer.historyCount
+            ),
+            confirmLabel = stringResource(R.string.settings_restore_confirm),
+            dismissLabel = stringResource(R.string.settings_restore_dismiss),
             onConfirm = onConfirmVaultRestore,
             onDismiss = onDismissVaultRestore
         )
@@ -147,7 +154,7 @@ fun SettingsScreen(
     )
 
     Scaffold(
-        topBar = { VaultTopBar(title = "Pengaturan", onBack = onBack) },
+        topBar = { VaultTopBar(title = stringResource(R.string.settings_title), onBack = onBack) },
         snackbarHost = {
             SnackbarHost(snackbarHostState) { data ->
                 Snackbar(snackbarData = data, containerColor = colors.primary, contentColor = colors.onPrimary)
@@ -174,13 +181,12 @@ fun SettingsScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Icon(Icons.Filled.HelpOutline, contentDescription = null, modifier = Modifier.size(18.dp))
-                Text(" Buka Panduan Penggunaan")
+                Text(" " + stringResource(R.string.settings_open_guide))
             }
 
-            Text("Interval Auto-Scan", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.settings_interval_section_title), style = MaterialTheme.typography.titleMedium)
             Text(
-                "Seberapa sering PromptVault memindai Downloads di latar belakang. " +
-                    "Android tidak mengizinkan kurang dari 15 menit.",
+                stringResource(R.string.settings_interval_section_desc),
                 style = MaterialTheme.typography.bodySmall
             )
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -188,7 +194,12 @@ fun SettingsScreen(
                     FilterChip(
                         selected = minutes == currentIntervalMinutes,
                         onClick = { onIntervalSelected(minutes) },
-                        label = { Text(if (minutes < 60) "$minutes menit" else "${minutes / 60} jam") },
+                        label = {
+                            Text(
+                                if (minutes < 60) stringResource(R.string.settings_interval_unit_minutes_fmt, minutes)
+                                else stringResource(R.string.settings_interval_unit_hours_fmt, minutes / 60)
+                            )
+                        },
                         colors = chipColors()
                     )
                 }
@@ -199,16 +210,16 @@ fun SettingsScreen(
             // ColorScheme Material 3 murni, tidak ada lagi yang dipilih user
             // di sini (lihat Theme.kt/Color.kt).
 
-            Text("Kalau Nama File Sudah Ada di Tujuan", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.settings_conflict_section_title), style = MaterialTheme.typography.titleMedium)
             Text(
-                "Apa yang dilakukan PromptVault kalau file dengan nama yang sama sudah ada di folder tujuan.",
+                stringResource(R.string.settings_conflict_section_desc),
                 style = MaterialTheme.typography.bodySmall
             )
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 val conflictLabels = mapOf(
-                    ConflictStrategy.RENAME to "Ganti nama otomatis",
-                    ConflictStrategy.SKIP to "Lewati",
-                    ConflictStrategy.OVERWRITE to "Timpa"
+                    ConflictStrategy.RENAME to stringResource(R.string.settings_conflict_rename),
+                    ConflictStrategy.SKIP to stringResource(R.string.settings_conflict_skip),
+                    ConflictStrategy.OVERWRITE to stringResource(R.string.settings_conflict_overwrite)
                 )
                 conflictLabels.forEach { (strategy, label) ->
                     FilterChip(
@@ -221,7 +232,7 @@ fun SettingsScreen(
             }
             if (currentConflictStrategy == ConflictStrategy.OVERWRITE) {
                 Text(
-                    "Perhatian: file lama di tujuan akan tertimpa permanen dan tidak bisa di-undo.",
+                    stringResource(R.string.settings_conflict_overwrite_warning),
                     style = MaterialTheme.typography.bodySmall,
                     color = colors.error
                 )
@@ -232,11 +243,9 @@ fun SettingsScreen(
             // configurable di sini -- default tetap 6 (SettingsRepository.
             // DEFAULT_SCAN_CONCURRENCY), jadi user yang tidak pernah membuka
             // kartu ini tidak terdampak sama sekali.
-            Text("Kecepatan Scan (Lanjutan)", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.settings_concurrency_section_title), style = MaterialTheme.typography.titleMedium)
             Text(
-                "Jumlah file yang diproses BERSAMAAN saat scan. Lebih tinggi = scan lebih " +
-                    "cepat di Downloads berisi banyak file, tapi lebih berat di HP kelas bawah. " +
-                    "6 adalah nilai default yang aman untuk kebanyakan HP.",
+                stringResource(R.string.settings_concurrency_section_desc),
                 style = MaterialTheme.typography.bodySmall
             )
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -244,7 +253,12 @@ fun SettingsScreen(
                     FilterChip(
                         selected = value == currentScanConcurrency,
                         onClick = { onScanConcurrencySelected(value) },
-                        label = { Text(if (value == SettingsRepository.DEFAULT_SCAN_CONCURRENCY) "$value (default)" else "$value") },
+                        label = {
+                            Text(
+                                if (value == SettingsRepository.DEFAULT_SCAN_CONCURRENCY) stringResource(R.string.settings_concurrency_default_fmt, value)
+                                else stringResource(R.string.settings_concurrency_value_fmt, value)
+                            )
+                        },
                         colors = chipColors()
                     )
                 }
@@ -252,19 +266,14 @@ fun SettingsScreen(
 
             VaultCard(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Folder Tujuan Kustom (Opsional)", style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.settings_saf_section_title), style = MaterialTheme.typography.titleMedium)
                     Text(
-                        "File tetap DIPINDAI dari Downloads seperti biasa. Folder ini cuma menentukan " +
-                            "KE MANA hasil sortir disimpan (lewat Storage Access Framework) -- cocok " +
-                            "untuk folder di kartu SD atau folder khusus lain. Kosongkan lagi untuk " +
-                            "kembali menyimpan hasil sortir ke Downloads/PromptVault. App otomatis membuat " +
-                            "subfolder \"PromptVault\" di dalam folder yang kamu pilih -- kamu tidak perlu " +
-                            "membuatnya manual.",
+                        stringResource(R.string.settings_saf_section_desc),
                         style = MaterialTheme.typography.bodySmall
                     )
                     if (safTreeUri != null) {
                         Text(
-                            "Folder aktif: ${friendlySafFolderLabel(safTreeUri)}",
+                            stringResource(R.string.settings_saf_active_folder_fmt, friendlySafFolderLabel(safTreeUri)),
                             style = MaterialTheme.typography.bodySmall,
                             color = colors.primary
                         )
@@ -281,10 +290,7 @@ fun SettingsScreen(
                         // supaya user TAHU opsinya, bukan blocking/error.
                         if (isSafRootDocumentsFolder(safTreeUri)) {
                             Text(
-                                "ℹ Folder ini juga dipakai buat menyimpan crash log internal app " +
-                                    "(di subfolder \"PromptVault/logs\"). Sudah ada penanganan otomatis kalau " +
-                                    "sampai bentrok, tapi kalau mau pisah total, pilih subfolder di dalam " +
-                                    "Documents (bukan Documents-nya langsung).",
+                                stringResource(R.string.settings_saf_documents_warning),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = colors.tertiary
                             )
@@ -296,9 +302,7 @@ fun SettingsScreen(
                         // baru dibuka) supaya user tahu SEBELUM scan berikutnya.
                         if (safAccessLost) {
                             Text(
-                                "⚠ Folder ini sudah tidak bisa diakses (mungkin dihapus/dipindah/izin " +
-                                    "dicabut). Scan TIDAK akan fallback diam-diam ke Downloads -- pilih " +
-                                    "ulang folder atau kembali ke Downloads.",
+                                stringResource(R.string.settings_saf_access_lost_warning),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = colors.error
                             )
@@ -307,17 +311,17 @@ fun SettingsScreen(
                             OutlinedButton(
                                 onClick = onPickSafFolder,
                                 colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primary)
-                            ) { Text("Ganti Folder") }
+                            ) { Text(stringResource(R.string.settings_saf_change_folder)) }
                             OutlinedButton(
                                 onClick = onClearSafFolder,
                                 colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.error)
-                            ) { Text("Kembali ke Downloads") }
+                            ) { Text(stringResource(R.string.settings_saf_reset_folder)) }
                         }
                     } else {
                         OutlinedButton(
                             onClick = onPickSafFolder,
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primary)
-                        ) { Text("Pilih Folder") }
+                        ) { Text(stringResource(R.string.settings_saf_pick_folder)) }
                     }
                 }
             }
@@ -335,38 +339,36 @@ fun SettingsScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Mode Shizuku (Lanjutan)", style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.settings_shizuku_section_title), style = MaterialTheme.typography.titleMedium)
                         TactileSwitch(checked = useShizuku, onCheckedChange = onUseShizukuChanged, accentColor = colors.primary)
                     }
                     Text(
-                        "Pakai izin privileged dari aplikasi Shizuku (bukan SAF) untuk menulis ke folder " +
-                            "tujuan kustom -- termasuk lokasi yang biasanya diblokir Scoped Storage. Butuh " +
-                            "aplikasi Shizuku terpasang & jalan (root ATAU wireless debugging/adb) di HP kamu.",
+                        stringResource(R.string.settings_shizuku_section_desc),
                         style = MaterialTheme.typography.bodySmall
                     )
 
                     val (statusLabel, statusColor) = when (shizukuStatus) {
-                        ShizukuManager.Status.READY -> "Siap digunakan" to colors.primary
-                        ShizukuManager.Status.BINDING -> "Menyambungkan..." to colors.tertiary
-                        ShizukuManager.Status.PERMISSION_DENIED -> "Izin belum diberikan" to colors.error
-                        ShizukuManager.Status.NOT_RUNNING -> "Shizuku belum jalan / belum terpasang" to colors.error
-                        ShizukuManager.Status.NOT_INSTALLED -> "Status belum dicek" to colors.onSurfaceVariant
-                        ShizukuManager.Status.ERROR -> "Gagal menyambung ke Shizuku" to colors.error
+                        ShizukuManager.Status.READY -> stringResource(R.string.settings_shizuku_status_ready) to colors.primary
+                        ShizukuManager.Status.BINDING -> stringResource(R.string.settings_shizuku_status_binding) to colors.tertiary
+                        ShizukuManager.Status.PERMISSION_DENIED -> stringResource(R.string.settings_shizuku_status_permission_denied) to colors.error
+                        ShizukuManager.Status.NOT_RUNNING -> stringResource(R.string.settings_shizuku_status_not_running) to colors.error
+                        ShizukuManager.Status.NOT_INSTALLED -> stringResource(R.string.settings_shizuku_status_not_installed) to colors.onSurfaceVariant
+                        ShizukuManager.Status.ERROR -> stringResource(R.string.settings_shizuku_status_error) to colors.error
                     }
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Status: $statusLabel", style = MaterialTheme.typography.bodySmall, color = statusColor)
+                        Text(stringResource(R.string.settings_shizuku_status_fmt, statusLabel), style = MaterialTheme.typography.bodySmall, color = statusColor)
                     }
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         if (shizukuStatus != ShizukuManager.Status.READY) {
                             OutlinedButton(
                                 onClick = onRequestShizukuPermission,
                                 colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primary)
-                            ) { Text("Minta Izin Shizuku") }
+                            ) { Text(stringResource(R.string.settings_shizuku_request_permission)) }
                         }
                         OutlinedButton(
                             onClick = onRefreshShizukuStatus,
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.onSurfaceVariant)
-                        ) { Text("Cek Ulang Status") }
+                        ) { Text(stringResource(R.string.settings_shizuku_recheck_status)) }
                     }
 
                     if (useShizuku) {
@@ -377,42 +379,36 @@ fun SettingsScreen(
                         // dibuat otomatis (lihat FileSorter.scanAndSortViaShizuku,
                         // yang MENOLAK scan kalau root belum ada, bukan
                         // membuatnya diam-diam).
-                        WarningBanner(
-                            "Path folder di bawah HARUS SUDAH ADA secara fisik di storage -- aplikasi ini " +
-                                "TIDAK PERNAH membuat folder root itu sendiri lewat Shizuku. Buat dulu " +
-                                "foldernya sendiri lewat file manager (contoh: /storage/emulated/0/PromptVaultShizuku), " +
-                                "baru isi path yang PERSIS SAMA di sini. Kalau folder belum ada, scan akan " +
-                                "GAGAL dengan pesan error, bukan membuatkan foldernya."
-                        )
+                        WarningBanner(stringResource(R.string.settings_shizuku_path_warning))
                         var pathText by remember(shizukuDestPath) { mutableStateOf(shizukuDestPath.orEmpty()) }
                         OutlinedTextField(
                             value = pathText,
                             onValueChange = { pathText = it },
-                            label = { Text("Path absolut folder tujuan") },
-                            placeholder = { Text("/storage/emulated/0/NamaFolderKamu") },
+                            label = { Text(stringResource(R.string.settings_shizuku_path_label)) },
+                            placeholder = { Text(stringResource(R.string.settings_shizuku_path_placeholder)) },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth()
                         )
                         OutlinedButton(
                             onClick = { onShizukuDestPathChanged(pathText) },
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primary)
-                        ) { Text("Simpan Path") }
+                        ) { Text(stringResource(R.string.settings_shizuku_save_path)) }
                     }
                 }
             }
 
             VaultCard(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Backup / Export Rule", style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.settings_backup_section_title), style = MaterialTheme.typography.titleMedium)
                     Text(
-                        "Simpan semua rule kamu sebagai teks, biar bisa dipulihkan lagi kalau app di-uninstall.",
+                        stringResource(R.string.settings_backup_section_desc),
                         style = MaterialTheme.typography.bodySmall
                     )
                     OutlinedButton(
                         onClick = { scope.launch { exportedText = onExportRequested() } },
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primary)
                     ) {
-                        Text("Tampilkan JSON Export")
+                        Text(stringResource(R.string.settings_backup_show_export))
                     }
 
                     exportedText?.let { text ->
@@ -420,7 +416,7 @@ fun SettingsScreen(
                             value = text,
                             onValueChange = {},
                             readOnly = true,
-                            label = { Text("Salin teks ini untuk backup") },
+                            label = { Text(stringResource(R.string.settings_backup_export_field_label)) },
                             modifier = Modifier.fillMaxWidth()
                         )
                         // [Fix audit P2 #UI-12, 2026-08-15] Sebelumnya user harus
@@ -430,12 +426,13 @@ fun SettingsScreen(
                         OutlinedButton(
                             onClick = {
                                 clipboardManager.setText(AnnotatedString(text))
-                                scope.launch { snackbarHostState.showSnackbar("JSON disalin ke clipboard") }
+                                val copiedMsg = context.getString(R.string.settings_backup_copied_snackbar)
+                                scope.launch { snackbarHostState.showSnackbar(copiedMsg) }
                             },
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primary)
                         ) {
                             Icon(Icons.Filled.ContentCopy, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Text(" Salin JSON")
+                            Text(" " + stringResource(R.string.settings_backup_copy_json))
                         }
                     }
                 }
@@ -443,28 +440,28 @@ fun SettingsScreen(
 
             VaultCard(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Import Rule", style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.settings_import_section_title), style = MaterialTheme.typography.titleMedium)
                     Text(
-                        "Tempel teks hasil export dari perangkat lain atau backup sebelumnya.",
+                        stringResource(R.string.settings_import_section_desc),
                         style = MaterialTheme.typography.bodySmall
                     )
                     OutlinedTextField(
                         value = importText,
                         onValueChange = { importText = it },
-                        label = { Text("Tempel JSON hasil export di sini") },
+                        label = { Text(stringResource(R.string.settings_import_field_label)) },
                         modifier = Modifier.fillMaxWidth()
                     )
+                    val importInvalidMsg = stringResource(R.string.settings_import_invalid)
+                    val importEmptyMsg = stringResource(R.string.settings_import_empty)
                     Button(
                         onClick = {
                             onImportRequested(importText) { parseSuccess, count ->
                                 importResult = when {
-                                    !parseSuccess -> ImportResultUiState.Error(
-                                        "Format JSON tidak valid -- tidak ada rule yang diimpor."
+                                    !parseSuccess -> ImportResultUiState.Error(importInvalidMsg)
+                                    count == 0 -> ImportResultUiState.Warning(importEmptyMsg)
+                                    else -> ImportResultUiState.Success(
+                                        context.getString(R.string.settings_import_success_fmt, count)
                                     )
-                                    count == 0 -> ImportResultUiState.Warning(
-                                        "JSON valid, tapi tidak ada rule di dalamnya untuk diimpor."
-                                    )
-                                    else -> ImportResultUiState.Success("$count rule berhasil diimpor.")
                                 }
                                 // Kosongkan field HANYA kalau parse berhasil (biar user
                                 // bisa perbaiki teks yang salah tanpa ngetik ulang dari nol).
@@ -473,7 +470,7 @@ fun SettingsScreen(
                         },
                         enabled = importText.isNotBlank(),
                         colors = ButtonDefaults.buttonColors(containerColor = colors.primary, contentColor = colors.onPrimary)
-                    ) { Text("Import") }
+                    ) { Text(stringResource(R.string.settings_import_button)) }
                     importResult?.let { result ->
                         Text(
                             result.message,
@@ -498,10 +495,10 @@ fun SettingsScreen(
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Icon(Icons.Filled.SystemUpdate, contentDescription = null, tint = colors.primary)
-                        Text("Pembaruan Aplikasi", style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.settings_update_section_title), style = MaterialTheme.typography.titleMedium)
                     }
                     Text(
-                        "Cek versi terbaru PromptVault langsung dari GitHub Releases.",
+                        stringResource(R.string.settings_update_section_desc),
                         style = MaterialTheme.typography.bodySmall
                     )
 
@@ -511,44 +508,43 @@ fun SettingsScreen(
                                 onClick = onCheckForUpdate,
                                 colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primary),
                                 modifier = Modifier.fillMaxWidth()
-                            ) { Text("Cek Pembaruan") }
+                            ) { Text(stringResource(R.string.settings_update_check_button)) }
                         }
                         is UpdateCheckResult.Checking -> {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                                Text("Memeriksa rilis terbaru...", style = MaterialTheme.typography.bodySmall)
+                                Text(stringResource(R.string.settings_update_checking), style = MaterialTheme.typography.bodySmall)
                             }
                         }
                         is UpdateCheckResult.UpToDate -> {
                             Text(
-                                "Sudah versi terbaru (v${state.currentVersion}).",
+                                stringResource(R.string.settings_update_uptodate_fmt, state.currentVersion),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = colors.primary
                             )
                             OutlinedButton(onClick = onDismissUpdateCheck, modifier = Modifier.fillMaxWidth()) {
-                                Text("Tutup")
+                                Text(stringResource(R.string.settings_update_close))
                             }
                         }
                         is UpdateCheckResult.NoApkAsset -> {
                             Text(
-                                "Rilis v${state.latestVersion} tersedia, tapi belum ada APK terlampir. " +
-                                    "Coba lagi nanti atau buka halaman rilis.",
+                                stringResource(R.string.settings_update_no_apk_fmt, state.latestVersion),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = colors.tertiary
                             )
                             OutlinedButton(onClick = onDismissUpdateCheck, modifier = Modifier.fillMaxWidth()) {
-                                Text("Tutup")
+                                Text(stringResource(R.string.settings_update_close))
                             }
                         }
                         is UpdateCheckResult.Error -> {
                             Text(state.message, style = MaterialTheme.typography.bodySmall, color = colors.error)
                             OutlinedButton(onClick = onCheckForUpdate, modifier = Modifier.fillMaxWidth()) {
-                                Text("Coba Lagi")
+                                Text(stringResource(R.string.settings_update_retry))
                             }
                         }
                         is UpdateCheckResult.UpdateAvailable -> {
                             Text(
-                                "Versi baru tersedia: v${state.latestVersion} (saat ini v${state.currentVersion})",
+                                stringResource(R.string.settings_update_available_fmt, state.latestVersion, state.currentVersion),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = colors.primary
                             )
@@ -558,7 +554,7 @@ fun SettingsScreen(
                                         onClick = { onDownloadUpdate(state.asset) },
                                         colors = ButtonDefaults.buttonColors(containerColor = colors.primary, contentColor = colors.onPrimary),
                                         modifier = Modifier.fillMaxWidth()
-                                    ) { Text("Unduh & Pasang") }
+                                    ) { Text(stringResource(R.string.settings_update_download_install)) }
                                 }
                                 is DownloadState.Downloading -> {
                                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -567,10 +563,10 @@ fun SettingsScreen(
                                                 progress = { dl.percent / 100f },
                                                 modifier = Modifier.fillMaxWidth()
                                             )
-                                            Text("${dl.percent}% -- ${dl.bytesRead / 1024} KB", style = MaterialTheme.typography.bodySmall)
+                                            Text(stringResource(R.string.settings_update_progress_percent_fmt, dl.percent, dl.bytesRead / 1024), style = MaterialTheme.typography.bodySmall)
                                         } else {
                                             LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                                            Text("${dl.bytesRead / 1024} KB terunduh", style = MaterialTheme.typography.bodySmall)
+                                            Text(stringResource(R.string.settings_update_progress_bytes_fmt, dl.bytesRead / 1024), style = MaterialTheme.typography.bodySmall)
                                         }
                                     }
                                 }
@@ -579,14 +575,14 @@ fun SettingsScreen(
                                         onClick = { onInstallUpdate(dl.filePath) },
                                         colors = ButtonDefaults.buttonColors(containerColor = colors.primary, contentColor = colors.onPrimary),
                                         modifier = Modifier.fillMaxWidth()
-                                    ) { Text("Pasang Sekarang") }
+                                    ) { Text(stringResource(R.string.settings_update_install_now)) }
                                 }
                                 is DownloadState.Failed -> {
                                     Text(dl.message, style = MaterialTheme.typography.bodySmall, color = colors.error)
                                     OutlinedButton(
                                         onClick = { onDownloadUpdate(state.asset) },
                                         modifier = Modifier.fillMaxWidth()
-                                    ) { Text("Coba Unduh Lagi") }
+                                    ) { Text(stringResource(R.string.settings_update_retry_download)) }
                                 }
                             }
                         }

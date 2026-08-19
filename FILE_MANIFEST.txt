@@ -1,3 +1,6 @@
+# FILE_MANIFEST.txt -- PromptVault
+# Regenerasi otomatis dari isi disk aktual (find), v8.6.0, 2026-08-19
+
 .github/workflows/build.yml
 .gitignore
 CHANGELOG.md
