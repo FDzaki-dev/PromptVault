@@ -18,7 +18,7 @@
          GitHub Releases API + download APK. REQUEST_INSTALL_PACKAGES wajib
          sejak Android 8 utk memicu ACTION_VIEW instalasi APK dari luar Play
          Store (FileProvider content:// URI yang sudah ada, lihat provider
-         di bawah) -- tanpa ini dialog instal ditolak sistem. -->
+         di bawah); tanpa ini dialog instal ditolak sistem. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 

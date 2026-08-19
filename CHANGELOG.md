@@ -3,6 +3,16 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.5.0b (2026-08-19) — COMPILE-FIX: `"--"` di komentar `AndroidManifest.xml`
+
+CI run #108 FAILED: `SAXParseException: "--" is not permitted within comments`,
+baris 21 `AndroidManifest.xml` — komentar baru fitur in-app updater (poin
+INTERNET/REQUEST_INSTALL_PACKAGES) pakai `--` sebagai pemisah kalimat.
+Fix: ganti `--` jadi `;`, tidak ada perubahan logika/permission. Validasi:
+`xml.dom.minidom.parse` (0 pelanggaran) + `preflight_check.sh` 13/13 kategori
+PASS. versionCode/versionName TIDAK naik (tetap 98/8.5.0) — compile-fix murni.
+Belum diverifikasi CI hijau — cek run Actions berikutnya.
+
 ## v8.5.0 (2026-08-19) — FITUR BARU: In-app Updater ("Release Downloader Spec")
 
 Menutup gap audit rule preferensi: fitur auto-updater/downloader belum ada

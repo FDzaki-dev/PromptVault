@@ -3,6 +3,13 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
+## v8.5.0b COMPILE-FIX -- "--" di komentar XML AndroidManifest.xml (2026-08-19)
+- **Gejala**: user upload `build-failure-log-v8_5_0.zip`. `:app:processDebugMainManifest FAILED` -- `SAXParseException: The string "--" is not permitted within comments`, baris 21 `AndroidManifest.xml` (komentar baru fitur in-app updater v8.5.0, poin INTERNET/REQUEST_INSTALL_PACKAGES).
+- **KELAS BUG BERULANG** (4x sekarang: v2.6.0, v2.24.1, v7.0.0/Insiden non-fatal, sekarang v8.5.0) -- pelajaran permanen "jangan pakai `--` di komentar XML manapun" TIDAK otomatis dicek AI saat menulis komentar baru; `preflight_check.sh` kategori #10 (well-formedness XML) MENANGKAP ini dgn benar tapi HANYA setelah CI compile, karena kategori #10 butuh Gradle utk generate merged manifest -- gap-nya ada di titik PENULISAN komentar, bukan di preflight.
+- **Fix**: ganti `--` jadi `;` di komentar tersebut (baris 17-21), nol perubahan logika/permission. Divalidasi `xml.dom.minidom.parse` (0 pelanggaran) + `preflight_check.sh` kategori #10 penuh (13/13 kategori PASS).
+- **versionCode/versionName TIDAK naik** (tetap 98/8.5.0) -- ini compile-fix, bukan fitur baru, konsisten kebijakan CHANGELOG.
+- **Belum diverifikasi CI hijau** -- WAJIB dicek run Actions berikutnya (run #108 sebelumnya FAILED, ini fix untuk run berikutnya).
+
 ## STATUS PROJECT: v8.5.0 -- FITUR BARU: In-app Updater ("Release Downloader Spec") -- 2026-08-19
 - **Sumber**: gap ditemukan lewat audit rule preferensi user (bukan laporan
   bug/permintaan fitur baru terpisah) -- app SEBELUMNYA sama sekali TIDAK
