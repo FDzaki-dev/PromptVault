@@ -3,6 +3,40 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
+## v8.7.0 -- Roadmap Fase 1.3 batch 3/N: ekstraksi string `DiagnosticsScreen.kt` (2026-08-19)
+- Lanjut item roadmap Fase 1.3 (berjalan sejak v8.3.0): 25 string resource
+  baru (`diag_*`) menggantikan literal Kotlin di `DiagnosticsScreen.kt` --
+  MURNI ekstraksi, nilai teks tidak berubah.
+- **Pola berbeda dari `SettingsScreen.kt` (v8.6.0)**: `readWorkStatus()`
+  adalah top-level `private fun` non-composable dipanggil dari dalam
+  `LaunchedEffect` -- BUKAN callback lambda spt di v8.6.0, jadi
+  `context.getString()` TIDAK dipakai. Sebagai gantinya, 3 string
+  (`diag_status_none`/`diag_status_fmt`/`diag_status_error_fmt`) di-resolve
+  lewat `stringResource()` di badan `@Composable` (SEBELUM `LaunchedEffect`,
+  bukan di dalamnya -- `stringResource()` juga butuh scope composable, tidak
+  bisa dipanggil di dalam lambda suspend `LaunchedEffect`), lalu diteruskan
+  sbg parameter fungsi ke `readWorkStatus(context, noneText, statusFmt,
+  errorFmt)`. Pola ini lebih sederhana drpd `context.getString()` utk kasus
+  fungsi top-level yang dipanggil dari composable (bukan dari lambda callback
+  UI langsung) -- kandidat pola dipakai lagi kalau sisa layar Fase 1.3 py
+  fungsi serupa (fungsi pure/helper non-composable yg butuh string).
+- Fmt 3-parameter (`diag_crashlog_item_fmt`, nama file + tanggal + ukuran)
+  & fmt 3-parameter lain (`diag_status_fmt`, state + attempt + waktu cek)
+  divalidasi manual urutan `%1$s`/`%2$s`/`%3$d` cocok urutan argumen
+  `stringResource(id, arg1, arg2, arg3)`.
+- Import `com.elprompter.promptvault.R` ditambah (konsisten pola
+  `SettingsScreen.kt`) supaya referensi `R.string.diag_*` singkat, bukan
+  fully-qualified.
+- Preflight: 13/13 kategori PASS. `strings.xml` divalidasi
+  `xml.dom.minidom.parse` (0 pelanggaran) sebelum preflight -- 0 karakter
+  `--` ditambahkan (pelajaran v8.5.0b/v8.6.0, tidak terulang).
+- **Belum diverifikasi CI hijau** -- WAJIB dicek run Actions berikutnya
+  setelah push.
+- **Sisa Fase 1.3**: PanduanScreen, HomeScreen, OnboardingScreen,
+  ActivityLogScreen, SkippedFilesScreen, MainActivity (dialog izin/error) --
+  urutan bebas, independen satu sama lain.
+- versionCode 99->100, versionName 8.6.0->8.7.0.
+
 ## v8.6.0 -- Roadmap Fase 1.3 batch 2/N: ekstraksi string `SettingsScreen.kt` (2026-08-19)
 - **Konfirmasi**: v8.5.0c (fix `this@MainActivity`) sudah CI hijau (run #110,
   commit `161ca4d`, dikonfirmasi user via screenshot). Ditutup, tidak perlu

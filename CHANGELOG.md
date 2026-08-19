@@ -3,6 +3,28 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.7.0 (2026-08-19) — Roadmap Fase 1.3 (batch 3/N): ekstraksi string `DiagnosticsScreen.kt`
+
+Lanjutan item ketiga `ROADMAP.md` setelah `SettingsScreen.kt` (v8.6.0).
+Cakupan: `DiagnosticsScreen.kt` (25 string resource baru, prefix `diag_*`) —
+MURNI ekstraksi, nilai teks tetap sama persis, tidak ada perubahan perilaku.
+
+**Pola non-composable berbeda dari v8.6.0**: `readWorkStatus()` top-level
+`private fun` (dipanggil dari `LaunchedEffect`, bukan callback lambda UI) —
+3 string (none/fmt/error) di-resolve via `stringResource()` di badan
+composable SEBELUM `LaunchedEffect` dimulai, diteruskan sbg parameter
+fungsi biasa. Lebih sederhana dari `context.getString()` untuk kasus ini.
+
+Fmt 3-parameter (`diag_crashlog_item_fmt`, `diag_status_fmt`) divalidasi
+manual urutan `%1$s/%2$s/%3$d` cocok argumen `stringResource()`.
+
+Preflight: 13/13 kategori PASS. `strings.xml` divalidasi
+`xml.dom.minidom.parse` sebelum preflight — 0 pelanggaran, 0 `--` baru.
+versionCode 99→100, versionName 8.6.0→8.7.0.
+
+**Sisa Fase 1.3**: `PanduanScreen.kt`, `HomeScreen.kt`, `OnboardingScreen.kt`,
+`ActivityLogScreen.kt`, `SkippedFilesScreen.kt`, `MainActivity.kt`.
+
 ## v8.6.0 (2026-08-19) — Roadmap Fase 1.3 (batch 2/N): ekstraksi string `SettingsScreen.kt`
 
 Lanjutan item ketiga `ROADMAP.md` setelah cluster "Kelola Rule" (v8.3.0).

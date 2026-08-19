@@ -1,6 +1,7 @@
 package com.elprompter.promptvault.ui.screens
 
 import android.content.Context
+import com.elprompter.promptvault.R
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -30,6 +31,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
@@ -53,20 +55,27 @@ fun DiagnosticsScreen(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
-    var statusText by remember { mutableStateOf("Memuat status WorkManager…") }
+    var statusText by remember { mutableStateOf("") }
     var crashLogs by remember { mutableStateOf<List<CrashLogger.CrashLogEntry>>(emptyList()) }
     var selectedLog by remember { mutableStateOf<CrashLogger.CrashLogEntry?>(null) }
     var openedLogContent by remember { mutableStateOf<String?>(null) }
 
+    val loadingStatusText = stringResource(id = R.string.diag_loading_status)
+    val loadingLogText = stringResource(id = R.string.diag_loading_log)
+    val statusNoneText = stringResource(id = R.string.diag_status_none)
+    val statusFmt = stringResource(id = R.string.diag_status_fmt)
+    val statusErrorFmt = stringResource(id = R.string.diag_status_error_fmt)
+
     LaunchedEffect(Unit) {
-        statusText = readWorkStatus(context)
+        statusText = loadingStatusText
+        statusText = readWorkStatus(context, statusNoneText, statusFmt, statusErrorFmt)
         crashLogs = withContext(Dispatchers.IO) { CrashLogger.listLogs(context) }
     }
 
     LaunchedEffect(selectedLog) {
         val entry = selectedLog
         if (entry != null) {
-            openedLogContent = "Memuat…"
+            openedLogContent = loadingLogText
             openedLogContent = withContext(Dispatchers.IO) { CrashLogger.readLog(context, entry.uri) }
         }
     }
@@ -74,7 +83,7 @@ fun DiagnosticsScreen(
     if (selectedLog != null) {
         AlertDialog(
             onDismissRequest = { selectedLog = null; openedLogContent = null },
-            confirmButton = { TextButton(onClick = { selectedLog = null; openedLogContent = null }) { Text("Tutup") } },
+            confirmButton = { TextButton(onClick = { selectedLog = null; openedLogContent = null }) { Text(stringResource(id = R.string.diag_dialog_close)) } },
             title = { Text(selectedLog?.displayName ?: "", style = MaterialTheme.typography.titleSmall) },
             text = {
                 Column(modifier = Modifier.heightIn(max = 400.dp).verticalScroll(rememberScrollState())) {
@@ -85,7 +94,7 @@ fun DiagnosticsScreen(
     }
 
     androidx.compose.material3.Scaffold(
-        topBar = { com.elprompter.promptvault.ui.components.VaultTopBar(title = "Diagnostik", onBack = onBack) }
+        topBar = { com.elprompter.promptvault.ui.components.VaultTopBar(title = stringResource(id = R.string.diag_title), onBack = onBack) }
     ) { padding ->
     Column(
         modifier = Modifier
@@ -96,27 +105,25 @@ fun DiagnosticsScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(
-            "Gunakan halaman ini untuk memverifikasi sendiri di HP bahwa auto-sort " +
-                "benar-benar terjadwal, termasuk setelah restart perangkat.",
+            stringResource(id = R.string.diag_intro),
             style = MaterialTheme.typography.bodyMedium
         )
 
         VaultCard(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("Nama File Asli di Downloads", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(id = R.string.diag_downloads_title), style = MaterialTheme.typography.titleMedium)
                 Text(
-                    "Bandingkan langsung dengan pattern rule kamu. Kalau tidak persis sama " +
-                        "(termasuk spasi/underscore/ekstensi), rule tidak akan cocok.",
+                    stringResource(id = R.string.diag_downloads_desc),
                     style = MaterialTheme.typography.bodySmall
                 )
                 if (downloadsFileNames.isEmpty()) {
-                    Text("Tidak ada file di Downloads saat ini.", style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(id = R.string.diag_downloads_empty), style = MaterialTheme.typography.bodySmall)
                 } else {
                     downloadsFileNames.take(20).forEach { name ->
-                        Text("• $name", style = MaterialTheme.typography.bodySmall)
+                        Text(stringResource(id = R.string.diag_downloads_item_fmt, name), style = MaterialTheme.typography.bodySmall)
                     }
                     if (downloadsFileNames.size > 20) {
-                        Text("+ ${downloadsFileNames.size - 20} file lainnya", style = MaterialTheme.typography.labelSmall)
+                        Text(stringResource(id = R.string.diag_downloads_more_fmt, downloadsFileNames.size - 20), style = MaterialTheme.typography.labelSmall)
                     }
                 }
             }
@@ -124,21 +131,20 @@ fun DiagnosticsScreen(
 
         VaultCard(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("Status Auto-Sort Worker", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(id = R.string.diag_worker_status_title), style = MaterialTheme.typography.titleMedium)
                 Text(statusText, style = MaterialTheme.typography.bodyMedium)
             }
         }
 
         VaultCard(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Crash Log (${crashLogs.size})", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(id = R.string.diag_crashlog_title_fmt, crashLogs.size), style = MaterialTheme.typography.titleMedium)
                 Text(
-                    "Tersimpan di Documents/PromptVault/logs/. Ketuk salah satu untuk baca isi lengkap " +
-                        "sebelum minta Logcat/ADB.",
+                    stringResource(id = R.string.diag_crashlog_desc),
                     style = MaterialTheme.typography.bodySmall
                 )
                 if (crashLogs.isEmpty()) {
-                    Text("Belum ada crash tercatat. Bagus.", style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(id = R.string.diag_crashlog_empty), style = MaterialTheme.typography.bodySmall)
                 } else {
                     val fmt = remember { SimpleDateFormat("dd MMM yyyy HH:mm", Locale("id", "ID")) }
                     // UI-08 & UI-15 fix: sebelumnya clickable dipasang langsung
@@ -157,7 +163,12 @@ fun DiagnosticsScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                "${entry.displayName} — ${fmt.format(Date(entry.dateAddedEpochSeconds * 1000))} (${entry.sizeBytes} B)",
+                                stringResource(
+                                    id = R.string.diag_crashlog_item_fmt,
+                                    entry.displayName,
+                                    fmt.format(Date(entry.dateAddedEpochSeconds * 1000)),
+                                    entry.sizeBytes
+                                ),
                                 style = MaterialTheme.typography.bodySmall,
                                 modifier = Modifier.weight(1f)
                             )
@@ -170,7 +181,7 @@ fun DiagnosticsScreen(
                         }
                     }
                     if (crashLogs.size > 10) {
-                        Text("+ ${crashLogs.size - 10} log lainnya (lihat file manager)", style = MaterialTheme.typography.labelSmall)
+                        Text(stringResource(id = R.string.diag_crashlog_more_fmt, crashLogs.size - 10), style = MaterialTheme.typography.labelSmall)
                     }
                 }
             }
@@ -178,12 +189,12 @@ fun DiagnosticsScreen(
 
         VaultCard(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("Cara verifikasi manual", style = MaterialTheme.typography.titleMedium)
-                Text("1. Buat rule, taruh file contoh (ekstensi apa saja) di Downloads.")
-                Text("2. Tekan \"Scan Sekarang\" di Home, cek file benar-benar pindah.")
-                Text("3. Restart HP, jangan buka app secara manual.")
-                Text("4. Tunggu sesuai interval, lalu cek lagi apakah file baru ikut terpindah.")
-                Text("5. Jika status di atas tetap \"ENQUEUED\"/\"RUNNING\" setelah restart, auto-sort survive reboot.")
+                Text(stringResource(id = R.string.diag_manual_verify_title), style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(id = R.string.diag_manual_step1))
+                Text(stringResource(id = R.string.diag_manual_step2))
+                Text(stringResource(id = R.string.diag_manual_step3))
+                Text(stringResource(id = R.string.diag_manual_step4))
+                Text(stringResource(id = R.string.diag_manual_step5))
             }
         }
 
@@ -191,19 +202,24 @@ fun DiagnosticsScreen(
     }
 }
 
-private fun readWorkStatus(context: Context): String {
+private fun readWorkStatus(
+    context: Context,
+    noneText: String,
+    statusFmt: String,
+    errorFmt: String
+): String {
     return try {
         val infos = WorkManager.getInstance(context)
             .getWorkInfosForUniqueWork(AutoSortWorker.WORK_NAME)
             .get()
         if (infos.isNullOrEmpty()) {
-            "Belum ada jadwal ditemukan. Buka Home sekali agar worker terdaftar."
+            noneText
         } else {
             val info: WorkInfo = infos.first()
             val fmt = SimpleDateFormat("dd MMM yyyy HH:mm", Locale("id", "ID"))
-            "State: ${info.state}\nRun attempt: ${info.runAttemptCount}\nDicek pada: ${fmt.format(Date())}"
+            String.format(statusFmt, info.state, info.runAttemptCount, fmt.format(Date()))
         }
     } catch (e: Exception) {
-        "Gagal membaca status: ${e.message}"
+        String.format(errorFmt, e.message)
     }
 }
