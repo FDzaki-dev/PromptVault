@@ -3,6 +3,25 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.8.0 (2026-08-19) — Roadmap Fase 1.3 (batch 4/N): ekstraksi string `PanduanScreen.kt`
+
+18 string resource baru (`pandu_*`) menggantikan literal Kotlin di
+`PanduanScreen.kt` — MURNI ekstraksi, nilai teks tetap sama persis.
+
+Beda karakter dari batch lain (dicatat sejak v8.3.0: paragraf besar,
+batch tersendiri) — 100% dalam scope `@Composable`, tanpa fungsi
+non-composable/callback, jadi pola paling sederhana sejauh ini:
+`stringResource(R.string.pandu_*)` langsung di parameter.
+
+XML entity escaping: `<nama rule>` → `&lt;nama rule&gt;`, 4 titik `&` →
+`&amp;` (preseden `settings_shizuku_section_desc`). Divalidasi
+`xml.dom.minidom.parse` sebelum preflight — 0 pelanggaran.
+
+Preflight: 13/13 kategori PASS. versionCode 100→101, versionName 8.7.0→8.8.0.
+
+**Sisa Fase 1.3**: `HomeScreen.kt`, `OnboardingScreen.kt`,
+`ActivityLogScreen.kt`, `SkippedFilesScreen.kt`, `MainActivity.kt`.
+
 ## v8.7.0 (2026-08-19) — Roadmap Fase 1.3 (batch 3/N): ekstraksi string `DiagnosticsScreen.kt`
 
 Lanjutan item ketiga `ROADMAP.md` setelah `SettingsScreen.kt` (v8.6.0).

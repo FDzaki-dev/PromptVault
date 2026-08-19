@@ -3,6 +3,29 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
+## v8.8.0 -- Roadmap Fase 1.3 batch 4/N: ekstraksi string `PanduanScreen.kt` (2026-08-19)
+- Lanjut item roadmap Fase 1.3: 18 string resource baru (`pandu_*`)
+  menggantikan literal Kotlin di `PanduanScreen.kt` -- MURNI ekstraksi,
+  nilai teks tidak berubah.
+- **Beda karakter dari batch lain** (sesuai catatan v8.3.0: "9 PARAGRAF
+  BESAR, pertimbangkan batch tersendiri") -- semua 100% dalam scope
+  `@Composable` (title layar, 1 intro, 7 title+body section, 1
+  `WarningBanner`, 1 footer), TIDAK ada fungsi non-composable/callback --
+  jadi pola paling sederhana dari seluruh Fase 1.3 sejauh ini, murni
+  `stringResource(R.string.pandu_*)` langsung di parameter.
+- **XML entity escaping**: body section 3 mengandung literal `<nama rule>`
+  -> di-escape `&lt;nama rule&gt;` (bukan sekadar hapus tanda kurung siku,
+  makna placeholder dipertahankan persis). 4 titik `&` (section 3/5/6, 2x
+  di section 6) -> `&amp;`, preseden sudah ada di `settings_shizuku_section_desc`
+  sebelumnya. Divalidasi `xml.dom.minidom.parse` (0 pelanggaran) SEBELUM
+  preflight, bukan sesudah.
+- Preflight: 13/13 kategori PASS.
+- **Belum diverifikasi CI hijau** -- WAJIB dicek run Actions berikutnya
+  setelah push.
+- **Sisa Fase 1.3**: HomeScreen, OnboardingScreen, ActivityLogScreen,
+  SkippedFilesScreen, MainActivity (dialog izin/error) -- urutan bebas.
+- versionCode 100->101, versionName 8.7.0->8.8.0.
+
 ## v8.7.0 -- Roadmap Fase 1.3 batch 3/N: ekstraksi string `DiagnosticsScreen.kt` (2026-08-19)
 - Lanjut item roadmap Fase 1.3 (berjalan sejak v8.3.0): 25 string resource
   baru (`diag_*`) menggantikan literal Kotlin di `DiagnosticsScreen.kt` --
