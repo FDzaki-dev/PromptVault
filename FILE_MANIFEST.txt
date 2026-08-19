@@ -15,6 +15,7 @@ app/src/main/java/com/elprompter/promptvault/MainActivity.kt
 app/src/main/java/com/elprompter/promptvault/PromptVaultApp.kt
 app/src/main/java/com/elprompter/promptvault/data/ActivityLogEntry.kt
 app/src/main/java/com/elprompter/promptvault/data/ActivityLogRepository.kt
+app/src/main/java/com/elprompter/promptvault/data/BackupManager.kt
 app/src/main/java/com/elprompter/promptvault/data/DataStoreProvider.kt
 app/src/main/java/com/elprompter/promptvault/data/LegacyDataMigration.kt
 app/src/main/java/com/elprompter/promptvault/data/MoveHistoryEntry.kt
@@ -58,6 +59,8 @@ app/src/main/java/com/elprompter/promptvault/ui/theme/Shapes.kt
 app/src/main/java/com/elprompter/promptvault/ui/theme/TactileTokens.kt
 app/src/main/java/com/elprompter/promptvault/ui/theme/Theme.kt
 app/src/main/java/com/elprompter/promptvault/ui/theme/Type.kt
+app/src/main/java/com/elprompter/promptvault/update/UpdateModels.kt
+app/src/main/java/com/elprompter/promptvault/update/UpdateRepository.kt
 app/src/main/java/com/elprompter/promptvault/util/CrashLogger.kt
 app/src/main/java/com/elprompter/promptvault/util/FileSorter.kt
 app/src/main/java/com/elprompter/promptvault/util/GlobMatcher.kt

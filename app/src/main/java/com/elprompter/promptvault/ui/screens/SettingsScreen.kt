@@ -15,12 +15,15 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.HelpOutline
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -45,6 +48,9 @@ import com.elprompter.promptvault.data.ConflictStrategy
 import com.elprompter.promptvault.data.SettingsRepository
 import com.elprompter.promptvault.shizuku.ShizukuManager
 import com.elprompter.promptvault.ui.MainViewModel
+import com.elprompter.promptvault.update.DownloadState
+import com.elprompter.promptvault.update.GithubAssetDto
+import com.elprompter.promptvault.update.UpdateCheckResult
 import com.elprompter.promptvault.ui.components.TactileSwitch
 import com.elprompter.promptvault.ui.components.VaultActionSheet
 import com.elprompter.promptvault.ui.components.VaultCard
@@ -90,6 +96,13 @@ fun SettingsScreen(
     // saat setup awal (SAF/Shizuku/konflik/interval), konteks paling wajar
     // utk menawarkan "baca panduan lengkap" tanpa harus balik ke Home dulu.
     onOpenPanduan: () -> Unit,
+    // [Fitur baru 2026-08-19, Release Downloader Spec] In-app updater.
+    updateCheckState: UpdateCheckResult?,
+    downloadState: DownloadState,
+    onCheckForUpdate: () -> Unit,
+    onDismissUpdateCheck: () -> Unit,
+    onDownloadUpdate: (GithubAssetDto) -> Unit,
+    onInstallUpdate: (String) -> Unit,
     onBack: () -> Unit
 ) {
     var exportedText by remember { mutableStateOf<String?>(null) }
@@ -471,6 +484,112 @@ fun SettingsScreen(
                                 is ImportResultUiState.Error -> colors.error
                             }
                         )
+                    }
+                }
+            }
+
+            // [Fitur baru 2026-08-19, Release Downloader Spec] Kartu updater --
+            // cek rilis terbaru GitHub + download APK streaming + trigger
+            // instal, lihat UpdateRepository.kt utk implementasi lengkap
+            // sesuai spec (Okio sink, timeout 15s/20s, followRedirects, header
+            // Authorization/Accept). Ditaruh PALING BAWAH (bukan urusan
+            // rutin sehari-hari spt interval/konflik di atas).
+            VaultCard(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Icon(Icons.Filled.SystemUpdate, contentDescription = null, tint = colors.primary)
+                        Text("Pembaruan Aplikasi", style = MaterialTheme.typography.titleMedium)
+                    }
+                    Text(
+                        "Cek versi terbaru PromptVault langsung dari GitHub Releases.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+
+                    when (val state = updateCheckState) {
+                        null -> {
+                            OutlinedButton(
+                                onClick = onCheckForUpdate,
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primary),
+                                modifier = Modifier.fillMaxWidth()
+                            ) { Text("Cek Pembaruan") }
+                        }
+                        is UpdateCheckResult.Checking -> {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                                Text("Memeriksa rilis terbaru...", style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                        is UpdateCheckResult.UpToDate -> {
+                            Text(
+                                "Sudah versi terbaru (v${state.currentVersion}).",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = colors.primary
+                            )
+                            OutlinedButton(onClick = onDismissUpdateCheck, modifier = Modifier.fillMaxWidth()) {
+                                Text("Tutup")
+                            }
+                        }
+                        is UpdateCheckResult.NoApkAsset -> {
+                            Text(
+                                "Rilis v${state.latestVersion} tersedia, tapi belum ada APK terlampir. " +
+                                    "Coba lagi nanti atau buka halaman rilis.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = colors.tertiary
+                            )
+                            OutlinedButton(onClick = onDismissUpdateCheck, modifier = Modifier.fillMaxWidth()) {
+                                Text("Tutup")
+                            }
+                        }
+                        is UpdateCheckResult.Error -> {
+                            Text(state.message, style = MaterialTheme.typography.bodySmall, color = colors.error)
+                            OutlinedButton(onClick = onCheckForUpdate, modifier = Modifier.fillMaxWidth()) {
+                                Text("Coba Lagi")
+                            }
+                        }
+                        is UpdateCheckResult.UpdateAvailable -> {
+                            Text(
+                                "Versi baru tersedia: v${state.latestVersion} (saat ini v${state.currentVersion})",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = colors.primary
+                            )
+                            when (val dl = downloadState) {
+                                is DownloadState.Idle -> {
+                                    Button(
+                                        onClick = { onDownloadUpdate(state.asset) },
+                                        colors = ButtonDefaults.buttonColors(containerColor = colors.primary, contentColor = colors.onPrimary),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) { Text("Unduh & Pasang") }
+                                }
+                                is DownloadState.Downloading -> {
+                                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        if (dl.percent in 0..100) {
+                                            LinearProgressIndicator(
+                                                progress = { dl.percent / 100f },
+                                                modifier = Modifier.fillMaxWidth()
+                                            )
+                                            Text("${dl.percent}% -- ${dl.bytesRead / 1024} KB", style = MaterialTheme.typography.bodySmall)
+                                        } else {
+                                            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                                            Text("${dl.bytesRead / 1024} KB terunduh", style = MaterialTheme.typography.bodySmall)
+                                        }
+                                    }
+                                }
+                                is DownloadState.Completed -> {
+                                    Button(
+                                        onClick = { onInstallUpdate(dl.filePath) },
+                                        colors = ButtonDefaults.buttonColors(containerColor = colors.primary, contentColor = colors.onPrimary),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) { Text("Pasang Sekarang") }
+                                }
+                                is DownloadState.Failed -> {
+                                    Text(dl.message, style = MaterialTheme.typography.bodySmall, color = colors.error)
+                                    OutlinedButton(
+                                        onClick = { onDownloadUpdate(state.asset) },
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) { Text("Coba Unduh Lagi") }
+                                }
+                            }
+                        }
                     }
                 }
             }

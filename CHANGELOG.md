@@ -3,6 +3,44 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.5.0 (2026-08-19) — FITUR BARU: In-app Updater ("Release Downloader Spec")
+
+Menutup gap audit rule preferensi: fitur auto-updater/downloader belum ada
+sama sekali sebelumnya. Ditambahkan sesuai spesifikasi wajib proyek —
+streaming chunk-by-chunk ke disk (Okio sink, BUKAN `readBytes()` penuh ke
+RAM), timeout eksplisit (connect 15s, read 20s), `followRedirects(true)`
+(asset GitHub Release selalu redirect 302 ke CDN S3), header
+`Authorization: Bearer <token>` (opsional, repo publik) + `Accept:
+application/octet-stream` saat request biner.
+
+**Alur**: `UpdateRepository.checkLatestRelease()` — `GET
+/repos/FDzaki-dev/PromptVault/releases/latest` (GitHub API), bandingkan
+`tag_name` vs versionName terpasang (parsing numerik per-segmen, bukan
+string compare polos — "8.10.0" > "8.9.0" ditangani benar), cari asset
+pertama berakhiran `.apk`. `downloadApk()` — download ke
+`cacheDir/updates/` via file sementara `.part` (baru di-rename ke final
+SETELAH sukses penuh, gagal di tengah jalan tidak meninggalkan APK
+"valid" palsu), progres dipancarkan tiap chunk 8 KB via callback.
+
+**UI**: kartu baru "Pembaruan Aplikasi" di `SettingsScreen` — cek versi,
+progress bar unduhan (determinate kalau server kirim Content-Length,
+indeterminate kalau tidak), tombol "Pasang Sekarang" memicu dialog
+installer sistem lewat `FileProvider` yang sudah dideklarasikan di
+manifest sejak awal tapi belum ada pemakai nyata.
+
+**Manifest**: tambah `INTERNET` (wajib utk network call) dan
+`REQUEST_INSTALL_PACKAGES` (wajib Android 8+ utk memicu instal APK dari
+luar Play Store).
+
+**Versi**: 8.4.0 (97) → 8.5.0 (98). File baru: `update/UpdateModels.kt`,
+`update/UpdateRepository.kt`. Bukan regresi — nol perubahan behavior utk
+user yang tidak membuka kartu baru ini.
+
+**Housekeeping terpisah, batch sama**: `FILE_MANIFEST.txt` diregenerasi
+penuh dari isi disk sebenarnya — memperbaiki desync lama (`data/
+BackupManager.kt` sempat tidak tercatat di manifest, ditemukan lewat audit
+rule preferensi, BUKAN perubahan kode/fungsi apapun pada file itu sendiri).
+
 ## v8.4.0 (2026-08-18) — FITUR BARU: "Selamatkan Uninstall" — deteksi & restore config lama dari folder tujuan kustom SAF
 
 Permintaan eksplisit user: kalau app tidak sengaja ter-uninstall lalu

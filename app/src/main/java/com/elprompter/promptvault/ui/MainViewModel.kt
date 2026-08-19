@@ -16,6 +16,10 @@ import com.elprompter.promptvault.data.RuleRepository
 import com.elprompter.promptvault.data.SaveRuleCheck
 import com.elprompter.promptvault.data.SettingsRepository
 import com.elprompter.promptvault.shizuku.ShizukuManager
+import com.elprompter.promptvault.update.DownloadState
+import com.elprompter.promptvault.update.GithubAssetDto
+import com.elprompter.promptvault.update.UpdateCheckResult
+import com.elprompter.promptvault.update.UpdateRepository
 import com.elprompter.promptvault.util.FileSorter
 import com.elprompter.promptvault.util.PatternPreviewResult
 import com.elprompter.promptvault.util.SkippedFileInfo
@@ -36,6 +40,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val moveHistoryRepository = MoveHistoryRepository(application)
     private val settingsRepository = SettingsRepository(application)
     private val fileSorter = FileSorter(application, ruleRepository, activityLogRepository, moveHistoryRepository, settingsRepository)
+    private val updateRepository = UpdateRepository(application)
 
     val rules: StateFlow<List<Rule>> = ruleRepository.rulesFlow
         .let { flow ->
@@ -479,4 +484,51 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     /** Nama file asli (semua ekstensi, sejak fix 2026-08-13) di Downloads, untuk layar Diagnostik. */
     fun listDownloadsFileNames(): List<String> = fileSorter.listDownloadsCandidateFileNames()
+
+    // [Fitur baru 2026-08-19, Release Downloader Spec] In-app updater --
+    // cek rilis terbaru GitHub + download APK streaming, lihat
+    // update/UpdateRepository.kt untuk implementasi lengkap sesuai spec
+    // (Okio sink, timeout 15s/20s, followRedirects, header Authorization/
+    // Accept). State di sini murni pass-through hasil repository ke UI
+    // (SettingsScreen), pola sama dengan StateFlow lain di file ini.
+
+    private val _updateCheckState = MutableStateFlow<UpdateCheckResult?>(null)
+    val updateCheckState: StateFlow<UpdateCheckResult?> = _updateCheckState.asStateFlow()
+
+    private val _downloadState = MutableStateFlow<DownloadState>(DownloadState.Idle)
+    val downloadState: StateFlow<DownloadState> = _downloadState.asStateFlow()
+
+    /** Versi terpasang saat ini, dibaca dari PackageManager -- pola sama dgn [CrashLogger.writeCrashLog]
+     * (bukan BuildConfig.VERSION_NAME, karena `buildFeatures.buildConfig` sengaja tidak diaktifkan). */
+    private fun currentVersionName(): String = try {
+        val app = getApplication<Application>()
+        app.packageManager.getPackageInfo(app.packageName, 0).versionName ?: "0.0.0"
+    } catch (_: Exception) {
+        "0.0.0"
+    }
+
+    fun checkForUpdate() {
+        viewModelScope.launch {
+            _updateCheckState.value = UpdateCheckResult.Checking
+            _updateCheckState.value = updateRepository.checkLatestRelease(currentVersionName())
+        }
+    }
+
+    /** Reset state pengecekan (mis. saat user menutup kartu hasil "sudah versi terbaru"/error). */
+    fun dismissUpdateCheck() {
+        _updateCheckState.value = null
+    }
+
+    fun downloadUpdate(asset: GithubAssetDto) {
+        viewModelScope.launch {
+            _downloadState.value = DownloadState.Downloading(0L, 0L)
+            _downloadState.value = updateRepository.downloadApk(asset) { progress ->
+                _downloadState.value = progress
+            }
+        }
+    }
+
+    fun resetDownloadState() {
+        _downloadState.value = DownloadState.Idle
+    }
 }

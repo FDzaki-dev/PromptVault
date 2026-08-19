@@ -3,6 +3,46 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
+## STATUS PROJECT: v8.5.0 -- FITUR BARU: In-app Updater ("Release Downloader Spec") -- 2026-08-19
+- **Sumber**: gap ditemukan lewat audit rule preferensi user (bukan laporan
+  bug/permintaan fitur baru terpisah) -- app SEBELUMNYA sama sekali TIDAK
+  punya cara update selain reinstall manual APK dari GitHub Releases.
+- **Implementasi** (BARU, package `update/`): `UpdateRepository.kt` --
+  `checkLatestRelease()` panggil GitHub API `releases/latest`, parsing versi
+  numerik per-segmen (bukan string compare polos, "8.10.0" > "8.9.0" benar);
+  `downloadApk()` streaming chunk-by-chunk (Okio `BufferedSource.read(Buffer,
+  Long)` -> `BufferedSink.write`) ke `cacheDir/updates/` via file `.part`
+  sementara, timeout connect 15s/read 20s, `followRedirects(true)` (asset
+  binary GitHub SELALU redirect 302 ke CDN). **TIDAK PERNAH** panggil
+  `body.bytes()`/`readBytes()` -- itu akan memuat seluruh APK ke RAM, persis
+  yang dilarang spesifikasi proyek.
+- **UI**: kartu "Pembaruan Aplikasi" di `SettingsScreen.kt` (state dari
+  `MainViewModel.updateCheckState`/`downloadState`, StateFlow biasa, pola
+  sama dgn state lain di file itu) -- cek versi, progress bar, tombol Pasang
+  yang trigger `installApk()` (BARU, top-level fun di `MainActivity.kt`)
+  via `FileProvider` yang SUDAH dideklarasikan di manifest sejak lama tapi
+  baru sekarang ada pemakainya.
+- **Manifest**: tambah permission `INTERNET` + `REQUEST_INSTALL_PACKAGES`.
+- **Dependency baru**: `okhttp:4.12.0`, `okio:3.9.0` (eksplisit, dipakai
+  langsung -- bukan cuma transitif diam-diam).
+- **Repo target hardcode**: `FDzaki-dev/PromptVault` (sesuai README.md,
+  "Repo publik"). Kalau repo pernah dipindah/rename, konstanta `OWNER`/`REPO`
+  di `UpdateRepository.kt` WAJIB ikut diupdate manual -- TIDAK ada mekanisme
+  auto-detect.
+- **Token GitHub PAT**: didukung opsional lewat parameter `githubToken` di
+  kedua fungsi repository, TAPI **belum ada UI input token di Pengaturan**
+  (belum dibutuhkan -- repo publik, rate-limit 60/jam cukup utk cek manual
+  sesekali). Kalau nanti user sering dapat error rate-limit, ini titik
+  ekstensi yang sudah siap, bukan re-desain dari nol.
+- **Housekeeping terpisah, batch sama**: `FILE_MANIFEST.txt` diregenerasi
+  penuh dari isi disk (`find` aktual, bukan ditulis manual) -- memperbaiki
+  desync lama (`data/BackupManager.kt` sempat tidak tercatat, ditemukan
+  lewat audit yang sama). Total file naik dari 93 (dgn 1 desync) jadi 95
+  (95 tercatat SEMUA cocok isi disk, termasuk `FILE_MANIFEST.txt` itu
+  sendiri) -- 2 file baru (`update/UpdateModels.kt`, `update/
+  UpdateRepository.kt`), fix 1 file lama yang sebelumnya tidak tercatat.
+- **Versi**: 8.4.0 (code 97) -> 8.5.0 (code 98).
+
 ## FIX CI: GitHub Releases page nempel di versi lama walau build sukses -- 2026-08-18
 - **Gejala user**: Actions run hijau semua (Artifact selalu ada), tapi tab
   Releases repo nunjuk versi LAMA sebagai "Latest".

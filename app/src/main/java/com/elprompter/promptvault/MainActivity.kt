@@ -54,6 +54,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
@@ -81,6 +82,7 @@ import com.elprompter.promptvault.ui.theme.AppBackground
 import com.elprompter.promptvault.ui.theme.PromptVaultTheme
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import java.io.File
 
 private val onboardingDoneKey = booleanPreferencesKey("onboarding_done")
 private val notificationPermissionAskedKey = booleanPreferencesKey("notification_permission_asked")
@@ -379,6 +381,9 @@ private fun PromptVaultRoot(
             val shizukuStatus by viewModel.shizukuStatus.collectAsStateWithLifecycle()
             val shizukuDestPath by viewModel.shizukuDestPath.collectAsStateWithLifecycle()
             val useShizuku by viewModel.useShizuku.collectAsStateWithLifecycle()
+            // [Fitur baru 2026-08-19, Release Downloader Spec]
+            val updateCheckState by viewModel.updateCheckState.collectAsStateWithLifecycle()
+            val downloadState by viewModel.downloadState.collectAsStateWithLifecycle()
             SettingsScreen(
                 currentIntervalMinutes = interval,
                 onIntervalSelected = { viewModel.setIntervalMinutes(it) },
@@ -403,6 +408,12 @@ private fun PromptVaultRoot(
                 onRequestShizukuPermission = { viewModel.requestShizukuPermission() },
                 onRefreshShizukuStatus = { viewModel.refreshShizukuStatus() },
                 onOpenPanduan = { navController.navigate(Routes.PANDUAN) },
+                updateCheckState = updateCheckState,
+                downloadState = downloadState,
+                onCheckForUpdate = { viewModel.checkForUpdate() },
+                onDismissUpdateCheck = { viewModel.dismissUpdateCheck() },
+                onDownloadUpdate = { asset -> viewModel.downloadUpdate(asset) },
+                onInstallUpdate = { filePath -> installApk(this@MainActivity, filePath) },
                 onBack = { navController.popBackStack() }
             )
         }
@@ -512,4 +523,25 @@ private fun hasManageStoragePermission(context: Context): Boolean {
         }
         readGranted && writeGranted
     }
+}
+
+/**
+ * [Fitur baru 2026-08-19, Release Downloader Spec] Picu instalasi APK yang
+ * sudah selesai diunduh ke cacheDir/updates/ ([UpdateRepository.downloadApk])
+ * lewat dialog installer sistem -- BUKAN instal diam-diam (app pihak ketiga
+ * TIDAK PERNAH boleh self-install tanpa konfirmasi user, ini batasan OS,
+ * bukan pilihan desain). Reuse FileProvider yang SUDAH dideklarasikan di
+ * manifest (authorities `${applicationId}.fileprovider`, sebelumnya
+ * disiapkan tapi belum ada pemakai nyata) -- content:// URI wajib sejak
+ * Android 7 (scoped file access), file:// URI langsung akan ditolak sistem.
+ */
+private fun installApk(context: Context, apkFilePath: String) {
+    val apkFile = File(apkFilePath)
+    val apkUri: Uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", apkFile)
+    val installIntent = Intent(Intent.ACTION_VIEW).apply {
+        setDataAndType(apkUri, "application/vnd.android.package-archive")
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    context.startActivity(installIntent)
 }

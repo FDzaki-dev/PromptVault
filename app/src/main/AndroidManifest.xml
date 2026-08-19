@@ -14,6 +14,13 @@
          bertipe dataSync di AutoSortWorker, lihat AutoSortNotification.kt -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- [Fitur baru 2026-08-19, in-app updater] INTERNET wajib utk cek
+         GitHub Releases API + download APK. REQUEST_INSTALL_PACKAGES wajib
+         sejak Android 8 utk memicu ACTION_VIEW instalasi APK dari luar Play
+         Store (FileProvider content:// URI yang sudah ada, lihat provider
+         di bawah) -- tanpa ini dialog instal ditolak sistem. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <application
         android:name=".PromptVaultApp"

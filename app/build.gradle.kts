@@ -22,8 +22,8 @@ android {
         applicationId = "com.elprompter.promptvault"
         minSdk = 26
         targetSdk = 34
-        versionCode = 97
-        versionName = "8.4.0"
+        versionCode = 98
+        versionName = "8.5.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -107,6 +107,15 @@ dependencies {
     ksp("androidx.room:room-compiler:2.6.1")
 
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+
+    // [Fitur baru 2026-08-19, Release Downloader Spec] In-app updater: cek
+    // rilis terbaru via GitHub Releases API + download APK streaming
+    // chunk-by-chunk ke disk (Okio sink, BUKAN readBytes() penuh ke RAM).
+    // okio dideklarasikan eksplisit walau ikut transitif dari okhttp --
+    // dipakai LANGSUNG (File.sink()/buffer()) di UpdateRepository.kt, bukan
+    // cuma dependency transitif diam-diam.
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.okio:okio:3.9.0")
 
     // [Fitur baru 2026-08-17, integrasi Shizuku -- permintaan eksplisit user]
     // "api" = kelas Shizuku/ShizukuBinderWrapper/UserServiceArgs dkk, dipakai
