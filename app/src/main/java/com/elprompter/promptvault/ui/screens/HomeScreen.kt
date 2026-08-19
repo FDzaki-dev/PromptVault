@@ -44,7 +44,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.elprompter.promptvault.R
 import com.elprompter.promptvault.ui.MainViewModel
 import com.elprompter.promptvault.ui.components.GroupedList
 import com.elprompter.promptvault.ui.components.GroupedListRow
@@ -140,20 +142,20 @@ fun HomeScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text("PromptVault", style = MaterialTheme.typography.headlineMedium, color = colors.onBackground)
-            Text("Rapikan otomatis file di Downloads kamu sesuai rule.", style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
+            Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineMedium, color = colors.onBackground)
+            Text(stringResource(R.string.home_subtitle), style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
 
             VaultCard(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    ManifestRow(icon = Icons.Filled.Rule, tint = colors.primary, label = "Rule aktif", value = "$ruleCount")
-                    ManifestRow(icon = Icons.Filled.Schedule, tint = colors.tertiary, label = "Auto-scan", value = "tiap $intervalMinutes menit")
+                    ManifestRow(icon = Icons.Filled.Rule, tint = colors.primary, label = stringResource(R.string.home_stat_rule_active), value = "$ruleCount")
+                    ManifestRow(icon = Icons.Filled.Schedule, tint = colors.tertiary, label = stringResource(R.string.home_stat_autoscan), value = stringResource(R.string.home_stat_autoscan_interval_fmt, intervalMinutes))
                     if (lastScanSummary != null) {
                         Text(lastScanSummary, style = MaterialTheme.typography.bodySmall, color = colors.onSurface)
                     }
                     if (hasSkippedFiles) {
                         TextButton(onClick = onOpenSkippedFiles, modifier = Modifier.fillMaxWidth()) {
                             Icon(Icons.Filled.ErrorOutline, contentDescription = null, tint = colors.secondary, modifier = Modifier.size(16.dp))
-                            Text(" Lihat detail file yang dilewati", color = colors.secondary, style = MaterialTheme.typography.bodyMedium)
+                            Text(stringResource(R.string.home_skipped_files_button), color = colors.secondary, style = MaterialTheme.typography.bodyMedium)
                         }
                     }
                 }
@@ -190,7 +192,7 @@ fun HomeScreen(
                     if (isScanning) {
                         CircularProgressIndicator(modifier = Modifier.size(18.dp), color = colors.onPrimary)
                     } else {
-                        Text("Scan Sekarang", color = colors.onPrimary, style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.home_scan_now_button), color = colors.onPrimary, style = MaterialTheme.typography.titleMedium)
                     }
                 }
             }
@@ -198,17 +200,17 @@ fun HomeScreen(
             val extraColors = VaultTheme.extraColors
             GroupedList(
                 rows = listOf(
-                    { GroupedListRow(Icons.Filled.Rule, "Kelola Rule", colors.primary, onOpenRules) },
+                    { GroupedListRow(Icons.Filled.Rule, stringResource(R.string.rule_list_title), colors.primary, onOpenRules) },
                     // [Fitur baru, batch "Panduan User Baru" 2026-08-17] Tint
                     // pakai colors.tertiary (Amber) -- SENGAJA reuse aksen yang
                     // sama dgn "Riwayat Aktivitas" di bawah, BUKAN aksen ke-5
                     // baru. Sistem warna app dibatasi 4 aksen (primary/
                     // tertiary/error/slate, lihat Color.kt & EmptyState.kt),
                     // menambah aksen ke-5 melanggar standar itu.
-                    { GroupedListRow(Icons.Filled.HelpOutline, "Panduan Penggunaan", colors.tertiary, onOpenPanduan) },
-                    { GroupedListRow(Icons.Filled.History, "Riwayat Aktivitas & Undo", colors.tertiary, onOpenLog) },
-                    { GroupedListRow(Icons.Filled.Settings, "Pengaturan", extraColors.slate, onOpenSettings) },
-                    { GroupedListRow(Icons.Filled.BugReport, "Diagnostik", colors.error, onOpenDiagnostics) }
+                    { GroupedListRow(Icons.Filled.HelpOutline, stringResource(R.string.pandu_title), colors.tertiary, onOpenPanduan) },
+                    { GroupedListRow(Icons.Filled.History, stringResource(R.string.home_menu_riwayat), colors.tertiary, onOpenLog) },
+                    { GroupedListRow(Icons.Filled.Settings, stringResource(R.string.settings_title), extraColors.slate, onOpenSettings) },
+                    { GroupedListRow(Icons.Filled.BugReport, stringResource(R.string.diag_title), colors.error, onOpenDiagnostics) }
                 )
             )
         }

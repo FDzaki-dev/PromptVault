@@ -3,6 +3,30 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.9.0 (2026-08-19) — Roadmap Fase 1.3 (batch 5/N): ekstraksi string `HomeScreen.kt`
+
+7 string resource baru (`home_*`) + 5 REUSE string yang sudah ada
+menggantikan literal Kotlin di `HomeScreen.kt`.
+
+Reuse (bukan duplikat): `"PromptVault"`→`app_name`, `"Kelola Rule"`→
+`rule_list_title`, `"Panduan Penggunaan"`→`pandu_title`, `"Pengaturan"`→
+`settings_title`, `"Diagnostik"`→`diag_title` — semuanya identik persis
+dengan title layar tujuan navigasi masing-masing, jadi 1 sumber kebenaran.
+`"Riwayat Aktivitas & Undo"` TIDAK direuse (beda dari title internal
+`ActivityLogScreen` yang belum diverifikasi) — dibuat `home_menu_riwayat` baru.
+
+`GroupedList.rows` adalah `List<@Composable () -> Unit>` (diverifikasi ke
+source sebelum menulis kode) — `stringResource()` valid di dalam tiap
+lambda karena lambda itu sendiri `@Composable`.
+
+2 literal sengaja tidak diubah: `"$ruleCount"` (interpolasi dinamis) &
+`"ctaScale"` (tag internal animasi, bukan teks user-facing).
+
+Preflight: 13/13 kategori PASS. versionCode 101→102, versionName 8.8.0→8.9.0.
+
+**Sisa Fase 1.3**: `OnboardingScreen.kt`, `ActivityLogScreen.kt`,
+`SkippedFilesScreen.kt`, `MainActivity.kt`.
+
 ## v8.8.0 (2026-08-19) — Roadmap Fase 1.3 (batch 4/N): ekstraksi string `PanduanScreen.kt`
 
 18 string resource baru (`pandu_*`) menggantikan literal Kotlin di

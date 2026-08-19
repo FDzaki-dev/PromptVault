@@ -3,6 +3,37 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
+## v8.9.0 -- Roadmap Fase 1.3 batch 5/N: ekstraksi string `HomeScreen.kt` (2026-08-19)
+- Lanjut item roadmap Fase 1.3: 7 string resource baru (`home_*`) +
+  **5 REUSE string yang sudah ada** (bukan duplikat baru) menggantikan
+  literal Kotlin di `HomeScreen.kt` -- MURNI ekstraksi, nilai teks tidak
+  berubah.
+- **Reuse, bukan duplikasi**: `"PromptVault"` -> `R.string.app_name`
+  (sudah ada sejak awal project), `"Kelola Rule"` -> `R.string.rule_list_title`,
+  `"Panduan Penggunaan"` -> `R.string.pandu_title` (v8.8.0),
+  `"Pengaturan"` -> `R.string.settings_title`, `"Diagnostik"` ->
+  `R.string.diag_title` (v8.7.0) -- kelimanya IDENTIK persis dgn title
+  layar tujuan navigasi masing-masing (menu Home = pintu masuk ke layar
+  itu), jadi 1 sumber kebenaran lebih benar drpd string terpisah yang bisa
+  drift kalau title diubah di satu tempat tapi lupa di tempat lain.
+  `"Riwayat Aktivitas & Undo"` TIDAK direuse (beda persis dgn title internal
+  `ActivityLogScreen` yang belum diekstrak/diverifikasi -- dibuat sbg
+  `home_menu_riwayat` baru, aman drpd asumsi sama).
+- **`GroupedList.rows` adalah `List<@Composable () -> Unit>`** (diverifikasi
+  ke `GroupedListRow.kt` SEBELUM menulis kode) -- `stringResource()` valid
+  dipanggil di dalam tiap lambda karena lambda itu sendiri `@Composable`,
+  bukan lambda biasa. Dicek eksplisit supaya tidak salah asumsi sama seperti
+  pelajaran Insiden #8 (composable scope semantics).
+- Sisa 2 literal yang SENGAJA tidak diubah: `value = "$ruleCount"`
+  (interpolasi angka dinamis, bukan literal teks) & `label = "ctaScale"`
+  (tag internal `animateFloatAsState`, bukan teks user-facing).
+- Preflight: 13/13 kategori PASS.
+- **Belum diverifikasi CI hijau** -- WAJIB dicek run Actions berikutnya
+  setelah push.
+- **Sisa Fase 1.3**: OnboardingScreen, ActivityLogScreen, SkippedFilesScreen,
+  MainActivity (dialog izin/error) -- urutan bebas.
+- versionCode 101->102, versionName 8.8.0->8.9.0.
+
 ## v8.8.0 -- Roadmap Fase 1.3 batch 4/N: ekstraksi string `PanduanScreen.kt` (2026-08-19)
 - Lanjut item roadmap Fase 1.3: 18 string resource baru (`pandu_*`)
   menggantikan literal Kotlin di `PanduanScreen.kt` -- MURNI ekstraksi,

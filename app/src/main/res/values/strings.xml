@@ -177,4 +177,11 @@
     <string name="pandu_section7_title">7. File tidak masuk ke folder yang diharapkan?</string>
     <string name="pandu_section7_body">Buka \"Detail File Dilewati\" (muncul di Home setelah scan kalau ada file yang dilewati) untuk lihat alasan spesifik per file -- tidak cocok pattern, kena pattern exclude, di luar batas ukuran, diduga masih ditulis (file baru banget), atau konflik nama dengan strategi \"Lewati\". Untuk cek pattern rule kamu terhadap nama file asli di Downloads, buka \"Diagnostik\" dari Home.</string>
     <string name="pandu_footer">Panduan ini bisa dibuka lagi kapan saja lewat menu Home atau kartu di Pengaturan. Konten mengikuti versi app yang sedang kamu pakai.</string>
+    <string name="home_subtitle">Rapikan otomatis file di Downloads kamu sesuai rule.</string>
+    <string name="home_stat_rule_active">Rule aktif</string>
+    <string name="home_stat_autoscan">Auto-scan</string>
+    <string name="home_stat_autoscan_interval_fmt">tiap %1$d menit</string>
+    <string name="home_skipped_files_button"> Lihat detail file yang dilewati</string>
+    <string name="home_scan_now_button">Scan Sekarang</string>
+    <string name="home_menu_riwayat">Riwayat Aktivitas &amp; Undo</string>
 </resources>
