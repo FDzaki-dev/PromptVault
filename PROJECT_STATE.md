@@ -3,6 +3,61 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
+## v8.12.0 -- Fitur: UI input PAT GitHub (opsional, hindari rate-limit updater) (2026-08-20)
+- **Item pending eksplisit dari user** (dicatat sejak v8.5.0 sbg "titik
+  ekstensi siap pakai") -- dieksekusi sekarang atas instruksi langsung.
+- `UpdateRepository.checkLatestRelease()`/`downloadApk()` SUDAH menerima
+  parameter `githubToken: String? = null` sejak v8.5.0 -- batch ini **0
+  baris `UpdateRepository.kt` diubah**, murni menyambungkan penyimpanan +
+  UI ke parameter yang sudah ada (bukan fitur baru dari nol).
+- **`SettingsRepository.kt`**: key DataStore baru `github_pat_token`
+  (`stringPreferencesKey`, nullable) + `githubTokenFlow`/`getGithubToken()`/
+  `setGithubToken()`/`clearGithubToken()` -- pola diverifikasi IDENTIK
+  `shizukuDestPathKey` (string opsional, `.trim()` sebelum simpan, method
+  `clear` terpisah dari `set`).
+- **`MainViewModel.kt`**: `val githubToken: StateFlow<String?>` via
+  manual `stateIn`-style collect (pola sama persis `shizukuDestPath`,
+  BUKAN `.stateIn()` Flow operator resmi -- proyek ini konsisten pakai
+  pola manual di seluruh file, ikuti konvensi yang ada). `setGithubToken()`/
+  `clearGithubToken()` wrapper `viewModelScope.launch`. `checkForUpdate()`/
+  `downloadUpdate()` diteruskan `githubToken.value` sbg argumen ke-2
+  (sebelumnya default `null` implisit, sekarang eksplisit dari state).
+- **`MainActivity.kt`** (protected asset, edit PARSIAL): 1
+  `collectAsStateWithLifecycle` (`githubToken`) + 3 parameter baru
+  diteruskan ke `SettingsScreen(...)` (`githubToken`,
+  `onGithubTokenChanged`, `onClearGithubToken`) -- TIDAK ada logika
+  permission/lifecycle lain disentuh.
+- **`SettingsScreen.kt`**: `OutlinedTextField` masked
+  (`PasswordVisualTransformation`, toggle show/hide via `trailingIcon`
+  ikon `Icons.Filled.VpnKey`, `KeyboardType.Password`) ditaruh DI DALAM
+  kartu "Pembaruan Aplikasi" yang sudah ada (bawah deskripsi, ATAS blok
+  `when(updateCheckState)`) -- BUKAN kartu terpisah, karena token ini
+  murni parameter internal fitur updater, bukan setting mandiri. Tombol
+  "Simpan" (`action_save`, REUSE, sama seperti `action_edit`/`action_delete`
+  yg sudah dipakai lintas layar sejak v8.3.0) disabled kalau input kosong
+  ATAU sama persis dgn token tersimpan (`tokenInput != githubToken.orEmpty()`).
+  Tombol "Hapus" (`action_delete`, REUSE) HANYA muncul kalau token SUDAH
+  ada tersimpan (`!githubToken.isNullOrBlank()`) -- tidak menawarkan hapus
+  utk state yang memang sudah kosong.
+- **3 string baru** (`settings_update_token_label/placeholder/hint`) --
+  hint eksplisit sebut "Token disimpan di HP kamu saja" (DataStore lokal,
+  BUKAN dikirim kemana pun selain header `Authorization` request ke GitHub
+  API sendiri saat cek/unduh update -- sesuai `UpdateRepository.kt` yang
+  TIDAK disentuh batch ini).
+- File diubah (4): `data/SettingsRepository.kt`, `ui/MainViewModel.kt`,
+  `MainActivity.kt` (parsial), `ui/screens/SettingsScreen.kt`. `res/values/
+  strings.xml` (3 string baru). `app/build.gradle.kts` (versi).
+  `FILE_MANIFEST.txt` TIDAK berubah (0 file baru/dihapus).
+- Preflight: 13/13 kategori PASS.
+- **Belum diverifikasi CI hijau** -- WAJIB dicek run Actions berikutnya
+  setelah push. **User WAJIB verifikasi di HP**: (1) isi token PAT GitHub
+  valid -> Simpan -> tutup app -> buka lagi -> field masih terisi
+  (persistensi DataStore), (2) tombol Hapus muncul setelah ada token
+  tersimpan, hilang lagi setelah dihapus, (3) cek update tetap jalan
+  normal baik dengan maupun tanpa token diisi (fungsi dasar TIDAK boleh
+  regresi utk user yang tidak pernah menyentuh field ini).
+- versionCode 104->105, versionName 8.11.0->8.12.0.
+
 ## v8.11.0 -- Roadmap Fase 1.3 batch 7/N: ekstraksi string `ActivityLogScreen.kt` (2026-08-20)
 - Lanjut item roadmap Fase 1.3: 26 string resource baru (`activitylog_*` +
   1 `action_undo` generik reuse 2x) menggantikan literal Kotlin di

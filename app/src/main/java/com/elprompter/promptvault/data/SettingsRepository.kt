@@ -43,7 +43,7 @@ class SettingsRepository(private val context: Context) {
     // EKSKLUSIF by design (bukan campur/prioritas implisit).
     private val shizukuDestPathKey = stringPreferencesKey("shizuku_dest_path")
     private val useShizukuKey = booleanPreferencesKey("use_shizuku")
-
+    private val githubTokenKey = stringPreferencesKey("github_pat_token")
     companion object {
         const val DEFAULT_INTERVAL_MINUTES = 15
         val ALLOWED_INTERVALS = listOf(15, 30, 60, 120, 240)
@@ -224,5 +224,27 @@ class SettingsRepository(private val context: Context) {
 
     suspend fun setUseShizuku(value: Boolean) {
         context.promptVaultDataStore.edit { prefs -> prefs[useShizukuKey] = value }
+    }
+
+    /**
+     * [Fitur baru 2026-08-20, titik ekstensi siap pakai sejak v8.5.0 --
+     * lihat PROJECT_STATE.md] PAT (Personal Access Token) GitHub OPSIONAL,
+     * murni menaikkan rate-limit REST API 60/jam -> 5000/jam saat user cek
+     * pembaruan manual sering (repo publik, TIDAK wajib diisi utk fungsi
+     * dasar cek/unduh update tetap jalan). `UpdateRepository.checkLatestRelease()`/
+     * `downloadApk()` SUDAH menerima parameter `githubToken: String? = null`
+     * sejak v8.5.0 -- batch ini HANYA menyambungkan penyimpanan + UI, TIDAK
+     * mengubah `UpdateRepository.kt` sama sekali (0 baris).
+     */
+    val githubTokenFlow: Flow<String?> = context.promptVaultDataStore.data.map { prefs -> prefs[githubTokenKey] }
+
+    suspend fun getGithubToken(): String? = githubTokenFlow.first()
+
+    suspend fun setGithubToken(token: String) {
+        context.promptVaultDataStore.edit { prefs -> prefs[githubTokenKey] = token.trim() }
+    }
+
+    suspend fun clearGithubToken() {
+        context.promptVaultDataStore.edit { prefs -> prefs.remove(githubTokenKey) }
     }
 }

@@ -234,4 +234,7 @@
     <string name="activitylog_batch_undo_partial_fmt">%1$d berhasil, %2$d gagal -- lihat tab Log untuk detail</string>
     <string name="activitylog_tab_log">Log</string>
     <string name="activitylog_tab_undo">Undo Pemindahan</string>
+    <string name="settings_update_token_label">Token GitHub (opsional)</string>
+    <string name="settings_update_token_placeholder">ghp_xxxxxxxxxxxxxxxxxxxx</string>
+    <string name="settings_update_token_hint">Naikkan rate-limit cek versi dari 60/jam ke 5000/jam. Kosongkan kalau jarang cek manual -- repo publik, tidak wajib diisi. Token disimpan di HP kamu saja.</string>
 </resources>

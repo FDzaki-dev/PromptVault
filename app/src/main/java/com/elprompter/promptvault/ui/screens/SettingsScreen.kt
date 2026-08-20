@@ -11,11 +11,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.SystemUpdate
+import androidx.compose.material.icons.filled.VpnKey
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -23,6 +25,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -45,6 +48,9 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.elprompter.promptvault.R
 import com.elprompter.promptvault.data.ConflictStrategy
@@ -106,6 +112,11 @@ fun SettingsScreen(
     onDismissUpdateCheck: () -> Unit,
     onDownloadUpdate: (GithubAssetDto) -> Unit,
     onInstallUpdate: (String) -> Unit,
+    // [Fitur baru 2026-08-20] PAT GitHub opsional -- naikkan rate-limit
+    // REST API 60/jam->5000/jam, TIDAK wajib diisi (repo publik).
+    githubToken: String?,
+    onGithubTokenChanged: (String) -> Unit,
+    onClearGithubToken: () -> Unit,
     onBack: () -> Unit
 ) {
     var exportedText by remember { mutableStateOf<String?>(null) }
@@ -501,6 +512,49 @@ fun SettingsScreen(
                         stringResource(R.string.settings_update_section_desc),
                         style = MaterialTheme.typography.bodySmall
                     )
+
+                    // [Fitur baru 2026-08-20] UI input PAT GitHub -- titik ekstensi
+                    // yang sudah disiapkan sejak v8.5.0 (UpdateRepository.checkLatestRelease/
+                    // downloadApk sudah terima parameter githubToken: String? = null,
+                    // 0 baris diubah di UpdateRepository.kt batch ini). Opsional murni --
+                    // repo publik, rate-limit default 60/jam cukup utk pemakaian normal.
+                    var tokenInput by remember(githubToken) { mutableStateOf(githubToken.orEmpty()) }
+                    var tokenVisible by remember { mutableStateOf(false) }
+                    OutlinedTextField(
+                        value = tokenInput,
+                        onValueChange = { tokenInput = it },
+                        label = { Text(stringResource(R.string.settings_update_token_label)) },
+                        placeholder = { Text(stringResource(R.string.settings_update_token_placeholder)) },
+                        singleLine = true,
+                        visualTransformation = if (tokenVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        trailingIcon = {
+                            IconButton(onClick = { tokenVisible = !tokenVisible }) {
+                                Icon(Icons.Filled.VpnKey, contentDescription = null, tint = colors.onSurfaceVariant)
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Text(
+                        stringResource(R.string.settings_update_token_hint),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = colors.onSurfaceVariant
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                        OutlinedButton(
+                            onClick = { onGithubTokenChanged(tokenInput) },
+                            enabled = tokenInput.isNotBlank() && tokenInput != githubToken.orEmpty(),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primary),
+                            modifier = Modifier.weight(1f)
+                        ) { Text(stringResource(R.string.action_save)) }
+                        if (!githubToken.isNullOrBlank()) {
+                            OutlinedButton(
+                                onClick = { tokenInput = ""; onClearGithubToken() },
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.error),
+                                modifier = Modifier.weight(1f)
+                            ) { Text(stringResource(R.string.action_delete)) }
+                        }
+                    }
 
                     when (val state = updateCheckState) {
                         null -> {

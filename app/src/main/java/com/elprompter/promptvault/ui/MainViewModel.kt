@@ -153,6 +153,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             state.asStateFlow()
         }
 
+    /** [Fitur baru 2026-08-20] `null`/kosong = tidak diisi (default, rate-limit publik 60/jam
+     * tetap berlaku) -- lihat SettingsRepository.githubTokenFlow utk detail lengkap kenapa opsional. */
+    val githubToken: StateFlow<String?> = settingsRepository.githubTokenFlow
+        .let { flow ->
+            val state = MutableStateFlow<String?>(null)
+            viewModelScope.launch { flow.collect { state.value = it } }
+            state.asStateFlow()
+        }
+
+    fun setGithubToken(token: String) {
+        viewModelScope.launch { settingsRepository.setGithubToken(token) }
+    }
+
+    fun clearGithubToken() {
+        viewModelScope.launch { settingsRepository.clearGithubToken() }
+    }
+
     private val _isScanning = MutableStateFlow(false)
     val isScanning: StateFlow<Boolean> = _isScanning.asStateFlow()
 
@@ -510,7 +527,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun checkForUpdate() {
         viewModelScope.launch {
             _updateCheckState.value = UpdateCheckResult.Checking
-            _updateCheckState.value = updateRepository.checkLatestRelease(currentVersionName())
+            _updateCheckState.value = updateRepository.checkLatestRelease(currentVersionName(), githubToken.value)
         }
     }
 
@@ -522,7 +539,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun downloadUpdate(asset: GithubAssetDto) {
         viewModelScope.launch {
             _downloadState.value = DownloadState.Downloading(0L, 0L)
-            _downloadState.value = updateRepository.downloadApk(asset) { progress ->
+            _downloadState.value = updateRepository.downloadApk(asset, githubToken.value) { progress ->
                 _downloadState.value = progress
             }
         }

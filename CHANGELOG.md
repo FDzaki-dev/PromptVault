@@ -3,6 +3,31 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.12.0 (2026-08-20) — Fitur: UI input PAT GitHub (opsional, hindari rate-limit updater)
+
+Menyambungkan titik ekstensi yang sudah disiapkan sejak v8.5.0
+(`UpdateRepository.checkLatestRelease()`/`downloadApk()` sudah terima
+parameter `githubToken: String? = null`) — **0 baris `UpdateRepository.kt`
+diubah** batch ini, murni penyimpanan + UI.
+
+`SettingsRepository`: key DataStore baru `github_pat_token` (string,
+nullable), pola identik `shizukuDestPathKey` (flow + get/set/clear).
+`MainViewModel`: `StateFlow<String?> githubToken` + `setGithubToken()`/
+`clearGithubToken()`, pola `stateIn` manual identik `shizukuDestPath`;
+`checkForUpdate()`/`downloadUpdate()` diteruskan `githubToken.value`.
+`MainActivity.kt` (protected asset, parsial): 1 `collectAsStateWithLifecycle`
++ 3 param baru diteruskan ke `SettingsScreen`.
+
+`SettingsScreen.kt`: `OutlinedTextField` masked (toggle show/hide via ikon
+`VpnKey`) di kartu "Pembaruan Aplikasi" (bawah deskripsi, atas tombol cek
+update) + hint rate-limit + tombol Simpan (`action_save`, reuse) & Hapus
+(`action_delete`, reuse, hanya muncul kalau token sudah tersimpan) — Simpan
+disabled kalau input kosong/sama dgn tersimpan.
+
+Preflight: 13/13 kategori PASS. versionCode 104→105, versionName 8.11.0→8.12.0.
+
+**Belum diverifikasi CI hijau.**
+
 ## v8.11.0 (2026-08-20) — Roadmap Fase 1.3 (batch 7/N): ekstraksi string `ActivityLogScreen.kt`
 
 26 string resource baru (`activitylog_*` + 1 `action_undo` generik)

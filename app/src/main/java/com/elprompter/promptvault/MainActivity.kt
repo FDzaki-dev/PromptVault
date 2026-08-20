@@ -384,6 +384,8 @@ private fun PromptVaultRoot(
             // [Fitur baru 2026-08-19, Release Downloader Spec]
             val updateCheckState by viewModel.updateCheckState.collectAsStateWithLifecycle()
             val downloadState by viewModel.downloadState.collectAsStateWithLifecycle()
+            // [Fitur baru 2026-08-20] PAT GitHub opsional, lihat KDoc lengkap di MainViewModel/SettingsRepository.
+            val githubToken by viewModel.githubToken.collectAsStateWithLifecycle()
             SettingsScreen(
                 currentIntervalMinutes = interval,
                 onIntervalSelected = { viewModel.setIntervalMinutes(it) },
@@ -414,6 +416,9 @@ private fun PromptVaultRoot(
                 onDismissUpdateCheck = { viewModel.dismissUpdateCheck() },
                 onDownloadUpdate = { asset -> viewModel.downloadUpdate(asset) },
                 onInstallUpdate = { filePath -> installApk(context, filePath) },
+                githubToken = githubToken,
+                onGithubTokenChanged = { viewModel.setGithubToken(it) },
+                onClearGithubToken = { viewModel.clearGithubToken() },
                 onBack = { navController.popBackStack() }
             )
         }
