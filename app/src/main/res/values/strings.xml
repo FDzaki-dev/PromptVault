@@ -204,4 +204,34 @@
     <string name="onboarding_btn_next">Lanjut</string>
     <string name="onboarding_btn_start">Mulai</string>
     <string name="onboarding_btn_back">Kembali</string>
+
+    <!-- [Roadmap Fase 1.3 batch 7/N, 2026-08-20] Ekstraksi MURNI ActivityLogScreen.kt -->
+    <string name="action_undo">Undo</string>
+    <string name="activitylog_title">Riwayat Aktivitas</string>
+    <string name="activitylog_selected_count_fmt">%1$d dipilih</string>
+    <string name="activitylog_cancel_select_desc">Batal pilih</string>
+    <string name="activitylog_undo_selected_fmt">Undo Terpilih (%1$d)</string>
+    <string name="activitylog_no_log_placeholder">(Belum ada aktivitas log)</string>
+    <string name="activitylog_log_export_fmt">[%1$s] %2$s: %3$s</string>
+    <string name="activitylog_log_copied">Log disalin ke clipboard</string>
+    <string name="activitylog_copy_log_desc">Salin Log</string>
+    <string name="activitylog_empty_log_title">Belum ada aktivitas</string>
+    <string name="activitylog_empty_log_message">Riwayat pemindahan file akan muncul di sini setelah scan pertama berjalan.</string>
+    <string name="activitylog_sweep_hint">Tips: tahan lalu sapukan jari ke bawah untuk pilih banyak &amp; undo sekaligus.</string>
+    <string name="activitylog_empty_undo_title">Tidak ada yang bisa di-undo</string>
+    <string name="activitylog_empty_undo_message">Pemindahan file yang bisa dibatalkan akan muncul di sini setelah scan memindahkan sesuatu.</string>
+    <string name="activitylog_dest_shizuku_fmt">Ke: folder Shizuku/%1$s/</string>
+    <string name="activitylog_dest_saf_fmt">Ke: folder tujuan kustom/%1$s/</string>
+    <string name="activitylog_dest_local_fmt">Ke: PromptVault/%1$s/</string>
+    <string name="activitylog_undo_confirm_title">Undo pemindahan?</string>
+    <string name="activitylog_undo_confirm_message_fmt">\"%1$s\" akan dikembalikan ke lokasi asalnya.</string>
+    <string name="activitylog_undo_success_fmt">\"%1$s\" berhasil dikembalikan</string>
+    <string name="activitylog_undo_failed_fmt">Undo \"%1$s\" gagal -- lihat tab Log untuk detail</string>
+    <string name="activitylog_batch_undo_title_fmt">Undo %1$d pemindahan?</string>
+    <string name="activitylog_batch_undo_message_fmt">%1$d file akan dikembalikan ke lokasi asalnya masing-masing.</string>
+    <string name="activitylog_batch_undo_confirm">Undo Semua</string>
+    <string name="activitylog_batch_undo_success_fmt">%1$d file berhasil dikembalikan</string>
+    <string name="activitylog_batch_undo_partial_fmt">%1$d berhasil, %2$d gagal -- lihat tab Log untuk detail</string>
+    <string name="activitylog_tab_log">Log</string>
+    <string name="activitylog_tab_undo">Undo Pemindahan</string>
 </resources>

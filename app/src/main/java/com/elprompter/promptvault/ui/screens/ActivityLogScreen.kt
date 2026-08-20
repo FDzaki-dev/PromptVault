@@ -45,8 +45,11 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
+import com.elprompter.promptvault.R
 import com.elprompter.promptvault.data.ActivityLogEntry
 import com.elprompter.promptvault.data.LogLevel
 import com.elprompter.promptvault.data.MoveHistoryEntry
@@ -107,6 +110,10 @@ fun ActivityLogScreen(
     val scope = rememberCoroutineScope()
     val colors = MaterialTheme.colorScheme
     val clipboardManager: ClipboardManager = LocalClipboardManager.current
+    // [Roadmap Fase 1.3 batch 7/N] context.getString() dipakai di dalam
+    // lambda non-composable (onClick/onConfirm/scope.launch) -- stringResource()
+    // TIDAK valid di situ, sama pola dgn SettingsScreen v8.6.0.
+    val context = LocalContext.current
 
     // --- State mode seleksi-sapuan (tab Undo saja) ---
     var selectionMode by remember { mutableStateOf(false) }
@@ -123,7 +130,7 @@ fun ActivityLogScreen(
     Scaffold(
         topBar = {
             VaultTopBar(
-                title = if (selectionMode) "${selectedIds.size} dipilih" else "Riwayat Aktivitas",
+                title = if (selectionMode) stringResource(R.string.activitylog_selected_count_fmt, selectedIds.size) else stringResource(R.string.activitylog_title),
                 onBack = { if (selectionMode) exitSelectionMode() else onBack() },
                 actions = {
                     if (selectionMode) {
@@ -132,7 +139,7 @@ fun ActivityLogScreen(
                         // punya jalan mundur yang jelas (bukan cuma back
                         // sistem, yang biasanya berarti "keluar layar").
                         IconButton(onClick = { exitSelectionMode() }) {
-                            Icon(Icons.Filled.Close, contentDescription = "Batal pilih", tint = colors.onSurfaceVariant)
+                            Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.activitylog_cancel_select_desc), tint = colors.onSurfaceVariant)
                         }
                         TextButton(
                             onClick = {
@@ -140,7 +147,7 @@ fun ActivityLogScreen(
                                 if (toUndo.isNotEmpty()) pendingBatchUndo = toUndo
                             },
                             enabled = selectedIds.isNotEmpty() && !undoInFlight
-                        ) { Text("Undo Terpilih (${selectedIds.size})") }
+                        ) { Text(stringResource(R.string.activitylog_undo_selected_fmt, selectedIds.size)) }
                     } else if (tab == 0) {
                         // Batch fix (2026-08-06): user butuh cara cepat ekspor log utk
                         // analisis bug tanpa ADB/Logcat -- copy SEMUA entri log
@@ -152,16 +159,21 @@ fun ActivityLogScreen(
                         // tambahan.
                         IconButton(onClick = {
                             val text = if (logEntries.isEmpty()) {
-                                "(Belum ada aktivitas log)"
+                                context.getString(R.string.activitylog_no_log_placeholder)
                             } else {
                                 logEntries.joinToString("\n") { entry ->
-                                    "[${logExportFormatter.format(Date(entry.timestampMillis))}] ${entry.level}: ${entry.message}"
+                                    context.getString(
+                                        R.string.activitylog_log_export_fmt,
+                                        logExportFormatter.format(Date(entry.timestampMillis)),
+                                        entry.level,
+                                        entry.message
+                                    )
                                 }
                             }
                             clipboardManager.setText(AnnotatedString(text))
-                            scope.launch { snackbarHostState.showSnackbar("Log disalin ke clipboard") }
+                            scope.launch { snackbarHostState.showSnackbar(context.getString(R.string.activitylog_log_copied)) }
                         }) {
-                            Icon(Icons.Filled.ContentCopy, contentDescription = "Salin Log", tint = colors.primary)
+                            Icon(Icons.Filled.ContentCopy, contentDescription = stringResource(R.string.activitylog_copy_log_desc), tint = colors.primary)
                         }
                     }
                 }
@@ -175,7 +187,7 @@ fun ActivityLogScreen(
     ) { padding ->
     Column(modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
         com.elprompter.promptvault.ui.components.SegmentedControl(
-            options = listOf("Log", "Undo Pemindahan"),
+            options = listOf(stringResource(R.string.activitylog_tab_log), stringResource(R.string.activitylog_tab_undo)),
             selectedIndex = tab,
             onSelect = {
                 tab = it
@@ -188,8 +200,8 @@ fun ActivityLogScreen(
                 if (isEmpty) {
                     EmptyState(
                         icon = Icons.Filled.History,
-                        title = "Belum ada aktivitas",
-                        message = "Riwayat pemindahan file akan muncul di sini setelah scan pertama berjalan.",
+                        title = stringResource(R.string.activitylog_empty_log_title),
+                        message = stringResource(R.string.activitylog_empty_log_message),
                         accentColor = colors.tertiary,
                         accentContainerColor = colors.tertiaryContainer
                     )
@@ -229,8 +241,8 @@ fun ActivityLogScreen(
                 if (isEmpty) {
                     EmptyState(
                         icon = Icons.Filled.Undo,
-                        title = "Tidak ada yang bisa di-undo",
-                        message = "Pemindahan file yang bisa dibatalkan akan muncul di sini setelah scan memindahkan sesuatu.",
+                        title = stringResource(R.string.activitylog_empty_undo_title),
+                        message = stringResource(R.string.activitylog_empty_undo_message),
                         accentColor = colors.tertiary,
                         accentContainerColor = colors.tertiaryContainer
                     )
@@ -241,7 +253,7 @@ fun ActivityLogScreen(
                             // kalimat, cukup sekali di atas list, supaya user
                             // tahu fiturnya ADA tanpa perlu menemukannya sendiri.
                             Text(
-                                "Tips: tahan lalu sapukan jari ke bawah untuk pilih banyak & undo sekaligus.",
+                                stringResource(R.string.activitylog_sweep_hint),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = colors.onSurfaceVariant,
                                 modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
@@ -327,9 +339,9 @@ fun ActivityLogScreen(
                                                     // Downloads/PromptVault/...) TETAP benar pakai
                                                     // prefix lama.
                                                     text = when {
-                                                        entry.destUri.startsWith("shizuku://") -> "Ke: folder Shizuku/${entry.ruleFolderName}/"
-                                                        entry.destUri.startsWith("content://") -> "Ke: folder tujuan kustom/${entry.ruleFolderName}/"
-                                                        else -> "Ke: PromptVault/${entry.ruleFolderName}/"
+                                                        entry.destUri.startsWith("shizuku://") -> stringResource(R.string.activitylog_dest_shizuku_fmt, entry.ruleFolderName)
+                                                        entry.destUri.startsWith("content://") -> stringResource(R.string.activitylog_dest_saf_fmt, entry.ruleFolderName)
+                                                        else -> stringResource(R.string.activitylog_dest_local_fmt, entry.ruleFolderName)
                                                     },
                                                     style = MaterialTheme.typography.labelSmall
                                                 )
@@ -339,7 +351,7 @@ fun ActivityLogScreen(
                                                 TextButton(
                                                     onClick = { pendingUndo = entry },
                                                     enabled = !undoInFlight
-                                                ) { Text("Undo") }
+                                                ) { Text(stringResource(R.string.action_undo)) }
                                             }
                                         }
                                     }
@@ -355,9 +367,9 @@ fun ActivityLogScreen(
 
     pendingUndo?.let { entry ->
         VaultActionSheet(
-            title = "Undo pemindahan?",
-            message = "\"${entry.fileName}\" akan dikembalikan ke lokasi asalnya.",
-            confirmLabel = "Undo",
+            title = stringResource(R.string.activitylog_undo_confirm_title),
+            message = stringResource(R.string.activitylog_undo_confirm_message_fmt, entry.fileName),
+            confirmLabel = stringResource(R.string.action_undo),
             onConfirm = {
                 pendingUndo = null
                 undoInFlight = true
@@ -370,8 +382,8 @@ fun ActivityLogScreen(
                     val success = onUndo(entry)
                     undoInFlight = false
                     snackbarHostState.showSnackbar(
-                        if (success) "\"${entry.fileName}\" berhasil dikembalikan"
-                        else "Undo \"${entry.fileName}\" gagal -- lihat tab Log untuk detail"
+                        if (success) context.getString(R.string.activitylog_undo_success_fmt, entry.fileName)
+                        else context.getString(R.string.activitylog_undo_failed_fmt, entry.fileName)
                     )
                 }
             },
@@ -386,9 +398,9 @@ fun ActivityLogScreen(
     // balik, bukan langsung eksekusi begitu tombol top bar ditekan.
     pendingBatchUndo?.let { entries ->
         VaultActionSheet(
-            title = "Undo ${entries.size} pemindahan?",
-            message = "${entries.size} file akan dikembalikan ke lokasi asalnya masing-masing.",
-            confirmLabel = "Undo Semua",
+            title = stringResource(R.string.activitylog_batch_undo_title_fmt, entries.size),
+            message = stringResource(R.string.activitylog_batch_undo_message_fmt, entries.size),
+            confirmLabel = stringResource(R.string.activitylog_batch_undo_confirm),
             onConfirm = {
                 pendingBatchUndo = null
                 undoInFlight = true
@@ -397,8 +409,8 @@ fun ActivityLogScreen(
                     undoInFlight = false
                     exitSelectionMode()
                     snackbarHostState.showSnackbar(
-                        if (failed == 0) "$success file berhasil dikembalikan"
-                        else "$success berhasil, $failed gagal -- lihat tab Log untuk detail"
+                        if (failed == 0) context.getString(R.string.activitylog_batch_undo_success_fmt, success)
+                        else context.getString(R.string.activitylog_batch_undo_partial_fmt, success, failed)
                     )
                 }
             },

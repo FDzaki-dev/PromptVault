@@ -3,6 +3,48 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
+## v8.11.0 -- Roadmap Fase 1.3 batch 7/N: ekstraksi string `ActivityLogScreen.kt` (2026-08-20)
+- Lanjut item roadmap Fase 1.3: 26 string resource baru (`activitylog_*` +
+  1 `action_undo` generik reuse 2x) menggantikan literal Kotlin di
+  `ActivityLogScreen.kt` -- MURNI ekstraksi, nilai teks tidak berubah.
+- **Layar paling kompleks strukturnya sejauh Fase 1.3** -- pola CAMPURAN,
+  BUKAN 1 pola tunggal spt batch sebelumnya: teks di scope composable
+  langsung (topBar/actions lambda TopAppBar, `EmptyState`, `items{}`
+  LazyColumn, `pendingUndo?.let{}`/`pendingBatchUndo?.let{}` yang eksekusi
+  LANGSUNG di body composable -- bukan di dalam lambda parameter lain)
+  pakai `stringResource()` biasa. Teks di dalam `onClick`/`onConfirm`/
+  `scope.launch{}` (lambda non-composable, BUKAN diberi anotasi
+  `@Composable`) pakai `context.getString()` -- `val context =
+  LocalContext.current` ditambah 1x di awal fungsi, pola IDENTIK
+  `SettingsScreen.kt` v8.6.0 (`readWorkStatus` dkk).
+- `action_undo` ("Undo") REUSE di 2 titik BERBEDA: label `TextButton`
+  per-baris entri Undo (klik satuan) DAN `confirmLabel` `VaultActionSheet`
+  konfirmasi undo tunggal -- keduanya teks identik persis, 1 sumber
+  kebenaran, konsisten preseden `action_save`/`action_edit`/`action_delete`
+  (batch 1/N Fase 1.3, v8.3.0). `confirmLabel` "Undo Semua" (batch undo)
+  TIDAK direuse dari `action_undo` -- teks beda (\"Semua\" bukan cuma
+  \"Undo\"), dibuat `activitylog_batch_undo_confirm` terpisah.
+- **1 literal sempat terlewat di audit pertama, ketangkap SEBELUM ZIP
+  dipaket** (bukan lolos ke user): `SegmentedControl(options = listOf(\"Log\",
+  \"Undo Pemindahan\"), ...)` -- 2 label tab, gampang terlewat krn bukan
+  `Text()`/`Icon()` langsung, cuma `String` mentah di parameter `List<String>`.
+  Ditemukan lewat re-grep manual `grep '\"'` menyeluruh ke seluruh file
+  SEBELUM klaim selesai (bukan sesudah) -- ditambah sbg
+  `activitylog_tab_log`/`activitylog_tab_undo`. **Pelajaran utk sesi
+  berikutnya**: kalau ada komponen yang menerima `List<String>`/`String`
+  mentah (bukan wrapper `Text`/`Icon` composable yang jelas terlihat),
+  WAJIB di-grep ulang eksplisit -- pola visual "cari `Text(...)`/`title
+  =`/`message =`" saja tidak cukup menangkap semua kasus.
+- **XML escaping**: kutip literal nama file dinamis `\"%1$s\"` (preseden
+  `pandu_section6_body` v8.8.0), `&` di teks sweep-hint -> `&amp;`.
+  Divalidasi `xml.dom.minidom.parse` (0 pelanggaran) sebelum preflight.
+- Preflight: 13/13 kategori PASS.
+- **Belum diverifikasi CI hijau** -- WAJIB dicek run Actions berikutnya
+  setelah push.
+- **Sisa Fase 1.3**: SkippedFilesScreen, MainActivity (dialog izin/error)
+  -- urutan bebas.
+- versionCode 103->104, versionName 8.10.0->8.11.0.
+
 ## v8.10.0 -- Roadmap Fase 1.3 batch 6/N: ekstraksi string `OnboardingScreen.kt` (2026-08-20)
 - Lanjut item roadmap Fase 1.3: 18 string resource baru (`onboarding_*`)
   menggantikan literal Kotlin di `OnboardingScreen.kt` -- MURNI ekstraksi,

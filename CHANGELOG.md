@@ -3,6 +3,38 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.11.0 (2026-08-20) — Roadmap Fase 1.3 (batch 7/N): ekstraksi string `ActivityLogScreen.kt`
+
+26 string resource baru (`activitylog_*` + 1 `action_undo` generik)
+menggantikan literal Kotlin di `ActivityLogScreen.kt` — MURNI ekstraksi,
+nilai teks tetap sama persis.
+
+Pola CAMPURAN (layar ini paling kompleks strukturnya sejauh Fase 1.3):
+teks di scope composable langsung (topBar/actions lambda, `EmptyState`,
+`items{}`, `pendingUndo?.let{}`/`pendingBatchUndo?.let{}` yang jalan
+langsung di body composable) pakai `stringResource()` biasa. Teks di
+dalam `onClick`/`onConfirm`/`scope.launch{}` (lambda non-composable) pakai
+`context.getString()` — `val context = LocalContext.current` ditambah di
+awal, pola identik `SettingsScreen.kt` v8.6.0.
+
+`action_undo` REUSE 2x (label tombol `TextButton` per-baris & `confirmLabel`
+`VaultActionSheet` konfirmasi tunggal) — teks identik "Undo", 1 sumber
+kebenaran, konsisten pola `action_save`/`action_edit`/`action_delete`.
+
+1 literal sempat terlewat di audit pertama (`SegmentedControl` tab
+"Log"/"Undo Pemindahan") — ketangkap lewat re-grep manual sebelum ZIP
+dipaket, ditambah sbg `activitylog_tab_log`/`activitylog_tab_undo`.
+
+XML escaping: kutip literal nama file `\"%1$s\"` (preseden `pandu_section6_body`),
+`&` di sweep hint → `&amp;`.
+
+Preflight: 13/13 kategori PASS. versionCode 103→104, versionName 8.10.0→8.11.0.
+
+**Belum diverifikasi CI hijau** — WAJIB dicek run Actions berikutnya.
+
+**Sisa Fase 1.3**: `SkippedFilesScreen.kt`, `MainActivity.kt` (dialog
+izin/error) — urutan bebas.
+
 ## v8.10.0 (2026-08-20) — Roadmap Fase 1.3 (batch 6/N): ekstraksi string `OnboardingScreen.kt`
 
 18 string resource baru (`onboarding_*`) menggantikan literal Kotlin di
