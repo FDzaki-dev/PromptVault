@@ -3,6 +3,38 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
+## v8.10.0 -- Roadmap Fase 1.3 batch 6/N: ekstraksi string `OnboardingScreen.kt` (2026-08-20)
+- Lanjut item roadmap Fase 1.3: 18 string resource baru (`onboarding_*`)
+  menggantikan literal Kotlin di `OnboardingScreen.kt` -- MURNI ekstraksi,
+  nilai teks tidak berubah.
+- **Pola BARU, beda dari 5 batch sebelumnya**: `steps` sebelumnya `private
+  val` TOP-LEVEL (bukan di dalam scope composable manapun) -- `stringResource()`
+  butuh scope composable, TIDAK BISA dipanggil di inisialisasi `val`
+  top-level. Diubah jadi `@Composable private fun onboardingSteps(): List<
+  OnboardingStep>`, dipanggil SEKALI di awal body `OnboardingScreen` (`val
+  steps = onboardingSteps()`) -- list re-build murah (7 item literal), tidak
+  perlu `remember`. Kandidat pola dipakai lagi kalau sisa layar Fase 1.3 py
+  `val`/`data class` list top-level berisi teks (beda dari kasus
+  `DiagnosticsScreen` yang fungsinya non-composable tapi tetap top-level
+  function, bukan `val`).
+- **XML escaping**: `<nama rule>` -> `&lt;nama rule&gt;` (preseden
+  `pandu_section3_body` v8.8.0), `&` -> `&amp;` (2 titik, step3 & step7),
+  kutip literal `"PromptVault"`/`"Riwayat Aktivitas & Undo"`/`"Panduan
+  Penggunaan"` -> `\"..\"` (preseden `pandu_section6_body`, BUKAN `&quot;`,
+  konsisten gaya escaping yang sudah dipakai project). Divalidasi
+  `xml.dom.minidom.parse` (0 pelanggaran) SEBELUM preflight.
+- **0 reuse string** -- semua 14 teks title/body Onboarding beda kalimat
+  persis dari `pandu_*` (PanduanScreen) walau topiknya tumpang tindih,
+  SESUAI keputusan v7.4.0 (Onboarding = wizard ringkas per-langkah,
+  Panduan = referensi satu-halaman lengkap, 2 gaya penulisan BEDA SENGAJA,
+  bukan boleh disatukan jadi 1 sumber).
+- Preflight: 13/13 kategori PASS.
+- **Belum diverifikasi CI hijau** -- WAJIB dicek run Actions berikutnya
+  setelah push.
+- **Sisa Fase 1.3**: ActivityLogScreen, SkippedFilesScreen, MainActivity
+  (dialog izin/error) -- urutan bebas.
+- versionCode 102->103, versionName 8.9.0->8.10.0.
+
 ## v8.9.0 -- Roadmap Fase 1.3 batch 5/N: ekstraksi string `HomeScreen.kt` (2026-08-19)
 - Lanjut item roadmap Fase 1.3: 7 string resource baru (`home_*`) +
   **5 REUSE string yang sudah ada** (bukan duplikat baru) menggantikan

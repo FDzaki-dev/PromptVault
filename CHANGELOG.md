@@ -3,6 +3,33 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.10.0 (2026-08-20) — Roadmap Fase 1.3 (batch 6/N): ekstraksi string `OnboardingScreen.kt`
+
+18 string resource baru (`onboarding_*`) menggantikan literal Kotlin di
+`OnboardingScreen.kt` — MURNI ekstraksi, nilai teks tetap sama persis.
+
+Pola berbeda dari batch lain: `steps` sebelumnya `private val` top-level
+(bukan di dalam scope composable) — `stringResource()` TIDAK BISA dipanggil
+di situ. Diubah jadi `@Composable private fun onboardingSteps()`, dipanggil
+sekali di awal body `OnboardingScreen` (list re-build murah, 7 item, tidak
+perlu `remember`). Ini kandidat pola dipakai lagi kalau ada layar Fase 1.3
+lain yang juga punya data top-level berisi teks (bukan cuma fungsi
+non-composable seperti `DiagnosticsScreen`, tapi `val` murni).
+
+XML escaping: `<nama rule>` → `&lt;nama rule&gt;` (preseden `pandu_section3_body`),
+`&` → `&amp;` (2 titik), kutip literal `"PromptVault"`/`"Riwayat Aktivitas & Undo"`/
+`"Panduan Penggunaan"` → `\"..\"` (preseden `pandu_section6_body`, bukan `&quot;`).
+Tidak ada reuse string — semua teks Onboarding beda kalimat dari `pandu_*`
+walau topiknya sama (Onboarding = ringkas per-langkah, Panduan = referensi
+lengkap), sesuai keputusan v7.4.0 kedua konten SENGAJA berbeda gaya.
+
+Preflight: 13/13 kategori PASS. versionCode 102→103, versionName 8.9.0→8.10.0.
+
+**Belum diverifikasi CI hijau** — WAJIB dicek run Actions berikutnya.
+
+**Sisa Fase 1.3**: `ActivityLogScreen.kt`, `SkippedFilesScreen.kt`,
+`MainActivity.kt` (dialog izin/error) — urutan bebas.
+
 ## v8.9.0 (2026-08-19) — Roadmap Fase 1.3 (batch 5/N): ekstraksi string `HomeScreen.kt`
 
 7 string resource baru (`home_*`) + 5 REUSE string yang sudah ada

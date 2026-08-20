@@ -38,7 +38,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.elprompter.promptvault.R
 
 private data class OnboardingStep(val icon: ImageVector, val title: String, val body: String)
 
@@ -58,42 +60,49 @@ private data class OnboardingStep(val icon: ImageVector, val title: String, val 
  * memberitahu bahwa seluruh isi ini bisa dibuka ULANG kapan saja lewat
  * "Panduan Penggunaan" di menu Home -- supaya info tidak hilang begitu user
  * menekan "Mulai" sekali dan lupa detailnya.
+ *
+ * [Roadmap Fase 1.3 batch 6/N, 2026-08-20] Diubah dari `private val` top-level
+ * jadi `@Composable private fun` -- `stringResource()` butuh scope composable,
+ * tidak bisa dipanggil di inisialisasi `val` top-level biasa. Dipanggil sekali
+ * di awal body `OnboardingScreen`, bukan tiap Crossfade re-render (list re-build
+ * murah, cuma 7 item, tidak perlu `remember`).
  */
-private val steps = listOf(
+@Composable
+private fun onboardingSteps(): List<OnboardingStep> = listOf(
     OnboardingStep(
         Icons.Filled.Archive,
-        "Selamat datang di PromptVault",
-        "App ini memindai folder Downloads kamu dan memindahkan file (ekstensi apa saja) ke folder tujuan, sesuai rule yang kamu buat sendiri. Tidak ada rule = tidak ada file yang dipindah."
+        stringResource(R.string.onboarding_step1_title),
+        stringResource(R.string.onboarding_step1_body)
     ),
     OnboardingStep(
         Icons.Filled.FolderOpen,
-        "Rule = pattern + folder tujuan",
-        "Tiap rule punya pattern nama file (mis. *.pdf atau laporan-*.txt) dan nama folder tujuan. File yang cocok pattern langsung dipindah ke folder itu. Kalau ada beberapa rule yang bisa cocok ke file yang sama, rule PALING ATAS di daftar yang menang (first-match-wins) -- urutan rule penting."
+        stringResource(R.string.onboarding_step2_title),
+        stringResource(R.string.onboarding_step2_body)
     ),
     OnboardingStep(
         Icons.Filled.Lock,
-        "Izin penyimpanan",
-        "PromptVault perlu izin akses penyimpanan (sesuai versi Android kamu) supaya bisa membaca & memindahkan file di Downloads. Tanpa izin ini, app tidak bisa memindai sama sekali."
+        stringResource(R.string.onboarding_step3_title),
+        stringResource(R.string.onboarding_step3_body)
     ),
     OnboardingStep(
         Icons.Filled.HelpOutline,
-        "Ke mana file disortir?",
-        "Default: Downloads/PromptVault/<nama rule>/, dibuat otomatis. Folder tujuan kustom (SAF, di Pengaturan) juga otomatis dibuatkan subfolder \"PromptVault\" di dalamnya -- tidak perlu setup manual. Kekecualian: mode Shizuku (lanjutan) -- folder ROOT-nya HARUS SUDAH ADA lebih dulu, dibuat manual lewat file manager; kalau belum ada, scan akan gagal dengan pesan error yang jelas, bukan membuatkannya diam-diam."
+        stringResource(R.string.onboarding_step4_title),
+        stringResource(R.string.onboarding_step4_body)
     ),
     OnboardingStep(
         Icons.Filled.CompareArrows,
-        "Kalau nama file sudah ada di tujuan",
-        "Ada 3 pilihan (atur di Pengaturan): Ganti nama otomatis (aman, default), Lewati (file lama tidak disentuh), atau Timpa (file lama di tujuan DIHAPUS PERMANEN, tidak bisa di-undo). Pilih Timpa hanya kalau kamu yakin."
+        stringResource(R.string.onboarding_step5_title),
+        stringResource(R.string.onboarding_step5_body)
     ),
     OnboardingStep(
         Icons.Filled.Schedule,
-        "Auto-sort berjalan sendiri",
-        "Setelah rule dibuat, app memindai Downloads secara berkala di latar belakang sesuai interval yang kamu atur di Pengaturan (minimal 15 menit, batas sistem Android). Notifikasi kecil akan muncul saat auto-sort sedang berjalan."
+        stringResource(R.string.onboarding_step6_title),
+        stringResource(R.string.onboarding_step6_body)
     ),
     OnboardingStep(
         Icons.Filled.History,
-        "Salah pindah? Ada Undo",
-        "Buka \"Riwayat Aktivitas & Undo\" dari Home untuk membatalkan pemindahan file, satu per satu atau tekan-lama lalu sapukan jari untuk pilih banyak sekaligus. Lupa detail apapun dari panduan ini? Buka \"Panduan Penggunaan\" di menu Home kapan saja -- tidak perlu mengulang onboarding ini dari awal."
+        stringResource(R.string.onboarding_step7_title),
+        stringResource(R.string.onboarding_step7_body)
     )
 )
 
@@ -101,6 +110,7 @@ private val steps = listOf(
 fun OnboardingScreen(onFinished: () -> Unit) {
     var index by remember { mutableStateOf(0) }
     val colors = MaterialTheme.colorScheme
+    val steps = onboardingSteps()
 
     Column(
         modifier = Modifier
@@ -132,7 +142,7 @@ fun OnboardingScreen(onFinished: () -> Unit) {
                         Icon(currentStep.icon, contentDescription = null, tint = colors.onPrimary, modifier = Modifier.size(36.dp))
                     }
 
-                    Text("Langkah ${stepIndex + 1} dari ${steps.size}", style = MaterialTheme.typography.labelLarge, color = colors.onSurfaceVariant)
+                    Text(stringResource(R.string.onboarding_progress_fmt, stepIndex + 1, steps.size), style = MaterialTheme.typography.labelLarge, color = colors.onSurfaceVariant)
                     Text(currentStep.title, style = MaterialTheme.typography.headlineSmall, color = colors.onBackground)
                     Text(currentStep.body, style = MaterialTheme.typography.bodyLarge, color = colors.onBackground)
                 }
@@ -145,14 +155,14 @@ fun OnboardingScreen(onFinished: () -> Unit) {
                 colors = ButtonDefaults.buttonColors(containerColor = colors.secondary, contentColor = colors.onSecondary),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(if (index < steps.lastIndex) "Lanjut" else "Mulai")
+                Text(if (index < steps.lastIndex) stringResource(R.string.onboarding_btn_next) else stringResource(R.string.onboarding_btn_start))
             }
             if (index > 0) {
                 OutlinedButton(
                     onClick = { index-- },
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primary),
                     modifier = Modifier.fillMaxWidth()
-                ) { Text("Kembali") }
+                ) { Text(stringResource(R.string.onboarding_btn_back)) }
             }
         }
     }
