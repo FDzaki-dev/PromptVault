@@ -40,6 +40,13 @@
   (versi saja, TIDAK ada perubahan dependency/plugin/logic).
   `FILE_MANIFEST.txt` TIDAK berubah.
 - Preflight: cek hasil di bawah entri ini sebelum ZIP dikirim.
+- **CI CONFIRMED HIJAU oleh user** (2026-08-21, run #118, commit 084539a):
+  `Success`, total durasi **7m 15s** (job `build` 7m 12s), 1 artifact. User
+  konfirmasi via screenshot GitHub Actions -- eksperimen berhasil, TIDAK
+  ada rollback diperlukan. (Baseline durasi run SEBELUM eksperimen ini
+  tidak tercatat di sesi manapun -- tidak ada angka pembanding "sebelum"
+  yang valid dikutip; 7m15s dicatat sbg REFERENSI durasi baru ke depan,
+  bukan klaim persentase speedup.)
 - **BELUM PERNAH lewat `./gradlew` asli / CI asli** -- sandbox Claude TIDAK
   punya Android SDK/Gradle/jaringan (lihat header `scripts/preflight_check.sh`),
   jadi "sampai berhasil" TIDAK BISA diverifikasi tuntas di sini secara

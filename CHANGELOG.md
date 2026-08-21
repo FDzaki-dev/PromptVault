@@ -12,8 +12,10 @@ di `signingConfigs` cuma jadi warning bukan gagal build) + heap
 (compile->test->assembleRelease) saling reuse config cache. K2 compiler
 SENGAJA tidak diaktifkan (belum stabil utk Compose di Kotlin 1.9.24).
 Rollback kalau CI gagal: hapus 2 baris `configuration-cache*` saja.
-Detail lengkap + alasan tiap baris: `PROJECT_STATE.md`. Belum lewat CI
-asli -- pantau run Actions berikutnya.
+Detail lengkap + alasan tiap baris: `PROJECT_STATE.md`.
+
+**Update 2026-08-21**: CI CONFIRMED hijau oleh user (run #118, 7m15s,
+Success, 1 artifact) -- tidak ada rollback diperlukan.
 
 ## v8.12.0 (2026-08-20) — Fitur: UI input PAT GitHub (opsional, hindari rate-limit updater)
 
