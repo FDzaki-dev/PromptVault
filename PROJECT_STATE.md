@@ -13,6 +13,24 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.22.0 -- Preset Cepat di tab Tambah Rule, edukasi user awam (2026-08-21)
+- Instruksi eksplisit: preset cepat khusus "Tambah Rule" biar user awam
+  paham mekanisme pattern+folder yang benar.
+- 6 chip preset (Gambar/PDF/Video/Arsip/Dokumen Office/Screenshot), HANYA
+  tampil saat TAMBAH rule baru (`existingRule == null`). Tap isi
+  `folderName`+`pattern` saja -- exclude/filter ukuran TIDAK disentuh.
+- Reuse penuh: `GlobMatcher.matchesAny` CSV multi-pattern (SUDAH ADA sejak
+  awal, nol perubahan di util/), live preview `onPreviewPattern` (SUDAH
+  ADA) otomatis jalan begitu preset ditap -- user langsung lihat bukti
+  file Downloads yang cocok. Chip pakai `FlowRow`+`AssistChip`, pola sama
+  dgn chip kecepatan-scan/konflik di SettingsScreen.kt.
+- "Screenshot" sengaja pakai gaya prefix (`Screenshot_*.png`) bukan cuma
+  ekstensi -- tunjukkan 2 gaya pattern valid ke user awam.
+- File diubah (2): `AddEditRuleScreen.kt`, `strings.xml` (+2). TIDAK
+  disentuh: FileSorter, GlobMatcher, Rule Engine, validator nama folder.
+- `preflight_check.sh` 13/13 lolos. Confidence Rating: **90%**.
+  versionCode 126->127, versionName 8.21.3->8.22.0.
+
 ## v8.21.3 -- FIX WAJIB: Auto-Sort OFF ikut blokir widget "Scan Sekarang" (2026-08-21)
 - Instruksi eksplisit user (format terstruktur: bug report + instruksi 1-6 +
   test wajib + target final). Bug: `ScanWidgetProvider` enqueue

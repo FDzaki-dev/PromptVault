@@ -26,6 +26,9 @@
     <string name="rule_edit_title_add">Tambah Rule</string>
     <string name="rule_edit_title_edit">Edit Rule</string>
     <string name="rule_edit_folder_label">Nama folder tujuan</string>
+    <!-- [Preset cepat, 2026-08-21] -->
+    <string name="rule_edit_preset_title">Preset Cepat (opsional)</string>
+    <string name="rule_edit_preset_hint">Ketuk buat isi folder &amp; pattern otomatis — tetap bisa diedit sebelum disimpan. Contoh nyata cara pattern &amp; folder tujuan dipasangkan.</string>
     <string name="rule_edit_pattern_label">Pattern (mis. invoice_*.zip)</string>
     <string name="rule_edit_pattern_hint">Gunakan * untuk banyak karakter dan ? untuk satu karakter. Contoh: *.txt, laporan_*.zip</string>
     <string name="rule_edit_exclude_label">Kecualikan pattern ini (opsional)</string>

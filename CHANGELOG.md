@@ -3,6 +3,37 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.22.0 (2026-08-21) — Preset Cepat di tab Tambah Rule (edukasi user awam)
+
+Instruksi eksplisit: "tambahkan preset cepat khusus tab tambah rule. biar
+user awam ada gambaran gimana mekanisme rule sortir file yang benar".
+
+**Fitur baru**: 6 chip preset (Gambar, PDF, Video, Arsip ZIP/RAR, Dokumen
+Office, Screenshot) di atas form — HANYA tampil saat tambah rule baru (gate
+`existingRule == null`, tidak muncul saat edit). Tap = isi `folderName`+
+`pattern` otomatis, tetap bisa diedit manual, TIDAK menimpa exclude
+pattern/filter ukuran yang sudah diisi user.
+
+**Nilai edukasi (tujuan utama)**: pattern preset pakai CSV multi-ekstensi
+(mis. `*.jpg, *.jpeg, *.png, *.webp, *.heic` — `GlobMatcher.matchesAny`
+sudah mendukung ini dari awal, TIDAK ada perubahan di util/GlobMatcher.kt).
+Begitu ditap, live preview yang SUDAH ADA (`onPreviewPattern`) langsung
+jalan tunjukkan file Downloads mana yang cocok — user awam lihat loop
+lengkap "pattern -> folder -> bukti file cocok" tanpa baca teks panjang.
+Preset "Screenshot" SENGAJA beda gaya (prefix nama file `Screenshot_*.png`,
+bukan cuma ekstensi) — menunjukkan 2 gaya pattern valid, bukan cuma satu
+pola yang bisa disalahpahami user sbg satu-satunya cara.
+
+**File diubah (2)**: `AddEditRuleScreen.kt` (+`RulePreset` data class,
+`FlowRow`+`AssistChip`, pola sama dgn chip di SettingsScreen.kt), `strings.xml`
+(+2 string). **Tidak disentuh**: FileSorter, GlobMatcher, Rule Engine,
+validasi nama folder — preset cuma mengisi field yang sudah ada, nol logic
+baru di layer data.
+
+`preflight_check.sh` 13/13 lolos. Confidence Rating: **90%** (UI-only,
+reuse pattern matcher & live preview yang sudah teruji). versionCode
+126->127, versionName 8.21.3->8.22.0.
+
 ## v8.21.3 (2026-08-21) — FIX WAJIB: Auto-Sort OFF ikut blokir widget "Scan Sekarang"
 
 Bug: `ScanWidgetProvider` enqueue `AutoSortWorker` untuk trigger manual --

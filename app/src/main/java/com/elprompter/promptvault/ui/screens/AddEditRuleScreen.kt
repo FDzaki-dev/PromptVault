@@ -2,6 +2,8 @@ package com.elprompter.promptvault.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -10,8 +12,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -42,6 +46,40 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.UUID
 
+/**
+ * [next pending, 2026-08-21 -- "tambahkan preset cepat khusus tab tambah
+ * rule, biar user awam ada gambaran gimana mekanisme rule sortir file yang
+ * benar"] 6 preset umum, HANYA tampil saat TAMBAH rule baru (bukan edit --
+ * lihat gate `existingRule == null` di composable). Tap = isi `folderName`+
+ * `pattern` OTOMATIS (tetap bisa diedit manual sebelum Simpan) -- exclude
+ * pattern & filter ukuran SENGAJA tidak disentuh preset, biar tidak menimpa
+ * apa pun yang sudah diisi user di 2 field itu.
+ *
+ * Nilai edukasi (tujuan utama fitur ini, bukan cuma shortcut): begitu
+ * ditap, user LANGSUNG lihat pattern CSV multi-ekstensi (mis.
+ * "*.jpg, *.jpeg, *.png") di field pattern yang SAMA dgn yang mereka akan
+ * ketik manual, DAN live preview di bawah (sudah ada, [onPreviewPattern])
+ * otomatis jalan tunjukkan file Downloads mana yang benar-benar cocok --
+ * loop lengkap "pattern -> folder -> bukti file cocok" tanpa perlu
+ * dijelaskan lewat teks panjang di Onboarding/Panduan.
+ *
+ * "Screenshot" SENGAJA beda gaya dari 5 preset lain (prefix nama file,
+ * BUKAN cuma ekstensi) -- supaya user awam lihat 2 gaya pattern yang valid
+ * (ekstensi generik vs prefix nama spesifik), bukan cuma satu pola yang
+ * bisa disalahpahami sbg "cara satu-satunya".
+ */
+private data class RulePreset(val label: String, val folder: String, val pattern: String)
+
+private val rulePresets = listOf(
+    RulePreset("Gambar", "Gambar", "*.jpg, *.jpeg, *.png, *.webp, *.heic"),
+    RulePreset("PDF", "PDF", "*.pdf"),
+    RulePreset("Video", "Video", "*.mp4, *.mkv, *.mov, *.3gp"),
+    RulePreset("Arsip (ZIP/RAR)", "Arsip", "*.zip, *.rar, *.7z"),
+    RulePreset("Dokumen Office", "Dokumen", "*.doc, *.docx, *.xls, *.xlsx, *.ppt, *.pptx"),
+    RulePreset("Screenshot", "Screenshot", "Screenshot_*.png, Screenshot_*.jpg")
+)
+
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun AddEditRuleScreen(
     existingRule: Rule?,
@@ -109,6 +147,25 @@ fun AddEditRuleScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            if (existingRule == null) {
+                Text(stringResource(R.string.rule_edit_preset_title), style = MaterialTheme.typography.titleSmall)
+                Text(
+                    stringResource(R.string.rule_edit_preset_hint),
+                    style = MaterialTheme.typography.bodySmall
+                )
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    rulePresets.forEach { preset ->
+                        AssistChip(
+                            onClick = {
+                                folderName = preset.folder
+                                pattern = preset.pattern
+                            },
+                            label = { Text(preset.label) }
+                        )
+                    }
+                }
+            }
+
             OutlinedTextField(
                 value = folderName,
                 onValueChange = { folderName = it },
