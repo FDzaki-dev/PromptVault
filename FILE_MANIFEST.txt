@@ -74,6 +74,8 @@ app/src/main/java/com/elprompter/promptvault/util/VaultConfigBackup.kt
 app/src/main/java/com/elprompter/promptvault/worker/AutoSortNotification.kt
 app/src/main/java/com/elprompter/promptvault/worker/AutoSortWorker.kt
 app/src/main/java/com/elprompter/promptvault/worker/BootCompletedReceiver.kt
+app/src/main/java/com/elprompter/promptvault/worker/ManualScanWorker.kt
+app/src/main/java/com/elprompter/promptvault/worker/ScanExecution.kt
 app/src/main/java/com/elprompter/promptvault/worker/WorkScheduler.kt
 app/src/main/java/com/elprompter/promptvault/widget/ScanWidgetProvider.kt
 app/src/main/res/drawable/ic_launcher_foreground.xml

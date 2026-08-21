@@ -3,6 +3,42 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.21.3 (2026-08-21) — FIX WAJIB: Auto-Sort OFF ikut blokir widget "Scan Sekarang"
+
+Bug: `ScanWidgetProvider` enqueue `AutoSortWorker` untuk trigger manual --
+padahal `AutoSortWorker` SENGAJA punya gate `autoSortEnabled` (v8.21.1).
+Akibatnya "Auto-Sort OFF" ikut memblokir tombol widget, padahal manual scan
+harus selalu jalan terlepas status auto-sort.
+
+**Fix (pisahkan entry point, BUKAN sorting engine)**:
+- BARU `worker/ScanExecution.kt`: extract-function `runScanAndReport()` --
+  badan kerja scan+lapor (FileSorter/notifikasi/error-handling) PERSIS SAMA
+  dgn isi lama `AutoSortWorker.doWork()`, dipakai ULANG oleh 2 worker di
+  bawah. Nol logic sorting yang diduplikasi/diubah.
+- `AutoSortWorker.kt`: gate `autoSortEnabled` DIPERTAHANKAN, badan kerja
+  sekarang panggil `runScanAndReport()`.
+- BARU `worker/ManualScanWorker.kt`: entry point manual (widget), TIDAK
+  mengecek `autoSortEnabled` sama sekali, panggil `runScanAndReport()` yang
+  SAMA.
+- `widget/ScanWidgetProvider.kt`: enqueue `ManualScanWorker` (bukan
+  `AutoSortWorker` lagi).
+
+**Target final tercapai**: `AUTO: WorkManager -> AutoSortWorker -> gate ->
+FileSorter` | `MANUAL: Widget -> ManualScanWorker -> FileSorter`.
+
+**Tidak disentuh** (sesuai scope eksplisit): FileSorter, SAF, Shizuku, Rule
+Engine, `WorkScheduler` (periodic tetap jadwalkan `AutoSortWorker`, tidak
+berubah), sorting logic.
+
+Test manual WAJIB di device (tidak bisa diverifikasi otomatis di sesi ini):
+Auto-Sort OFF -> AutoSortWorker no-op; Auto-Sort OFF -> tap widget tetap
+scan; Auto-Sort ON -> AutoSortWorker scan normal; tap widget -> notifikasi
+hasil tetap muncul (lewat `runScanAndReport` yang sama).
+
+`preflight_check.sh` 13/13 lolos. Confidence Rating: **88%** (logic gate
+sederhana & straightforward, tapi WorkManager execution tetap butuh
+verifikasi device asli). versionCode 125->126, versionName 8.21.2->8.21.3.
+
 ## v8.21.1 (2026-08-21) — FITUR: Auto-Sort ON/OFF benar-benar fungsional
 
 Sumber: instruksi eksplisit user. Toggle master switch baru untuk scheduler

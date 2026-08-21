@@ -10,22 +10,18 @@ import android.widget.Toast
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.elprompter.promptvault.R
-import com.elprompter.promptvault.worker.AutoSortWorker
+import com.elprompter.promptvault.worker.ManualScanWorker
 
 /**
  * [Fase 3.1 roadmap, 2026-08-21 -- dipilih eksplisit user dari 4 opsi Fase 3
  * (widget/cloud/lokalisasi/multi-profil) via ask_user_input_v0]
  *
  * Widget home screen: 1 area ketuk "Scan Sekarang", trigger scan Downloads
- * tanpa buka app. Reuse [AutoSortWorker] APA ADANYA -- class WorkManager
- * yang SAMA PERSIS dipakai auto-scan periodik ([WorkScheduler]) & tombol
- * "Scan Sekarang" di Home (tidak langsung, lewat [MainViewModel.
- * runManualScan] yang panggil [com.elprompter.promptvault.util.FileSorter]
- * langsung -- tapi ujungnya logic SAMA, sama-sama `scanAndSort()` yang
- * dilindungi `scanMutex` statis di FileSorter, jadi trigger widget tidak
- * mungkin race dgn scan manual/periodik yang kebetulan jalan bersamaan).
- * FileSorter/rule matching/notifikasi hasil TIDAK disentuh sama sekali di
- * batch ini -- murni trigger point baru, nol logic scan baru.
+ * tanpa buka app. [FIX 2026-08-21] Enqueue [ManualScanWorker] (BUKAN
+ * AutoSortWorker lagi -- lihat komentar di onReceive kenapa), entry point
+ * manual terpisah TANPA gate autoSortEnabled, badan kerja scan tetap
+ * di-share via runScanAndReport (ScanExecution.kt) dgn AutoSortWorker --
+ * FileSorter/rule matching/notifikasi hasil TIDAK disentuh sama sekali.
  *
  * **Kenapa SENGAJA stateless** (bukan RemoteViews yang menampilkan hasil
  * scan langsung di widget, mis. "39 file dipindahkan" muncul di widget
@@ -60,6 +56,15 @@ class ScanWidgetProvider : AppWidgetProvider() {
         super.onReceive(context, intent)
         if (intent.action == ACTION_SCAN_NOW) {
             Toast.makeText(context, context.getString(R.string.widget_scan_toast), Toast.LENGTH_SHORT).show()
+            // [FIX WAJIB "Auto-Sort vs Manual Scan", 2026-08-21] SEBELUMNYA
+            // enqueue AutoSortWorker -- BUG: AutoSortWorker punya gate
+            // autoSortEnabled (lihat AutoSortWorker.kt), jadi "Auto-Sort OFF"
+            // ikut memblokir tombol widget ini. Fix: enqueue ManualScanWorker
+            // (entry point terpisah, TANPA gate) -- badan kerja scan tetap
+            // PERSIS SAMA lewat runScanAndReport yang di-share (lihat
+            // ScanExecution.kt), FileSorter/SAF/Shizuku/notifikasi tidak
+            // diduplikasi/diubah sama sekali.
+            //
             // .enqueue() biasa (BUKAN enqueueUniqueWork) -- trigger manual
             // dari widget SENGAJA tidak berbagi slot unique work dgn
             // AutoSortWorker.WORK_NAME milik auto-scan periodik ([WorkScheduler]),
@@ -67,7 +72,7 @@ class ScanWidgetProvider : AppWidgetProvider() {
             // slot unique itu lagi terisi jadwal periodik. Aman dari race
             // eksekusi ganda krn scanMutex statis di FileSorter (lihat
             // javadoc class di atas).
-            WorkManager.getInstance(context).enqueue(OneTimeWorkRequestBuilder<AutoSortWorker>().build())
+            WorkManager.getInstance(context).enqueue(OneTimeWorkRequestBuilder<ManualScanWorker>().build())
         }
     }
 

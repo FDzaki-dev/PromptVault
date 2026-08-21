@@ -13,6 +13,43 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.21.3 -- FIX WAJIB: Auto-Sort OFF ikut blokir widget "Scan Sekarang" (2026-08-21)
+- Instruksi eksplisit user (format terstruktur: bug report + instruksi 1-6 +
+  test wajib + target final). Bug: `ScanWidgetProvider` enqueue
+  `AutoSortWorker` -- worker itu SENGAJA punya gate `autoSortEnabled`
+  (v8.21.1), jadi "Auto-Sort OFF" ikut memblokir tap widget.
+- Fix: PISAHKAN entry point (gate vs tidak), BUKAN sorting engine.
+  - BARU `worker/ScanExecution.kt`: extract-function `runScanAndReport()`
+    -- badan kerja scan+lapor lama `AutoSortWorker.doWork()` dipindah ke
+    sini APA ADANYA (FileSorter/notifikasi/error-handling TIDAK diubah),
+    dipakai ULANG 2 worker -- nol logic sorting terduplikasi.
+  - `AutoSortWorker.kt`: gate `autoSortEnabled` DIPERTAHANKAN persis,
+    badan kerja panggil `runScanAndReport()`.
+  - BARU `worker/ManualScanWorker.kt`: TANPA gate sama sekali, panggil
+    `runScanAndReport()` yang sama.
+  - `widget/ScanWidgetProvider.kt`: enqueue `ManualScanWorker`, bukan
+    `AutoSortWorker`.
+- Target final tercapai: `AUTO: WorkManager -> AutoSortWorker -> gate ->
+  FileSorter` | `MANUAL: Widget -> ManualScanWorker -> FileSorter`.
+- **TIDAK disentuh** (scope eksplisit): FileSorter, SAF, Shizuku, Rule
+  Engine, `WorkScheduler` (periodic tetap jadwalkan `AutoSortWorker`),
+  sorting logic. `DiagnosticsScreen.kt` yg query
+  `getWorkInfosForUniqueWork(AutoSortWorker.WORK_NAME)` juga tidak perlu
+  diubah -- unique work name AutoSortWorker tidak berubah.
+- `preflight_check.sh` 13/13 lolos.
+- **Batas jujur**: 5 test wajib dari instruksi user (Auto-Sort OFF x2,
+  Auto-Sort ON, widget->ManualScanWorker, no duplicate logic) BELUM
+  dijalankan di device asli sesi ini -- logic gate & pemisahan entry point
+  straightforward & sudah diverifikasi lewat pembacaan kode statis
+  (`grep` konfirmasi WorkScheduler/DiagnosticsScreen masih pakai
+  AutoSortWorker apa adanya, ScanWidgetProvider sudah pindah ke
+  ManualScanWorker), tapi eksekusi WorkManager sesungguhnya (apakah
+  ManualScanWorker benar-benar terdaftar & jalan tanpa manifest entry --
+  seharusnya ya, Worker tidak butuh registrasi manifest, tapi tetap perlu
+  dikonfirmasi) **WAJIB dicek user** dgn 5 skenario test di instruksi asli.
+- Confidence Rating: **88%**. versionCode 125->126, versionName
+  8.21.2->8.21.3.
+
 ## v8.21.2 -- Fix cacat widget "vibes beta testing" (2026-08-21)
 - **Instruksi langsung user**: "perbaiki dulu widget kamu yang vibes nya beta testing, dan masih cacat!!" -- sebelum lanjut pilih item Fase 3 berikutnya.
 - **3 cacat konkret ditemukan & diperbaiki** (3 file, sesuai batch limit):
