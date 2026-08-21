@@ -3,6 +3,35 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.19.0 (2026-08-21) — Roadmap Fase 2.2: notifikasi hasil auto-scan per-rule
+
+"Lanjutkan progress!!" tanpa area spesifik → dicek `ROADMAP.md`, item
+berikutnya setelah 2.1 adalah 2.2: notifikasi hasil auto-scan diperkaya
+ringkasan per-rule (sebelumnya tidak ada notifikasi hasil sama sekali,
+cuma notifikasi ongoing "sedang berjalan").
+
+- Breakdown per-rule diambil dari `MoveHistoryRepository` pasca-scan (pola
+  sama `computeHomeStats()` v8.17.0) — `FileSorter.kt`/`ScanResult`/
+  `MoveHistoryDao.kt` (Protected) nol disentuh, risiko regresi di jalur
+  scan inti = nol.
+- `AutoSortNotification.resultNotification()` baru, ID notifikasi terpisah
+  (1002) dari ongoing (1001), `BigTextStyle` breakdown per-folder sort
+  DESC by count.
+- `AutoSortWorker.kt`: notif hasil HANYA kalau `filesMoved > 0` (cegah
+  notification fatigue tiap siklus 240 menit kalau nihil). Try-catch
+  terpisah termasuk `SecurityException` (POST_NOTIFICATIONS dicabut) —
+  kegagalan notif tidak menggagalkan hasil scan yang sudah sukses.
+- Caveat: breakdown per-rule derived by time-window
+  (`timestampMillis >= scanStartMillis`), bukan dihitung langsung di titik
+  pindah — praktis tidak meleset karena `scanMutex` mencegah 2 scan
+  beriringan, dicatat apa adanya.
+- File diubah (3): `AutoSortNotification.kt`, `AutoSortWorker.kt`,
+  `strings.xml`. `ROADMAP.md` Fase 2.2 dicoret selesai.
+- Preflight 13/13 PASS. **Belum lewat device asli** — user verifikasi:
+  notifikasi hasil muncul terpisah dari ongoing, breakdown per-rule masuk
+  akal, 0-file tidak memicu notifikasi.
+- versionCode 119→120, versionName 8.18.0→8.19.0.
+
 ## v8.18.0 (2026-08-21) — Roadmap Fase 2.1: pencarian di Riwayat Aktivitas
 
 Cross-check dulu ke kode: `RuleListScreen.kt` ternyata sudah punya search

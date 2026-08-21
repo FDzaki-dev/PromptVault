@@ -13,6 +13,61 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.19.0 -- Roadmap Fase 2.2: notifikasi hasil auto-scan per-rule (2026-08-21)
+- Instruksi user: "Lanjutkan progress!!" (tanpa area spesifik, + peringatan
+  "dilarang overthinking") -- dicek `ROADMAP.md` dulu: item berikutnya
+  setelah Fase 2.1 (v8.18.0) adalah 2.2 (notifikasi hasil auto-scan
+  per-rule). Fase 2.3 dilewati dulu (prasyaratnya eksplisit: 1.4 terbukti
+  stabil di device asli, belum ada konfirmasi user). Fase 3 tidak disentuh
+  (butuh sebutan eksplisit).
+- **Desain rendah-risiko** (lebih rendah dari estimasi roadmap "~2-3 file,
+  Risiko: Sedang"): breakdown per-rule DIAMBIL dari `MoveHistoryRepository`
+  SETELAH scan selesai (filter `timestampMillis >= scanStartMillis`,
+  `groupingBy { ruleFolderName }`) -- pola PERSIS `computeHomeStats()`
+  v8.17.0 (sumber data existing yang sudah bersih per-file, bukan pipa
+  baru). Konsekuensi: `FileSorter.kt` (3 loop pemindahan legacy/SAF/
+  Shizuku) & `ScanResult` SAMA SEKALI TIDAK disentuh -- nol risiko regresi
+  di jalur scan inti. `MoveHistoryDao.kt` (Protected: DB Schema/DAO) juga
+  TIDAK disentuh -- `historyFlow.first()` (snapshot sekali) sudah cukup,
+  tidak perlu query baru.
+- **`AutoSortNotification.kt`**: fungsi baru `resultNotification()` --
+  notifikasi TERPISAH (ID beda, `RESULT_NOTIFICATION_ID = 1002`) dari
+  notifikasi ongoing yang sudah ada (`NOTIFICATION_ID = 1001`, otomatis
+  hilang begitu `doWork()` selesai). `BigTextStyle` tampilkan breakdown
+  per-rule diurutkan by count DESC, `contentText` collapsed cuma total.
+  Channel sama (`IMPORTANCE_LOW`, silent) -- konsisten, bukan notifikasi
+  urgent baru.
+- **`AutoSortWorker.kt`**: HANYA notif kalau `result.filesMoved > 0` --
+  sengaja SKIP kalau 0 (auto-scan default tiap 240 menit, notif tiap
+  siklus walau nihil akan jadi notification fatigue). Detail "0
+  dipindahkan" tetap tercatat di Log Aktivitas seperti biasa (tidak
+  berubah). Try-catch terpisah utk pemanggilan notifikasi (termasuk
+  `SecurityException` kalau `POST_NOTIFICATIONS` dicabut runtime) --
+  kegagalan notif TIDAK BOLEH menggagalkan `Result.success()` scan yang
+  sudah sukses.
+- **Caveat jujur**: breakdown per-rule derived dari window waktu
+  (`timestampMillis >= scanStartMillis`), BUKAN dihitung langsung di titik
+  pemindahan -- kalau scan manual (`MainViewModel`) kebetulan jalan di
+  window waktu yang SAMA PERSIS dgn auto-scan, breakdown per-rule bisa
+  sedikit meleset. Praktis mustahil (`scanMutex` sudah cegah 2 scan
+  beriringan sama sekali), dicatat apa adanya bukan disembunyikan. Angka
+  TOTAL di judul notifikasi tetap dari `ScanResult.filesMoved` (sumber
+  kebenaran asli), cuma baris per-rule yang best-effort derived.
+- File diubah (3): `AutoSortNotification.kt`, `AutoSortWorker.kt`,
+  `strings.xml` (3 string baru, prefix `auto_sort_result_notif_*`).
+  `app/build.gradle.kts` (versi). `AndroidManifest.xml` (Protected) TIDAK
+  disentuh -- `POST_NOTIFICATIONS` sudah dideklarasikan sejak fitur
+  foreground service lama.
+- **`ROADMAP.md` diupdate**: Fase 2.2 dicoret ✅ SELESAI.
+- Preflight: 13/13 kategori PASS, 0 iterasi.
+- **BELUM PERNAH lewat `./gradlew` asli / device asli.** User WAJIB
+  verifikasi di HP: setelah auto-scan (atau scan manual -- notifikasi
+  dipanggil dari path yang sama) memindahkan >=1 file, muncul notifikasi
+  baru "Auto-sort selesai" TERPISAH dari notifikasi "sedang berjalan" yang
+  hilang duluan, expand notifikasi lihat breakdown per-folder rule masuk
+  akal, DAN scan 0-file TIDAK memicu notifikasi apapun.
+- versionCode 119->120, versionName 8.18.0->8.19.0.
+
 ## v8.18.0 -- Roadmap Fase 2.1: pencarian di Riwayat Aktivitas (2026-08-21)
 - Lanjutan `ROADMAP.md` setelah Fase 1.4 (v8.17.0). **Cross-check ke kode
   dulu** (bukan asumsi dari estimasi roadmap "~4-6 file, 2 screen"):

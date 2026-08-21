@@ -67,9 +67,15 @@ sudah berjalan, roadmap ini tidak menambah proses baru di sini.
   nyata batch ini cuma `ActivityLogScreen.kt` (1 search field, 2 tab,
   disembunyikan saat mode seleksi-sapuan). Lihat `CHANGELOG.md` v8.18.0.
 
-### 2.2 Notifikasi hasil auto-scan lebih kaya (ringkasan per-rule, bukan cuma total)
-- **Risiko: Sedang** (`AutoSortNotification.kt` sudah ada, ini perluasan bukan bikin baru dari nol -- tapi tetap perlu hati-hati soal panjang teks notifikasi Android & battery/Doze) · **Nilai: Sedang**
-- Estimasi: ~2-3 file
+### ~~2.2 Notifikasi hasil auto-scan lebih kaya (ringkasan per-rule, bukan cuma total)~~ ✅ SELESAI v8.19.0
+- Notifikasi HASIL baru (`AutoSortNotification.resultNotification`),
+  terpisah dari notifikasi ongoing yang sudah ada. Breakdown per-rule
+  diambil dari `MoveHistoryRepository` (pola sama dgn `computeHomeStats()`
+  v8.17.0) -- BUKAN nambah parameter baru ke `FileSorter`/`ScanResult`,
+  jadi 3 loop pemindahan (legacy/SAF/Shizuku) di `FileSorter.kt` sama
+  sekali tidak disentuh (risiko lebih rendah dari estimasi awal). Hanya
+  muncul kalau ada file benar-benar dipindah (0 file = skip, cegah
+  notification fatigue tiap siklus auto-scan). Lihat `CHANGELOG.md` v8.19.0.
 
 ### 2.3 Halaman "Statistik" penuh (grafik tren, bukan cuma angka ringkas Home)
 - **Risiko: Sedang** (screen baru + agregasi data time-series, area baru yang belum pernah diaudit `preflight_check.sh` kategori 5/7) · **Nilai: Sedang**

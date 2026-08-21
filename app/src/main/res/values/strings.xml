@@ -6,6 +6,9 @@
     <string name="auto_sort_channel_desc">Status pemindaian otomatis file di folder Downloads</string>
     <string name="auto_sort_notif_title">Auto-sort berjalan</string>
     <string name="auto_sort_notif_text">PromptVault sedang menyortir file di Downloads</string>
+    <string name="auto_sort_result_notif_title">Auto-sort selesai</string>
+    <string name="auto_sort_result_notif_text">%1$d file tersortir</string>
+    <string name="auto_sort_result_notif_rule_line">%1$s: %2$d file</string>
 
     <!-- [Roadmap Fase 1.3, 2026-08-18] Ekstraksi MURNI (bukan lokalisasi
          — lihat ROADMAP.md item 3.3 terpisah utk itu), nilai string TETAP

@@ -1,5 +1,6 @@
 package com.elprompter.promptvault.worker
 
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
@@ -27,10 +28,20 @@ import com.elprompter.promptvault.R
  * proses prioritas lebih tinggi di mata OS supaya tidak gampang dijeda.
  * Notifikasi otomatis hilang begitu doWork() selesai (WorkManager yang urus
  * lifecycle-nya, bukan manual di sini).
+ *
+ * [Fase 2.2 roadmap, 2026-08-21] Ditambah [resultNotification] -- notifikasi
+ * HASIL (post-scan), TERPISAH dari notifikasi ongoing di atas (yang otomatis
+ * hilang begitu doWork() selesai). ID beda ([RESULT_NOTIFICATION_ID]) supaya
+ * tidak saling menimpa & tetap kelihatan di tray setelah scan tuntas. Channel
+ * SAMA ([CHANNEL_ID], IMPORTANCE_LOW, silent) -- bukan notifikasi urgent,
+ * tidak perlu bunyi/getar terpisah. Dipanggil dari [AutoSortWorker] SETELAH
+ * `scanAndSort()` selesai, HANYA kalau ada file yang benar-benar dipindah
+ * (lihat komentar di pemanggilnya kenapa 0-file di-skip, bukan bug).
  */
 object AutoSortNotification {
     const val CHANNEL_ID = "auto_sort_channel"
     const val NOTIFICATION_ID = 1001
+    const val RESULT_NOTIFICATION_ID = 1002
 
     /** Idempoten -- aman dipanggil berkali-kali (mis. dari Application.onCreate() DAN dari worker). */
     fun ensureChannel(context: Context) {
@@ -68,5 +79,38 @@ object AutoSortNotification {
         } else {
             ForegroundInfo(NOTIFICATION_ID, notification)
         }
+    }
+
+    /**
+     * Notifikasi hasil scan, dgn ringkasan per-rule (bukan cuma total).
+     * [perRule] = nama folder rule -> jumlah file yang masuk ke situ, diambil
+     * caller dari [com.elprompter.promptvault.data.MoveHistoryRepository]
+     * (bukan diteruskan manual per-file dari [com.elprompter.promptvault.util.FileSorter]
+     * -- lihat komentar di [AutoSortWorker], pola sama dgn `computeHomeStats()`
+     * v8.17.0: sumber data existing yang sudah bersih, bukan pipa baru).
+     */
+    fun resultNotification(context: Context, totalMoved: Int, perRule: Map<String, Int>): Notification {
+        ensureChannel(context)
+        val summary = context.getString(R.string.auto_sort_result_notif_text, totalMoved)
+        // Baris per-rule diurutkan by count DESC (rule paling "sibuk" duluan) --
+        // lebih informatif drpd urutan Map yang tidak terjamin stabil.
+        val breakdown = perRule.entries
+            .sortedByDescending { it.value }
+            .joinToString("\n") { (folder, count) ->
+                context.getString(R.string.auto_sort_result_notif_rule_line, folder, count)
+            }
+        val style = NotificationCompat.BigTextStyle()
+            .bigText(breakdown.ifEmpty { summary })
+            .setSummaryText(summary)
+        return NotificationCompat.Builder(context, CHANNEL_ID)
+            .setContentTitle(context.getString(R.string.auto_sort_result_notif_title))
+            .setContentText(summary)
+            .setStyle(style)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setOngoing(false)
+            .setAutoCancel(true)
+            .setSilent(true)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .build()
     }
 }
