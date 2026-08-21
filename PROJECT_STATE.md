@@ -13,6 +13,28 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.15.5 -- Audit UX 100% batch 4: aktifkan predictive back gesture (2026-08-21)
+- Lanjutan pending queue #3 v8.15.0 (item: predictive back gesture,
+  Android 13+). **Bug nyata ditemukan**: `targetSdk = 34` (Android 14)
+  TAPI `android:enableOnBackInvokedCallback` TIDAK dideklarasikan di
+  `AndroidManifest.xml` -- default-nya `false`, jadi app diam-diam JATUH
+  ke back-dispatch legacy tanpa animasi preview predictive-back sistem,
+  walau target SDK-nya sudah lama mendukung.
+- Fix: tambah `android:enableOnBackInvokedCallback="true"` di tag
+  `<application>` (1 baris, protected asset edit PARSIAL). Tidak
+  bersinggungan dengan `enterTransition`/`exitTransition` custom Compose
+  Navigation yang sudah ada (itu transisi antar-composable, ini flag
+  animasi preview back sistem level-Activity) -- tidak ada konflik.
+- File diubah (1): `AndroidManifest.xml`. `app/build.gradle.kts` (versi).
+- Pending queue tersisa (2 item dari v8.15.0 #3): kontras warna
+  disabled-state, konsistensi durasi animasi antar layar,
+  landscape/tablet layout -- belum ada bukti konkret bug per item.
+- **BELUM PERNAH lewat `./gradlew` asli / device asli.** User WAJIB
+  verifikasi di HP Android 13+: swipe-back dari tepi layar menampilkan
+  animasi preview (scale-down/slide) sebelum benar-benar keluar/back,
+  bukan langsung potong seperti sebelumnya.
+- versionCode 112->113, versionName 8.15.4->8.15.5.
+
 ## v8.15.4 -- Tampilkan potongan release notes di layar Pembaruan (2026-08-21)
 - Instruksi langsung user (screenshot layar Pengaturan > Pembaruan
   Aplikasi): "jangan cuma compare version doang. Minimal nampilin

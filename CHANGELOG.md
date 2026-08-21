@@ -3,6 +3,12 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.15.5 (2026-08-21) — Aktifkan predictive back gesture
+
+`targetSdk 34` tapi `android:enableOnBackInvokedCallback` belum
+dideklarasikan (default false) — animasi preview swipe-back sistem
+(Android 13+) tidak pernah jalan. Fix: 1 baris di `AndroidManifest.xml`.
+
 ## v8.15.4 (2026-08-21) — Tampilkan potongan release notes di Pembaruan
 
 Layar Pengaturan > Pembaruan Aplikasi sebelumnya cuma bandingkan nomor
