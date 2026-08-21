@@ -3,6 +3,27 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
+## 📌 ATURAN WAJIB SESI (PINNED -- jangan pernah turun/terkubur log baru)
+1. **Bump versi manual wajib setiap sesi** -- `versionCode` & `versionName`
+   di `app/build.gradle.kts` WAJIB di-bump tiap sesi kerja, termasuk kalau
+   perubahan cuma dokumentasi/governance (tanpa ubah kode).
+2. **Box skrip commit WAJIB tampil DI ATAS** heading "Update Harian:" pada
+   tiap respons akhir sesi -- bukan di bawahnya.
+> Instruksi user 2026-08-21. Section ini PERMANEN di baris teratas file ini,
+> tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
+> di bawah section ini, BUKAN di atasnya.
+
+## v8.15.2 -- Pin aturan wajib sesi (bump versi + posisi box commit) (2026-08-21)
+- Instruksi langsung user: "Abadikan di repository" -- 2 rule adaptif (bump
+  versi manual wajib tiap sesi; box skrip commit wajib tampil di atas
+  heading "Update Harian:") sebelumnya cuma diakui di chat (hilang kalau
+  sesi baru), sekarang ditulis permanen sebagai section pinned di atas
+  file ini supaya sesi Claude berikutnya (siapapun modelnya) otomatis
+  ikut tanpa user perlu tempel ulang instruksi.
+- File diubah (1): `PROJECT_STATE.md` (tambah section pinned). `app/build.gradle.kts` (versi, sesuai rule #1 baru itu sendiri).
+- Tidak ada perubahan kode/perilaku app.
+- versionCode 109->110, versionName 8.15.1->8.15.2.
+
 ## v8.15.1 -- Audit UX 100% batch 2: guard double-tap "Simpan" (2026-08-21)
 - Lanjutan pending queue #1 dari v8.15.0. `AddEditRuleScreen.kt`: tombol
   "Simpan" sebelumnya `enabled` hanya cek isi field, TIDAK guard terhadap

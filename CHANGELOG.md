@@ -3,6 +3,13 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.15.2 (2026-08-21) — Pin aturan wajib sesi ke repo
+
+Instruksi user: "Abadikan di repository". 2 rule (bump versi manual wajib
+tiap sesi; box skrip commit tampil di atas heading "Update Harian:") kini
+tertulis permanen di section pinned teratas `PROJECT_STATE.md`, bukan
+cuma diingat via chat. Tidak ada perubahan kode.
+
 ## v8.15.1 (2026-08-21) — Audit UX 100%, batch 2: guard double-tap "Simpan"
 
 Lanjutan pending queue v8.15.0. `AddEditRuleScreen.kt`: tombol "Simpan"
