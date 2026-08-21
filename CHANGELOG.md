@@ -3,6 +3,17 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.20.1 (2026-08-21) — Fix cacat UI: chart Tren 14 Hari cuma tampil 4 batang
+Laporan user + screenshot: layar Statistik judulnya "Tren 14 hari terakhir"
+tapi cuma 4 batang terlihat di kanvas kosong -- kelihatan RUSAK ke user
+beginner. Root cause: `TrendBarChart` di StatisticsScreen.kt gambar
+`barHeight=0px` utk hari count=0 (0px = tidak terlihat), padahal data selalu
+14 bucket lengkap (lihat `computeStatisticsData`). Fix: hari count=0 tetap
+digambar stub pendek warna redup (bukan tinggi 0) -- 14 batang SELALU
+terlihat, beda visual jelas 0-aktivitas vs ada-aktivitas. 1 file diubah
+(StatisticsScreen.kt). preflight_check.sh lolos. Confidence: 92%.
+versionCode 121->122, versionName 8.20.0->8.20.1.
+
 ## v8.20.0 (2026-08-21) — Roadmap Fase 2.3: halaman Statistik penuh
 
 "Lanjutkan" setelah Fase 1-2.2 tuntas → ditanya dulu (prasyarat 2.3 belum

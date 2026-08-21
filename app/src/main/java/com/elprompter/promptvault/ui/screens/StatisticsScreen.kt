@@ -148,20 +148,34 @@ fun StatisticsScreen(
     }
 }
 
-/** Grafik batang hand-rolled, lihat javadoc [StatisticsScreen] kenapa tanpa library. */
+/**
+ * Grafik batang hand-rolled, lihat javadoc [StatisticsScreen] kenapa tanpa library.
+ *
+ * [Fix cacat UI, laporan user + screenshot 2026-08-21] Sebelumnya bar count=0
+ * digambar dgn barHeight=0px -- drawRoundRect ukuran nol = TIDAK TERLIHAT SAMA
+ * SEKALI. Judul bilang "Tren 14 hari terakhir" (selalu 14 bucket, lihat
+ * computeStatisticsData di MainViewModel.kt) tapi kalau cuma 4 hari yg punya
+ * aktivitas, user cuma lihat 4 batang mengambang di tengah kanvas kosong --
+ * kelihatan seperti chart RUSAK/belum sepenuhnya termuat, bukan "10 hari
+ * lainnya memang 0 aktivitas". Fix: hari dgn count=0 tetap digambar sbg stub
+ * pendek warna redup (bukan tinggi 0) -- 14 batang SELALU terlihat, beda
+ * visual jelas antara "0 aktivitas" vs "ada aktivitas".
+ */
 @Composable
 private fun TrendBarChart(data: List<MainViewModel.StatisticsData.DayBucket>, barColor: Color, modifier: Modifier = Modifier) {
     val maxCount = (data.maxOfOrNull { it.count } ?: 0).coerceAtLeast(1)
+    val emptyStubColor = barColor.copy(alpha = 0.22f)
     Canvas(modifier = modifier) {
         if (data.isEmpty()) return@Canvas
         val spacing = 4.dp.toPx()
         val barWidth = (size.width - spacing * (data.size - 1)) / data.size
+        val stubHeight = 3.dp.toPx()
         data.forEachIndexed { index, bucket ->
             val ratio = bucket.count.toFloat() / maxCount.toFloat()
-            val barHeight = size.height * ratio
+            val barHeight = (size.height * ratio).coerceAtLeast(stubHeight)
             val x = index * (barWidth + spacing)
             drawRoundRect(
-                color = barColor,
+                color = if (bucket.count > 0) barColor else emptyStubColor,
                 topLeft = Offset(x, size.height - barHeight),
                 size = Size(barWidth, barHeight),
                 cornerRadius = CornerRadius(3.dp.toPx(), 3.dp.toPx())

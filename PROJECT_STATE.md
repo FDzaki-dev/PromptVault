@@ -13,6 +13,23 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.20.1 -- Fix cacat UI: chart Tren 14 Hari cuma tampil 4 batang (2026-08-21)
+- Laporan user + screenshot: layar Statistik judulnya "Tren 14 hari terakhir"
+  tapi cuma 4 batang terlihat di kanvas kosong -- kelihatan RUSAK ke user
+  beginner (bukan ada). "Dilarang overthinking" -- langsung diagnosa & fix,
+  tanpa tanya balik.
+- Root cause: `TrendBarChart` (StatisticsScreen.kt) gambar `barHeight=0px`
+  utk hari count=0 (drawRoundRect ukuran nol = tidak terlihat sama sekali),
+  padahal `computeStatisticsData()` di MainViewModel.kt SELALU hasilkan 14
+  bucket lengkap (bukan cuma hari yg ada aktivitas) -- data sudah benar,
+  murni bug rendering di Canvas.
+- Fix: hari count=0 tetap digambar sbg stub pendek (3dp) warna redup
+  (`barColor.copy(alpha=0.22f)`), bukan tinggi 0 -- 14 batang SELALU
+  terlihat, beda visual jelas "0 aktivitas" vs "ada aktivitas".
+- 1 file diubah: `StatisticsScreen.kt` (`TrendBarChart` saja, tidak
+  menyentuh data layer/`MainViewModel.kt`/DAO). `preflight_check.sh` lolos.
+- Confidence Rating: 92%. versionCode 121->122, versionName 8.20.0->8.20.1.
+
 ## v8.20.0 -- Roadmap Fase 2.3: halaman Statistik penuh (2026-08-21)
 - "Lanjutkan" tanpa area spesifik, setelah Fase 1-2.2 tuntas semua --
   Fase 2.3 punya prasyarat eksplisit ("kerjakan SETELAH 1.4 terbukti stabil
