@@ -13,6 +13,38 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.15.6 -- Audit UX 100% batch 5: tutup pending queue #3 (2026-08-21)
+- **Kontras disabled-state**: DICEK, tidak ada override manual warna
+  disabled di seluruh kode (`grep "disabled"` 0 hasil relevan) -- app
+  100% pakai default alpha disabled Material3 (~38% konten/12% container)
+  bawaan `ButtonDefaults`/`FilterChipDefaults`. **Kesimpulan: N/A, bukan
+  bug** -- WCAG 1.4.3 sendiri MENGECUALIKAN komponen UI inaktif dari
+  syarat kontras, dan default M3 sudah teruji.
+- **Konsistensi durasi animasi**: DICEK seluruh `tween(...)` di app --
+  SEMUA transisi Crossfade layar konsisten 220ms, transisi masuk
+  NavHost 220ms/keluar 180ms (pola standar Material "keluar lebih cepat
+  dari masuk"), animasi tekan tombol konsisten via 1 konstanta
+  `TactileTokens.PressAnimationMillis=120`. **Kesimpulan: N/A, sudah
+  konsisten**, tidak ada durasi acak/beda sendiri di file manapun.
+- **Landscape/tablet layout**: bug NYATA -- 0 resource qualifier
+  (`-land`, `-sw600dp`, dst), `MainActivity` tanpa
+  `android:screenOrientation`, TIDAK ADA adaptive layout sama sekali.
+  Redesign adaptive penuh (breakpoint, 2-pane, dst) di luar cakupan 1
+  batch micro. **Fix pragmatis diterapkan**: kunci
+  `android:screenOrientation="portrait"` di `MainActivity` -- mencegah
+  layout pecah/tumpang-tindih di landscape yang memang belum pernah
+  didesain untuknya, TANPA memblokir siapa pun (app tetap penuh
+  fungsional di portrait, mode utama HP Android). Adaptive tablet
+  layout tetap dicatat sebagai roadmap terpisah kalau user mau lanjut
+  ke sana (bukan micro-fix, butuh desain ulang beberapa layar).
+- File diubah (1): `AndroidManifest.xml`. `app/build.gradle.kts` (versi).
+- **Pending queue v8.15.0 #3 KINI TUTUP SELURUHNYA** (3/3 item selesai
+  diaudit: 2 N/A terverifikasi, 1 fix pragmatis).
+- **BELUM PERNAH lewat `./gradlew` asli / device asli.** User WAJIB
+  verifikasi: app terkunci portrait (tidak lagi bisa rotate ke
+  landscape), tidak ada regresi fungsi normal di portrait.
+- versionCode 113->114, versionName 8.15.5->8.15.6.
+
 ## v8.15.5 -- Audit UX 100% batch 4: aktifkan predictive back gesture (2026-08-21)
 - Lanjutan pending queue #3 v8.15.0 (item: predictive back gesture,
   Android 13+). **Bug nyata ditemukan**: `targetSdk = 34` (Android 14)

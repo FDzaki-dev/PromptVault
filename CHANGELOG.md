@@ -3,6 +3,14 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.15.6 (2026-08-21) — Tutup pending queue #3: disabled-contrast & animasi N/A, portrait lock
+
+Kontras disabled-state & konsistensi durasi animasi diverifikasi N/A
+(sudah sesuai/konsisten). Landscape/tablet: belum ada adaptive layout —
+fix pragmatis `android:screenOrientation="portrait"` dikunci di
+MainActivity untuk cegah layout pecah, adaptive tablet jadi roadmap
+terpisah. Pending queue audit UX v8.15.0 kini tuntas.
+
 ## v8.15.5 (2026-08-21) — Aktifkan predictive back gesture
 
 `targetSdk 34` tapi `android:enableOnBackInvokedCallback` belum
