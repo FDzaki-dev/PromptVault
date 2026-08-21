@@ -3,6 +3,51 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
+## v8.13.0 -- Eksperimen percepatan kompilasi CI (gradle.properties) (2026-08-21)
+- **Instruksi langsung user**: "terapkan percepatan kompilasi (experimental)".
+- CI (`build.yml`) menjalankan 3 invocation `./gradlew` TERPISAH dalam 1 job
+  yang sama (`compileDebugKotlin` -> `testDebugUnitTest`+`testReleaseUnitTest`
+  -> `assembleRelease`) -- target utama: hemat waktu KONFIGURASI ulang
+  project berkali-kali di job yang sama, + build cache lintas run (`gradle/
+  actions/setup-gradle@v3` di CI sudah cache `~/.gradle` antar run workflow
+  secara bawaan, jadi flag lokal ini MEMANFAATKAN cache itu, bukan bikin
+  cache baru).
+- **`gradle.properties` (protected asset, edit PARSIAL) -- 5 baris baru**:
+  `org.gradle.parallel=true`, `org.gradle.caching=true` (stabil, low-risk),
+  `org.gradle.vfs.watch=true` (stabil), + 2 baris **EKSPERIMENTAL sungguhan**
+  `org.gradle.configuration-cache=true` dengan
+  `org.gradle.configuration-cache.problems=warn` (BUKAN default `fail`) --
+  `warn` dipilih SENGAJA karena `signingConfigs` di `app/build.gradle.kts`
+  baca `System.getenv(...)` LANGSUNG di fase konfigurasi (input "untracked"
+  bagi configuration cache, akan selalu ke-flag sbg "problem") -- kalau pakai
+  default `fail`, build PASTI gagal keras gara2 ini padahal secara fungsi
+  tidak masalah. `warn` supaya itu cuma jadi catatan, build tetap lanjut.
+- **`org.gradle.jvmargs`**: `-Xmx2048m` -> `-Xmx3072m` (runner ubuntu-latest
+  GitHub Actions, margin lebih aman utk Compose+Room+KSP+config-cache
+  sekaligus tanpa OOM daemon).
+- **SENGAJA TIDAK diaktifkan**: Kotlin K2 compiler
+  (`kotlin.experimental.tryK2=true`) -- proyek ini Kotlin 1.9.24 + Compose
+  compiler plugin `1.5.14`, dan dukungan K2 utk Compose compiler plugin
+  BELUM stabil sebelum Kotlin 2.0 (K2 baru resmi didukung penuh saat Compose
+  compiler dibundel ke Kotlin 2.0+) -- risiko build GAGAL TOTAL jauh lebih
+  besar drpd potensi speedup, tidak sepadan utk perubahan yang diminta
+  "sampai berhasil". Kalau proyek ini upgrade ke Kotlin 2.0+ di masa depan,
+  K2 layak dipertimbangkan ulang saat itu.
+- **Rollback cepat kalau CI ternyata bermasalah**: cukup hapus 2 baris
+  `org.gradle.configuration-cache*` di `gradle.properties` (3 baris lain --
+  parallel/caching/vfs.watch -- aman/stabil, tidak perlu ikut dihapus).
+- File diubah (2): `gradle.properties` (parsial), `app/build.gradle.kts`
+  (versi saja, TIDAK ada perubahan dependency/plugin/logic).
+  `FILE_MANIFEST.txt` TIDAK berubah.
+- Preflight: cek hasil di bawah entri ini sebelum ZIP dikirim.
+- **BELUM PERNAH lewat `./gradlew` asli / CI asli** -- sandbox Claude TIDAK
+  punya Android SDK/Gradle/jaringan (lihat header `scripts/preflight_check.sh`),
+  jadi "sampai berhasil" TIDAK BISA diverifikasi tuntas di sini secara
+  teknis. **User WAJIB pantau run GitHub Actions berikutnya setelah push**
+  -- kalau `assembleRelease` gagal krn config-cache, langsung terapkan
+  rollback 2-baris di atas (JANGAN revert seluruh 5 baris, cuma yang
+  eksperimental).
+
 ## v8.12.0 -- Fitur: UI input PAT GitHub (opsional, hindari rate-limit updater) (2026-08-20)
 - **Item pending eksplisit dari user** (dicatat sejak v8.5.0 sbg "titik
   ekstensi siap pakai") -- dieksekusi sekarang atas instruksi langsung.

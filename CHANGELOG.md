@@ -3,6 +3,18 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.13.0 (2026-08-21) — Eksperimen percepatan kompilasi CI
+
+`gradle.properties`: `parallel`+`caching`+`vfs.watch` (stabil) +
+`configuration-cache` (EKSPERIMENTAL, `problems=warn` supaya `System.getenv`
+di `signingConfigs` cuma jadi warning bukan gagal build) + heap
+2048m->3072m. Target: 3 invocation `./gradlew` terpisah per job CI
+(compile->test->assembleRelease) saling reuse config cache. K2 compiler
+SENGAJA tidak diaktifkan (belum stabil utk Compose di Kotlin 1.9.24).
+Rollback kalau CI gagal: hapus 2 baris `configuration-cache*` saja.
+Detail lengkap + alasan tiap baris: `PROJECT_STATE.md`. Belum lewat CI
+asli -- pantau run Actions berikutnya.
+
 ## v8.12.0 (2026-08-20) — Fitur: UI input PAT GitHub (opsional, hindari rate-limit updater)
 
 Menyambungkan titik ekstensi yang sudah disiapkan sejak v8.5.0
