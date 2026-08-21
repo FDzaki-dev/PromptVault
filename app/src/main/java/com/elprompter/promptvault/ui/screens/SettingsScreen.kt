@@ -78,6 +78,9 @@ import java.util.Locale
 fun SettingsScreen(
     currentIntervalMinutes: Int,
     onIntervalSelected: (Int) -> Unit,
+    // [Fix Auto-Sort ON/OFF, 2026-08-21] Master switch scheduler background.
+    autoSortEnabled: Boolean,
+    onAutoSortEnabledChanged: (Boolean) -> Unit,
     currentConflictStrategy: ConflictStrategy,
     onConflictStrategySelected: (ConflictStrategy) -> Unit,
     currentScanConcurrency: Int,
@@ -198,6 +201,22 @@ fun SettingsScreen(
                 Icon(Icons.Filled.HelpOutline, contentDescription = null, modifier = Modifier.size(18.dp))
                 Text(" " + stringResource(R.string.settings_open_guide))
             }
+
+            // [Fix Auto-Sort ON/OFF, 2026-08-21] Master switch, ditaruh
+            // SEBELUM interval (interval tetap bisa diubah saat OFF, tapi
+            // tidak akan menjadwalkan apa-apa sampai toggle ini ON lagi).
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(stringResource(R.string.settings_autosort_title), style = MaterialTheme.typography.titleMedium)
+                TactileSwitch(checked = autoSortEnabled, onCheckedChange = onAutoSortEnabledChanged, accentColor = colors.primary)
+            }
+            Text(
+                if (autoSortEnabled) stringResource(R.string.settings_autosort_desc_on) else stringResource(R.string.settings_autosort_desc_off),
+                style = MaterialTheme.typography.bodySmall
+            )
 
             Text(stringResource(R.string.settings_interval_section_title), style = MaterialTheme.typography.titleMedium)
             Text(

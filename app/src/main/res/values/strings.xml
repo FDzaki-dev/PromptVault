@@ -73,6 +73,11 @@
     <string name="settings_restore_confirm">Pulihkan Konfigurasi Lama</string>
     <string name="settings_restore_dismiss">Mulai Kosong Saja</string>
     <string name="settings_open_guide">Buka Panduan Penggunaan</string>
+    <!-- [Fix Auto-Sort ON/OFF, 2026-08-21] Master switch scheduler background. -->
+    <string name="settings_autosort_title">Auto-Sort</string>
+    <string name="settings_autosort_desc_on">Otomatis memindai Downloads di latar belakang dan menjalankan Rule aktif sesuai interval.</string>
+    <string name="settings_autosort_desc_off">Auto-sort dinonaktifkan. Scan manual tetap tersedia.</string>
+
     <string name="settings_interval_section_title">Interval Auto-Scan</string>
     <string name="settings_interval_section_desc">Seberapa sering PromptVault memindai Downloads di latar belakang. Android tidak mengizinkan kurang dari 15 menit.</string>
     <string name="settings_interval_unit_minutes_fmt">%1$d menit</string>
@@ -185,6 +190,8 @@
     <string name="home_stat_rule_active">Rule aktif</string>
     <string name="home_stat_autoscan">Auto-scan</string>
     <string name="home_stat_autoscan_interval_fmt">tiap %1$d menit</string>
+    <!-- [Fix Auto-Sort ON/OFF, 2026-08-21] -->
+    <string name="home_stat_autoscan_off">OFF</string>
 
     <!-- [Roadmap Fase 1.4, 2026-08-21] Statistik ringkas Home. -->
     <string name="home_stat_sorted_week_label">Tersortir minggu ini</string>
@@ -207,7 +214,7 @@
     <string name="onboarding_step5_title">Kalau nama file sudah ada di tujuan</string>
     <string name="onboarding_step5_body">Ada 3 pilihan (atur di Pengaturan): Ganti nama otomatis (aman, default), Lewati (file lama tidak disentuh), atau Timpa (file lama di tujuan DIHAPUS PERMANEN, tidak bisa di-undo). Pilih Timpa hanya kalau kamu yakin.</string>
     <string name="onboarding_step6_title">Auto-sort berjalan sendiri</string>
-    <string name="onboarding_step6_body">Setelah rule dibuat, app memindai Downloads secara berkala di latar belakang sesuai interval yang kamu atur di Pengaturan (minimal 15 menit, batas sistem Android). Notifikasi kecil akan muncul saat auto-sort sedang berjalan.</string>
+    <string name="onboarding_step6_body">Setelah rule dibuat, jika Auto-Sort aktif, PromptVault akan memindai Downloads secara berkala di latar belakang sesuai interval yang kamu atur di Pengaturan (minimal 15 menit, batas sistem Android). Notifikasi kecil akan muncul saat auto-sort sedang berjalan.</string>
     <string name="onboarding_step7_title">Salah pindah? Ada Undo</string>
     <string name="onboarding_step7_body">Buka \"Riwayat Aktivitas &amp; Undo\" dari Home untuk membatalkan pemindahan file, satu per satu atau tekan-lama lalu sapukan jari untuk pilih banyak sekaligus. Lupa detail apapun dari panduan ini? Buka \"Panduan Penggunaan\" di menu Home kapan saja -- tidak perlu mengulang onboarding ini dari awal.</string>
     <string name="onboarding_progress_fmt">Langkah %1$d dari %2$d</string>

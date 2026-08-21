@@ -13,7 +13,21 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
-## v8.21.0 -- Roadmap Fase 3.1: Widget Home Screen "Scan Sekarang" (2026-08-21)
+## v8.21.1 -- FITUR: Auto-Sort ON/OFF benar-benar fungsional (2026-08-21)
+- **Sumber**: `PromptVault_AutoSort_Toggle_Fix_Instructions.md` (instruksi eksplisit user) -- sebelumnya toggle Auto-Sort TIDAK ADA sama sekali, `WorkScheduler.rescheduleFromSavedSettings()` selalu unconditional schedule().
+- **SettingsRepository**: key baru `autoSortEnabledKey` (boolean, default `true` -- backward compat), API `autoSortEnabledFlow`/`getAutoSortEnabled()`/`setAutoSortEnabled()`. DataStore existing, tidak ada repo/DB baru.
+- **WorkScheduler.rescheduleFromSavedSettings()**: sekarang baca `autoSortEnabled` dulu -- ON -> `schedule()`, OFF -> `cancel()`. Titik pusat ini otomatis benarkan `PromptVaultApp.onCreate()` dan `BootCompletedReceiver` TANPA mengubah kedua file itu sama sekali (0 baris).
+- **MainViewModel**: `autoSortEnabled: StateFlow<Boolean>` baru + `setAutoSortEnabled()` (urutan: persist -> update scheduler). `setIntervalMinutes()` sekarang cuma `WorkScheduler.schedule()` kalau `autoSortEnabled == true` -- ganti interval saat OFF tidak lagi diam-diam menghidupkan scheduler.
+- **AutoSortWorker.doWork()**: defensive gate di baris pertama -- baca `autoSortEnabled`, kalau `false` langsung `Result.success()` tanpa scan (defense-in-depth utk stale/pending worker).
+- **SettingsScreen**: toggle `TactileSwitch` baru di atas kartu Interval Auto-Scan (reuse komponen existing, tidak ada Switch baru). Interval tetap bisa diubah saat OFF (sesuai instruksi).
+- **HomeScreen**: indikator "Auto-scan" sekarang tampil "OFF" (bukan interval) kalau `autoSortEnabled == false`.
+- **Panduan/Onboarding**: wording step 6 diubah jadi kondisional ("jika Auto-Sort aktif...") -- tidak rewrite total.
+- **TIDAK disentuh** (sesuai larangan eksplisit): `FileSorter.scanAndSort()` (0 baris), SAF/Shizuku, `scanMutex`, Rule matching, conflict strategy, Room schema/DAO, Navigation, signing, `PromptVaultApp.kt`/`BootCompletedReceiver.kt` (logic-nya otomatis benar lewat `WorkScheduler`), `ALLOWED_INTERVALS`/`DEFAULT_INTERVAL_MINUTES`.
+- **Test otomatis**: TIDAK ditambahkan -- lifecycle test (ON/OFF x startup/reboot/worker) butuh Robolectric/mockk utk mock `Context`/`WorkManager`/`CoroutineWorker`, dependency ini TIDAK ADA di `build.gradle.kts` (cuma JUnit polos + coroutines-test) dan menambahnya = di luar scope instruksi ("jangan refactor besar-besaran"). Skenario A-G di instruksi divalidasi manual/preflight, BELUM ada automated test coverage -- dicatat sebagai technical debt.
+- **versionCode/versionName TIDAK naik** (tetap 123/8.21.0) -- menunggu konfirmasi CI hijau dulu sebelum bump.
+- **Belum diverifikasi CI hijau.**
+
+
 - "lanjutkan progress!!" tanpa item spesifik -- Fase 1&2 ROADMAP.md 100%
   selesai, Fase 3 WAJIB pilih eksplisit (aturan roadmap sendiri). Ditanya
   via ask_user_input_v0 (4 opsi Fase 3), **user pilih: 3.1 Widget Home

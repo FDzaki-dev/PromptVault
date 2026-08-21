@@ -293,6 +293,8 @@ private fun PromptVaultRoot(
         composable(Routes.HOME) {
             val rules by viewModel.rules.collectAsStateWithLifecycle()
             val interval by viewModel.intervalMinutes.collectAsStateWithLifecycle()
+            // [Fix Auto-Sort ON/OFF, 2026-08-21]
+            val autoSortEnabledHome by viewModel.autoSortEnabled.collectAsStateWithLifecycle()
             val isScanning by viewModel.isScanning.collectAsStateWithLifecycle()
             val summary by viewModel.lastScanSummary.collectAsStateWithLifecycle()
             val skipped by viewModel.lastSkippedFiles.collectAsStateWithLifecycle()
@@ -302,6 +304,7 @@ private fun PromptVaultRoot(
             HomeScreen(
                 ruleCount = rules.count { it.enabled },
                 intervalMinutes = interval,
+                autoSortEnabled = autoSortEnabledHome,
                 isScanning = isScanning,
                 lastScanSummary = summary,
                 hasSkippedFiles = skipped.isNotEmpty(),
@@ -383,6 +386,8 @@ private fun PromptVaultRoot(
         }
         composable(Routes.SETTINGS) {
             val interval by viewModel.intervalMinutes.collectAsStateWithLifecycle()
+            // [Fix Auto-Sort ON/OFF, 2026-08-21]
+            val autoSortEnabled by viewModel.autoSortEnabled.collectAsStateWithLifecycle()
             val conflictStrategy by viewModel.conflictStrategy.collectAsStateWithLifecycle()
             val scanConcurrency by viewModel.scanConcurrency.collectAsStateWithLifecycle()
             val safTreeUri by viewModel.safTreeUri.collectAsStateWithLifecycle()
@@ -400,6 +405,8 @@ private fun PromptVaultRoot(
             SettingsScreen(
                 currentIntervalMinutes = interval,
                 onIntervalSelected = { viewModel.setIntervalMinutes(it) },
+                autoSortEnabled = autoSortEnabled,
+                onAutoSortEnabledChanged = { viewModel.setAutoSortEnabled(it) },
                 currentConflictStrategy = conflictStrategy,
                 onConflictStrategySelected = { viewModel.setConflictStrategy(it) },
                 currentScanConcurrency = scanConcurrency,

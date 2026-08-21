@@ -60,6 +60,9 @@ import com.elprompter.promptvault.ui.theme.VaultTheme
 fun HomeScreen(
     ruleCount: Int,
     intervalMinutes: Int,
+    // [Fix Auto-Sort ON/OFF, 2026-08-21] supaya indikator tidak menampilkan
+    // interval seolah aktif saat auto-sort sebenarnya OFF.
+    autoSortEnabled: Boolean,
     isScanning: Boolean,
     lastScanSummary: String?,
     hasSkippedFiles: Boolean,
@@ -154,7 +157,7 @@ fun HomeScreen(
             VaultCard(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     ManifestRow(icon = Icons.Filled.Rule, tint = colors.primary, label = stringResource(R.string.home_stat_rule_active), value = "$ruleCount")
-                    ManifestRow(icon = Icons.Filled.Schedule, tint = colors.tertiary, label = stringResource(R.string.home_stat_autoscan), value = stringResource(R.string.home_stat_autoscan_interval_fmt, intervalMinutes))
+                    ManifestRow(icon = Icons.Filled.Schedule, tint = colors.tertiary, label = stringResource(R.string.home_stat_autoscan), value = if (autoSortEnabled) stringResource(R.string.home_stat_autoscan_interval_fmt, intervalMinutes) else stringResource(R.string.home_stat_autoscan_off))
                     ManifestRow(icon = Icons.Filled.History, tint = colors.tertiary, label = stringResource(R.string.home_stat_sorted_week_label), value = stringResource(R.string.home_stat_sorted_value_fmt, homeStats.thisWeek))
                     ManifestRow(icon = Icons.Filled.History, tint = colors.tertiary, label = stringResource(R.string.home_stat_sorted_month_label), value = stringResource(R.string.home_stat_sorted_value_fmt, homeStats.thisMonth))
                     if (lastScanSummary != null) {

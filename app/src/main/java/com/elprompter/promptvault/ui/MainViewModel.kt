@@ -141,6 +141,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             state.asStateFlow()
         }
 
+    /** [Fix Auto-Sort ON/OFF, 2026-08-21] Master switch scheduler background -- lihat dokumentasi lengkap di SettingsRepository.autoSortEnabledFlow. */
+    val autoSortEnabled: StateFlow<Boolean> = settingsRepository.autoSortEnabledFlow
+        .let { flow ->
+            val state = MutableStateFlow(true)
+            viewModelScope.launch { flow.collect { state.value = it } }
+            state.asStateFlow()
+        }
+
     val conflictStrategy: StateFlow<ConflictStrategy> = settingsRepository.conflictStrategyFlow
         .let { flow ->
             val state = MutableStateFlow(SettingsRepository.DEFAULT_CONFLICT_STRATEGY)
@@ -337,7 +345,31 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun setIntervalMinutes(minutes: Int) {
         viewModelScope.launch {
             settingsRepository.setIntervalMinutes(minutes)
-            WorkScheduler.schedule(getApplication(), minutes)
+            // [Fix Auto-Sort ON/OFF, 2026-08-21] Dulu unconditional schedule() --
+            // sekarang cuma schedule kalau auto-sort memang ON, supaya ganti
+            // interval saat OFF tidak diam-diam menghidupkan scheduler lagi.
+            if (settingsRepository.getAutoSortEnabled()) {
+                WorkScheduler.schedule(getApplication(), minutes)
+            }
+        }
+    }
+
+    /**
+     * [Fix Auto-Sort ON/OFF, 2026-08-21] Urutan WAJIB: persist state dulu,
+     * baru update scheduler -- kalau proses mati di antara keduanya, state
+     * tersimpan tetap konsisten (scheduler akan disinkronkan ulang lewat
+     * WorkScheduler.rescheduleFromSavedSettings saat app dibuka lagi/reboot).
+     * TIDAK menyentuh FileSorter.scanAndSort() -- manual scan selalu jalan
+     * terlepas dari nilai ini.
+     */
+    fun setAutoSortEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setAutoSortEnabled(enabled)
+            if (enabled) {
+                WorkScheduler.schedule(getApplication(), settingsRepository.getIntervalMinutes())
+            } else {
+                WorkScheduler.cancel(getApplication())
+            }
         }
     }
 

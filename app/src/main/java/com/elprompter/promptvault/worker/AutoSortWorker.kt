@@ -16,6 +16,15 @@ class AutoSortWorker(appContext: Context, params: WorkerParameters) : CoroutineW
 
     override suspend fun doWork(): Result {
         return try {
+            // [Fix Auto-Sort ON/OFF, 2026-08-21] Defense-in-depth: worker stale/
+            // pending yang sempat terjadwal SEBELUM user menekan OFF (WorkManager
+            // tidak selalu langsung mem-batalkan instance yang sudah running/
+            // dispatched) tetap bisa dipanggil sistem -- gate ini pastikan worker
+            // itu TIDAK ikut scan kalau baca OFF, cukup no-op sukses (bukan retry/
+            // failure, memang sengaja tidak ada kerjaan).
+            if (!SettingsRepository(applicationContext).getAutoSortEnabled()) {
+                return Result.success()
+            }
             // Batch §5: promosikan ke foreground service SEBELUM scan mulai, supaya
             // OS tidak menjeda/membunuh worker di tengah scan panjang (lihat
             // AutoSortNotification.kt untuk alasan lengkap). Best-effort: kalau

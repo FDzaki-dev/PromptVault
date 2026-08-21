@@ -3,6 +3,19 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.21.1 (2026-08-21) — FITUR: Auto-Sort ON/OFF benar-benar fungsional
+
+Sumber: instruksi eksplisit user. Toggle master switch baru untuk scheduler
+background: `SettingsRepository.autoSortEnabled` (default `true`, backward
+compat). `WorkScheduler.rescheduleFromSavedSettings()` jadi titik pusat
+ON→schedule/OFF→cancel — otomatis benarkan `PromptVaultApp`/`BootCompletedReceiver`
+tanpa mengubah keduanya. `AutoSortWorker` dapat defensive gate untuk stale
+worker. `setIntervalMinutes()` tidak lagi schedule diam-diam saat OFF. UI
+toggle di SettingsScreen (reuse `TactileSwitch`), indikator Home tampil OFF.
+`FileSorter.scanAndSort()` tidak disentuh — manual scan selalu jalan. Test
+otomatis TIDAK ditambahkan (butuh Robolectric/mockk, tidak ada di project) —
+dicatat sebagai technical debt. versionCode/versionName tetap 123/8.21.0.
+
 ## v8.21.0 (2026-08-21) — Roadmap Fase 3.1: Widget Home Screen "Scan Sekarang"
 User pilih eksplisit lewat 4 opsi Fase 3 (widget/cloud/lokalisasi/multi-profil).
 

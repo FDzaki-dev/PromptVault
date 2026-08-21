@@ -52,8 +52,20 @@ object WorkScheduler {
      * PromptVaultApp (scope app biasa) vs BootCompletedReceiver (goAsync()
      * supaya proses ditahan hidup sampai selesai).
      */
+    /**
+     * [Fix Auto-Sort ON/OFF, 2026-08-21] Dulu unconditional schedule() --
+     * sekarang baca SettingsRepository.autoSortEnabled dulu: OFF -> cancel()
+     * (bukan schedule), supaya PromptVaultApp.onCreate()/BootCompletedReceiver
+     * TIDAK diam-diam menghidupkan lagi scheduler yang sudah user matikan.
+     * Interval tetap dibaca dari DataStore SAAT ON (sumber tunggal, tidak ada
+     * duplikasi logic default interval di caller manapun).
+     */
     suspend fun rescheduleFromSavedSettings(context: Context) {
-        val minutes = SettingsRepository(context).getIntervalMinutes()
-        schedule(context, minutes)
+        val repo = SettingsRepository(context)
+        if (repo.getAutoSortEnabled()) {
+            schedule(context, repo.getIntervalMinutes())
+        } else {
+            cancel(context)
+        }
     }
 }

@@ -34,6 +34,7 @@ class SettingsRepository(private val context: Context) {
     private val intervalKey = intPreferencesKey("auto_scan_interval_minutes")
     private val conflictKey = stringPreferencesKey("conflict_strategy")
     private val safTreeUriKey = stringPreferencesKey("saf_tree_uri")
+    private val autoSortEnabledKey = booleanPreferencesKey("auto_sort_enabled")
     private val scanConcurrencyKey = intPreferencesKey("scan_concurrency")
     // [Fitur baru 2026-08-17, integrasi Shizuku] Path filesystem absolut
     // (BUKAN content:// URI -- Shizuku bypass SAF sepenuhnya) folder tujuan
@@ -103,6 +104,24 @@ class SettingsRepository(private val context: Context) {
 
     suspend fun setConflictStrategy(strategy: ConflictStrategy) {
         context.promptVaultDataStore.edit { prefs -> prefs[conflictKey] = strategy.name }
+    }
+
+    /**
+     * [Fix Auto-Sort ON/OFF, 2026-08-21] Master switch scheduler background --
+     * default `true` (backward compatibility: user existing yang belum pernah
+     * menyentuh toggle ini tetap dapat perilaku lama, auto-sort tetap jalan).
+     * Ini murni scheduler concern (WorkManager schedule/cancel) -- TIDAK
+     * menyentuh [FileSorter.scanAndSort] sama sekali, manual scan selalu
+     * berfungsi terlepas dari nilai ini.
+     */
+    val autoSortEnabledFlow: Flow<Boolean> = context.promptVaultDataStore.data.map { prefs ->
+        prefs[autoSortEnabledKey] ?: true
+    }
+
+    suspend fun getAutoSortEnabled(): Boolean = autoSortEnabledFlow.first()
+
+    suspend fun setAutoSortEnabled(enabled: Boolean) {
+        context.promptVaultDataStore.edit { prefs -> prefs[autoSortEnabledKey] = enabled }
     }
 
     /**
