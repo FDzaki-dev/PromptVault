@@ -182,6 +182,11 @@
     <string name="home_stat_rule_active">Rule aktif</string>
     <string name="home_stat_autoscan">Auto-scan</string>
     <string name="home_stat_autoscan_interval_fmt">tiap %1$d menit</string>
+
+    <!-- [Roadmap Fase 1.4, 2026-08-21] Statistik ringkas Home. -->
+    <string name="home_stat_sorted_week_label">Tersortir minggu ini</string>
+    <string name="home_stat_sorted_month_label">Tersortir bulan ini</string>
+    <string name="home_stat_sorted_value_fmt">%1$d file</string>
     <string name="home_skipped_files_button"> Lihat detail file yang dilewati</string>
     <string name="home_scan_now_button">Scan Sekarang</string>
     <string name="home_menu_riwayat">Riwayat Aktivitas &amp; Undo</string>

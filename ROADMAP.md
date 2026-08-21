@@ -6,7 +6,7 @@
 > urutan pengerjaan yang disarankan, BUKAN urutan prioritas rasa/opini --
 > murni rasio nilai:risiko dari tertinggi ke terendah.
 >
-> Status saat ini: **v8.16.2**, dark-only, Material 3 murni. Baseline app
+> Status saat ini: **v8.17.0**, dark-only, Material 3 murni. Baseline app
 > sudah solid -- fitur inti (auto-sort, rule pattern, undo, conflict
 > strategy, export/import rule JSON, notifikasi hasil auto-scan, Shizuku
 > integration, crash logger) semua sudah 100% fungsional & terdokumentasi di
@@ -52,10 +52,11 @@ sudah berjalan, roadmap ini tidak menambah proses baru di sini.
   nol literal UI hardcode tersisa. Prasyarat Fase 3.3 (lokalisasi EN)
   terpenuhi kalau suatu saat diminta eksplisit.
 
-### 1.4 Statistik ringkas di Home (jumlah file tersortir minggu ini/bulan ini)
-- **Risiko: Rendah** (baca data yang sudah ada di `ActivityLogRepository`/`MoveHistoryRepository`, murni tampilan baru) · **Nilai: Sedang-Tinggi** (user langsung lihat app "bekerja" tanpa buka Riwayat Aktivitas manual)
-- Estimasi: ~2-3 file (`HomeScreen.kt` + 1 komponen kartu baru + query
-  agregasi di repository terkait)
+### ~~1.4 Statistik ringkas di Home (jumlah file tersortir minggu ini/bulan ini)~~ ✅ SELESAI v8.17.0
+- 2 baris baru di kartu ringkasan Home. Sumber `MoveHistoryRepository`.
+  Caveat: cap 200 entri (existing, fitur Undo) bisa under-count "bulan
+  ini" kalau pemindahan bulan berjalan >200 sebelum akhir bulan --
+  diterima sbg trade-off, bukan bug baru. Lihat `CHANGELOG.md` v8.17.0.
 
 ---
 

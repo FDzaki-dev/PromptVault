@@ -3,6 +3,19 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.17.0 (2026-08-21) — Roadmap Fase 1.4: statistik ringkas Home
+
+Kartu ringkasan Home dapat 2 baris baru: jumlah file tersortir minggu
+ini/bulan ini. Sumber `MoveHistoryRepository` (record per-file bersih),
+dihitung regardless status undo. Caveat: repository di-cap 200 entri
+(existing, utk fitur Undo) — bisa under-count kalau pemindahan bulan ini
+melebihi 200 sebelum akhir bulan. Batas minggu/bulan pakai kalender via
+`java.util.Calendar`, konsisten pola tanggal existing app.
+
+`ROADMAP.md` Fase 1.4 dicoret selesai.
+
+Preflight: 13/13 kategori PASS. versionCode 117→118, versionName 8.16.2→8.17.0.
+
 ## v8.16.2 (2026-08-21) — Roadmap Fase 1.3 batch 8/N (PENUTUP): ekstraksi string `MainActivity.kt`
 
 Lanjutan `ROADMAP.md` Fase 1.3 — dicek ulang ke kode aktual dulu (bukan

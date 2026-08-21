@@ -13,6 +13,38 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.17.0 -- Roadmap Fase 1.4: statistik ringkas Home (2026-08-21)
+- Lanjutan `ROADMAP.md` -- item berikutnya setelah Fase 1.3 tutup (v8.16.2).
+  Kartu ringkasan Home (bareng "Rule aktif"/"Auto-scan") dapat 2 baris baru:
+  jumlah file tersortir minggu ini & bulan ini.
+- Sumber data: `MoveHistoryRepository` (record per-file bersih, punya
+  `timestampMillis`), BUKAN `ActivityLogRepository` (pesan bebas, parsing
+  string utk hitung terlalu rapuh). Dihitung REGARDLESS status `undone` --
+  pemindahannya tetap terjadi.
+- **Caveat jujur, bukan disembunyikan**: `MoveHistoryRepository` sudah
+  di-cap `MAX_ENTRIES = 200` (utk fitur Undo, sudah ada lama) -- kalau
+  total pemindahan bulan ini pernah melebihi 200 sebelum akhir bulan,
+  angka "bulan ini" bisa under-count karena entri terlama ke-trim. Ini
+  trade-off yang SUDAH ADA & diterima utk fitur Undo, bukan regresi baru
+  dari fitur ini. Kalau user suatu saat butuh statistik akurat tanpa cap,
+  itu scope terpisah (Roadmap Fase 2.3 "Statistik penuh").
+- Batas minggu/bulan: kalender (Minggu/Senin sesuai locale device s/d
+  sekarang; 1 bulan berjalan s/d sekarang) via `java.util.Calendar` --
+  konsisten dgn pola tanggal existing di app (`SimpleDateFormat`, BUKAN
+  `java.time`, tidak ada preseden lain di codebase ini).
+- File diubah (4): `MainViewModel.kt` (`data class HomeStats` + StateFlow
+  `homeStats` + fungsi murni `computeHomeStats()`), `HomeScreen.kt` (param
+  baru + 2 `ManifestRow`), `MainActivity.kt` (wiring `collectAsStateWithLifecycle`
+  + parameter), `strings.xml` (3 string baru). `app/build.gradle.kts` (versi
+  -- minor bump, fitur baru bukan micro-fix).
+- **`ROADMAP.md` diupdate**: Fase 1.4 dicoret ✅ SELESAI.
+- Preflight: 13/13 kategori PASS, 0 iterasi (langsung bersih).
+- **BELUM PERNAH lewat `./gradlew` asli / device asli.** User WAJIB
+  verifikasi di HP: kartu ringkasan Home tampil 4 baris (Rule aktif,
+  Auto-scan, Tersortir minggu ini, Tersortir bulan ini), angka masuk akal
+  dibanding tab "Log" di Riwayat Aktivitas.
+- versionCode 117->118, versionName 8.16.2->8.17.0.
+
 ## v8.16.2 -- Roadmap Fase 1.3 batch 8/N -- PENUTUP: ekstraksi string `MainActivity.kt`/`PermissionGate` (2026-08-21)
 - Instruksi user: "Lanjutkan progress!!" (tanpa area spesifik) -- dicek dulu
   `ROADMAP.md` (bukan asumsi) sbg antrian resmi: Fase 1.3 (audit hardcode

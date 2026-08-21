@@ -297,6 +297,7 @@ private fun PromptVaultRoot(
             val summary by viewModel.lastScanSummary.collectAsStateWithLifecycle()
             val skipped by viewModel.lastSkippedFiles.collectAsStateWithLifecycle()
             val scanFeedback by viewModel.scanFeedback.collectAsStateWithLifecycle()
+            val homeStats by viewModel.homeStats.collectAsStateWithLifecycle()
 
             HomeScreen(
                 ruleCount = rules.count { it.enabled },
@@ -304,6 +305,7 @@ private fun PromptVaultRoot(
                 isScanning = isScanning,
                 lastScanSummary = summary,
                 hasSkippedFiles = skipped.isNotEmpty(),
+                homeStats = homeStats,
                 scanFeedback = scanFeedback,
                 onScanFeedbackConsumed = { viewModel.consumeScanFeedback() },
                 onScanNow = { viewModel.runManualScan() },

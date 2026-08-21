@@ -62,6 +62,9 @@ fun HomeScreen(
     isScanning: Boolean,
     lastScanSummary: String?,
     hasSkippedFiles: Boolean,
+    // [Roadmap Fase 1.4, 2026-08-21] Statistik ringkas -- lihat KDoc lengkap
+    // (sumber data + caveat cap 200 entri) di `MainViewModel.homeStats`.
+    homeStats: MainViewModel.HomeStats,
     scanFeedback: MainViewModel.ScanFeedback?,
     onScanFeedbackConsumed: () -> Unit,
     onScanNow: () -> Unit,
@@ -149,6 +152,8 @@ fun HomeScreen(
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     ManifestRow(icon = Icons.Filled.Rule, tint = colors.primary, label = stringResource(R.string.home_stat_rule_active), value = "$ruleCount")
                     ManifestRow(icon = Icons.Filled.Schedule, tint = colors.tertiary, label = stringResource(R.string.home_stat_autoscan), value = stringResource(R.string.home_stat_autoscan_interval_fmt, intervalMinutes))
+                    ManifestRow(icon = Icons.Filled.History, tint = colors.tertiary, label = stringResource(R.string.home_stat_sorted_week_label), value = stringResource(R.string.home_stat_sorted_value_fmt, homeStats.thisWeek))
+                    ManifestRow(icon = Icons.Filled.History, tint = colors.tertiary, label = stringResource(R.string.home_stat_sorted_month_label), value = stringResource(R.string.home_stat_sorted_value_fmt, homeStats.thisMonth))
                     if (lastScanSummary != null) {
                         Text(lastScanSummary, style = MaterialTheme.typography.bodySmall, color = colors.onSurface)
                     }

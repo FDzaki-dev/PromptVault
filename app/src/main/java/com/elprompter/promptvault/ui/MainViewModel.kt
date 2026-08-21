@@ -30,8 +30,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Calendar
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -73,6 +75,32 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val undoableHistory: StateFlow<List<MoveHistoryEntry>> = moveHistoryRepository.historyFlow
         .let { flow ->
             val state = MutableStateFlow<List<MoveHistoryEntry>>(emptyList())
+            viewModelScope.launch { flow.collect { state.value = it } }
+            state.asStateFlow()
+        }
+
+    /**
+     * [Roadmap Fase 1.4, 2026-08-21] Statistik ringkas Home -- jumlah file
+     * berhasil disortir minggu ini/bulan ini. Sumber: [MoveHistoryRepository]
+     * (record per-file bersih, BUKAN [ActivityLogRepository] yang isinya
+     * pesan bebas -- hindari parsing string utk hitung, rapuh). Dihitung
+     * REGARDLESS status `undone` -- pemindahannya TETAP TERJADI, undo itu
+     * aksi terpisah, bukan "batalkan riwayat statistik".
+     *
+     * Caveat JUJUR (bukan disembunyikan): [MoveHistoryRepository] di-cap
+     * `MAX_ENTRIES = 200` (utk fitur Undo, lihat KDoc di sana) -- kalau
+     * total pemindahan bulan ini pernah melebihi 200 SEBELUM akhir bulan,
+     * entri terlama ikut ter-trim & angka "bulan ini" bisa under-count.
+     * Trade-off yang SUDAH ADA & diterima utk fitur Undo, bukan regresi
+     * baru dari fitur ini -- kalau user butuh statistik akurat jangka
+     * panjang tanpa cap, itu scope terpisah (Fase 2.3 "Statistik penuh").
+     */
+    data class HomeStats(val thisWeek: Int, val thisMonth: Int)
+
+    val homeStats: StateFlow<HomeStats> = moveHistoryRepository.historyFlow
+        .map { entries -> computeHomeStats(entries) }
+        .let { flow ->
+            val state = MutableStateFlow(HomeStats(thisWeek = 0, thisMonth = 0))
             viewModelScope.launch { flow.collect { state.value = it } }
             state.asStateFlow()
         }
@@ -548,4 +576,31 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun resetDownloadState() {
         _downloadState.value = DownloadState.Idle
     }
+}
+
+/**
+ * Fungsi murni (bukan member class, gampang di-reason-about) -- lihat KDoc
+ * lengkap di [MainViewModel.homeStats] soal sumber data & caveat cap 200
+ * entri. `nowMillis` diparameterkan (bukan `System.currentTimeMillis()`
+ * inline) supaya fungsi ini gampang dites tanpa mock waktu sistem, walau
+ * belum ada test unit utk ini di batch ini.
+ */
+private fun computeHomeStats(entries: List<MoveHistoryEntry>, nowMillis: Long = System.currentTimeMillis()): MainViewModel.HomeStats {
+    val weekStart = Calendar.getInstance().apply {
+        timeInMillis = nowMillis
+        set(Calendar.DAY_OF_WEEK, firstDayOfWeek)
+        set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+    }.timeInMillis
+    val monthStart = Calendar.getInstance().apply {
+        timeInMillis = nowMillis
+        set(Calendar.DAY_OF_MONTH, 1)
+        set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+    }.timeInMillis
+    var week = 0
+    var month = 0
+    entries.forEach { entry ->
+        if (entry.timestampMillis >= monthStart) month++
+        if (entry.timestampMillis >= weekStart) week++
+    }
+    return MainViewModel.HomeStats(thisWeek = week, thisMonth = month)
 }
