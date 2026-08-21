@@ -3,6 +3,16 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.14.0 (2026-08-21) — Eksperimen percepatan kompilasi CI, batch 2
+
+CI: 3 invocation `./gradlew` terpisah digabung jadi 1 step (config-cache
+cuma configure project sekali, bukan per-invocation). Keystore decode
+dipindah ke atas step gabungan (assembleRelease butuh signing sejak
+awal). Log gabung ke `build-all.log`. `gradle.properties`: +
+`ksp.incremental=true` (eksplisit, sudah default true, tidak ubah
+perilaku). Detail + risiko: `PROJECT_STATE.md`. Belum lewat CI asli --
+pantau run Actions berikutnya lebih ketat (step YAML direstruktur).
+
 ## v8.13.0 (2026-08-21) — Eksperimen percepatan kompilasi CI
 
 `gradle.properties`: `parallel`+`caching`+`vfs.watch` (stabil) +

@@ -66,16 +66,6 @@ jobs:
       # PERSIS penyebab kegagalan "cp: cannot stat app-release.apk" yang
       # pernah kejadian: assembleRelease sebenarnya gagal duluan, tapi
       # step-nya dianggap sukses karena exit code ke-mask oleh tee.
-      - name: Compile check (fail fast)
-        run: |
-          set -euo pipefail
-          ./gradlew compileDebugKotlin --stacktrace 2>&1 | tee compile-check.log
-
-      - name: Run unit tests
-        run: |
-          set -euo pipefail
-          ./gradlew testDebugUnitTest testReleaseUnitTest --stacktrace 2>&1 | tee unit-tests.log
-
       - name: Decode keystore
         run: |
           set -euo pipefail
@@ -93,7 +83,22 @@ jobs:
           }
           echo "Keystore valid."
 
-      - name: Build release APK
+      # [Eksperimen percepatan kompilasi batch 2, 2026-08-21] SEBELUMNYA 3
+      # invocation `./gradlew` TERPISAH (compileDebugKotlin -> testDebugUnitTest
+      # +testReleaseUnitTest -> assembleRelease) = project dikonfigurasi ulang
+      # tiap invocation (`configuration-cache` di-key per SET task yang
+      # diminta -- config utk "compileDebugKotlin" saja TIDAK otomatis kepake
+      # ulang utk request "assembleRelease" yang beda set task, lihat
+      # PROJECT_STATE.md v8.13.0). Digabung jadi SATU invocation dgn ke-4
+      # task sekaligus supaya project betul2 CUMA dikonfigurasi SEKALI.
+      # Keystore WAJIB sudah didekode SEBELUM step ini (dipindah ke atas)
+      # krn `assembleRelease` butuh file+env signing sejak awal invocation.
+      # Gradle TETAP fail-fast: tanpa `--continue`, begitu 1 task gagal,
+      # build berhenti & task berikutnya (mis. `assembleRelease`) TIDAK
+      # dijalankan -- perilaku setara 3 step terpisah lama, cuma log
+      # digabung jadi 1 file (`build-all.log`, lihat step upload log gagal
+      # di bawah yang juga sudah disesuaikan).
+      - name: Compile, test, and build release APK
         env:
           ANDROID_KEYSTORE_PATH: ${{ github.workspace }}/release.keystore
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -101,7 +106,7 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           set -euo pipefail
-          ./gradlew assembleRelease --stacktrace 2>&1 | tee assemble-release.log
+          ./gradlew compileDebugKotlin testDebugUnitTest testReleaseUnitTest assembleRelease --stacktrace 2>&1 | tee build-all.log
 
       # Diagnostik SELALU jalan (bukan cuma pas gagal) supaya kalau nama file
       # output ternyata beda dugaan (mis. "app-release-unsigned.apk" karena
@@ -175,9 +180,7 @@ jobs:
         with:
           name: build-failure-log-v${{ steps.version.outputs.version }}
           path: |
-            compile-check.log
-            unit-tests.log
-            assemble-release.log
+            build-all.log
             **/build/reports/**
           if-no-files-found: ignore
 

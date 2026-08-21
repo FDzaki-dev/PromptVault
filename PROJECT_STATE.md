@@ -3,6 +3,48 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
+## v8.14.0 -- Eksperimen percepatan kompilasi CI, batch 2 (gabung invocation + KSP incremental) (2026-08-21)
+- Lanjutan v8.13.0 (CI CONFIRMED hijau, run #118, 7m15s) -- instruksi
+  langsung user: "Gabung 3 invocation+KSP incremental".
+- **`.github/workflows/build.yml` (protected asset, edit PARSIAL)**: 3
+  invocation `./gradlew` terpisah (`compileDebugKotlin` -> `testDebugUnitTest`
+  +`testReleaseUnitTest` -> `assembleRelease`) DIGABUNG jadi 1 step
+  "Compile, test, and build release APK" dgn 1 invocation berisi ke-4 task
+  sekaligus -- alasan: `configuration-cache` (aktif sejak v8.13.0) di-key
+  per SET task yang diminta, jadi config utk request "compileDebugKotlin
+  saja" TIDAK otomatis kepake ulang utk request "assembleRelease" (set
+  task beda) -- gabung 1 invocation = project CUMA dikonfigurasi SEKALI
+  utuh. Step "Decode keystore" DIPINDAH ke ATAS step gabungan ini (SEBELUMNYA
+  di antara "Run unit tests" & "Build release APK" lama) krn `assembleRelease`
+  butuh file+env signing SEJAK AWAL invocation gabungan (tidak bisa lagi
+  didekode di tengah, karena tengahnya sudah tidak ada step terpisah).
+  Fail-fast TETAP terjaga: tanpa `--continue`, task gagal = build berhenti,
+  task berikutnya tidak jalan -- perilaku setara 3 step lama.
+- Log 3 file lama (`compile-check.log`/`unit-tests.log`/`assemble-release
+  .log`) jadi 1 file `build-all.log` -- step "Upload build log on failure"
+  disesuaikan (path lama akan 404 diam2 krn `if-no-files-found: ignore`
+  kalau tidak diperbaiki; SUDAH diperbaiki batch ini).
+- **`gradle.properties` (parsial)**: +1 baris `ksp.incremental=true` --
+  SUDAH default true sejak KSP 1.0.4+ (versi proyek 1.9.24-1.0.20), baris
+  ini eksplisit murni supaya niatnya tercatat, BUKAN perubahan perilaku.
+  Room compiler (`ksp("androidx.room:room-compiler")`) satu-satunya
+  processor KSP di proyek ini.
+- File diubah (3): `.github/workflows/build.yml` (parsial),
+  `gradle.properties` (parsial), `app/build.gradle.kts` (versi).
+  `FILE_MANIFEST.txt` TIDAK berubah.
+- Preflight: cek hasil di bawah entri ini sebelum ZIP dikirim (kategori #8
+  YAML validity WAJIB tetap hijau setelah restrukturisasi step).
+- **BELUM PERNAH lewat CI asli** -- risiko utama batch ini BUKAN di
+  gradle.properties (sudah confirmed v8.13.0), tapi di REORDER step YAML
+  (keystore decode pindah posisi + env block pindah ke step gabungan) --
+  **user WAJIB pantau run Actions berikutnya lebih ketat dari biasanya**,
+  khususnya: (1) step "Decode keystore" tetap sukses di posisi barunya,
+  (2) step gabungan berhasil sampai `assembleRelease` (bukan cuma
+  compile/test), (3) APK ter-upload & Release ter-publish seperti biasa.
+  Kalau gagal: rollback termudah adalah revert `.github/workflows/build.yml`
+  ke versi v8.13.0 (3 step terpisah) -- `gradle.properties` v8.13.0 TIDAK
+  perlu ikut di-rollback, sudah terbukti aman terpisah.
+
 ## v8.13.0 -- Eksperimen percepatan kompilasi CI (gradle.properties) (2026-08-21)
 - **Instruksi langsung user**: "terapkan percepatan kompilasi (experimental)".
 - CI (`build.yml`) menjalankan 3 invocation `./gradlew` TERPISAH dalam 1 job
