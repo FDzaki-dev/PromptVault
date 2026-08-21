@@ -3,6 +3,12 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.15.3 (2026-08-21) — Audit UX 100%, batch 3: OnboardingScreen verified N/A
+
+Verifikasi manual `OnboardingScreen.kt` (pending queue v8.15.0 #2): murni
+carousel info, 0 TextField — dikonfirmasi bukan bug. Tidak ada perubahan
+kode.
+
 ## v8.15.2 (2026-08-21) — Pin aturan wajib sesi ke repo
 
 Instruksi user: "Abadikan di repository". 2 rule (bump versi manual wajib

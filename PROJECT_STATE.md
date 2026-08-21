@@ -13,6 +13,20 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.15.3 -- Audit UX 100% batch 3: verifikasi OnboardingScreen N/A (2026-08-21)
+- Lanjutan pending queue #2 v8.15.0. `view` manual `OnboardingScreen.kt`
+  (188 baris) SELURUHNYA: layar ini carousel 7 langkah info murni
+  (icon+title+body+progress dots+Next/Back), 0 `TextField`/`OutlinedTextField`
+  di file ini. **Kesimpulan: N/A, bukan bug** -- grep 0 hasil di batch
+  audit awal SUDAH akurat, tidak ada input yang lolos.
+- Tidak ada file kode diubah. `app/build.gradle.kts` (versi, sesuai rule
+  wajib bump tiap sesi).
+- Pending queue tersisa (dari v8.15.0, item #3): kontras disabled-state,
+  konsistensi durasi animasi, predictive back gesture, landscape/tablet --
+  belum ada bukti konkret bug, perlu audit manual lebih dalam per item
+  kalau user mau lanjut.
+- versionCode 110->111, versionName 8.15.2->8.15.3.
+
 ## v8.15.2 -- Pin aturan wajib sesi (bump versi + posisi box commit) (2026-08-21)
 - Instruksi langsung user: "Abadikan di repository" -- 2 rule adaptif (bump
   versi manual wajib tiap sesi; box skrip commit wajib tampil di atas
