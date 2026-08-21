@@ -3,6 +3,19 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.18.0 (2026-08-21) — Roadmap Fase 2.1: pencarian di Riwayat Aktivitas
+
+Cross-check dulu ke kode: `RuleListScreen.kt` ternyata sudah punya search
+lengkap (v2.24.0 lama) — cakupan nyata cuma `ActivityLogScreen.kt`. 1
+search field shared 2 tab (filter `message` di Log, `fileName` di Undo),
+disembunyikan saat mode seleksi-sapuan aktif, empty-state beda "data
+kosong" vs "tidak ditemukan". Sweep-select & batch undo tidak terpengaruh
+(tetap pakai `undoableHistory` param penuh).
+
+`ROADMAP.md` Fase 2.1 dicoret selesai.
+
+Preflight: 13/13 kategori PASS. versionCode 118→119, versionName 8.17.0→8.18.0.
+
 ## v8.17.0 (2026-08-21) — Roadmap Fase 1.4: statistik ringkas Home
 
 Kartu ringkasan Home dapat 2 baris baru: jumlah file tersortir minggu

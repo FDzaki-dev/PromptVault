@@ -13,6 +13,36 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.18.0 -- Roadmap Fase 2.1: pencarian di Riwayat Aktivitas (2026-08-21)
+- Lanjutan `ROADMAP.md` setelah Fase 1.4 (v8.17.0). **Cross-check ke kode
+  dulu** (bukan asumsi dari estimasi roadmap "~4-6 file, 2 screen"):
+  `RuleListScreen.kt` TERNYATA SUDAH punya search/filter lengkap (query,
+  filter folderName/pattern, empty-state beda utk "belum ada rule" vs
+  "tidak ditemukan" -- v2.24.0 lama). **Cakupan nyata batch ini cuma 1
+  screen**: `ActivityLogScreen.kt`, yang benar-benar 0 search sebelumnya.
+- Fitur: 1 `OutlinedTextField` search (shared 1 field utk 2 tab, filter
+  kolom beda per tab -- `message` di tab Log, `fileName` di tab Undo).
+  Disembunyikan saat mode seleksi-sapuan aktif (top bar sudah ganti fokus
+  ke "Undo Terpilih", search cuma nambah ramai). Empty-state dibedakan:
+  "belum ada aktivitas"/`"tidak ada yang bisa di-undo"` (data kosong) vs
+  "tidak ditemukan" + ikon `SearchOff` (hasil search kosong) -- pola sama
+  persis `RuleListScreen.kt`.
+- **Sweep-select & batch undo TIDAK terpengaruh**: `pendingBatchUndo`
+  tetap pakai `undoableHistory` (param penuh) di-filter by `selectedIds`,
+  BUKAN list ter-filter search -- id tetap valid lintas filter, tidak ada
+  risiko "pilih lalu hilang saat search diubah".
+- File diubah (2): `ActivityLogScreen.kt`, `strings.xml` (3 string baru,
+  prefix `activitylog_search_*`/`activitylog_no_results_*`).
+  `app/build.gradle.kts` (versi -- minor, fitur baru).
+- **`ROADMAP.md` diupdate**: Fase 2.1 dicoret ✅ SELESAI (cakupan nyata
+  lebih kecil dari estimasi awal -- RuleListScreen sudah beres duluan).
+- Preflight: 13/13 kategori PASS, 0 iterasi.
+- **BELUM PERNAH lewat `./gradlew` asli / device asli.** User WAJIB
+  verifikasi di HP: ketik di search box tab Log (filter pesan) & tab Undo
+  (filter nama file), long-press tetap masuk mode seleksi & search
+  hilang, ganti tab search TETAP ada tapi filter beda kolom.
+- versionCode 118->119, versionName 8.17.0->8.18.0.
+
 ## v8.17.0 -- Roadmap Fase 1.4: statistik ringkas Home (2026-08-21)
 - Lanjutan `ROADMAP.md` -- item berikutnya setelah Fase 1.3 tutup (v8.16.2).
   Kartu ringkasan Home (bareng "Rule aktif"/"Auto-scan") dapat 2 baris baru:

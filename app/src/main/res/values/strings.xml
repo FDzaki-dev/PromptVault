@@ -240,6 +240,11 @@
     <string name="activitylog_batch_undo_partial_fmt">%1$d berhasil, %2$d gagal -- lihat tab Log untuk detail</string>
     <string name="activitylog_tab_log">Log</string>
     <string name="activitylog_tab_undo">Undo Pemindahan</string>
+
+    <!-- [Roadmap Fase 2.1, 2026-08-21] Search di ActivityLogScreen. -->
+    <string name="activitylog_search_label">Cari pesan log / nama file</string>
+    <string name="activitylog_no_results_title">Tidak ditemukan</string>
+    <string name="activitylog_no_results_message_fmt">Tidak ada hasil yang cocok dengan pencarian \"%1$s\".</string>
     <string name="settings_update_token_label">Token GitHub (opsional)</string>
     <string name="settings_update_token_placeholder">ghp_xxxxxxxxxxxxxxxxxxxx</string>
     <string name="settings_update_token_hint">Naikkan rate-limit cek versi dari 60/jam ke 5000/jam. Kosongkan kalau jarang cek manual -- repo publik, tidak wajib diisi. Token disimpan di HP kamu saja.</string>

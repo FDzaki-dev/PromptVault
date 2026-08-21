@@ -18,12 +18,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material.icons.filled.Undo
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
@@ -102,6 +104,11 @@ fun ActivityLogScreen(
     onBack: () -> Unit
 ) {
     var tab by remember { mutableStateOf(0) }
+    // [Roadmap Fase 2.1, 2026-08-21] Search lintas 2 tab (Log & Undo) --
+    // 1 field dipakai bersama (bukan per-tab terpisah, biar tidak nambah
+    // state), filter kolom BEDA per tab (message vs fileName) di titik
+    // pemakaiannya masing-masing di bawah.
+    var query by remember { mutableStateOf("") }
     var pendingUndo by remember { mutableStateOf<MoveHistoryEntry?>(null) }
     var pendingBatchUndo by remember { mutableStateOf<List<MoveHistoryEntry>?>(null) }
     var undoInFlight by remember { mutableStateOf(false) }
@@ -196,19 +203,46 @@ fun ActivityLogScreen(
             }
         )
 
+        // Disembunyikan saat mode seleksi aktif -- top bar sudah ganti fokus ke
+        // aksi "Undo Terpilih", search bar di situ cuma nambah ramai tanpa guna
+        // (mode seleksi cuma ada di tab Undo, sweep-select butuh fokus penuh).
+        if (!selectionMode) {
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                label = { Text(stringResource(R.string.activitylog_search_label)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+            )
+        }
+
         if (tab == 0) {
-            Crossfade(targetState = logEntries.isEmpty(), label = "activityLogEmptyState", animationSpec = tween(220)) { isEmpty ->
+            val filteredLogEntries = remember(logEntries, query) {
+                if (query.isBlank()) logEntries
+                else logEntries.filter { it.message.contains(query, ignoreCase = true) }
+            }
+            Crossfade(targetState = filteredLogEntries.isEmpty(), label = "activityLogEmptyState", animationSpec = tween(220)) { isEmpty ->
                 if (isEmpty) {
-                    EmptyState(
-                        icon = Icons.Filled.History,
-                        title = stringResource(R.string.activitylog_empty_log_title),
-                        message = stringResource(R.string.activitylog_empty_log_message),
-                        accentColor = colors.tertiary,
-                        accentContainerColor = colors.tertiaryContainer
-                    )
+                    if (logEntries.isEmpty()) {
+                        EmptyState(
+                            icon = Icons.Filled.History,
+                            title = stringResource(R.string.activitylog_empty_log_title),
+                            message = stringResource(R.string.activitylog_empty_log_message),
+                            accentColor = colors.tertiary,
+                            accentContainerColor = colors.tertiaryContainer
+                        )
+                    } else {
+                        EmptyState(
+                            icon = Icons.Filled.SearchOff,
+                            title = stringResource(R.string.activitylog_no_results_title),
+                            message = stringResource(R.string.activitylog_no_results_message_fmt, query),
+                            accentColor = colors.tertiary,
+                            accentContainerColor = colors.tertiaryContainer
+                        )
+                    }
                 } else {
                     LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(top = 8.dp)) {
-                        items(logEntries, key = { it.id }) { entry ->
+                        items(filteredLogEntries, key = { it.id }) { entry ->
                             val entryColor = when (entry.level) {
                                 LogLevel.SUCCESS -> colors.primary
                                 LogLevel.WARNING -> colors.tertiary
@@ -238,15 +272,29 @@ fun ActivityLogScreen(
             // tanpa perlu file manager manual. Selesai & jalan penuh (bukan lagi TODO) --
             // lihat blok `pendingUndo` di bawah untuk alur konfirmasi & hasil asli.
             val undoable = undoableHistory.filter { !it.undone }
-            Crossfade(targetState = undoable.isEmpty(), label = "undoHistoryEmptyState", animationSpec = tween(220)) { isEmpty ->
+            val filteredUndoable = remember(undoable, query) {
+                if (query.isBlank()) undoable
+                else undoable.filter { it.fileName.contains(query, ignoreCase = true) }
+            }
+            Crossfade(targetState = filteredUndoable.isEmpty(), label = "undoHistoryEmptyState", animationSpec = tween(220)) { isEmpty ->
                 if (isEmpty) {
-                    EmptyState(
-                        icon = Icons.Filled.Undo,
-                        title = stringResource(R.string.activitylog_empty_undo_title),
-                        message = stringResource(R.string.activitylog_empty_undo_message),
-                        accentColor = colors.tertiary,
-                        accentContainerColor = colors.tertiaryContainer
-                    )
+                    if (undoable.isEmpty()) {
+                        EmptyState(
+                            icon = Icons.Filled.Undo,
+                            title = stringResource(R.string.activitylog_empty_undo_title),
+                            message = stringResource(R.string.activitylog_empty_undo_message),
+                            accentColor = colors.tertiary,
+                            accentContainerColor = colors.tertiaryContainer
+                        )
+                    } else {
+                        EmptyState(
+                            icon = Icons.Filled.SearchOff,
+                            title = stringResource(R.string.activitylog_no_results_title),
+                            message = stringResource(R.string.activitylog_no_results_message_fmt, query),
+                            accentColor = colors.tertiary,
+                            accentContainerColor = colors.tertiaryContainer
+                        )
+                    }
                 } else {
                     Column {
                         if (!selectionMode) {
@@ -287,7 +335,7 @@ fun ActivityLogScreen(
                                 }
                         ) {
                             LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(top = 4.dp)) {
-                                items(undoable, key = { it.id }) { entry ->
+                                items(filteredUndoable, key = { it.id }) { entry ->
                                     val isSelected = entry.id in selectedIds
                                     VaultCard(
                                         modifier = Modifier

@@ -6,7 +6,7 @@
 > urutan pengerjaan yang disarankan, BUKAN urutan prioritas rasa/opini --
 > murni rasio nilai:risiko dari tertinggi ke terendah.
 >
-> Status saat ini: **v8.17.0**, dark-only, Material 3 murni. Baseline app
+> Status saat ini: **v8.18.0**, dark-only, Material 3 murni. Baseline app
 > sudah solid -- fitur inti (auto-sort, rule pattern, undo, conflict
 > strategy, export/import rule JSON, notifikasi hasil auto-scan, Shizuku
 > integration, crash logger) semua sudah 100% fungsional & terdokumentasi di
@@ -62,9 +62,10 @@ sudah berjalan, roadmap ini tidak menambah proses baru di sini.
 
 ## Fase 2 -- Medium-Risk / High-Value (kerjakan setelah Fase 1 stabil)
 
-### 2.1 Pencarian & filter di Riwayat Aktivitas + daftar Rule
-- **Risiko: Sedang** (state UI baru + interaksi list, tapi tidak sentuh data layer) · **Nilai: Tinggi** (skala nyata: user dgn puluhan rule/ratusan log entry akan makin butuh ini)
-- Estimasi: ~4-6 file (2 screen + kemungkinan 1 util filter kecil)
+### ~~2.1 Pencarian & filter di Riwayat Aktivitas + daftar Rule~~ ✅ SELESAI v8.18.0
+- `RuleListScreen.kt` ternyata sudah selesai duluan (v2.24.0). Cakupan
+  nyata batch ini cuma `ActivityLogScreen.kt` (1 search field, 2 tab,
+  disembunyikan saat mode seleksi-sapuan). Lihat `CHANGELOG.md` v8.18.0.
 
 ### 2.2 Notifikasi hasil auto-scan lebih kaya (ringkasan per-rule, bukan cuma total)
 - **Risiko: Sedang** (`AutoSortNotification.kt` sudah ada, ini perluasan bukan bikin baru dari nol -- tapi tetap perlu hati-hati soal panjang teks notifikasi Android & battery/Doze) · **Nilai: Sedang**
