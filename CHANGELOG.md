@@ -3,6 +3,13 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.15.4 (2026-08-21) — Tampilkan potongan release notes di Pembaruan
+
+Layar Pengaturan > Pembaruan Aplikasi sebelumnya cuma bandingkan nomor
+versi. `releaseNotes` (body GitHub Releases API) sudah ada di model tapi
+belum pernah dirender — sekarang ditampilkan (maks 4 baris + ellipsis) +
+tombol "Lihat rilis lengkap" buka halaman rilis di browser.
+
 ## v8.15.3 (2026-08-21) — Audit UX 100%, batch 3: OnboardingScreen verified N/A
 
 Verifikasi manual `OnboardingScreen.kt` (pending queue v8.15.0 #2): murni

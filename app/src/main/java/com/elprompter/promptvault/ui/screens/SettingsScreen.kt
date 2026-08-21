@@ -35,6 +35,7 @@ import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -46,7 +47,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.KeyboardType
@@ -127,6 +130,7 @@ fun SettingsScreen(
     var importResult by remember { mutableStateOf<ImportResultUiState?>(null) }
     val scope = rememberCoroutineScope()
     val colors = MaterialTheme.colorScheme
+    val uriHandler = LocalUriHandler.current
     // [Fix audit P2 #UI-12, 2026-08-15] Dipakai tombol "Salin JSON" export --
     // pola identik dgn tombol "Salin Log" di ActivityLogScreen (Insiden #6).
     val clipboardManager: ClipboardManager = LocalClipboardManager.current
@@ -602,6 +606,24 @@ fun SettingsScreen(
                                 style = MaterialTheme.typography.bodySmall,
                                 color = colors.primary
                             )
+                            // Instruksi user 2026-08-21: jangan cuma banding
+                            // nomor versi -- tampilkan potongan `body` rilis
+                            // GitHub (`releaseNotes`, sudah ada di model sejak
+                            // awal tapi belum pernah dirender). Dibatasi
+                            // maxLines=4 (release notes markdown mentah bisa
+                            // panjang) + tautan buka rilis lengkap di browser.
+                            if (state.releaseNotes.isNotBlank()) {
+                                Text(
+                                    state.releaseNotes.trim(),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = colors.onSurfaceVariant,
+                                    maxLines = 4,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                TextButton(onClick = { uriHandler.openUri(state.releaseUrl) }) {
+                                    Text(stringResource(R.string.settings_update_view_full_notes))
+                                }
+                            }
                             when (val dl = downloadState) {
                                 is DownloadState.Idle -> {
                                     Button(

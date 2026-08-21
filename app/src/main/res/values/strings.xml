@@ -134,6 +134,7 @@
     <string name="settings_update_progress_bytes_fmt">%1$d KB terunduh</string>
     <string name="settings_update_install_now">Pasang Sekarang</string>
     <string name="settings_update_retry_download">Coba Unduh Lagi</string>
+    <string name="settings_update_view_full_notes">Lihat rilis lengkap</string>
     <string name="diag_title">Diagnostik</string>
     <string name="diag_intro">Gunakan halaman ini untuk memverifikasi sendiri di HP bahwa auto-sort benar-benar terjadwal, termasuk setelah restart perangkat.</string>
     <string name="diag_loading_status">Memuat status WorkManager…</string>

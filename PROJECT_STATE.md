@@ -13,6 +13,34 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.15.4 -- Tampilkan potongan release notes di layar Pembaruan (2026-08-21)
+- Instruksi langsung user (screenshot layar Pengaturan > Pembaruan
+  Aplikasi): "jangan cuma compare version doang. Minimal nampilin
+  potongan informasi update apa yang didapat dari commit terbaru".
+- **Root cause**: `UpdateAvailable.releaseNotes` (isi `body` dari GitHub
+  Releases API, `GET /repos/.../releases/latest`) SUDAH ditarik & disimpan
+  di model sejak awal (`UpdateRepository.kt` baris 95), tapi TIDAK PERNAH
+  dirender di `SettingsScreen.kt` -- UI cuma bandingkan `latestVersion` vs
+  `currentVersion`. Bukan bug logika, murni field yang kepotong sebelum
+  sampai UI.
+- Fix: di bawah baris "Versi baru tersedia", tampilkan
+  `state.releaseNotes` (`maxLines = 4, overflow = TextOverflow.Ellipsis` --
+  body rilis GitHub mentah bisa panjang) + tombol "Lihat rilis lengkap"
+  (`LocalUriHandler.openUri(state.releaseUrl)`, buka halaman rilis GitHub
+  di browser).
+- File diubah (2): `SettingsScreen.kt` (render notes + tombol, import
+  `TextButton`/`TextOverflow`/`LocalUriHandler`), `strings.xml` (1 string
+  baru: `settings_update_view_full_notes`). `app/build.gradle.kts` (versi).
+- Preflight manual: `releaseNotes` cuma dirender kalau `isNotBlank()` --
+  rilis tanpa body (jarang, tapi mungkin) tidak menampilkan section
+  kosong/tombol menggantung.
+- **BELUM PERNAH lewat `./gradlew` asli / device asli.** User WAJIB
+  verifikasi: setelah "Cek Pembaruan" dan versi baru tersedia, potongan
+  teks release notes (maks 4 baris, dipotong "..." kalau panjang) muncul
+  di bawah baris versi, tombol "Lihat rilis lengkap" membuka halaman
+  rilis GitHub di browser.
+- versionCode 111->112, versionName 8.15.3->8.15.4.
+
 ## v8.15.3 -- Audit UX 100% batch 3: verifikasi OnboardingScreen N/A (2026-08-21)
 - Lanjutan pending queue #2 v8.15.0. `view` manual `OnboardingScreen.kt`
   (188 baris) SELURUHNYA: layar ini carousel 7 langkah info murni
