@@ -3,6 +3,27 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
+## v8.15.1 -- Audit UX 100% batch 2: guard double-tap "Simpan" (2026-08-21)
+- Lanjutan pending queue #1 dari v8.15.0. `AddEditRuleScreen.kt`: tombol
+  "Simpan" sebelumnya `enabled` hanya cek isi field, TIDAK guard terhadap
+  tap cepat 2x saat `onCheckBeforeSave` (suspend) masih in-flight -- bisa
+  trigger 2 proses cek/simpan bertumpuk.
+- Fix: state `isSaving` (pola sama seperti `undoInFlight` di
+  `ActivityLogScreen.kt`) -- `true` sebelum `scope.launch`, `false` setelah
+  `onCheckBeforeSave` selesai; `enabled` tombol ikut cek `!isSaving`.
+- File diubah (1): `AddEditRuleScreen.kt`. `app/build.gradle.kts` (versi).
+- Preflight: N/A (tidak ada script gradlew di sandbox ini, cek manual OK).
+- **BELUM PERNAH lewat `./gradlew` asli / device asli.** User WAJIB
+  verifikasi di HP: tap cepat 2x tombol "Simpan" saat menambah/edit rule
+  TIDAK lagi memicu 2 proses simpan bertumpuk, tombol sempat nonaktif
+  singkat lalu normal lagi.
+- **PENDING QUEUE (masih tersisa dari v8.15.0, belum dikerjakan)**:
+  1. `OnboardingScreen.kt` -- verifikasi manual perlu `TextField`/
+     `KeyboardOptions` ada/tidak (lihat detail di entri v8.15.0 di bawah).
+  2. Cakupan lanjutan: kontras warna disabled-state, konsistensi durasi
+     animasi, predictive back gesture, landscape/tablet layout.
+- versionCode 108->109, versionName 8.15.0->8.15.1.
+
 ## v8.15.0 -- Audit UX 100% (batch 1: fix nama file mentah tanpa maxLines) (2026-08-21)
 - **Instruksi langsung user**: "audit UX 100%". Audit dilakukan lintas
   SEMUA layar (`ui/screens/*.kt`, 9 file) + komponen (`ui/components/*.kt`,

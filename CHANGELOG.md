@@ -3,6 +3,14 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.15.1 (2026-08-21) — Audit UX 100%, batch 2: guard double-tap "Simpan"
+
+Lanjutan pending queue v8.15.0. `AddEditRuleScreen.kt`: tombol "Simpan"
+sekarang guard `isSaving` (pola sama seperti `undoInFlight` di
+`ActivityLogScreen.kt`) supaya tap cepat 2x saat `onCheckBeforeSave`
+(suspend) masih berjalan tidak memicu 2 proses cek/simpan bertumpuk.
+Belum lewat gradlew/device asli — verifikasi manual diperlukan.
+
 ## v8.15.0 (2026-08-21) — Audit UX 100%, batch 1: fix nama file tanpa maxLines
 
 Audit lintas semua layar+komponen. 1 bug nyata diperbaiki: nama file

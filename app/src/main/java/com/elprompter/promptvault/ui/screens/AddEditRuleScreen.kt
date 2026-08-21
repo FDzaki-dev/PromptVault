@@ -57,6 +57,11 @@ fun AddEditRuleScreen(
     var pendingCheck by remember { mutableStateOf<SaveRuleCheck?>(null) }
     var pendingRule by remember { mutableStateOf<Rule?>(null) }
     var preview by remember { mutableStateOf<PatternPreviewResult?>(null) }
+    // Pending queue v8.15.0: guard double-tap "Simpan" -- pola sama seperti
+    // undoInFlight di ActivityLogScreen.kt. Tanpa ini, tap cepat 2x sebelum
+    // onCheckBeforeSave (suspend) selesai bisa trigger 2 proses cek/simpan
+    // bertumpuk.
+    var isSaving by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
 
@@ -182,8 +187,10 @@ fun AddEditRuleScreen(
                         minSizeKb = minSizeKbText.toLongOrNull(),
                         maxSizeKb = maxSizeKbText.toLongOrNull()
                     )
+                    isSaving = true
                     scope.launch {
                         val check = onCheckBeforeSave(rule)
+                        isSaving = false
                         if (check is SaveRuleCheck.Ok) {
                             onSave(rule, null)
                         } else {
@@ -192,7 +199,7 @@ fun AddEditRuleScreen(
                         }
                     }
                 },
-                enabled = folderName.isNotBlank() && folderNameError == null && pattern.isNotBlank(),
+                enabled = folderName.isNotBlank() && folderNameError == null && pattern.isNotBlank() && !isSaving,
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary, contentColor = MaterialTheme.colorScheme.onSecondary),
                 modifier = Modifier.fillMaxWidth()
             ) { Text(stringResource(R.string.action_save)) }
