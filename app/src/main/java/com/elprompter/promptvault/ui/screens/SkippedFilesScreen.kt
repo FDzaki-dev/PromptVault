@@ -17,6 +17,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.elprompter.promptvault.ui.components.EmptyState
 import com.elprompter.promptvault.util.SkippedFileInfo
@@ -68,7 +69,15 @@ fun SkippedFilesScreen(
                     items(skipped, key = { it.fileName + it.reason }) { info ->
                         VaultCard(modifier = Modifier.fillMaxWidth().animateItemPlacement()) {
                             Column(modifier = Modifier.padding(10.dp)) {
-                                Text(info.fileName, style = MaterialTheme.typography.bodyMedium)
+                                // [Fix Audit UX, 2026-08-21] Konsisten dgn fix di ActivityLogScreen
+                                // (Undo tab) -- nama file mentah tanpa maxLines beresiko word-break
+                                // paksa di tengah token + tinggi row tidak konsisten antar entri.
+                                Text(
+                                    info.fileName,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
                                 Text(
                                     info.reason,
                                     style = MaterialTheme.typography.labelSmall,

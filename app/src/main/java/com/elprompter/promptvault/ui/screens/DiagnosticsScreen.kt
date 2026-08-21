@@ -32,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
@@ -120,7 +121,14 @@ fun DiagnosticsScreen(
                     Text(stringResource(id = R.string.diag_downloads_empty), style = MaterialTheme.typography.bodySmall)
                 } else {
                     downloadsFileNames.take(20).forEach { name ->
-                        Text(stringResource(id = R.string.diag_downloads_item_fmt, name), style = MaterialTheme.typography.bodySmall)
+                        // [Fix Audit UX, 2026-08-21] konsisten dgn fix ActivityLogScreen/
+                        // SkippedFilesScreen -- nama file mentah tanpa maxLines.
+                        Text(
+                            stringResource(id = R.string.diag_downloads_item_fmt, name),
+                            style = MaterialTheme.typography.bodySmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
                     if (downloadsFileNames.size > 20) {
                         Text(stringResource(id = R.string.diag_downloads_more_fmt, downloadsFileNames.size - 20), style = MaterialTheme.typography.labelSmall)
@@ -170,7 +178,9 @@ fun DiagnosticsScreen(
                                     entry.sizeBytes
                                 ),
                                 style = MaterialTheme.typography.bodySmall,
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                             Icon(
                                 Icons.Filled.ChevronRight,

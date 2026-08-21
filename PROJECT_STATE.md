@@ -3,6 +3,60 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
+## v8.15.0 -- Audit UX 100% (batch 1: fix nama file mentah tanpa maxLines) (2026-08-21)
+- **Instruksi langsung user**: "audit UX 100%". Audit dilakukan lintas
+  SEMUA layar (`ui/screens/*.kt`, 9 file) + komponen (`ui/components/*.kt`,
+  10 file) -- cakupan dicek: accessibility `contentDescription`, ukuran
+  touch target, dialog konfirmasi utk aksi destruktif, feedback (snackbar)
+  setelah aksi, cakupan `EmptyState`, `maxLines`/`TextOverflow` utk teks
+  dinamis, `KeyboardOptions`/`ImeAction` di form.
+- **1 BUG NYATA ditemukan & diperbaiki (sesuai batch limit -- max 3 file)**:
+  `entry.fileName`/`info.fileName`/`entry.displayName` (nama file MENTAH
+  dari filesystem, sering tanpa spasi) ditampilkan TANPA `maxLines` di 3
+  layar -- beresiko WORD-BREAK PAKSA di tengah token saat tidak muat 1
+  baris. **BUKTI NYATA, bukan spekulasi**: screenshot referensi v2.20.3 di
+  sesi ini SUDAH menunjukkan gejalanya --
+  `"AudioPlayer-v1.0.34-release-run146.apk"` pecah jadi
+  `"...release-r"` / `"un146.apk"` di baris ke-2, tinggi row jadi tidak
+  konsisten antar entri.
+  - Fix: `maxLines = 1, overflow = TextOverflow.Ellipsis` (konvensi standar
+    list file Android) di 4 titik, 3 file: `ActivityLogScreen.kt` (baris
+    file di tab Undo), `SkippedFilesScreen.kt` (baris "Detail File
+    Dilewati"), `DiagnosticsScreen.kt` (2 titik: daftar kandidat Downloads
+    + baris crash log yang isi `entry.displayName`-nya format
+    `crash_<timestamp>_<UUID>.txt`, UUID = token panjang tanpa titik
+    break alami).
+- **PENDING QUEUE (ditemukan saat audit, BELUM dikerjakan -- batch
+  berikutnya)**:
+  1. **`AddEditRuleScreen.kt`** -- tombol "Simpan" (`enabled =
+     folderName.isNotBlank() && ...` SUDAH ada, itu bagus) TAPI `onClick`
+     men-trigger `scope.launch { onCheckBeforeSave(rule) ... }` TANPA
+     guard against double-tap SAAT coroutine check masih in-flight -- tap
+     cepat 2x sebelum check pertama selesai berpotensi trigger 2 proses
+     cek/simpan bertumpuk. Fix tersedia: state `isSaving` +
+     `enabled = ... && !isSaving`, pola SAMA seperti yang sudah dipakai di
+     `undoInFlight` (`ActivityLogScreen.kt`).
+  2. **`OnboardingScreen.kt`** -- 0 `KeyboardOptions`/`ImeAction` ditemukan
+     lewat grep. BELUM diverifikasi manual apakah layar ini memang tidak
+     punya `TextField` sama sekali (kalau iya, N/A bukan bug) atau ada
+     input yang lolos kena grep pattern beda. Perlu `view` manual sebelum
+     diputuskan ada bug atau tidak.
+  3. Cakupan audit BELUM menyentuh: kontras warna teks disabled-state,
+     konsistensi durasi animasi/transisi antar layar, perilaku predictive
+     back gesture (Android 13+), landscape/tablet layout. Kalau user mau
+     lanjut "audit UX 100%" lebih dalam, area ini titik mulai berikutnya.
+- File diubah (3): `ActivityLogScreen.kt`, `SkippedFilesScreen.kt`,
+  `DiagnosticsScreen.kt` (tambah import `TextOverflow` + `maxLines`/
+  `overflow` di masing2 Text nama file). `app/build.gradle.kts` (versi).
+  `FILE_MANIFEST.txt` TIDAK berubah.
+- Preflight: 13/13 kategori PASS.
+- **BELUM PERNAH lewat `./gradlew` asli / device asli.** User WAJIB
+  verifikasi di HP: nama file panjang di tab "Undo Pemindahan", "Detail
+  File Dilewati", & Diagnostics TIDAK lagi pecah 2 baris (dipotong "..."
+  di 1 baris), tidak ada regresi baca nama file pendek yang sudah muat 1
+  baris.
+- versionCode 107->108, versionName 8.14.0->8.15.0.
+
 ## v8.14.0 -- Eksperimen percepatan kompilasi CI, batch 2 (gabung invocation + KSP incremental) (2026-08-21)
 - Lanjutan v8.13.0 (CI CONFIRMED hijau, run #118, 7m15s) -- instruksi
   langsung user: "Gabung 3 invocation+KSP incremental".

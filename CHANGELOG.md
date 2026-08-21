@@ -3,6 +3,18 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.15.0 (2026-08-21) — Audit UX 100%, batch 1: fix nama file tanpa maxLines
+
+Audit lintas semua layar+komponen. 1 bug nyata diperbaiki: nama file
+mentah (`entry.fileName`/`info.fileName`/`entry.displayName`) tampil
+tanpa `maxLines` di 3 layar -> word-break paksa di tengah token (bukti:
+"AudioPlayer-v1.0.34-release-run146.apk" pecah 2 baris di screenshot
+referensi sesi ini) + tinggi row tidak konsisten. Fix: `maxLines=1` +
+`TextOverflow.Ellipsis` di `ActivityLogScreen.kt`, `SkippedFilesScreen.kt`,
+`DiagnosticsScreen.kt` (4 titik). Pending queue (belum dikerjakan, batch
+berikutnya): guard double-tap submit `AddEditRuleScreen.kt`, verifikasi
+manual form `OnboardingScreen.kt`. Detail lengkap: `PROJECT_STATE.md`.
+
 ## v8.14.0 (2026-08-21) — Eksperimen percepatan kompilasi CI, batch 2
 
 CI: 3 invocation `./gradlew` terpisah digabung jadi 1 step (config-cache

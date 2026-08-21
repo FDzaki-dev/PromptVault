@@ -48,6 +48,7 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.elprompter.promptvault.R
 import com.elprompter.promptvault.data.ActivityLogEntry
@@ -325,7 +326,25 @@ fun ActivityLogScreen(
                                                 )
                                             }
                                             Column(modifier = Modifier.weight(1f)) {
-                                                Text(entry.fileName, style = MaterialTheme.typography.bodyMedium)
+                                                // [Fix Audit UX, 2026-08-21] SEBELUMNYA tanpa maxLines --
+                                                // nama file APA ADANYA dari filesystem (sering tanpa
+                                                // spasi, cuma "-"/"_"/".") bisa kena WORD-BREAK PAKSA
+                                                // di tengah token saat tidak muat 1 baris (mis.
+                                                // "AudioPlayer-v1.0.34-release-run146.apk" pecah jadi
+                                                // "...release-r" / "un146.apk" -- kejadian NYATA, lihat
+                                                // screenshot referensi) -- tinggi tiap row jadi TIDAK
+                                                // konsisten antar entri (1 baris vs 2 baris tergantung
+                                                // panjang nama file), ritme list jadi berantakan.
+                                                // Diklem 1 baris + ellipsis (konvensi standar list file
+                                                // Android, mis. app Files/Photos) -- nama lengkap tetap
+                                                // ada di `entry.fileName` kalau nanti dibutuhkan detail
+                                                // (mis. via long-press/dialog), TIDAK dihapus datanya.
+                                                Text(
+                                                    entry.fileName,
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
                                                 Text(
                                                     // [Fix 2026-08-17] Label ini SEBELUMNYA hardcode
                                                     // "PromptVault/<rule>/" utk SEMUA entri -- sejak app
