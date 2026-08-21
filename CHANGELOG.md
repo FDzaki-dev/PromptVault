@@ -10,8 +10,11 @@ cuma configure project sekali, bukan per-invocation). Keystore decode
 dipindah ke atas step gabungan (assembleRelease butuh signing sejak
 awal). Log gabung ke `build-all.log`. `gradle.properties`: +
 `ksp.incremental=true` (eksplisit, sudah default true, tidak ubah
-perilaku). Detail + risiko: `PROJECT_STATE.md`. Belum lewat CI asli --
-pantau run Actions berikutnya lebih ketat (step YAML direstruktur).
+perilaku). Detail + risiko: `PROJECT_STATE.md`.
+
+**Update 2026-08-21**: CI CONFIRMED hijau (run #120, 6m23s, Success, 1
+artifact) -- turun ~52s dari baseline v8.13.0 (7m15s). Tidak ada rollback
+diperlukan.
 
 ## v8.13.0 (2026-08-21) — Eksperimen percepatan kompilasi CI
 

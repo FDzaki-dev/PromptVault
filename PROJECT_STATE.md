@@ -34,16 +34,15 @@
   `FILE_MANIFEST.txt` TIDAK berubah.
 - Preflight: cek hasil di bawah entri ini sebelum ZIP dikirim (kategori #8
   YAML validity WAJIB tetap hijau setelah restrukturisasi step).
-- **BELUM PERNAH lewat CI asli** -- risiko utama batch ini BUKAN di
-  gradle.properties (sudah confirmed v8.13.0), tapi di REORDER step YAML
-  (keystore decode pindah posisi + env block pindah ke step gabungan) --
-  **user WAJIB pantau run Actions berikutnya lebih ketat dari biasanya**,
-  khususnya: (1) step "Decode keystore" tetap sukses di posisi barunya,
-  (2) step gabungan berhasil sampai `assembleRelease` (bukan cuma
-  compile/test), (3) APK ter-upload & Release ter-publish seperti biasa.
-  Kalau gagal: rollback termudah adalah revert `.github/workflows/build.yml`
-  ke versi v8.13.0 (3 step terpisah) -- `gradle.properties` v8.13.0 TIDAK
-  perlu ikut di-rollback, sudah terbukti aman terpisah.
+- **CI CONFIRMED HIJAU oleh user** (2026-08-21, run #120, commit e1a5cab):
+  `Success`, total durasi **6m 23s** (job `build` 6m 20s), 1 artifact --
+  turun dari baseline v8.13.0 (run #118, 7m15s) = **~52 detik lebih
+  cepat**. Tidak ada rollback diperlukan.
+- **BELUM PERNAH lewat `./gradlew` asli / CI asli** -- sandbox Claude TIDAK
+  punya Android SDK/Gradle/jaringan. Kalau ada run berikutnya yang gagal,
+  rollback termudah: revert `.github/workflows/build.yml` ke versi 3-step
+  (v8.13.0) -- `gradle.properties` v8.13.0/v8.14.0 TIDAK perlu ikut
+  di-rollback, sudah terbukti aman terpisah.
 
 ## v8.13.0 -- Eksperimen percepatan kompilasi CI (gradle.properties) (2026-08-21)
 - **Instruksi langsung user**: "terapkan percepatan kompilasi (experimental)".
