@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- [Fase 3.1 roadmap, 2026-08-21] Layout RemoteViews — HANYA View bawaan
+     Android yang didukung RemoteViews (LinearLayout/TextView/dst), TIDAK
+     BISA pakai Compose (batasan platform, proses widget terpisah total dari
+     Activity, lihat javadoc ScanWidgetProvider.kt). Seluruh area root
+     (@id/widget_root) clickable via setOnClickPendingIntent — SENGAJA
+     tanpa tombol terpisah, memperbesar target sentuh di widget kecil. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center_vertical"
+    android:background="@drawable/widget_scan_background"
+    android:padding="14dp">
+
+    <TextView
+        android:id="@+id/widget_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/widget_scan_label"
+        android:textColor="@color/pv_primary_accent"
+        android:textSize="14sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/widget_action"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="@string/widget_scan_action"
+        android:textColor="#FFEAEAEA"
+        android:textSize="12sp" />
+</LinearLayout>

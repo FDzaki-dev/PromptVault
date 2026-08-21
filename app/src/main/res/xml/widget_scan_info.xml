@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- [Fase 3.1 roadmap, 2026-08-21] updatePeriodMillis=0 SENGAJA — widget ini
+     stateless (tidak butuh auto-refresh berkala, cuma trigger point sekali
+     tap), auto-update berkala cuma buang baterai tanpa manfaat. Ukuran
+     minWidth/minHeight dipilih utk selalu muat teks "Ketuk untuk Scan
+     Sekarang" tanpa terpotong di grid 4x4 standar Android (110dp ~ 2 kolom
+     di kebanyakan launcher). -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="110dp"
+    android:minHeight="40dp"
+    android:targetCellWidth="2"
+    android:targetCellHeight="1"
+    android:updatePeriodMillis="0"
+    android:initialLayout="@layout/widget_scan"
+    android:previewImage="@mipmap/ic_launcher"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen"
+    android:description="@string/widget_scan_description" />

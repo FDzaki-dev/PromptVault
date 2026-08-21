@@ -97,7 +97,7 @@ sudah berjalan, roadmap ini tidak menambah proses baru di sini.
 
 | Item | Risiko | Nilai | Kenapa berisiko |
 |---|---|---|---|
-| **3.1 Home screen widget** (trigger scan cepat dari luar app) | Tinggi | Sedang | API `AppWidgetProvider` terpisah total dari Compose, tidak bisa diverifikasi visual sama sekali tanpa device asli, gagal-diam sulit dideteksi |
+| ~~**3.1 Home screen widget** (trigger scan cepat dari luar app)~~ | Tinggi | Sedang | ✅ SELESAI v8.21.0 -- widget stateless 1-tap, reuse `AutoSortWorker` apa adanya, hasil tetap lewat notifikasi existing. Lihat `CHANGELOG.md`/`PROJECT_STATE.md` v8.21.0. Verifikasi device asli MASIH tertunda user (lihat batas jujur di log). |
 | **3.2 Tujuan pemindahan ke cloud storage** (Google Drive dll, bukan cuma folder lokal/SAF) | Tinggi | Sedang | Butuh OAuth + API pihak ketiga baru, model izin baru, ubah asumsi inti `FileSorter` (saat ini 100% berbasis SAF lokal) |
 | **3.3 Lokalisasi multi-bahasa (EN toggle)** | Sedang-Tinggi | Rendah-Sedang (app saat ini Bahasa Indonesia penuh, target user belum jelas butuh EN) | Menyentuh SEMUA layar sekaligus (>1 modul, melebihi batch limit jauh), butuh 1.3 selesai dulu sbg prasyarat |
 | **3.4 Multi-profile / lebih dari 1 set rule aktif bergantian** | Tinggi | Rendah-Sedang | Ubah model data inti (`Rule`, `SettingsRepository`) -- migrasi DataStore, risiko regresi ke semua fitur existing |

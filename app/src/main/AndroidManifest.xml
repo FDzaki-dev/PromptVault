@@ -57,6 +57,26 @@
             </intent-filter>
         </receiver>
 
+        <!-- [Fase 3.1 roadmap, 2026-08-21] Widget home screen "Scan Sekarang".
+             exported=true WAJIB utk widget (system launcher proses terpisah
+             yang memicu broadcast APPWIDGET_UPDATE) — ini pola standar
+             Android, BUKAN celah keamanan baru (custom action ACTION_SCAN_NOW
+             cuma trigger scan Downloads yang sudah bisa dipicu app itu
+             sendiri kapan saja lewat tombol "Scan Sekarang" di Home, tidak
+             expose data/permission baru). Lihat javadoc ScanWidgetProvider.kt. -->
+        <receiver
+            android:name=".widget.ScanWidgetProvider"
+            android:exported="true"
+            android:enabled="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.elprompter.promptvault.widget.ACTION_SCAN_NOW" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_scan_info" />
+        </receiver>
+
         <!-- Batch §5: WorkManager sudah mendeklarasikan service ini lewat manifest
              merge library-nya sendiri, tapi di-override eksplisit di sini supaya
              foregroundServiceType="dataSync" PASTI ter-set (bukan bergantung ke

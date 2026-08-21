@@ -13,6 +13,49 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.21.0 -- Roadmap Fase 3.1: Widget Home Screen "Scan Sekarang" (2026-08-21)
+- "lanjutkan progress!!" tanpa item spesifik -- Fase 1&2 ROADMAP.md 100%
+  selesai, Fase 3 WAJIB pilih eksplisit (aturan roadmap sendiri). Ditanya
+  via ask_user_input_v0 (4 opsi Fase 3), **user pilih: 3.1 Widget Home
+  Screen**.
+- Widget 1-tap "Scan Sekarang", SENGAJA stateless -- reuse `AutoSortWorker`
+  APA ADANYA lewat `.enqueue()` biasa (bukan `enqueueUniqueWork`, supaya tap
+  widget tidak pernah "ditolak" gara-gara slot unique auto-scan periodik lagi
+  terisi), aman dari race berkat `scanMutex` statis existing di
+  `FileSorter.kt` (TIDAK disentuh). Hasil scan tetap lewat notifikasi sistem
+  yang sudah ada & terbukti jalan (`AutoSortNotification.resultNotification`)
+  -- widget cukup Toast instan konfirmasi tap.
+- File baru (4): `widget/ScanWidgetProvider.kt`, `res/layout/widget_scan.xml`
+  (RemoteViews, bukan Compose), `res/xml/widget_scan_info.xml`
+  (`updatePeriodMillis=0`), `res/drawable/widget_scan_background.xml`. File
+  diubah (3): `strings.xml` (+4), `AndroidManifest.xml` (protected, edit
+  parsial -- 1 `<receiver>`), `build.gradle.kts` (versi). Nol dependency
+  baru (`androidx.glance` dll TIDAK ditambah) -- `AppWidgetProvider`/
+  `RemoteViews` bagian framework Android, sama prinsip `StatisticsScreen.kt`
+  v8.20.0.
+- **Insiden minor + FIX, dicatat supaya tidak terulang**: 5 file XML baru
+  awalnya GAGAL `preflight_check.sh` kategori 10 (well-formedness) --
+  komentar XML pakai "--" (konvensi pemisah kalimat project ini di Kotlin/
+  Markdown), padahal spec XML MELARANG "--" di DALAM isi comment `<!-- -->`
+  di mana saja (bukan cuma ujung). Fix: semua "--" di komentar XML diganti
+  em dash "—". Kotlin/Markdown tidak kena aturan ini. **Sesi berikutnya:
+  kalau nambah file XML baru + komentar gaya project ini, jangan pakai "--"
+  di dalamnya.**
+- `ROADMAP.md` diupdate: Fase 3.1 dicoret ✅ SELESAI.
+- **Batas jujur (LEBIH KETAT dari batch biasa)**: widget adalah surface
+  Android BARU yang sama sekali belum pernah diverifikasi visual/fungsional
+  di sesi manapun -- `preflight_check.sh` cuma cek well-formedness/sintaks,
+  BUKAN bukti widget benar-benar muncul & berfungsi di launcher device asli.
+  **User WAJIB verifikasi**: (1) build CI hijau, (2) widget bisa
+  ditambahkan ke home screen lewat menu "Widgets" launcher, (3) tampilan
+  sesuai (background gelap, teks "PromptVault"/"Ketuk untuk Scan Sekarang"
+  tidak terpotong di ukuran widget minimum), (4) tap widget -> Toast muncul
+  -> notifikasi hasil scan muncul beberapa saat kemudian (WorkManager,
+  bukan instan) -- kalau notifikasi tidak pernah muncul, cek izin
+  POST_NOTIFICATIONS & battery optimization di HP.
+- Confidence Rating: **80%**. versionCode 122->123, versionName
+  8.20.1->8.21.0.
+
 ## v8.20.1 -- Fix cacat UI: chart Tren 14 Hari cuma tampil 4 batang (2026-08-21)
 - Laporan user + screenshot: layar Statistik judulnya "Tren 14 hari terakhir"
   tapi cuma 4 batang terlihat di kanvas kosong -- kelihatan RUSAK ke user

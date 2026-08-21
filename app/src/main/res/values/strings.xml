@@ -275,4 +275,12 @@
     <string name="permission_gate_open_settings">Buka Pengaturan Izin</string>
     <string name="permission_gate_recheck">Sudah diizinkan, cek ulang</string>
     <string name="permission_gate_denied_fallback">Izin ditolak permanen? Buka Pengaturan Aplikasi</string>
+
+    <!-- [Fase 3.1 roadmap, 2026-08-21] Widget home screen — dipakai
+         widget_scan.xml (RemoteViews) & ScanWidgetProvider.kt, BUKAN
+         Compose (proses widget terpisah dari Activity). -->
+    <string name="widget_scan_label">PromptVault</string>
+    <string name="widget_scan_action">Ketuk untuk Scan Sekarang</string>
+    <string name="widget_scan_toast">Scan dimulai di latar belakang…</string>
+    <string name="widget_scan_description">Scan &amp; sortir Downloads sekali ketuk, tanpa buka app.</string>
 </resources>

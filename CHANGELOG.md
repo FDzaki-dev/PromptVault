@@ -3,6 +3,51 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.21.0 (2026-08-21) — Roadmap Fase 3.1: Widget Home Screen "Scan Sekarang"
+User pilih eksplisit lewat 4 opsi Fase 3 (widget/cloud/lokalisasi/multi-profil).
+
+**Fitur baru**: widget home screen 1-tap "Scan Sekarang" — trigger scan
+Downloads tanpa buka app. SENGAJA stateless (tidak coba tampilkan hasil scan
+langsung di widget) — hasil tetap lewat notifikasi sistem yang sudah ada
+(`AutoSortNotification.resultNotification`), widget cukup Toast instan
+konfirmasi tap diterima. Ini yang menjaga risiko tetap rendah dibanding
+estimasi awal ROADMAP.md ("Tinggi" — gagal-diam sulit dideteksi tanpa device).
+
+**File baru (4)**: `widget/ScanWidgetProvider.kt` (AppWidgetProvider,
+`.enqueue()` biasa ke `AutoSortWorker` — class WorkManager yang SAMA PERSIS
+dipakai auto-scan periodik, nol logic scan baru, aman dari race lewat
+`scanMutex` statis existing di FileSorter), `res/layout/widget_scan.xml`
+(RemoteViews, bukan Compose — platform tidak mendukung Compose di proses
+widget), `res/xml/widget_scan_info.xml` (AppWidgetProviderInfo,
+`updatePeriodMillis=0` — stateless, tidak perlu auto-refresh berkala),
+`res/drawable/widget_scan_background.xml` (reuse warna `colors.xml` yang
+sama dgn Compose `Color.kt`, biar tidak "beda app" di home screen).
+
+**File diubah (3)**: `strings.xml` (+4 string, ikut konvensi 100%
+stringResource sejak Fase 1.3), `AndroidManifest.xml` (protected asset, edit
+parsial — 1 `<receiver>` baru), `app/build.gradle.kts` (versi).
+
+**Nol dependency baru** — `AppWidgetProvider`/`RemoteViews` bagian framework
+Android, konsisten prinsip yang sama dipakai `StatisticsScreen.kt` v8.20.0
+(Canvas hand-rolled, bukan library chart).
+
+**Insiden minor sesi ini**: 5 file XML baru awalnya GAGAL
+`preflight_check.sh` kategori 10 (well-formedness) — komentar XML pakai "--"
+(konvensi pemisah kalimat project ini), padahal spec XML MELARANG "--" di
+dalam isi comment `<!-- -->` di mana saja, bukan cuma di ujung. Fix: semua
+"--" di komentar XML diganti em dash "—". Kotlin/Markdown TIDAK kena aturan
+ini (comment `/** */`/`//` bebas), jadi bug ini spesifik file XML baru saja.
+**Pelajaran dicatat di sini supaya sesi berikutnya tidak mengulang** kalau
+nambah file XML baru + komentar panjang gaya project ini.
+
+`ROADMAP.md` diupdate: Fase 3.1 dicoret ✅ SELESAI. `preflight_check.sh`
+13/13 lolos (setelah fix XML di atas). Confidence Rating: **80%** (lebih
+rendah dari batch UI-only biasa — widget adalah surface Android BARU yang
+sama sekali belum pernah diverifikasi visual/fungsional di sesi manapun,
+device asli WAJIB sebelum dianggap benar-benar beres, sesuai peringatan
+ROADMAP.md sendiri utk item ini).
+versionCode 122->123, versionName 8.20.1->8.21.0.
+
 ## v8.20.1 (2026-08-21) — Fix cacat UI: chart Tren 14 Hari cuma tampil 4 batang
 Laporan user + screenshot: layar Statistik judulnya "Tren 14 hari terakhir"
 tapi cuma 4 batang terlihat di kanvas kosong -- kelihatan RUSAK ke user
