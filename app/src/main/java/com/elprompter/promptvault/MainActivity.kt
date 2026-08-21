@@ -314,7 +314,15 @@ private fun PromptVaultRoot(
                 onOpenSettings = { navController.navigate(Routes.SETTINGS) },
                 onOpenDiagnostics = { navController.navigate(Routes.DIAGNOSTICS) },
                 onOpenSkippedFiles = { navController.navigate(Routes.SKIPPED_FILES) },
-                onOpenPanduan = { navController.navigate(Routes.PANDUAN) }
+                onOpenPanduan = { navController.navigate(Routes.PANDUAN) },
+                onOpenStatistics = { navController.navigate(Routes.STATISTICS) }
+            )
+        }
+        composable(Routes.STATISTICS) {
+            val statisticsData by viewModel.statisticsData.collectAsStateWithLifecycle()
+            com.elprompter.promptvault.ui.screens.StatisticsScreen(
+                data = statisticsData,
+                onBack = { navController.popBackStack() }
             )
         }
         composable(Routes.PANDUAN) {

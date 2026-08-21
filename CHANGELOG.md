@@ -3,6 +3,32 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.20.0 (2026-08-21) — Roadmap Fase 2.3: halaman Statistik penuh
+
+"Lanjutkan" setelah Fase 1-2.2 tuntas → ditanya dulu (prasyarat 2.3 belum
+bisa dikonfirmasi Claude tanpa device asli) → user pilih lanjut, anggap 1.4
+stabil.
+
+- `StatisticsScreen.kt` baru: total sepanjang riwayat, grafik tren batang
+  14 hari, breakdown per-rule — semua `Canvas` hand-rolled, nol library
+  chart baru.
+- Sumber data `MoveHistoryRepository`, pola sama `computeHomeStats()`
+  v8.17.0 & `resultNotification` v8.19.0 (3 fitur share 1 sumber). Caveat
+  cap 200 entri ditampilkan eksplisit di layar (caption), bukan cuma
+  komentar kode.
+- `MainViewModel.kt`: `StatisticsData` + `statisticsData` StateFlow +
+  `computeStatisticsData()` murni.
+- Protected Assets disentuh parsial: `Navigation.kt` (+1 route),
+  `MainActivity.kt` (+1 composable, +1 param `HomeScreen`).
+- Preflight 1 iterasi: kategori 5 false-positive dari komentar yang
+  menyebut "LazyColumn"+"verticalScroll" sekaligus (menjelaskan kenapa
+  tidak dipakai) — di-reword, bukan bug kode nyata.
+- File: 6 diubah + 1 baru (`StatisticsScreen.kt`), 8 string baru.
+- Preflight 13/13 PASS. **Belum lewat device asli** — user verifikasi: menu
+  Statistik muncul di Home, grafik proporsional, breakdown per-rule urut
+  desc, caption cap 200 kebaca.
+- versionCode 120→121, versionName 8.19.0→8.20.0.
+
 ## v8.19.0 (2026-08-21) — Roadmap Fase 2.2: notifikasi hasil auto-scan per-rule
 
 "Lanjutkan progress!!" tanpa area spesifik → dicek `ROADMAP.md`, item

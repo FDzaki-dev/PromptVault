@@ -193,6 +193,7 @@
     <string name="home_skipped_files_button"> Lihat detail file yang dilewati</string>
     <string name="home_scan_now_button">Scan Sekarang</string>
     <string name="home_menu_riwayat">Riwayat Aktivitas &amp; Undo</string>
+    <string name="home_menu_statistik">Statistik</string>
 
     <!-- [Roadmap Fase 1.3 batch 6/N, 2026-08-20] Ekstraksi MURNI OnboardingScreen.kt -->
     <string name="onboarding_step1_title">Selamat datang di PromptVault</string>
@@ -252,6 +253,13 @@
     <string name="settings_update_token_placeholder">ghp_xxxxxxxxxxxxxxxxxxxx</string>
     <string name="settings_update_token_hint">Naikkan rate-limit cek versi dari 60/jam ke 5000/jam. Kosongkan kalau jarang cek manual -- repo publik, tidak wajib diisi. Token disimpan di HP kamu saja.</string>
     <string name="skipped_files_title">Detail File Dilewati</string>
+    <string name="statistics_title">Statistik</string>
+    <string name="statistics_total_label">Total sepanjang riwayat</string>
+    <string name="statistics_trend_title">Tren 14 hari terakhir</string>
+    <string name="statistics_per_rule_title">Per rule</string>
+    <string name="statistics_cap_caveat">Berdasarkan hingga 200 riwayat pemindahan terakhir (data yang sama dipakai fitur Undo) — riwayat lebih lama dari itu tidak lagi ikut terhitung.</string>
+    <string name="statistics_empty_title">Belum ada data</string>
+    <string name="statistics_empty_message">Statistik akan muncul setelah ada file yang berhasil disortir.</string>
     <string name="skipped_files_intro">Data dari scan terakhir. Jalankan \"Scan Sekarang\" lagi untuk memperbarui daftar ini.</string>
     <string name="skipped_files_empty_title_scanned">Tidak ada file yang dilewati</string>
     <string name="skipped_files_empty_title_never">Belum pernah scan</string>

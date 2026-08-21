@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.HelpOutline
@@ -73,6 +74,8 @@ fun HomeScreen(
     onOpenSettings: () -> Unit,
     onOpenDiagnostics: () -> Unit,
     onOpenSkippedFiles: () -> Unit,
+    // [Roadmap Fase 2.3, 2026-08-21] Jalan pintas ke StatisticsScreen.
+    onOpenStatistics: () -> Unit,
     // [Fitur baru, batch "Panduan User Baru" 2026-08-17] Jalan pintas paling
     // discoverable ke PanduanScreen -- ditaruh di grouped menu Home (bukan
     // cuma di Pengaturan) supaya user baru yang belum pernah buka Pengaturan
@@ -214,6 +217,7 @@ fun HomeScreen(
                     // menambah aksen ke-5 melanggar standar itu.
                     { GroupedListRow(Icons.Filled.HelpOutline, stringResource(R.string.pandu_title), colors.tertiary, onOpenPanduan) },
                     { GroupedListRow(Icons.Filled.History, stringResource(R.string.home_menu_riwayat), colors.tertiary, onOpenLog) },
+                    { GroupedListRow(Icons.Filled.BarChart, stringResource(R.string.home_menu_statistik), colors.primary, onOpenStatistics) },
                     { GroupedListRow(Icons.Filled.Settings, stringResource(R.string.settings_title), extraColors.slate, onOpenSettings) },
                     { GroupedListRow(Icons.Filled.BugReport, stringResource(R.string.diag_title), colors.error, onOpenDiagnostics) }
                 )

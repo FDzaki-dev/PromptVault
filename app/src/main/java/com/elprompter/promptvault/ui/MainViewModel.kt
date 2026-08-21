@@ -34,6 +34,9 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Calendar
+import java.util.Date
+import java.util.Locale
+import java.text.SimpleDateFormat
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -101,6 +104,32 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         .map { entries -> computeHomeStats(entries) }
         .let { flow ->
             val state = MutableStateFlow(HomeStats(thisWeek = 0, thisMonth = 0))
+            viewModelScope.launch { flow.collect { state.value = it } }
+            state.asStateFlow()
+        }
+
+    /**
+     * [Roadmap Fase 2.3, 2026-08-21] Statistik PENUH -- grafik tren + total
+     * per-rule sepanjang riwayat tersimpan. Sumber data SAMA dgn [homeStats]
+     * ([MoveHistoryRepository], BUKAN [ActivityLogRepository]) dan caveat cap
+     * `MAX_ENTRIES = 200` yang SAMA TETAP BERLAKU di sini (bahkan lebih
+     * terasa dari [homeStats] krn window waktu lebih panjang/tidak terbatas
+     * minggu-ini/bulan-ini) -- ditampilkan eksplisit di [StatisticsScreen]
+     * lewat caption, BUKAN disembunyikan.
+     */
+    data class StatisticsData(
+        val totalAllTime: Int,
+        val dailyTrend: List<DayBucket>,
+        val perRule: List<RuleBucket>
+    ) {
+        data class DayBucket(val dayLabel: String, val count: Int)
+        data class RuleBucket(val folderName: String, val count: Int)
+    }
+
+    val statisticsData: StateFlow<StatisticsData> = moveHistoryRepository.historyFlow
+        .map { entries -> computeStatisticsData(entries) }
+        .let { flow ->
+            val state = MutableStateFlow(StatisticsData(totalAllTime = 0, dailyTrend = emptyList(), perRule = emptyList()))
             viewModelScope.launch { flow.collect { state.value = it } }
             state.asStateFlow()
         }
@@ -603,4 +632,39 @@ private fun computeHomeStats(entries: List<MoveHistoryEntry>, nowMillis: Long = 
         if (entry.timestampMillis >= weekStart) week++
     }
     return MainViewModel.HomeStats(thisWeek = week, thisMonth = month)
+}
+
+/**
+ * Fungsi murni (bukan member class), pola sama dgn [computeHomeStats] --
+ * lihat KDoc lengkap di [MainViewModel.statisticsData]. Bucket harian
+ * dibangun MUNDUR dari hari ini (offset 13..0, jadi array hasil urut
+ * KRONOLOGIS lama->baru, siap dipakai langsung sbg sumbu-X grafik tanpa
+ * perlu sort ulang di layer UI). Entri di luar window 14 hari TETAP masuk
+ * [totalAllTime]/[perRule] (tidak dibuang), cuma tidak ikut [dailyTrend].
+ */
+private fun computeStatisticsData(entries: List<MoveHistoryEntry>, nowMillis: Long = System.currentTimeMillis()): MainViewModel.StatisticsData {
+    val dayFormat = SimpleDateFormat("d/M", Locale.getDefault())
+    val dayStarts = (13 downTo 0).map { offset ->
+        Calendar.getInstance().apply {
+            timeInMillis = nowMillis
+            add(Calendar.DAY_OF_YEAR, -offset)
+            set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
+    }
+    val counts = IntArray(dayStarts.size)
+    entries.forEach { entry ->
+        for (i in dayStarts.indices.reversed()) {
+            if (entry.timestampMillis >= dayStarts[i]) {
+                counts[i]++
+                break
+            }
+        }
+    }
+    val dailyTrend = dayStarts.indices.map { i ->
+        MainViewModel.StatisticsData.DayBucket(dayFormat.format(Date(dayStarts[i])), counts[i])
+    }
+    val perRule = entries.groupingBy { it.ruleFolderName }.eachCount()
+        .map { (folder, count) -> MainViewModel.StatisticsData.RuleBucket(folder, count) }
+        .sortedByDescending { it.count }
+    return MainViewModel.StatisticsData(totalAllTime = entries.size, dailyTrend = dailyTrend, perRule = perRule)
 }

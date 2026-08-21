@@ -13,6 +13,59 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.20.0 -- Roadmap Fase 2.3: halaman Statistik penuh (2026-08-21)
+- "Lanjutkan" tanpa area spesifik, setelah Fase 1-2.2 tuntas semua --
+  Fase 2.3 punya prasyarat eksplisit ("kerjakan SETELAH 1.4 terbukti stabil
+  di device asli") yang belum bisa dikonfirmasi Claude (sandbox tanpa
+  device), jadi ditanya dulu via pilihan singkat, bukan diasumsikan.
+  **User pilih eksplisit: lanjut 2.3, anggap 1.4 stabil.**
+- **Screen baru `StatisticsScreen.kt`**: kartu total sepanjang riwayat,
+  grafik tren batang 14 hari, breakdown per-rule (bar proporsional). SEMUA
+  grafik hand-rolled pakai `Canvas` polos -- SENGAJA TANPA library chart
+  baru (nol dependency baru = nol risiko kompatibilitas versi/lisensi yang
+  belum pernah lewat `preflight_check.sh`). Label sumbu-X grafik tren cuma
+  3 titik (awal/tengah/akhir) -- 14 label penuh di lebar layar HP beresiko
+  tumpang tindih, dihindari dari awal bukan ditemukan lewat trial-error.
+- **Sumber data**: `MoveHistoryRepository` (`historyFlow`, pola PERSIS
+  `computeHomeStats()` v8.17.0 & breakdown per-rule `resultNotification`
+  v8.19.0 -- 3 fitur beda sekarang share 1 sumber data yang sama, bukan 3
+  jalur terpisah). `MoveHistoryDao.kt` (Protected) TIDAK disentuh. Caveat
+  cap `MAX_ENTRIES = 200` SAMA seperti `homeStats`, kali ini ditampilkan
+  EKSPLISIT di layar (`statistics_cap_caveat` string, caption di bawah
+  breakdown) -- bukan cuma di komentar kode kayak sebelumnya, krn window
+  waktu di sini jauh lebih panjang/tak terbatas (bukan cuma minggu/bulan
+  ini) shg dampak cap lebih terasa & lebih perlu transparan ke user.
+- **`MainViewModel.kt`**: `StatisticsData` (data class + nested
+  `DayBucket`/`RuleBucket`) + `statisticsData: StateFlow` + fungsi murni
+  `computeStatisticsData()` (pola sama `computeHomeStats()`, testable tanpa
+  Context).
+- **Protected Assets disentuh PARSIAL** (sesuai aturan edit-parsial):
+  `Navigation.kt` (+1 baris `Routes.STATISTICS`), `MainActivity.kt`
+  (+1 composable route + 1 parameter baru ke `HomeScreen`). Tidak ada
+  logika lain di kedua file itu yang diubah.
+- **Preflight iterasi 1x**: kategori 5 (LazyColumn dlm verticalScroll)
+  sempat false-positive -- bukan kode salah, tapi KOMENTAR di
+  `StatisticsScreen.kt` yang menyebut kata "LazyColumn" DAN
+  "verticalScroll" sekaligus (menjelaskan kenapa TIDAK dipakai) ikut
+  ke-grep sbg pola berisiko. Diperbaiki dgn reword komentar TANPA ubah
+  makna. **Pelajaran**: preflight ini regex/grep polos, tidak parse
+  AST -- komentar yang menyebutkan nama pola berbahaya (utk dokumentasi)
+  bisa memicu false-positive di dirinya sendiri, cek isi komentar juga
+  saat preflight merah, jangan asumsi selalu bug kode nyata.
+- File diubah (6) + 1 file baru: `StatisticsScreen.kt` (BARU),
+  `MainViewModel.kt`, `HomeScreen.kt`, `Navigation.kt` (Protected, parsial),
+  `MainActivity.kt` (Protected, parsial), `strings.xml` (8 string baru).
+  `app/build.gradle.kts` (versi). `ROADMAP.md` Fase 2.3 dicoret selesai --
+  **Fase 1 & 2 SEKARANG SEMUA SELESAI**, sisa cuma Fase 3 (butuh item
+  disebut eksplisit user).
+- Preflight: 13/13 kategori PASS (setelah 1 iterasi reword komentar).
+- **BELUM PERNAH lewat `./gradlew` asli / device asli.** User WAJIB
+  verifikasi di HP: menu "Statistik" baru muncul di Home (antara Riwayat &
+  Pengaturan), buka layar, grafik tren tampil masuk akal (batang tinggi
+  proporsional ke jumlah file), breakdown per-rule urut dari yang paling
+  banyak, caption cap 200 entri kebaca jelas.
+- versionCode 120->121, versionName 8.19.0->8.20.0.
+
 ## v8.19.0 -- Roadmap Fase 2.2: notifikasi hasil auto-scan per-rule (2026-08-21)
 - Instruksi user: "Lanjutkan progress!!" (tanpa area spesifik, + peringatan
   "dilarang overthinking") -- dicek `ROADMAP.md` dulu: item berikutnya

@@ -6,12 +6,13 @@
 > urutan pengerjaan yang disarankan, BUKAN urutan prioritas rasa/opini --
 > murni rasio nilai:risiko dari tertinggi ke terendah.
 >
-> Status saat ini: **v8.18.0**, dark-only, Material 3 murni. Baseline app
+> Status saat ini: **v8.20.0**, dark-only, Material 3 murni. Baseline app
 > sudah solid -- fitur inti (auto-sort, rule pattern, undo, conflict
-> strategy, export/import rule JSON, notifikasi hasil auto-scan, Shizuku
-> integration, crash logger) semua sudah 100% fungsional & terdokumentasi di
-> `PROJECT_STATE.md`/`CHANGELOG.md`. Roadmap ini HANYA berisi gap nyata yang
-> tersisa, bukan daftar fitur ulang yang sudah ada.
+> strategy, export/import rule JSON, notifikasi hasil auto-scan per-rule,
+> statistik penuh, Shizuku integration, crash logger) semua sudah 100%
+> fungsional & terdokumentasi di `PROJECT_STATE.md`/`CHANGELOG.md`. **Fase 1
+> & 2 SEMUA SELESAI** -- sisa roadmap tinggal Fase 3 (butuh item disebut
+> eksplisit oleh user, JANGAN dikerjakan default).
 
 ---
 
@@ -77,11 +78,13 @@ sudah berjalan, roadmap ini tidak menambah proses baru di sini.
   muncul kalau ada file benar-benar dipindah (0 file = skip, cegah
   notification fatigue tiap siklus auto-scan). Lihat `CHANGELOG.md` v8.19.0.
 
-### 2.3 Halaman "Statistik" penuh (grafik tren, bukan cuma angka ringkas Home)
-- **Risiko: Sedang** (screen baru + agregasi data time-series, area baru yang belum pernah diaudit `preflight_check.sh` kategori 5/7) · **Nilai: Sedang**
-- Estimasi: ~5-8 file
-- **Prasyarat**: kerjakan SETELAH 1.4 (statistik ringkas Home) terbukti stabil
-  di device asli user -- jangan lompat langsung ke versi penuh
+### ~~2.3 Halaman "Statistik" penuh (grafik tren, bukan cuma angka ringkas Home)~~ ✅ SELESAI v8.20.0
+- `StatisticsScreen.kt` baru: kartu total sepanjang riwayat, grafik tren
+  batang 14 hari (Canvas hand-rolled, TANPA library chart baru), breakdown
+  per-rule (bar proporsional + angka). Sumber data `MoveHistoryRepository`
+  (pola sama `computeHomeStats()`/`resultNotification` v8.17.0/v8.19.0) --
+  caveat cap 200 entri sama, ditampilkan eksplisit di layar (bukan
+  disembunyikan). Lihat `CHANGELOG.md` v8.20.0.
 
 ---
 

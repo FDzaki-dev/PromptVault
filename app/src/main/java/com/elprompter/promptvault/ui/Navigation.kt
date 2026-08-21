@@ -11,4 +11,5 @@ object Routes {
     const val DIAGNOSTICS = "diagnostics"
     const val SKIPPED_FILES = "skipped_files"
     const val PANDUAN = "panduan"
+    const val STATISTICS = "statistics"
 }
