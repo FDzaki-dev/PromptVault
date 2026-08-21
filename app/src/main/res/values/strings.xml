@@ -244,4 +244,14 @@
     <string name="skipped_files_empty_title_never">Belum pernah scan</string>
     <string name="skipped_files_empty_message_scanned">Semua file cocok dengan rule pada scan terakhir.</string>
     <string name="skipped_files_empty_message_never">Jalankan \"Scan Sekarang\" dari Home dulu untuk melihat file yang dilewati di sini.</string>
+
+    <!-- [Roadmap Fase 1.3 batch 8/N; PENUTUP, 2026-08-21] Ekstraksi MURNI
+         MainActivity.kt / PermissionGate. Ini item TERAKHIR di daftar "Sisa
+         Fase 1.3"; setelah ini seluruh app 100% stringResource, nol
+         literal UI hardcode tersisa. -->
+    <string name="permission_gate_title">Izin Diperlukan</string>
+    <string name="permission_gate_message">PromptVault butuh akses ke semua file supaya bisa memindahkan file di Downloads ke folder yang kamu tentukan. Tanpa izin ini, app tidak bisa bekerja.</string>
+    <string name="permission_gate_open_settings">Buka Pengaturan Izin</string>
+    <string name="permission_gate_recheck">Sudah diizinkan, cek ulang</string>
+    <string name="permission_gate_denied_fallback">Izin ditolak permanen? Buka Pengaturan Aplikasi</string>
 </resources>

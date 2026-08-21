@@ -6,7 +6,7 @@
 > urutan pengerjaan yang disarankan, BUKAN urutan prioritas rasa/opini --
 > murni rasio nilai:risiko dari tertinggi ke terendah.
 >
-> Status saat ini: **v8.0.0**, dark-only, Material 3 murni. Baseline app
+> Status saat ini: **v8.16.2**, dark-only, Material 3 murni. Baseline app
 > sudah solid -- fitur inti (auto-sort, rule pattern, undo, conflict
 > strategy, export/import rule JSON, notifikasi hasil auto-scan, Shizuku
 > integration, crash logger) semua sudah 100% fungsional & terdokumentasi di
@@ -41,21 +41,16 @@ sudah berjalan, roadmap ini tidak menambah proses baru di sini.
   target sentuh 38dp→48dp), sisanya sudah compliant. Selesai 1 batch
   (bukan 4 seperti estimasi awal di bawah).
 
-### 1.3 String UI: audit hardcode vs `strings.xml` -- 🔶 SEDANG BERJALAN (batch 1/N selesai, v8.3.0)
-- **Selesai**: cluster "Kelola Rule" (`AddEditRuleScreen.kt`,
-  `RuleListScreen.kt`, `RuleCard.kt`) -- lihat `CHANGELOG.md` v8.3.0.
-- **Sisa** (independen, urutan bebas, masing-masing 1 batch terpisah):
-  `SettingsScreen.kt` (~22 literal, terbesar), `DiagnosticsScreen.kt` (~15),
-  `PanduanScreen.kt` (~9 paragraf besar, karakter beda -- pertimbangkan
-  batch tersendiri), `HomeScreen.kt`, `OnboardingScreen.kt`,
-  `ActivityLogScreen.kt`, `SkippedFilesScreen.kt`, `MainActivity.kt` (dialog
-  izin/error).
-- **Baca dulu sebelum lanjut**: catatan teknis `stringResource()` vs
-  `Context.getString()` + aturan XML comment di `CHANGELOG.md` v8.3.0 --
-  jangan re-investigasi dari nol.
-- **Risiko: Rendah** (mechanical, tidak ubah perilaku) · **Nilai: Sedang** (prasyarat WAJIB kalau kelak mau lokalisasi -- lihat Fase 3.3 -- tapi berdiri sendiri juga berguna: memisahkan teks dari logika bikin maintenance lebih rapi)
-- **Catatan low-risk**: kerjakan HANYA ekstraksi string, JANGAN sekalian
-  terjemahkan -- itu scope Fase 3.3 terpisah
+### ~~1.3 String UI: audit hardcode vs `strings.xml`~~ ✅ SELESAI v8.16.2
+- Batch 1: cluster "Kelola Rule" (v8.3.0). Batch 2: `SettingsScreen.kt`
+  (v8.6.0). Batch 3-7: sisa 6 screen (`DiagnosticsScreen.kt`,
+  `PanduanScreen.kt`, `HomeScreen.kt`, `OnboardingScreen.kt`,
+  `ActivityLogScreen.kt`, `SkippedFilesScreen.kt` -- yang terakhir via
+  audit UX batch 7, v8.16.1). Batch 8/N (PENUTUP): `MainActivity.kt`/
+  `PermissionGate`, v8.16.2.
+- Seluruh app (9 screen + `MainActivity.kt`) sekarang 100% `stringResource`,
+  nol literal UI hardcode tersisa. Prasyarat Fase 3.3 (lokalisasi EN)
+  terpenuhi kalau suatu saat diminta eksplisit.
 
 ### 1.4 Statistik ringkas di Home (jumlah file tersortir minggu ini/bulan ini)
 - **Risiko: Rendah** (baca data yang sudah ada di `ActivityLogRepository`/`MoveHistoryRepository`, murni tampilan baru) · **Nilai: Sedang-Tinggi** (user langsung lihat app "bekerja" tanpa buka Riwayat Aktivitas manual)

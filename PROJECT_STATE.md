@@ -13,6 +13,38 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.16.2 -- Roadmap Fase 1.3 batch 8/N -- PENUTUP: ekstraksi string `MainActivity.kt`/`PermissionGate` (2026-08-21)
+- Instruksi user: "Lanjutkan progress!!" (tanpa area spesifik) -- dicek dulu
+  `ROADMAP.md` (bukan asumsi) sbg antrian resmi: Fase 1.3 (audit hardcode
+  string vs `strings.xml`) status "SEDANG BERJALAN", sisa item terakhir
+  `MainActivity.kt` (dialog izin/error). **Cross-check ke kode aktual dulu**
+  (bukan percaya `ROADMAP.md` mentah -- filenya sendiri bilang "coret kalau
+  ternyata sudah lebih dulu selesai") -- grep 7 screen lain yg tercatat
+  "sisa" di `ROADMAP.md` (SettingsScreen, DiagnosticsScreen, dst) ternyata
+  SEMUA sudah 0 literal `Text("...")` (klaim v8.16.1 "8/9 screen 100%
+  stringResource" terverifikasi akurat, `ROADMAP.md`-nya sendiri yang
+  belum sempat di-update). **`MainActivity.kt` SATU-SATUNYA sisa nyata**:
+  5 string di composable `PermissionGate` (dialog izin runtime) -- persis
+  sesuai catatan `ROADMAP.md`.
+- Fix: 5 string baru `strings.xml` (prefix `permission_gate_*`), wired ke
+  `stringResource(...)` di `PermissionGate`. MURNI ekstraksi, nilai teks
+  identik, nol perubahan perilaku/logic izin.
+- Insiden minor sendiri, ketangkap preflight SEBELUM commit (kelas bug
+  sama persis v8.5.0b/v8.6.0): komentar XML baru pakai `--` ("batch 8/N --
+  PENUTUP" & "TERAKHIR ... -- setelah ini") -- expat parser tolak `--` di
+  dalam `<!-- -->`. Diganti `;`, preflight kategori #10 ulang -> bersih.
+- File diubah (3): `MainActivity.kt`, `strings.xml`, `app/build.gradle.kts`
+  (versi). Preflight: 13/13 kategori PASS (setelah 1x iterasi fix XML).
+- **`ROADMAP.md` diupdate**: Fase 1.3 dicoret jadi ✅ SELESAI v8.16.2 --
+  seluruh app (9 screen + `MainActivity.kt`) sekarang 100% `stringResource`,
+  nol literal UI hardcode tersisa, prasyarat Fase 3.3 (lokalisasi EN)
+  sudah terpenuhi kalau suatu saat diminta eksplisit.
+- **BELUM PERNAH lewat `./gradlew` asli / device asli.** User WAJIB
+  verifikasi: cabut izin "All files access" app ini lalu buka app --
+  layar "Izin Diperlukan" tampil identik (judul, paragraf, 3 tombol),
+  tidak ada teks hilang/berubah.
+- versionCode 116->117, versionName 8.16.1->8.16.2.
+
 ## v8.16.1 -- Audit UX 100% batch 7 (area baru: hardcoded string/i18n) (2026-08-21)
 - Area baru: konsistensi `stringResource`/`strings.xml` vs literal
   hardcode. Grep lintas 9 screen: 8/9 SUDAH 100% `stringResource`

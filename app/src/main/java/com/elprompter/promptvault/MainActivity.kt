@@ -52,6 +52,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
@@ -469,10 +470,9 @@ private fun PermissionGate(
             ) {
                 Icon(Icons.Filled.FolderOpen, contentDescription = null, tint = colors.onPrimary, modifier = Modifier.size(32.dp))
             }
-            Text("Izin Diperlukan", style = MaterialTheme.typography.headlineSmall, color = colors.onBackground)
+            Text(stringResource(R.string.permission_gate_title), style = MaterialTheme.typography.headlineSmall, color = colors.onBackground)
             Text(
-                "PromptVault butuh akses ke semua file supaya bisa memindahkan file " +
-                    "di Downloads ke folder yang kamu tentukan. Tanpa izin ini, app tidak bisa bekerja.",
+                stringResource(R.string.permission_gate_message),
                 style = MaterialTheme.typography.bodyMedium,
                 color = colors.onBackground
             )
@@ -480,12 +480,12 @@ private fun PermissionGate(
                 onClick = onPrimaryAction,
                 colors = ButtonDefaults.buttonColors(containerColor = colors.secondary, contentColor = colors.onSecondary),
                 modifier = Modifier.fillMaxWidth()
-            ) { Text("Buka Pengaturan Izin") }
+            ) { Text(stringResource(R.string.permission_gate_open_settings)) }
             OutlinedButton(
                 onClick = onRecheck,
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primary),
                 modifier = Modifier.fillMaxWidth()
-            ) { Text("Sudah diizinkan, cek ulang") }
+            ) { Text(stringResource(R.string.permission_gate_recheck)) }
             // Fallback khusus API 26-29: kalau user pernah menolak dialog izin
             // dan Android tidak akan menampilkannya lagi otomatis (permanently
             // denied), satu-satunya jalan adalah pengaturan aplikasi manual.
@@ -494,7 +494,7 @@ private fun PermissionGate(
                     onClick = onOpenAppSettings,
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.onSurfaceVariant),
                     modifier = Modifier.fillMaxWidth()
-                ) { Text("Izin ditolak permanen? Buka Pengaturan Aplikasi") }
+                ) { Text(stringResource(R.string.permission_gate_denied_fallback)) }
             }
         }
     }

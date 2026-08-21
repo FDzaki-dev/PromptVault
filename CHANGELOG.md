@@ -3,6 +3,23 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.16.2 (2026-08-21) — Roadmap Fase 1.3 batch 8/N (PENUTUP): ekstraksi string `MainActivity.kt`
+
+Lanjutan `ROADMAP.md` Fase 1.3 — dicek ulang ke kode aktual dulu (bukan
+percaya `ROADMAP.md` mentah yang belum sempat di-update): 7 screen lain
+yang tercatat "sisa" ternyata sudah 100% `stringResource` (klaim v8.16.1
+akurat). `MainActivity.kt`/`PermissionGate` (dialog izin runtime)
+satu-satunya sisa nyata — 5 string dipindah ke `strings.xml` (prefix
+`permission_gate_*`). Murni ekstraksi, nol perubahan perilaku.
+
+Insiden minor sendiri, ketangkap preflight (kelas bug sama v8.5.0b/v8.6.0):
+`--` di komentar XML baru, diganti `;`.
+
+**Roadmap Fase 1.3 SEKARANG 100% SELESAI** — seluruh app (9 screen +
+`MainActivity.kt`) sudah `stringResource` penuh, `ROADMAP.md` diupdate.
+
+Preflight: 13/13 kategori PASS. versionCode 116→117, versionName 8.16.1→8.16.2.
+
 ## v8.16.1 (2026-08-21) — Audit UX area baru: hardcoded string/i18n
 
 `SkippedFilesScreen.kt` satu-satunya screen terlewat migrasi
