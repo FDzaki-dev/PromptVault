@@ -13,6 +13,71 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.16.1 -- Audit UX 100% batch 7 (area baru: hardcoded string/i18n) (2026-08-21)
+- Area baru: konsistensi `stringResource`/`strings.xml` vs literal
+  hardcode. Grep lintas 9 screen: 8/9 SUDAH 100% `stringResource`
+  (migrasi "Roadmap Fase 1.3" batch sebelumnya, per komentar di
+  `OnboardingScreen.kt`). **1 pengecualian nyata ditemukan**:
+  `SkippedFilesScreen.kt` -- SATU-SATUNYA screen yang TERLEWAT migrasi,
+  6 string (title top bar + intro + 2x title/message empty-state) 100%
+  hardcode literal Indonesia, TIDAK ADA di `strings.xml` sama sekali.
+  Root cause: layar ini dibuat/direvisi (fix UI-09) SEBELUM batch migrasi
+  Fase 1.3 berjalan, dan tidak ikut tersapu waktu itu.
+- Fix: 6 string baru di `strings.xml` (prefix `skipped_files_*`), wired
+  ke `stringResource(...)` di `SkippedFilesScreen.kt`. `info.reason` (teks
+  alasan skip per-file) SENGAJA TIDAK disentuh -- itu string DINAMIS
+  dibangun di `util/FileSorter.kt` (layer terpisah, bukan `ui/screens/*`,
+  di luar cakupan batch ini + beresiko cakupan lebih luas dari 1 file).
+- File diubah (2): `SkippedFilesScreen.kt`, `strings.xml`. `app/build.gradle.kts` (versi).
+- Dampak: sekarang app SIAP di-i18n (tambah `values-en/strings.xml` dst)
+  tanpa lubang -- sebelumnya 1 layar akan selalu Indonesia keras walau
+  locale diganti.
+- **BELUM PERNAH lewat `./gradlew` asli / device asli.** User WAJIB
+  verifikasi: layar "Detail File Dilewati" tampil identik (tidak ada teks
+  hilang/berubah), termasuk 2 varian empty-state (belum pernah scan vs
+  sudah scan tapi kosong).
+- versionCode 115->116, versionName 8.16.0->8.16.1.
+
+## v8.16.0 -- Audit UX 100% batch 6 (area baru: state restoration) (2026-08-21)
+- Instruksi user: "audit UX lebih dalam lagi (area baru)". Area baru:
+  **state restoration** (rotasi layar & process death) -- belum pernah
+  dicek di audit batch 1-5 sebelumnya (fokusnya waktu itu: maxLines,
+  double-tap guard, predictive back, kontras, animasi, orientation lock).
+- **Bug nyata ditemukan**: `AddEditRuleScreen.kt` -- SEMUA field ketikan
+  user (`folderName`, `pattern`, `excludePattern`, `minSizeKbText`,
+  `maxSizeKbText`) pakai `remember` biasa, BUKAN `rememberSaveable`.
+  Compose `remember` polos HANYA bertahan lewat recomposition biasa, HILANG
+  TOTAL saat: (1) rotasi layar (config change hancurkan+bikin ulang
+  Activity kalau tidak di-handle), (2) process death (app di-background
+  lalu proses dibunuh sistem saat RAM rendah, SANGAT umum di Android,
+  bukan edge case langka) -- user yang sudah ngetik pattern rule panjang
+  bisa kehilangan semua ketikan tanpa peringatan.
+  - grep dikonfirmasi 6 screen lain juga pakai `remember` untuk state
+    lokal, tapi SEMUA state-nya transient/derived (loading flag, dialog
+    terbuka/tertutup, hasil query) -- BUKAN ketikan user yang mahal
+    diulang. `AddEditRuleScreen.kt` SATU-SATUNYA form input teks
+    signifikan di app ini (grep `OutlinedTextField` lintas screens
+    dikonfirmasi).
+- Fix: 5 field di atas -> `rememberSaveable`. `pendingCheck`/`pendingRule`/
+  `preview` SENGAJA TETAP `remember` biasa -- objek kompleks (`Rule`/
+  `SaveRuleCheck`/`PatternPreviewResult`) butuh `@Parcelize`/custom Saver
+  utk Bundle-safe (di luar cakupan 1 batch micro), dan isinya
+  derived/transient (bisa dihitung ulang dari field text di atas begitu
+  field itu balik), BUKAN input mentah user yang butuh diselamatkan.
+- File diubah (1): `AddEditRuleScreen.kt` (import `rememberSaveable` + 5
+  deklarasi state). `app/build.gradle.kts` (versi -- **minor bump**,
+  bukan patch, krn ini penambahan cakupan audit BARU/area baru, bukan
+  sekadar lanjutan micro-fix dari batch sebelumnya).
+- **BELUM PERNAH lewat `./gradlew` asli / device asli.** User WAJIB
+  verifikasi di HP: buka "Tambah Rule", isi semua field, rotasi layar
+  (atau developer options > "Don't keep activities" lalu switch app lain
+  & balik) -- SEMUA isian TETAP ada, tidak kosong lagi.
+- Area lanjutan (kalau user mau audit lebih dalam lagi): urutan fokus
+  keyboard/`Modifier.focusRequester`, semantics TalkBack (`heading()`,
+  `mergeDescendants`), konsistensi haptic feedback antar aksi, hardcoded
+  string vs `stringResource` (i18n).
+- versionCode 114->115, versionName 8.15.6->8.16.0.
+
 ## v8.15.6 -- Audit UX 100% batch 5: tutup pending queue #3 (2026-08-21)
 - **Kontras disabled-state**: DICEK, tidak ada override manual warna
   disabled di seluruh kode (`grep "disabled"` 0 hasil relevan) -- app

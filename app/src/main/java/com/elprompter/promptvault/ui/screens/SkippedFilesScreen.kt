@@ -17,8 +17,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.elprompter.promptvault.R
 import com.elprompter.promptvault.ui.components.EmptyState
 import com.elprompter.promptvault.util.SkippedFileInfo
 
@@ -42,11 +44,11 @@ fun SkippedFilesScreen(
 ) {
     val colors = MaterialTheme.colorScheme
     androidx.compose.material3.Scaffold(
-        topBar = { com.elprompter.promptvault.ui.components.VaultTopBar(title = "Detail File Dilewati", onBack = onBack) }
+        topBar = { com.elprompter.promptvault.ui.components.VaultTopBar(title = stringResource(R.string.skipped_files_title), onBack = onBack) }
     ) { padding ->
     Column(modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
         Text(
-            "Data dari scan terakhir. Jalankan \"Scan Sekarang\" lagi untuk memperbarui daftar ini.",
+            stringResource(R.string.skipped_files_intro),
             style = MaterialTheme.typography.bodySmall
         )
 
@@ -55,11 +57,11 @@ fun SkippedFilesScreen(
                 // UI-09 fix: 2 pesan eksplisit berbeda, bukan 1 pesan gabungan.
                 EmptyState(
                     icon = Icons.Filled.TaskAlt,
-                    title = if (hasScannedBefore) "Tidak ada file yang dilewati" else "Belum pernah scan",
+                    title = if (hasScannedBefore) stringResource(R.string.skipped_files_empty_title_scanned) else stringResource(R.string.skipped_files_empty_title_never),
                     message = if (hasScannedBefore) {
-                        "Semua file cocok dengan rule pada scan terakhir."
+                        stringResource(R.string.skipped_files_empty_message_scanned)
                     } else {
-                        "Jalankan \"Scan Sekarang\" dari Home dulu untuk melihat file yang dilewati di sini."
+                        stringResource(R.string.skipped_files_empty_message_never)
                     },
                     accentColor = colors.secondary,
                     accentContainerColor = colors.secondaryContainer

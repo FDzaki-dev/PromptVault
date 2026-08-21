@@ -3,6 +3,19 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.16.1 (2026-08-21) — Audit UX area baru: hardcoded string/i18n
+
+`SkippedFilesScreen.kt` satu-satunya screen terlewat migrasi
+stringResource — 6 string dipindah ke `strings.xml`. Screen lain sudah
+100% migrasi sebelumnya.
+
+## v8.16.0 (2026-08-21) — Audit UX area baru: state restoration
+
+Ketikan user di `AddEditRuleScreen.kt` (5 field) sebelumnya `remember`
+biasa — hilang saat rotasi layar/process death. Fix: `rememberSaveable`.
+Satu-satunya form input teks signifikan di app; state transient di
+screen lain tidak terdampak.
+
 ## v8.15.6 (2026-08-21) — Tutup pending queue #3: disabled-contrast & animasi N/A, portrait lock
 
 Kontras disabled-state & konsistensi durasi animasi diverifikasi N/A

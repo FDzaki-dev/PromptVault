@@ -25,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -49,11 +50,20 @@ fun AddEditRuleScreen(
     onSave: (Rule, removeDuplicateRuleId: String?) -> Unit,
     onCancel: () -> Unit
 ) {
-    var folderName by remember { mutableStateOf(existingRule?.folderName ?: "") }
-    var pattern by remember { mutableStateOf(existingRule?.pattern ?: "") }
-    var excludePattern by remember { mutableStateOf(existingRule?.excludePattern ?: "") }
-    var minSizeKbText by remember { mutableStateOf(existingRule?.minSizeKb?.toString() ?: "") }
-    var maxSizeKbText by remember { mutableStateOf(existingRule?.maxSizeKb?.toString() ?: "") }
+    // Audit UX 100% batch 6 (area baru: state restoration): field ketikan
+    // user sebelumnya `remember` biasa -- HILANG total saat rotasi layar
+    // atau process death (app di-background lalu dibunuh sistem, umum di
+    // Android saat RAM rendah). `rememberSaveable` menyimpan ke
+    // savedInstanceState (Bundle), bertahan lewat keduanya. `pendingCheck`/
+    // `pendingRule`/`preview` TETAP `remember` biasa -- objek kompleks
+    // (Rule/SaveRuleCheck/PatternPreviewResult) tidak otomatis Bundle-safe
+    // tanpa Parcelize tambahan, dan isinya derived/transient (bisa dihitung
+    // ulang dari field di atas), bukan ketikan user yang butuh diselamatkan.
+    var folderName by rememberSaveable { mutableStateOf(existingRule?.folderName ?: "") }
+    var pattern by rememberSaveable { mutableStateOf(existingRule?.pattern ?: "") }
+    var excludePattern by rememberSaveable { mutableStateOf(existingRule?.excludePattern ?: "") }
+    var minSizeKbText by rememberSaveable { mutableStateOf(existingRule?.minSizeKb?.toString() ?: "") }
+    var maxSizeKbText by rememberSaveable { mutableStateOf(existingRule?.maxSizeKb?.toString() ?: "") }
     var pendingCheck by remember { mutableStateOf<SaveRuleCheck?>(null) }
     var pendingRule by remember { mutableStateOf<Rule?>(null) }
     var preview by remember { mutableStateOf<PatternPreviewResult?>(null) }

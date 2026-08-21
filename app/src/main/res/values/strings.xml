@@ -238,4 +238,10 @@
     <string name="settings_update_token_label">Token GitHub (opsional)</string>
     <string name="settings_update_token_placeholder">ghp_xxxxxxxxxxxxxxxxxxxx</string>
     <string name="settings_update_token_hint">Naikkan rate-limit cek versi dari 60/jam ke 5000/jam. Kosongkan kalau jarang cek manual -- repo publik, tidak wajib diisi. Token disimpan di HP kamu saja.</string>
+    <string name="skipped_files_title">Detail File Dilewati</string>
+    <string name="skipped_files_intro">Data dari scan terakhir. Jalankan \"Scan Sekarang\" lagi untuk memperbarui daftar ini.</string>
+    <string name="skipped_files_empty_title_scanned">Tidak ada file yang dilewati</string>
+    <string name="skipped_files_empty_title_never">Belum pernah scan</string>
+    <string name="skipped_files_empty_message_scanned">Semua file cocok dengan rule pada scan terakhir.</string>
+    <string name="skipped_files_empty_message_never">Jalankan \"Scan Sekarang\" dari Home dulu untuk melihat file yang dilewati di sini.</string>
 </resources>
