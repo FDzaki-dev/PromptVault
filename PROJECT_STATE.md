@@ -13,7 +13,16 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
-## v8.21.1 -- FITUR: Auto-Sort ON/OFF benar-benar fungsional (2026-08-21)
+## v8.21.1 -- Verifikasi build Batch8 + lanjutan Audit UX 100% (2026-08-21)
+- **Konfirmasi user**: screenshot toggle Auto-Sort OFF di HP asli -- UI + wording ("Auto-sort dinonaktifkan. Scan manual tetap tersedia.") tampil BENAR. Fitur Auto-Sort ON/OFF (entri v8.21.0b di bawah) TERKONFIRMASI bekerja di device asli.
+- **Pending queue v8.15.0 #2** (`OnboardingScreen.kt` -- verifikasi manual `TextField`/`KeyboardOptions`): **N/A, bukan bug**. Grep + `view` manual konfirmasi layar ini 0 `TextField`/`OutlinedTextField` sama sekali -- tidak ada input apa pun yang perlu `KeyboardOptions`/`ImeAction`.
+- **Pending queue v8.15.0 #3, sub-area predictive back gesture**: **sudah OK, tidak perlu fix**. `AndroidManifest.xml` sudah `android:enableOnBackInvokedCallback="true"`, `navigation-compose:2.7.7` (>= 2.7.0, sudah native support predictive back), 0 `BackHandler` custom yang bisa mengganggu animasi sistem.
+- **Pending queue v8.15.0 #3, sub-area kontras disabled-state**: **sudah OK, tidak perlu fix**. 20 titik pemakaian `ButtonDefaults.buttonColors`/`outlinedButtonColors` di project HANYA override `containerColor`/`contentColor` (parameter bernama) -- 0 titik override `disabledContentColor`/`disabledContainerColor` eksplisit, jadi default token Material 3 (alpha-reduced, kontras aman) otomatis dipakai di semua tombol.
+- **Sisa pending queue v8.15.0 #3** (belum diaudit, scope besar/subjektif -- BUKAN untuk batch ini): konsistensi durasi animasi/transisi antar layar, perilaku landscape/tablet layout.
+- File diubah: 0 (murni audit/verifikasi, tidak ada temuan bug baru). `app/build.gradle.kts` (versi saja).
+- versionCode 123->124, versionName 8.21.0->8.21.1 (menandai fitur Auto-Sort ON/OFF terkonfirmasi + audit ini, digabung 1 bump).
+
+## v8.21.0b -- FITUR: Auto-Sort ON/OFF benar-benar fungsional (2026-08-21)
 - **Sumber**: `PromptVault_AutoSort_Toggle_Fix_Instructions.md` (instruksi eksplisit user) -- sebelumnya toggle Auto-Sort TIDAK ADA sama sekali, `WorkScheduler.rescheduleFromSavedSettings()` selalu unconditional schedule().
 - **SettingsRepository**: key baru `autoSortEnabledKey` (boolean, default `true` -- backward compat), API `autoSortEnabledFlow`/`getAutoSortEnabled()`/`setAutoSortEnabled()`. DataStore existing, tidak ada repo/DB baru.
 - **WorkScheduler.rescheduleFromSavedSettings()**: sekarang baca `autoSortEnabled` dulu -- ON -> `schedule()`, OFF -> `cancel()`. Titik pusat ini otomatis benarkan `PromptVaultApp.onCreate()` dan `BootCompletedReceiver` TANPA mengubah kedua file itu sama sekali (0 baris).
@@ -27,7 +36,7 @@
 - **versionCode/versionName TIDAK naik** (tetap 123/8.21.0) -- menunggu konfirmasi CI hijau dulu sebelum bump.
 - **Belum diverifikasi CI hijau.**
 
-
+## v8.21.0 -- Roadmap Fase 3.1: Widget Home Screen "Scan Sekarang" (2026-08-21)
 - "lanjutkan progress!!" tanpa item spesifik -- Fase 1&2 ROADMAP.md 100%
   selesai, Fase 3 WAJIB pilih eksplisit (aturan roadmap sendiri). Ditanya
   via ask_user_input_v0 (4 opsi Fase 3), **user pilih: 3.1 Widget Home

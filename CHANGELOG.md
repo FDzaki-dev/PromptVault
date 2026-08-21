@@ -16,6 +16,16 @@ toggle di SettingsScreen (reuse `TactileSwitch`), indikator Home tampil OFF.
 otomatis TIDAK ditambahkan (butuh Robolectric/mockk, tidak ada di project) —
 dicatat sebagai technical debt. versionCode/versionName tetap 123/8.21.0.
 
+## v8.21.1 (2026-08-21) — Verifikasi build + lanjutan Audit UX 100%
+
+Fitur Auto-Sort ON/OFF (batch sebelumnya) TERKONFIRMASI bekerja di device
+asli via screenshot user. Lanjutan pending queue audit UX: OnboardingScreen
+dikonfirmasi 0 TextField (N/A, bukan bug); predictive back gesture sudah OK
+(manifest + nav-compose 2.7.7 native support, 0 BackHandler custom); kontras
+disabled-state sudah OK (0 override eksplisit, default Material 3 dipakai).
+Sisa pending queue (durasi animasi, landscape/tablet) — scope besar,
+ditunda batch berikutnya. 0 file kode diubah, murni audit + version bump.
+
 ## v8.21.0 (2026-08-21) — Roadmap Fase 3.1: Widget Home Screen "Scan Sekarang"
 User pilih eksplisit lewat 4 opsi Fase 3 (widget/cloud/lokalisasi/multi-profil).
 
