@@ -16,6 +16,15 @@ toggle di SettingsScreen (reuse `TactileSwitch`), indikator Home tampil OFF.
 otomatis TIDAK ditambahkan (butuh Robolectric/mockk, tidak ada di project) —
 dicatat sebagai technical debt. versionCode/versionName tetap 123/8.21.0.
 
+## v8.21.2 (2026-08-21) — Fix cacat widget "vibes beta testing"
+
+Instruksi langsung user. 3 cacat konkret diperbaiki: (1) `previewImage`
+generik → tambah `previewLayout` (API 31+) supaya widget picker tampilkan
+bentuk widget sebenarnya; (2) tidak ada feedback tap → background dibungkus
+`<ripple>`; (3) tidak ada identitas visual → tambah icon app + layout
+horizontal. `ScanWidgetProvider.kt` tidak disentuh (logic sudah benar).
+3 file XML.
+
 ## v8.21.1 (2026-08-21) — Verifikasi build + lanjutan Audit UX 100%
 
 Fitur Auto-Sort ON/OFF (batch sebelumnya) TERKONFIRMASI bekerja di device

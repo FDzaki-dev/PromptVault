@@ -13,7 +13,18 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
-## v8.21.1 -- Verifikasi build Batch8 + lanjutan Audit UX 100% (2026-08-21)
+## v8.21.2 -- Fix cacat widget "vibes beta testing" (2026-08-21)
+- **Instruksi langsung user**: "perbaiki dulu widget kamu yang vibes nya beta testing, dan masih cacat!!" -- sebelum lanjut pilih item Fase 3 berikutnya.
+- **3 cacat konkret ditemukan & diperbaiki** (3 file, sesuai batch limit):
+  1. `widget_scan_info.xml` -- `previewImage` cuma app icon generik, widget picker TIDAK menampilkan bentuk widget sebenarnya saat user long-press home screen (kelihatan "belum jadi"). Fix: tambah `previewLayout="@layout/widget_scan"` (API 31+, Android render layout ASLI sbg preview akurat), `previewImage` TETAP jadi fallback wajib device API 26-30.
+  2. `widget_scan_background.xml` -- shape polos TANPA feedback visual sama sekali saat diketuk, satu-satunya interaksi widget ini terasa tidak responsif. Fix: dibungkus `<ripple>` (API 21+, aman di minSdk 26), ripple otomatis terpotong sesuai radius 20dp (bukan ripple persegi lepas dari bentuk kartu).
+  3. `widget_scan.xml` -- root cuma 2 baris teks polos, tidak ada identitas visual, kelihatan generic/placeholder. Fix: dibungkus jadi horizontal (icon `ic_launcher`, aset SUDAH ADA/0 aset baru, + kolom teks), pola umum widget shortcut Android.
+- **Ketemu 3x insiden `--` di komentar XML sendiri saat menulis fix ini** (kelas bug berulang, lihat v8.5.0b) -- SEMUA langsung diperbaiki sebelum package (`--` -> `;`), divalidasi `xml.dom.minidom` + scan regex menyeluruh seluruh `**/*.xml` project (0 pelanggaran) + `preflight_check.sh` 13/13 PASS.
+- File diubah (3): `widget_scan_info.xml`, `widget_scan_background.xml`, `widget_scan.xml`. `ScanWidgetProvider.kt` TIDAK disentuh (logic trigger scan sudah benar, cacat murni visual/UX).
+- **Belum diverifikasi CI hijau / device asli.**
+- versionCode 124->125, versionName 8.21.1->8.21.2.
+
+
 - **Konfirmasi user**: screenshot toggle Auto-Sort OFF di HP asli -- UI + wording ("Auto-sort dinonaktifkan. Scan manual tetap tersedia.") tampil BENAR. Fitur Auto-Sort ON/OFF (entri v8.21.0b di bawah) TERKONFIRMASI bekerja di device asli.
 - **Pending queue v8.15.0 #2** (`OnboardingScreen.kt` -- verifikasi manual `TextField`/`KeyboardOptions`): **N/A, bukan bug**. Grep + `view` manual konfirmasi layar ini 0 `TextField`/`OutlinedTextField` sama sekali -- tidak ada input apa pun yang perlu `KeyboardOptions`/`ImeAction`.
 - **Pending queue v8.15.0 #3, sub-area predictive back gesture**: **sudah OK, tidak perlu fix**. `AndroidManifest.xml` sudah `android:enableOnBackInvokedCallback="true"`, `navigation-compose:2.7.7` (>= 2.7.0, sudah native support predictive back), 0 `BackHandler` custom yang bisa mengganggu animasi sistem.

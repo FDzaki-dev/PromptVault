@@ -2,9 +2,22 @@
 <!-- [Fase 3.1 roadmap, 2026-08-21] Background widget RemoteViews — warna
      di-reuse PERSIS dari colors.xml (pv_amoled_background/pv_primary_accent,
      sumber sama dgn Color.kt Compose) supaya widget di home screen tidak
-     kelihatan "beda app" dibanding UI utama. -->
-<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
-    <solid android:color="@color/pv_amoled_background" />
-    <stroke android:width="1dp" android:color="@color/pv_primary_accent" />
-    <corners android:radius="20dp" />
-</shape>
+     kelihatan "beda app" dibanding UI utama.
+     [Fix cacat "beta testing", 2026-08-21] Dulu shape polos TANPA feedback
+     visual sama sekali saat diketuk; widget kelihatan tidak responsif
+     (satu-satunya interaksi widget ini malah tidak ada indikasi ketukan
+     diterima, padahal Toast baru muncul SETELAH broadcast diproses, ada
+     jeda). Dibungkus ripple (didukung sejak API 21, minSdk project ini
+     26, aman); efek ripple otomatis terpotong sesuai corners shape di
+     dalamnya (radius 20dp tetap terjaga, bukan ripple persegi lepas dari
+     bentuk kartu). -->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="?android:attr/colorControlHighlight">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/pv_amoled_background" />
+            <stroke android:width="1dp" android:color="@color/pv_primary_accent" />
+            <corners android:radius="20dp" />
+        </shape>
+    </item>
+</ripple>

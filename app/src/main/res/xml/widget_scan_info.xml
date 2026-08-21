@@ -5,6 +5,14 @@
      minWidth/minHeight dipilih utk selalu muat teks "Ketuk untuk Scan
      Sekarang" tanpa terpotong di grid 4x4 standar Android (110dp ~ 2 kolom
      di kebanyakan launcher). -->
+<!-- [Fase 3.1 fix cacat "beta testing", 2026-08-21] `previewImage` doang
+     (app icon generik) bikin widget picker TIDAK menunjukkan bentuk widget
+     SEBENARNYA saat user long-press home screen; kelihatan belum jadi/
+     placeholder. Tambah `previewLayout` (API 31+, resmi dari Android 12):
+     Android me-render `initialLayout` ASLI sbg preview akurat, jauh lebih
+     baik dari image statis manapun. `previewImage` TETAP dipertahankan sbg
+     fallback wajib utk device API 26-30 (minSdk 26 project ini) yang belum
+     kenal `previewLayout`. -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:minWidth="110dp"
     android:minHeight="40dp"
@@ -12,6 +20,7 @@
     android:targetCellHeight="1"
     android:updatePeriodMillis="0"
     android:initialLayout="@layout/widget_scan"
+    android:previewLayout="@layout/widget_scan"
     android:previewImage="@mipmap/ic_launcher"
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen"
