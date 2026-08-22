@@ -7,6 +7,8 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.elprompter.promptvault.data.SettingsRepository
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.TimeUnit
 
 /**
@@ -16,7 +18,26 @@ import java.util.concurrent.TimeUnit
  */
 object WorkScheduler {
 
-    fun schedule(context: Context, intervalMinutes: Int) {
+    /**
+     * [Fix race ON/OFF, 2026-08-22] Bug nyata (audit): startup
+     * (PromptVaultApp.onCreate) baca DataStore lama (ON) SEBELUM user
+     * sempat matiin toggle, tapi baru benar-benar panggil schedule()
+     * SETELAH coroutine toggle user (yang lebih baru) sudah kelar
+     * cancel() -- hasil akhir: scheduler balik ON walau user baru saja
+     * matiin. Penyebabnya BUKAN nilai yang salah (baca DataStore-nya
+     * benar), tapi URUTAN EKSEKUSI 2 coroutine independen terhadap
+     * WorkManager yang tidak terjamin.
+     * Fix: 1 [Mutex] menyerialkan SEMUA jalur apply (startup/reboot/
+     * toggle/ganti interval) -- dan baca DataStore FRESH di DALAM
+     * critical section (bukan pakai parameter yang mungkin sudah basi
+     * saat giliran coroutine ini tiba). Siapa pun yang menang antrean
+     * mutex, keputusan schedule/cancel SELALU berdasarkan state
+     * TERBARU yang tersimpan saat itu -- toggle OFF user tidak lagi
+     * bisa tertimpa coroutine lama yang baru dapat giliran belakangan.
+     */
+    private val mutex = Mutex()
+
+    private fun schedule(context: Context, intervalMinutes: Int) {
         val constraints = Constraints.Builder().build()
 
         val request = PeriodicWorkRequestBuilder<AutoSortWorker>(intervalMinutes.toLong(), TimeUnit.MINUTES)
@@ -32,7 +53,7 @@ object WorkScheduler {
         )
     }
 
-    fun cancel(context: Context) {
+    private fun cancel(context: Context) {
         WorkManager.getInstance(context).cancelUniqueWork(AutoSortWorker.WORK_NAME)
     }
 
@@ -59,13 +80,30 @@ object WorkScheduler {
      * TIDAK diam-diam menghidupkan lagi scheduler yang sudah user matikan.
      * Interval tetap dibaca dari DataStore SAAT ON (sumber tunggal, tidak ada
      * duplikasi logic default interval di caller manapun).
+     * [Fix race ON/OFF, 2026-08-22] Sekarang cuma alias tipis ke
+     * [syncFromSavedSettings] -- 1 satu-satunya jalur baca+terapkan state,
+     * dipakai baik dari startup/reboot maupun dari toggle/ganti interval
+     * user, semua lewat mutex yang sama.
      */
-    suspend fun rescheduleFromSavedSettings(context: Context) {
-        val repo = SettingsRepository(context)
-        if (repo.getAutoSortEnabled()) {
-            schedule(context, repo.getIntervalMinutes())
-        } else {
-            cancel(context)
+    suspend fun rescheduleFromSavedSettings(context: Context) = syncFromSavedSettings(context)
+
+    /**
+     * [Fix race ON/OFF, 2026-08-22] Satu-satunya jalur yang boleh menyentuh
+     * WorkManager (schedule/cancel) utk auto-sort. Dipanggil dari:
+     * PromptVaultApp.onCreate, BootCompletedReceiver, dan
+     * MainViewModel.setAutoSortEnabled/setIntervalMinutes SETELAH persist
+     * ke DataStore selesai -- fungsi ini sendiri yang baca ulang state
+     * terbaru di dalam mutex, jadi pemanggil tidak perlu (dan sebaiknya
+     * tidak) kirim nilai enabled/interval hasil hitungan sendiri.
+     */
+    suspend fun syncFromSavedSettings(context: Context) {
+        mutex.withLock {
+            val repo = SettingsRepository(context)
+            if (repo.getAutoSortEnabled()) {
+                schedule(context, repo.getIntervalMinutes())
+            } else {
+                cancel(context)
+            }
         }
     }
 }

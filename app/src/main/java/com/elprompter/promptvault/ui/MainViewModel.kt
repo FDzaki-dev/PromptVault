@@ -345,12 +345,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun setIntervalMinutes(minutes: Int) {
         viewModelScope.launch {
             settingsRepository.setIntervalMinutes(minutes)
-            // [Fix Auto-Sort ON/OFF, 2026-08-21] Dulu unconditional schedule() --
-            // sekarang cuma schedule kalau auto-sort memang ON, supaya ganti
-            // interval saat OFF tidak diam-diam menghidupkan scheduler lagi.
-            if (settingsRepository.getAutoSortEnabled()) {
-                WorkScheduler.schedule(getApplication(), minutes)
-            }
+            // [Fix race ON/OFF, 2026-08-22] Dulu langsung panggil schedule()
+            // dgn nilai `minutes` lokal + cek enabled terpisah -- sekarang
+            // delegasi penuh ke syncFromSavedSettings (baca ulang state
+            // TERBARU di dalam mutex WorkScheduler), konsisten dgn semua
+            // jalur apply lain (startup/reboot/toggle).
+            WorkScheduler.syncFromSavedSettings(getApplication())
         }
     }
 
@@ -361,15 +361,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      * WorkScheduler.rescheduleFromSavedSettings saat app dibuka lagi/reboot).
      * TIDAK menyentuh FileSorter.scanAndSort() -- manual scan selalu jalan
      * terlepas dari nilai ini.
+     * [Fix race ON/OFF, 2026-08-22] Panggil syncFromSavedSettings (bukan
+     * schedule()/cancel() langsung dgn parameter `enabled` lokal) -- fungsi
+     * itu baca ulang DataStore FRESH di dalam mutex WorkScheduler, jadi
+     * kalau ada coroutine startup/reboot lain yang "telat" jalan, dia juga
+     * akan baca state OFF yang baru saja dipersist, bukan menimpanya balik.
      */
     fun setAutoSortEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setAutoSortEnabled(enabled)
-            if (enabled) {
-                WorkScheduler.schedule(getApplication(), settingsRepository.getIntervalMinutes())
-            } else {
-                WorkScheduler.cancel(getApplication())
-            }
+            WorkScheduler.syncFromSavedSettings(getApplication())
         }
     }
 

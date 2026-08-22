@@ -13,6 +13,73 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.22.8 -- CABUT DISCONTINUED: fix P1 audit #1, scheduler race ON/OFF (2026-08-22)
+- Status DISCONTINUED (v8.22.7) DICABUT -- user upload audit bug baru
+  (`PromptVault_v8_22_7_Final_Audit_Straight_To_The_Point.md`, 6 item).
+  Batas 1 task/batch: eksekusi HANYA P1 #1 (paling kritis -- race
+  konkurensi bisa BATALKAN toggle OFF user secara diam-diam). 5 item
+  sisanya masuk Pending Queue (lihat bawah), TIDAK dikerjakan batch ini.
+- **Bug**: `PromptVaultApp.onCreate()`/`BootCompletedReceiver` baca
+  DataStore (mis. ON) lewat coroutine sendiri, lalu panggil
+  `WorkScheduler.schedule()` -- kalau user SEMPAT toggle OFF di antara
+  baca & panggil itu (coroutine startup "telat"), `schedule()` dari
+  coroutine lama bisa dieksekusi SETELAH `cancel()` dari coroutine
+  toggle user -- net result: scheduler balik ON walau user baru saja
+  matiin. Root cause: 2 coroutine independen ubah WorkManager tanpa
+  ordering/serialisasi apa pun.
+- **Fix (`WorkScheduler.kt`)**: `schedule()`/`cancel()` jadi `private`.
+  1 `Mutex` baru menyerialkan SEMUA jalur apply lewat 1 fungsi publik
+  `syncFromSavedSettings(context)` -- baca DataStore FRESH DI DALAM
+  critical section (bukan parameter basi), baru schedule/cancel.
+  `rescheduleFromSavedSettings` jadi alias tipis ke fungsi ini (nama
+  lama dipertahankan, dipanggil dari `PromptVaultApp`/
+  `BootCompletedReceiver`, 0 perubahan di kedua file itu).
+- **`MainViewModel.kt`**: `setAutoSortEnabled`/`setIntervalMinutes` --
+  dulu hitung sendiri true/false lalu panggil `schedule()`/`cancel()`
+  langsung dgn parameter lokal, sekarang cuma persist ke
+  `settingsRepository` lalu panggil `WorkScheduler.syncFromSavedSettings`
+  (fungsi itu sendiri yg baca state terbaru).
+- **TIDAK disentuh** (sesuai instruksi audit "dilarang refactor
+  arsitektur"): `AutoSortWorker`/`ManualScanWorker` (tetap terpisah),
+  `FileSorter`, SAF/Shizuku, database, navigation, default interval,
+  `BootCompletedReceiver.goAsync()`.
+- File diubah (2): `worker/WorkScheduler.kt`, `ui/MainViewModel.kt`.
+  `preflight_check.sh` 13/13 lolos. **Regression test: BELUM ditulis**
+  batch ini (grep konfirmasi 0 file test di project sama sekali --
+  nulis test pertama utk worker butuh setup test harness baru, di luar
+  scope 1-task/batch murni logic fix ini; masuk pending queue).
+  Confidence Rating: **80%** (fix mutex+fresh-read adalah pola standar
+  utk race jenis ini & logic sudah ditelusuri manual jalur-per-jalur,
+  tapi belum ada test otomatis ATAU verifikasi device nyata reproduce
+  race asli -- turun dari 90%+ krn itu).
+- **User WAJIB verifikasi**: (1) build CI hijau, (2) reproduksi manual
+  kalau bisa: matikan Auto-Sort tepat setelah buka app / reboot, cek
+  WorkManager/Diagnostics tetap OFF (bukan balik ON sendiri).
+- **⏳ PENDING QUEUE (5 item dari audit, batas 1 task/batch)**:
+  1. P1 #2: RENAME extensionless `README` -> `README_1.` (harusnya
+     `README_1`, tanpa titik trailing) -- unit test masih kunci
+     behavior lama, perlu diperbaiki bareng testnya.
+  2. P2 #3: Import Rule belum validasi invariant sebelum persist
+     (folderName, pattern, minKb/maxKb >=0 & minKb<=maxKb, ID/payload).
+  3. P2 #4: Notifikasi Manual Scan salah wording ("Auto-sort
+     berjalan/selesai" harusnya "Scan berjalan/selesai" generik).
+  4. P2 #5: Test lifecycle Auto-Sort belum lengkap (7 skenario ON/OFF/
+     reboot/widget, lihat file audit asli) -- termasuk regression test
+     utk item #1 (race fix) di atas.
+  5. P3 #6: Diagnostics belum bedakan `autoSortEnabled` vs WorkManager
+     state vs next scheduled run (bisa nampilin seolah sama).
+- versionCode 134->135, versionName 8.22.7->8.22.8.
+
+## v8.22.7 -- Governance: proyek DISCONTINUED sampai bug baru (2026-08-22)
+- User: sudah tidak ada improvement lagi yang bisa dikerjakan Claude --
+  status proyek dibekukan. Section `STATUS PROYEK: DISCONTINUED` baru
+  ditambah PERMANEN di baris paling atas file ini (di atas ATURAN WAJIB
+  SESI), efektif mulai sesi berikutnya.
+- 0 perubahan kode/fungsional -- murni governance/dokumentasi.
+- File diubah (1): `PROJECT_STATE.md`. `preflight_check.sh` 13/13 lolos.
+  Confidence Rating: **100%** (perubahan teks murni, 0 risiko teknis).
+- versionCode 133->134, versionName 8.22.6->8.22.7.
+
 ## v8.22.6 -- FIX BUG NYATA (screenshot user): dialog update cuma nampilin link, gak informatif (2026-08-22)
 - **Gejala (screenshot)**: dialog "Pembaruan Aplikasi" in-app cuma nampilin
   `**Full Changelog**: https://.../compare/v8.22.4...v8.22.5` -- 0 info

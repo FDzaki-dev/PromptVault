@@ -3,6 +3,19 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.22.8 (2026-08-22) — FIX: race condition scheduler ON/OFF (audit P1 #1)
+
+`WorkScheduler` diserialkan pakai `Mutex` + baca DataStore FRESH di
+dalam critical section (`syncFromSavedSettings`) -- toggle OFF user
+tidak lagi bisa tertimpa coroutine startup/reboot yang telat jalan.
+5 item audit lain (rename, validasi import rule, wording notif manual
+scan, test lifecycle, diagnostics) masuk pending queue.
+
+## v8.22.7 (2026-08-22) — Governance: proyek DISCONTINUED sampai bug baru
+
+0 perubahan kode. Status proyek dibekukan atas permintaan user; lihat
+`PROJECT_STATE.md` (section pinned teratas) untuk detail.
+
 ## v8.22.6 (2026-08-22) — FIX: dialog update gak informatif (cuma link)
 
 Root cause: `generate_release_notes: true` di CI kosong isi krn repo push
