@@ -148,13 +148,35 @@ jobs:
       # login. Tag dibuat otomatis dari versionName -- kalau tag sama sudah
       # ada (re-run versi yang sama), action ini UPDATE release yang sama
       # (bukan gagal/duplikat).
+      # [fix 2026-08-22] Gejala nyata (screenshot user): dialog update
+      # in-app cuma nampilin "**Full Changelog**: <link compare>" -- 0
+      # info konkret perubahan apa. Root cause: `generate_release_notes:
+      # true` bikin GitHub auto-generate notes dari daftar PR/commit; repo
+      # ini push langsung ke main (bukan alur PR), jadi hasil auto-nya
+      # SELALU kosong isi kecuali baris compare-link itu sendiri -- BUKAN
+      # bug di sisi app (releaseNotes sudah dirender benar sejak
+      # v8.22.1-an, cuma sumber datanya yang kosong). Fix: body Release
+      # diisi manual dari section TERATAS `CHANGELOG.md` (1 section = 1
+      # versi terbaru) via `awk`, bukan lagi auto-generate. Fallback pesan
+      # generik kalau ekstraksi gagal (mis. format CHANGELOG berubah) --
+      # tidak pernah biarkan body release kosong total.
+      - name: Extract release notes from CHANGELOG.md
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          awk '/^## /{n++} n==1' CHANGELOG.md > out/release_notes.md
+          if [ ! -s out/release_notes.md ]; then
+            echo "::warning::Gagal ekstrak section CHANGELOG.md teratas -- pakai fallback generik."
+            echo "Rilis v${{ steps.version.outputs.version }}. Lihat CHANGELOG.md di repo untuk detail lengkap." > out/release_notes.md
+          fi
+
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.version.outputs.version }}
           name: PromptVault v${{ steps.version.outputs.version }}
           files: out/*.apk
-          generate_release_notes: true
+          body_path: out/release_notes.md
           make_latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

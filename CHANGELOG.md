@@ -3,6 +3,12 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.22.6 (2026-08-22) — FIX: dialog update gak informatif (cuma link)
+
+Root cause: `generate_release_notes: true` di CI kosong isi krn repo push
+langsung ke `main` (bukan alur PR). Fix: body Release sekarang diambil
+dari section teratas `CHANGELOG.md` via `awk`, bukan auto-generate lagi.
+
 ## v8.22.5 (2026-08-22) — Tutup pending queue #2: chip preset stringResource
 
 `RulePreset.label: String` (6 literal Kotlin) → `labelRes: @StringRes Int`

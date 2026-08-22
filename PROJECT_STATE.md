@@ -13,6 +13,43 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.22.6 -- FIX BUG NYATA (screenshot user): dialog update cuma nampilin link, gak informatif (2026-08-22)
+- **Gejala (screenshot)**: dialog "Pembaruan Aplikasi" in-app cuma nampilin
+  `**Full Changelog**: https://.../compare/v8.22.4...v8.22.5` -- 0 info
+  konkret apa yang berubah, user harus buka link buat tau isinya.
+- **Root cause**: `releaseNotes` di app SUDAH benar dirender dari `body`
+  GitHub Release sejak v8.22.1-an (bukan bug UI) -- masalahnya sumber
+  datanya sendiri kosong. `.github/workflows/build.yml` step "Publish
+  GitHub Release" pakai `generate_release_notes: true`, yang bikin GitHub
+  auto-generate isi dari daftar PR/commit sejak tag terakhir -- repo ini
+  push LANGSUNG ke `main` (bukan alur PR), jadi hasil auto-generate-nya
+  SELALU kosong isi kecuali baris compare-link bawaan itu sendiri.
+- **Fix (1 file, `.github/workflows/build.yml`)**: step baru "Extract
+  release notes from CHANGELOG.md" -- `awk '/^## /{n++} n==1'
+  CHANGELOG.md` ambil section TERATAS (= versi rilis ini, format
+  CHANGELOG.md sudah descending) ke `out/release_notes.md`, fallback
+  pesan generik kalau ekstraksi kosong (format berubah dll -- tidak
+  pernah biarkan body release kosong total). `generate_release_notes:
+  true` DIHAPUS, ganti `body_path: out/release_notes.md` di step Publish.
+- **TIDAK disentuh**: model `releaseNotes`/parsing JSON GitHub API,
+  render dialog `SettingsScreen.kt` (`state.releaseNotes.trim()`,
+  `maxLines=4`, tombol "Lihat rilis lengkap" ke `releaseUrl`) -- semua
+  itu sudah benar, cukup pastikan sumber `body`-nya sekarang berisi teks
+  asli, bukan cuma link. Step "Force-flag Latest" & upload artifact tidak
+  berubah.
+- Diverifikasi lokal: `awk` command di-jalankan manual thd
+  `CHANGELOG.md` project ini -- hasil PERSIS 1 section (judul + isi),
+  berhenti tepat sebelum section berikutnya, tidak overrun.
+- File diubah (1): `.github/workflows/build.yml`. `preflight_check.sh`
+  13/13 lolos. Confidence Rating: **85%** (logic `awk` diverifikasi
+  lokal thd file asli, tapi step CI baru ini belum pernah jalan di
+  runner GitHub sungguhan -- turun dari 95%+ krn itu).
+- **User WAJIB verifikasi**: (1) build CI hijau, (2) buka rilis v8.22.6
+  di GitHub setelah CI selesai -- body Release berisi teks changelog
+  asli (bukan cuma "Full Changelog: link"), (3) buka dialog update
+  in-app dari versi lama -- sekarang nampilin potongan info nyata.
+- versionCode 132->133, versionName 8.22.5->8.22.6.
+
 ## v8.22.5 -- Tutup PENDING QUEUE #2: chip preset stringResource (2026-08-22)
 - Eksekusi item #2 pending queue v8.22.1 (chip preset `AddEditRuleScreen.kt`
   pakai Kotlin string literal, bukan `stringResource` -- regresi kecil dari
