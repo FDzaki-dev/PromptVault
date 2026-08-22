@@ -3,6 +3,22 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.22.3 (2026-08-22) — FIX: widget di-resize jadi kotak kosong raksasa
+
+Laporan user (screenshot): widget yang di-resize besar jadi kotak hitam
+raksasa, icon+teks numpuk kiri-atas, sisa ruang kosong total. Fungsional
+v8.22.2 (dynamic summary) sudah benar — ini murni cacat visual.
+
+Root cause: `resizeMode` tanpa batas atas + konten RemoteViews fixed-size
+tidak bisa scale. Fix: `maxResizeWidth="250dp"`/`maxResizeHeight="110dp"`
+(API 31+, aman diabaikan di bawahnya) mengunci widget selalu ukuran
+kartu shortcut ringkas — tidak bisa lagi dibesarkan jadi kotak kosong.
+`gravity="center"` (2 sumbu) di layout sbg pelengkap utk device API<31.
+
+File diubah (2): `widget_scan_info.xml`, `widget_scan.xml`. Preflight
+13/13 PASS (1 iterasi fix `--` di komentar baru, kelas bug berulang sama
+persis v8.5.0b/v8.6.0). versionCode 129→130, versionName 8.22.2→8.22.3.
+
 ## v8.22.2 (2026-08-22) — Tutup Pending Queue #1: widget dynamic scan summary
 
 Widget dulu 100% stateless (teks aksi tidak pernah berubah walau scan

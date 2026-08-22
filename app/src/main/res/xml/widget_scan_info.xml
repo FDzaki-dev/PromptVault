@@ -13,9 +13,23 @@
      baik dari image statis manapun. `previewImage` TETAP dipertahankan sbg
      fallback wajib utk device API 26-30 (minSdk 26 project ini) yang belum
      kenal `previewLayout`. -->
+<!-- [FIX laporan user, 2026-08-22] Screenshot: widget di-resize besar ->
+     kotak hitam raksasa, icon+teks numpuk kiri-atas, sisa ruang
+     kanan/bawah kosong total; root cause: `resizeMode="horizontal|
+     vertical"` TANPA batas atas, konten (icon 24dp fix + teks 14/12sp)
+     TIDAK BISA scale ikut ukuran box (keterbatasan RemoteViews polos,
+     bukan bug pemasangan). Fix: `maxResizeWidth`/`maxResizeHeight`
+     (API 31+, resmi; diabaikan aman di API 26-30 sesuai minSdk project
+     ini) mengunci widget ini SELALU tetap ukuran "kartu shortcut" ringkas,
+     tidak bisa dibesarkan sampai jadi kotak kosong. Dipasangkan dgn fix
+     gravity="center" di widget_scan.xml (2 sumbu, bukan cuma vertical)
+     supaya device API<31 (belum kenal maxResizeWidth/Height) tetap
+     terlihat rapi/tersengaja kalau sempat di-resize besar. -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:minWidth="110dp"
     android:minHeight="40dp"
+    android:maxResizeWidth="250dp"
+    android:maxResizeHeight="110dp"
     android:targetCellWidth="2"
     android:targetCellHeight="1"
     android:updatePeriodMillis="0"

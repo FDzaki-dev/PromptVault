@@ -13,6 +13,47 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.22.3 -- FIX BUG NYATA (screenshot user): widget di-resize jadi kotak kosong raksasa (2026-08-22)
+- **Gejala (screenshot)**: user resize widget besar -> kotak hitam raksasa,
+  icon+"PromptVault"/"0 file • 08:40" numpuk kiri-atas, sisa ruang
+  kanan/bawah kosong total. Konfirmasi FUNGSIONAL v8.22.2 (dynamic summary)
+  jalan benar -- ini murni cacat VISUAL, bukan regresi logic.
+- **Root cause**: `resizeMode="horizontal|vertical"` TANPA batas atas
+  (`maxResizeWidth`/`maxResizeHeight` tidak pernah diset) -- user bebas
+  resize widget sampai ukuran berapa pun, sementara konten RemoteViews
+  (icon 24dp fix + teks 14/12sp fix) TIDAK BISA ikut scale (keterbatasan
+  RemoteViews polos tanpa Glance, sudah didokumentasikan di javadoc
+  ScanWidgetProvider). Gravity root cuma `center_vertical` (bukan penuh
+  2 sumbu) -- kolom teks tetap `weight=1` fillMaxWidth, jadi horizontal
+  tidak pernah benar-benar center.
+- **Fix**: `widget_scan_info.xml` -- `maxResizeWidth="250dp"` +
+  `maxResizeHeight="110dp"` (API 31+, diabaikan aman API 26-30 minSdk
+  project ini) mengunci widget SELALU ukuran "kartu shortcut" ringkas,
+  TIDAK BISA dibesarkan jadi kotak kosong lagi -- fix STRUKTURAL (cegah
+  penyebab), bukan cuma tambal visual. `widget_scan.xml` -- gravity root
+  `center_vertical` -> `center` (2 sumbu), pelengkap utk device API<31
+  yang belum kenal `maxResizeWidth`/`Height`.
+- **Insiden minor sendiri, ketangkap preflight SEBELUM commit**: komentar
+  XML baru sempat pakai `--` 3x (kelas bug BERULANG persis sama dgn
+  v8.5.0b/v8.6.0) -- diganti `;`, divalidasi `xml.dom.minidom.parse` +
+  preflight kategori #10 ulang, 0 sisa.
+- **TIDAK disentuh**: `ScanWidgetProvider.kt`/`ScanExecution.kt` (logic
+  v8.22.2 sudah benar, tidak ada gap fungsional di sini), kolom teks tetap
+  `weight=1`+`maxLines`/`ellipsize` v8.22.1 (BUKAN diubah ke `wrap_content`
+  -- itu akan MEREGRESI proteksi ellipsize di ukuran minWidth 110dp).
+- File diubah (2): `res/xml/widget_scan_info.xml`, `res/layout/widget_scan.xml`.
+  `preflight_check.sh` 13/13 lolos (setelah 1 iterasi fix `--` di atas).
+  Confidence Rating: **85%** (fix resmi API Android + gravity standar,
+  risiko rendah -- turun dari 90%+ murni krn `maxResizeWidth`/`Height`
+  BELUM diverifikasi visual di launcher asli, beberapa launcher OEM
+  historically tidak selalu 100% patuh ke attribute ini).
+- **User WAJIB verifikasi**: (1) build CI hijau, (2) pasang ulang widget
+  (hapus+tambah lagi -- attribute widget info butuh re-add utk kebaca
+  ulang launcher, bukan cuma update app), (3) coba resize sebesar mungkin
+  -> widget TIDAK BISA melebihi ~250dp x 110dp lagi, (4) tampilan di
+  ukuran max itu terlihat rapi/center, bukan kotak kosong.
+- versionCode 129->130, versionName 8.22.2->8.22.3.
+
 ## v8.22.2 -- Tutup PENDING QUEUE #1: widget dynamic summary (2026-08-22)
 - Eksekusi item #1 pending queue v8.22.1 (widget 100% stateless, teks
   tidak pernah berubah walau scan selesai) -- item #2 (chip preset literal
