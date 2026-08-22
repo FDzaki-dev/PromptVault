@@ -45,6 +45,7 @@ class SettingsRepository(private val context: Context) {
     private val shizukuDestPathKey = stringPreferencesKey("shizuku_dest_path")
     private val useShizukuKey = booleanPreferencesKey("use_shizuku")
     private val githubTokenKey = stringPreferencesKey("github_pat_token")
+    private val widgetSummaryKey = stringPreferencesKey("widget_last_scan_summary")
     companion object {
         const val DEFAULT_INTERVAL_MINUTES = 15
         val ALLOWED_INTERVALS = listOf(15, 30, 60, 120, 240)
@@ -122,6 +123,25 @@ class SettingsRepository(private val context: Context) {
 
     suspend fun setAutoSortEnabled(enabled: Boolean) {
         context.promptVaultDataStore.edit { prefs -> prefs[autoSortEnabledKey] = enabled }
+    }
+
+    /**
+     * [PENDING QUEUE #1, v8.22.1 -> dieksekusi 2026-08-22] Ringkasan hasil
+     * scan TERAKHIR (auto-sort periodik ATAU manual widget), dipush ke
+     * RemoteViews widget lewat [ScanWidgetProvider.notifyScanCompleted]
+     * segera setelah scan selesai (lihat ScanExecution.kt), DAN dibaca
+     * ulang dari sini saat widget di-resize/reboot/baru ditambahkan
+     * (`onUpdate`) supaya tidak balik ke teks statis lama begitu proses
+     * widget di-restart OS. `null` = belum pernah ada scan sejak install.
+     */
+    val widgetLastScanSummaryFlow: Flow<String?> = context.promptVaultDataStore.data.map { prefs ->
+        prefs[widgetSummaryKey]
+    }
+
+    suspend fun getWidgetLastScanSummary(): String? = widgetLastScanSummaryFlow.first()
+
+    suspend fun setWidgetLastScanSummary(summary: String) {
+        context.promptVaultDataStore.edit { prefs -> prefs[widgetSummaryKey] = summary }
     }
 
     /**

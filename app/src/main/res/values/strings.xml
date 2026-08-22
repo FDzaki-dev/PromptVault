@@ -293,4 +293,9 @@
     <string name="widget_scan_action">Ketuk untuk Scan Sekarang</string>
     <string name="widget_scan_toast">Scan dimulai di latar belakang…</string>
     <string name="widget_scan_description">Scan &amp; sortir Downloads sekali ketuk, tanpa buka app.</string>
+    <!-- [PENDING QUEUE #1, v8.22.1 -> dieksekusi 2026-08-22] Widget dulu
+         stateless permanen (teks aksi statis). Sekarang dipush ringkasan
+         hasil scan TERAKHIR (auto-sort ATAU manual widget) via RemoteViews,
+         dibaca lagi saat widget resize/reboot dari SettingsRepository. -->
+    <string name="widget_scan_last_result_fmt">%1$d file • %2$s</string>
 </resources>

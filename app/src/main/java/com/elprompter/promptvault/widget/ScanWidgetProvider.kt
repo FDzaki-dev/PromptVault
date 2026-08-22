@@ -3,6 +3,7 @@ package com.elprompter.promptvault.widget
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.widget.RemoteViews
@@ -10,7 +11,9 @@ import android.widget.Toast
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.elprompter.promptvault.R
+import com.elprompter.promptvault.data.SettingsRepository
 import com.elprompter.promptvault.worker.ManualScanWorker
+import kotlinx.coroutines.runBlocking
 
 /**
  * [Fase 3.1 roadmap, 2026-08-21 -- dipilih eksplisit user dari 4 opsi Fase 3
@@ -23,18 +26,20 @@ import com.elprompter.promptvault.worker.ManualScanWorker
  * di-share via runScanAndReport (ScanExecution.kt) dgn AutoSortWorker --
  * FileSorter/rule matching/notifikasi hasil TIDAK disentuh sama sekali.
  *
- * **Kenapa SENGAJA stateless** (bukan RemoteViews yang menampilkan hasil
- * scan langsung di widget, mis. "39 file dipindahkan" muncul di widget
- * itu sendiri): proses widget terpisah TOTAL dari Activity/ViewModel --
- * menyinkronkan state scan real-time ke situ butuh observer/update-loop
- * lintas-proses terpisah yang jauh lebih rawan gagal-diam, PERSIS risiko
- * yang sudah diperingatkan `ROADMAP.md` utk item 3.1 ("tidak bisa
- * diverifikasi visual sama sekali tanpa device asli, gagal-diam sulit
- * dideteksi"). Fix scope: batasi widget ke SATU tanggung jawab (trigger),
- * hasil scan tetap lewat notifikasi sistem yang SUDAH ADA & SUDAH
- * TERBUKTI jalan (`AutoSortNotification.resultNotification`, dipanggil
- * `AutoSortWorker` sendiri saat `filesMoved > 0`) -- widget cukup kasih
- * Toast instan sbg konfirmasi tap diterima, bukan sumber kebenaran hasil.
+ * [PENDING QUEUE #1 v8.22.1 -> DITUTUP 2026-08-22] Widget TIDAK LAGI
+ * 100% stateless -- baris aksi (@id/widget_action) sekarang menampilkan
+ * ringkasan scan TERAKHIR ("N file • HH:mm"), dipush lewat
+ * [notifyScanCompleted] segera setelah `runScanAndReport` selesai
+ * (ScanExecution.kt, jalur auto-sort MAUPUN manual widget), dan dibaca
+ * ulang dari [SettingsRepository.widgetLastScanSummaryFlow] di
+ * [updateWidget] (`onUpdate`) supaya bertahan lintas resize/reboot/proses
+ * widget di-restart OS -- BUKAN observer/update-loop real-time lintas-
+ * proses (yang tetap dihindari sesuai risiko `ROADMAP.md` item 3.1),
+ * murni tulis-sekali-baca-ulang lewat DataStore yang sudah ada. Toast
+ * instan tap & notifikasi sistem (`AutoSortNotification.resultNotification`,
+ * HANYA saat `filesMoved > 0`) TETAP dipertahankan sbg sumber kebenaran
+ * hasil detail per-rule -- ringkasan widget ini pelengkap ringkas, bukan
+ * pengganti.
  *
  * Tidak butuh dependency baru (`androidx.glance` dll) -- `AppWidgetProvider`
  * + `RemoteViews` polos sudah bagian framework Android, konsisten dgn
@@ -77,19 +82,58 @@ class ScanWidgetProvider : AppWidgetProvider() {
     }
 
     private fun updateWidget(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int) {
-        val views = RemoteViews(context.packageName, R.layout.widget_scan)
-        val scanIntent = Intent(context, ScanWidgetProvider::class.java).apply { action = ACTION_SCAN_NOW }
-        val pendingIntent = PendingIntent.getBroadcast(
-            context,
-            appWidgetId,
-            scanIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        views.setOnClickPendingIntent(R.id.widget_root, pendingIntent)
+        // [PENDING QUEUE #1, 2026-08-22] Baca ringkasan scan TERAKHIR yang
+        // dipersist -- runBlocking aman di sini: baca DataStore Preferences
+        // lokal (bukan network/disk besar), dan onUpdate cuma dipanggil
+        // jarang (widget baru ditambah/di-resize/reboot), bukan tiap detik.
+        val summary = runBlocking { SettingsRepository(context).getWidgetLastScanSummary() }
+        val views = buildWidgetViews(context, appWidgetId, summary)
         appWidgetManager.updateAppWidget(appWidgetId, views)
     }
 
     companion object {
         const val ACTION_SCAN_NOW = "com.elprompter.promptvault.widget.ACTION_SCAN_NOW"
+
+        /**
+         * [PENDING QUEUE #1, v8.22.1 -> dieksekusi 2026-08-22] Dipanggil dari
+         * `runScanAndReport` (ScanExecution.kt) SEGERA setelah scan selesai
+         * (auto-sort periodik ATAU manual widget) -- push [summaryText] ke
+         * SEMUA instance widget yang sedang terpasang. No-op kalau widget
+         * belum pernah ditambahkan ke home screen manapun (`ids` kosong),
+         * supaya tidak ada kerja sia-sia tiap scan untuk user yang tidak
+         * pakai widget sama sekali.
+         */
+        fun notifyScanCompleted(context: Context, summaryText: String) {
+            val manager = AppWidgetManager.getInstance(context)
+            val ids = manager.getAppWidgetIds(ComponentName(context, ScanWidgetProvider::class.java))
+            if (ids.isEmpty()) return
+            ids.forEach { id -> manager.updateAppWidget(id, buildWidgetViews(context, id, summaryText)) }
+        }
+
+        /**
+         * Satu sumber pembangun RemoteViews, dipakai ULANG oleh instance
+         * [updateWidget] (baca dari persistensi) & [notifyScanCompleted]
+         * (push langsung pasca-scan) -- supaya wiring klik (PendingIntent)
+         * tidak pernah ketinggalan/berbeda antara 2 jalur update ini.
+         * [summary] `null`/kosong -> fallback ke label statis lama
+         * (@string/widget_scan_action) -- kondisi ini HANYA terjadi kalau
+         * belum pernah ada satu scan pun sejak app diinstal.
+         */
+        private fun buildWidgetViews(context: Context, appWidgetId: Int, summary: String?): RemoteViews {
+            val views = RemoteViews(context.packageName, R.layout.widget_scan)
+            views.setTextViewText(
+                R.id.widget_action,
+                if (summary.isNullOrBlank()) context.getString(R.string.widget_scan_action) else summary
+            )
+            val scanIntent = Intent(context, ScanWidgetProvider::class.java).apply { action = ACTION_SCAN_NOW }
+            val pendingIntent = PendingIntent.getBroadcast(
+                context,
+                appWidgetId,
+                scanIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            views.setOnClickPendingIntent(R.id.widget_root, pendingIntent)
+            return views
+        }
     }
 }

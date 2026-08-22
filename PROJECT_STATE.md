@@ -13,6 +13,69 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.22.2 -- Tutup PENDING QUEUE #1: widget dynamic summary (2026-08-22)
+- Eksekusi item #1 pending queue v8.22.1 (widget 100% stateless, teks
+  tidak pernah berubah walau scan selesai) -- item #2 (chip preset literal
+  vs stringResource) TETAP di pending queue, batas 1 task/batch.
+- **Desain**: `runScanAndReport` (ScanExecution.kt) push ringkasan
+  "N file • HH:mm" ke `SettingsRepository.widgetLastScanSummaryFlow`
+  (key DataStore baru, pola persis `autoSortEnabledFlow`) + langsung ke
+  RemoteViews semua instance widget lewat `ScanWidgetProvider.
+  notifyScanCompleted` (companion, no-op kalau widget belum dipasang) --
+  TIAP scan (termasuk 0 file, beda dari notifikasi sistem yg cuma muncul
+  saat filesMoved>0). `updateWidget` (`onUpdate`, dipanggil OS saat
+  resize/reboot/widget baru) baca ulang dari persistensi via
+  `runBlocking` (aman -- DataStore lokal, dipanggil jarang, bukan tiap
+  detik) supaya ringkasan bertahan lintas restart proses widget.
+- Builder RemoteViews di-refactor jadi 1 fungsi `buildWidgetViews`
+  (companion, private) dipakai ULANG `updateWidget` & `notifyScanCompleted`
+  -- wiring PendingIntent klik TIDAK PERNAH beda antara 2 jalur update.
+- **TIDAK disentuh**: FileSorter/scan logic, notifikasi sistem
+  (`AutoSortNotification`) TETAP jalan seperti biasa (pelengkap, bukan
+  diganti), `widget_scan.xml`/background (v8.22.1) tidak perlu diubah --
+  `widget_action` TextView yang sama, cuma isi teksnya sekarang dinamis.
+- File diubah (3): `data/SettingsRepository.kt` (+key/flow/getter/setter),
+  `worker/ScanExecution.kt` (+push pasca-scan), `widget/ScanWidgetProvider.kt`
+  (refactor builder + companion fn + javadoc dikoreksi, klaim lama
+  "SENGAJA stateless" sudah tidak akurat). `strings.xml` (+1 format string).
+- `preflight_check.sh` 13/13 lolos. Confidence Rating: **85%** (turun dari
+  90% standar -- `runBlocking` di `onUpdate` BELUM diverifikasi device asli
+  soal ANR-safety walau DataStore lokal seharusnya instan, dan alur push
+  RemoteViews lintas-proses widget masih risiko "gagal-diam" yang sama
+  seperti disebut `ROADMAP.md` 3.1, cuma sekarang ada 2 jalur update yang
+  saling menutupi -- bukan risiko baru dari nol).
+- **User WAJIB verifikasi**: (1) build CI hijau, (2) pasang widget baru ->
+  teks "Ketuk untuk Scan Sekarang" (belum pernah scan), (3) tap widget ->
+  tunggu scan selesai -> teks berubah jadi "N file • HH:mm" TANPA perlu
+  buka app, (4) resize widget / restart HP -> ringkasan TETAP tampil
+  (bukan balik ke teks statis lama).
+- versionCode 128->129, versionName 8.22.1->8.22.2.
+
+## v8.22.1 -- Audit Polish: fix widget resize/distorsi (2026-08-21)
+- Instruksi: "Audit polished 100%". Sweep: `FILE_MANIFEST.txt` vs disk 100%
+  akurat (0 file hilang/basi), 0 hardcode `Text()` di screens (Fase 1.3
+  masih tegak), 0 TODO aktif di luar catatan Fase 0 permanen.
+- **Fix (1 file, `widget_scan.xml`)**: laporan resize/distorsi user LAMA
+  (screenshot resize widget) TERNYATA belum benar-benar tertutup -- fix
+  "beta testing" v8.21.2 cuma nambah icon+layout horizontal, TIDAK pernah
+  nambah `maxLines`/`ellipsize`. Layout horizontal itu malah MENGURANGI
+  ruang teks tersisa (icon 28dp+margin makan duluan). Sekarang: `maxLines
+  ="1"`+`ellipsize="end"` di kedua TextView, padding 14dp->10dp.
+- **⏳ PENDING QUEUE (2 item, batas 1 task/batch -- BUKAN diabaikan,
+  ditunda eksplisit)**:
+  1. Widget MASIH 100% stateless -- teks tidak pernah berubah walau scan
+     selesai (laporan user lama poin ke-3, belum tertutup sampai batch
+     ini). Draft solusi (persist ringkasan ke SettingsRepository + push ke
+     RemoteViews dari `runScanAndReport`) sempat dirancang di sesi
+     sebelumnya tapi TIDAK PERNAH masuk ke source-of-truth (kena hard-reset
+     ZIP berkali-kali) -- kalau dikerjakan lagi, mulai dari nol, jangan
+     asumsikan draft lama masih relevan/valid.
+  2. Chip preset `AddEditRuleScreen.kt` (v8.22.0): label pakai Kotlin
+     string literal (`RulePreset("Gambar", ...)`), bukan `stringResource`
+     -- regresi kecil dari standar 100% stringResource Fase 1.3.
+- `preflight_check.sh` 13/13 lolos. Confidence Rating: **90%**.
+  versionCode 127->128, versionName 8.22.0->8.22.1.
+
 ## v8.22.0 -- Preset Cepat di tab Tambah Rule, edukasi user awam (2026-08-21)
 - Instruksi eksplisit: preset cepat khusus "Tambah Rule" biar user awam
   paham mekanisme pattern+folder yang benar.

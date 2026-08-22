@@ -9,8 +9,13 @@ import com.elprompter.promptvault.data.LogLevel
 import com.elprompter.promptvault.data.MoveHistoryRepository
 import com.elprompter.promptvault.data.RuleRepository
 import com.elprompter.promptvault.data.SettingsRepository
+import com.elprompter.promptvault.R
 import com.elprompter.promptvault.util.FileSorter
+import com.elprompter.promptvault.widget.ScanWidgetProvider
 import kotlinx.coroutines.flow.first
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /**
  * [FIX WAJIB "Auto-Sort vs Manual Scan", 2026-08-21] Bug: `ScanWidgetProvider`
@@ -59,6 +64,26 @@ internal suspend fun CoroutineWorker.runScanAndReport(applicationContext: Contex
         // waktu), lihat pemakaiannya di bawah.
         val scanStartMillis = System.currentTimeMillis()
         val result = sorter.scanAndSort()
+        // [PENDING QUEUE #1, v8.22.1 -> dieksekusi 2026-08-22] Widget dulu
+        // 100% stateless -- teks tidak pernah berubah walau scan selesai
+        // (auto-sort ATAU tap widget manual). Push ringkasan ke RemoteViews
+        // TIAP scan (termasuk 0 file, beda dari notifikasi sistem di bawah
+        // yang sengaja hanya muncul kalau filesMoved>0 -- widget ini
+        // konfirmasi "scan barusan jalan", bukan alert seperti notifikasi).
+        // Best-effort murni: kegagalan simpan/push TIDAK BOLEH menggagalkan
+        // scan yang sudah sukses memindahkan file.
+        try {
+            val timeLabel = SimpleDateFormat("HH:mm", Locale("id", "ID")).format(Date())
+            val widgetSummary = applicationContext.getString(
+                R.string.widget_scan_last_result_fmt,
+                result.filesMoved,
+                timeLabel
+            )
+            SettingsRepository(applicationContext).setWidgetLastScanSummary(widgetSummary)
+            ScanWidgetProvider.notifyScanCompleted(applicationContext, widgetSummary)
+        } catch (e: Exception) {
+            // sengaja ditelan -- lihat komentar di atas
+        }
         // Notifikasi hasil HANYA kalau benar-benar ada file dipindah --
         // sengaja TIDAK notif tiap siklus (auto-scan tiap 240 menit default
         // ATAU tap widget) kalau nihil, supaya tidak jadi notification fatigue.

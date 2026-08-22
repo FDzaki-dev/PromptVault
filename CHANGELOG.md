@@ -3,6 +3,50 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.22.2 (2026-08-22) — Tutup Pending Queue #1: widget dynamic scan summary
+
+Widget dulu 100% stateless (teks aksi tidak pernah berubah walau scan
+selesai). Sekarang `runScanAndReport` push ringkasan "N file • HH:mm" ke
+`SettingsRepository` (key baru, pola persis `autoSortEnabledFlow`) +
+langsung ke RemoteViews semua widget terpasang via `ScanWidgetProvider.
+notifyScanCompleted` (no-op kalau tidak ada widget). `onUpdate` baca ulang
+dari persistensi (`runBlocking`, DataStore lokal) supaya ringkasan
+bertahan lintas resize/reboot. Builder RemoteViews di-refactor jadi 1
+fungsi `buildWidgetViews` dipakai ulang kedua jalur update — wiring klik
+tidak pernah beda.
+
+File diubah (3) + 1 string baru: `data/SettingsRepository.kt`,
+`worker/ScanExecution.kt`, `widget/ScanWidgetProvider.kt`, `strings.xml`.
+Tidak disentuh: FileSorter, notifikasi sistem, `widget_scan.xml` layout.
+
+Preflight 13/13 PASS. versionCode 128→129, versionName 8.22.1→8.22.2.
+Pending Queue #2 (chip preset literal vs stringResource) tetap tertunda.
+
+## v8.22.1 (2026-08-21) — Audit Polish: fix widget resize/distorsi (temuan lama belum tertutup)
+
+"Audit polished 100%" — sweep menyeluruh (FILE_MANIFEST.txt vs disk 100%
+akurat ✅, 0 hardcode Text() tersisa di screens ✅, 0 TODO aktif selain
+catatan Fase 0 permanen ✅). 1 temuan konkret ditutup batch ini (sisanya
+di-log sbg Pending Queue, lihat PROJECT_STATE.md — batas 1 task/batch):
+
+**Widget resize/distorsi** (laporan user lama, screenshot resize — SEMPAT
+disangka tertutup oleh fix "beta testing" v8.21.2, TERNYATA TIDAK): 2
+TextView di `widget_scan.xml` masih `wrap_content` tanpa `maxLines`/
+`ellipsize` sama sekali, dan layout horizontal v8.21.2 (icon+teks) malah
+MENGURANGI ruang teks yang tersisa. Fix: `maxLines="1"`+`ellipsize="end"`
+di KEDUA TextView, padding root 14dp->10dp. 1 file (`widget_scan.xml`).
+`ScanWidgetProvider.kt` tidak disentuh (murni layout).
+
+**Pending Queue (BELUM dikerjakan, ditunda batch berikutnya)**:
+1. Widget masih 100% stateless — teks TIDAK PERNAH berubah walau scan
+   selesai (laporan user lama, poin ke-3, juga belum tertutup).
+2. Chip preset di `AddEditRuleScreen.kt` (v8.22.0) pakai label hardcoded
+   Kotlin (`RulePreset("Gambar", ...)`), BUKAN `stringResource` — regresi
+   kecil dari standar "100% stringResource" (Fase 1.3, SELESAI v8.16.2).
+
+`preflight_check.sh` 13/13 lolos. Confidence Rating: **90%** (fix layout
+sempit & mekanis). versionCode 127->128, versionName 8.22.0->8.22.1.
+
 ## v8.22.0 (2026-08-21) — Preset Cepat di tab Tambah Rule (edukasi user awam)
 
 Instruksi eksplisit: "tambahkan preset cepat khusus tab tambah rule. biar
