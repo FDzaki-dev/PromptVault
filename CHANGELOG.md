@@ -3,6 +3,33 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.22.14 (2026-08-22) — Pending queue P2 #5-lanjutan: setup Robolectric + reboot survival test ⚠️
+
+**RISIKO**: mengubah `app/build.gradle.kts` (dependency test baru) TANPA
+verifikasi gradle/network di sesi ini. CI menjalankan test SEBELUM build
+release DALAM SATU perintah — test gagal = release APK ikut gagal.
+Confidence 80%. **Pantau run CI pertama ekstra ketat.**
+
+Dependency baru (`testImplementation` saja, 0 pengaruh APK rilis):
+`org.robolectric:robolectric:4.13`, `androidx.test:core:1.6.1`,
+`androidx.test.ext:junit:1.2.1`, `androidx.work:work-testing:2.9.1`
+(sinkron versi dgn `work-runtime-ktx`). + `testOptions.unitTests.isIncludeAndroidResources = true`.
+
+Test baru `BootSurvivalWorkManagerTest.kt` (4 test, WorkManager ASLI via
+Robolectric): reboot ON→ENQUEUED, reboot OFF→tidak ada worker aktif,
+reboot berulang→state akhir konsisten, `AutoSortWorker.doWork()`
+benar2 dieksekusi (bukan pure-logic gate) saat OFF→`Result.success()`.
+
+Reboot disimulasikan panggil `WorkScheduler.rescheduleFromSavedSettings()`
+langsung (badan kerja `BootCompletedReceiver`), bukan lewat
+`onReceive()`/`goAsync()` (proteksi lifecycle proses OS, bukan logic
+yang perlu diuji).
+
+Preflight: 13/13 (cek statis, bukan `./gradlew test` beneran).
+versionCode 140→141, versionName 8.22.13→8.22.14.
+
+**Pending queue: KOSONG** — semua item audit 2026-08-22 tuntas.
+
 ## v8.22.13 (2026-08-22) — Pending queue P3 #6: Diagnostics bedakan toggle/WorkManager/next-run
 
 `readWorkStatus()` (`DiagnosticsScreen.kt`) sekarang tampilkan 3 baris

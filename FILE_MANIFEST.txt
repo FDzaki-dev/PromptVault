@@ -1,5 +1,5 @@
 # FILE_MANIFEST.txt -- PromptVault
-# Regenerasi otomatis dari isi disk aktual (find), v8.22.13, 2026-08-22
+# Regenerasi otomatis dari isi disk aktual (find), v8.22.14, 2026-08-22
 
 .github/workflows/build.yml
 .gitignore
@@ -103,6 +103,7 @@ app/src/test/java/com/elprompter/promptvault/util/RuleFolderNameValidatorTest.kt
 app/src/test/java/com/elprompter/promptvault/util/RuleOverlapCheckerTest.kt
 app/src/test/java/com/elprompter/promptvault/util/VaultConfigBackupTest.kt
 app/src/test/java/com/elprompter/promptvault/worker/AutoSortLifecycleLogicTest.kt
+app/src/test/java/com/elprompter/promptvault/worker/BootSurvivalWorkManagerTest.kt
 build.gradle.kts
 gradle.properties
 scripts/preflight_check.sh

@@ -13,6 +13,68 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.22.14 -- Pending queue P2 #5-lanjutan, setup Robolectric + reboot survival test (2026-08-22)
+- Eksekusi item pending TERAKHIR dari antrean audit (v8.22.11 -> v8.22.12
+  -> v8.22.13, semua item lain sudah tuntas). Batas 1 task/batch --
+  tidak ada item lain di pending queue setelah ini per audit user
+  2026-08-22.
+- **⚠️ RISIKO EKSPLISIT (WAJIB dibaca sebelum push)**: batch ini mengubah
+  `app/build.gradle.kts` (protected asset, dependency BARU) TANPA akses
+  gradle/Android SDK/network di sesi ini -- TIDAK BISA diverifikasi
+  compile/run. CI (`build.yml`) menjalankan `testDebugUnitTest
+  testReleaseUnitTest` SEBELUM `assembleRelease` DALAM SATU perintah
+  gradle yang sama (lihat step \"Compile, test, and build release APK\") --
+  kalau dependency/test baru gagal compile atau gagal assert, SELURUH
+  pipeline release (termasuk APK) ikut gagal, bukan cuma test yang merah.
+  Confidence Rating batch ini **80%** (lebih rendah dari batch biasa)
+  krn ketidakpastian genuinely tidak bisa dihilangkan tanpa run gradle
+  asli -- **user WAJIB pantau run CI pertama setelah push ini lebih
+  ketat dari biasanya**, siap revert `app/build.gradle.kts` (3 baris
+  `testImplementation` + block `testOptions` baru, lihat CHANGELOG) kalau
+  merah.
+- **Dependency baru** (`testImplementation`, 0 pengaruh ke release APK
+  App itu sendiri -- murni test classpath): `org.robolectric:robolectric:4.13`,
+  `androidx.test:core:1.6.1`, `androidx.test.ext:junit:1.2.1` (sudah ada
+  di androidTestImplementation, ditambah varian testImplementation),
+  `androidx.work:work-testing:2.9.1` (PERSIS sama versi
+  `work-runtime-ktx` yang sudah dipakai -- wajib sinkron, API internal
+  WorkManager sensitif mismatch versi). Plus `testOptions.unitTests.isIncludeAndroidResources = true`
+  di block `android {}` (wajib utk Robolectric baca manifest/res).
+- **Test baru**: `worker/BootSurvivalWorkManagerTest.kt` (4 test, Robolectric
+  + `WorkManagerTestInitHelper`, WorkManager ASLI bukan mock): (1) reboot
+  simulasi dgn toggle ON -> worker periodik ENQUEUED, (2) reboot dgn
+  toggle OFF -> tidak ada worker aktif, (3) reboot berulang ON->OFF->ON
+  -> state akhir konsisten dgn toggle terakhir, (4) `AutoSortWorker.doWork()`
+  BENAR-BENAR dieksekusi (bukan cuma pure-logic gate spt
+  `AutoSortLifecycleLogicTest` v8.22.12) saat toggle OFF -> verifikasi
+  `Result.success()` no-op nyata.
+- **Reboot disimulasikan LANGSUNG panggil**
+  `WorkScheduler.rescheduleFromSavedSettings()` (badan kerja
+  `BootCompletedReceiver` SETELAH `goAsync()`), BUKAN lewat `onReceive()`
+  itu sendiri -- `goAsync()`+coroutine fire-and-forget tidak bisa
+  di-await sinkron dari test, dan itu sendiri murni proteksi lifecycle
+  proses OS (Robolectric 1 JVM, tidak pernah benar2 matikan proses),
+  bukan logic yang perlu diuji benar/salah. Didokumentasikan eksplisit
+  di javadoc test supaya sesi berikutnya tidak salah kira ini "belum
+  lengkap".
+- **TIDAK disentuh**: `AutoSortLifecycleLogic.kt`/`AutoSortLifecycleLogicTest.kt`
+  (v8.22.12, tetap dipakai apa adanya, TIDAK diduplikasi), scan logic
+  (`FileSorter`/`ScanExecution`), `DiagnosticsScreen.kt` (v8.22.13).
+- File diubah (1) + 1 baru: `app/build.gradle.kts`, BARU
+  `test/.../worker/BootSurvivalWorkManagerTest.kt`. `preflight_check.sh`
+  13/13 lolos (cek statis -- TIDAK setara `./gradlew test` beneran,
+  lihat peringatan risiko di atas).
+- **User WAJIB verifikasi**: (1) **PANTAU run CI Actions pertama ekstra
+  ketat**, khususnya step compile+test, (2) kalau merah & sulit
+  didiagnosis cepat, opsi tercepat: revert 4 baris `testImplementation`
+  baru + block `testOptions` di `app/build.gradle.kts` dan file test
+  baru (rollback ke v8.22.13, 0 fitur lain kena krn scope batch ini
+  murni test infra), (3) kalau hijau, build CI + APK seperti biasa.
+- **⏳ PENDING QUEUE**: KOSONG -- semua item audit 2026-08-22 (P2 #3/#4/#5,
+  P3 #6) sudah dieksekusi per batch masing2. Sesi berikutnya mulai dari
+  nol/instruksi baru user, TIDAK ada carry-over otomatis.
+- versionCode 140->141, versionName 8.22.13->8.22.14.
+
 ## v8.22.13 -- Pending queue P3 #6, Diagnostics bedakan toggle/WorkManager/next-run (2026-08-22)
 - Eksekusi P3 #6 dari pending queue (v8.22.12): Diagnostics belum bedakan
   `autoSortEnabled` vs WorkManager state vs next scheduled run. Batas
