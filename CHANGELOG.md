@@ -3,6 +3,23 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.22.13 (2026-08-22) — Pending queue P3 #6: Diagnostics bedakan toggle/WorkManager/next-run
+
+`readWorkStatus()` (`DiagnosticsScreen.kt`) sekarang tampilkan 3 baris
+terpisah: toggle Auto-Sort dari `SettingsRepository` (sumber kebenaran
+Pengaturan, dibaca langsung), state WorkManager apa adanya, dan
+`nextScheduleTimeMillis` (androidx.work 2.9.1) diformat jadi tanggal
+atau "tidak diketahui". Fungsi jadi `suspend fun` (baca DataStore).
+
+6 string baru, 1 string lama dihapus (`diag_status_fmt`, 100%
+unreferenced setelah restrukturisasi). Scan logic/scheduling/worker
+lain tidak disentuh.
+
+Preflight: 13/13 kategori PASS. versionCode 139→140, versionName
+8.22.12→8.22.13.
+
+**Sisa pending**: P2 #5-lanjutan (setup Robolectric, reboot survival test).
+
 ## v8.22.12 (2026-08-22) — Pending queue P2 #5 (partial): pure-logic test lifecycle Auto-Sort
 
 File baru `worker/AutoSortLifecycleLogic.kt` (5 fungsi pure) + rewire

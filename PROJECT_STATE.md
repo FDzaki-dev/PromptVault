@@ -13,6 +13,56 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.22.13 -- Pending queue P3 #6, Diagnostics bedakan toggle/WorkManager/next-run (2026-08-22)
+- Eksekusi P3 #6 dari pending queue (v8.22.12): Diagnostics belum bedakan
+  `autoSortEnabled` vs WorkManager state vs next scheduled run. Batas
+  1 task/batch -- P2 #5-lanjutan (setup Robolectric, reboot survival
+  test) TETAP pending, TIDAK disentuh sesi ini (butuh ubah
+  `app/build.gradle.kts` dependency yang tidak bisa diverifikasi
+  compile/run tanpa akses gradle/Android SDK, lihat catatan v8.22.12).
+- **Sebelumnya**: `readWorkStatus()` di `DiagnosticsScreen.kt` cuma
+  tampilkan `WorkInfo.state` mentah -- user tidak bisa bedakan apakah
+  state itu MEMANG cerminan toggle Auto-Sort di Pengaturan, atau
+  WorkManager belum sinkron (ada latency propagasi setelah toggle
+  diubah). Tidak ada info kapan scan berikutnya bakal jalan.
+- **Fix**: `readWorkStatus()` sekarang tampilkan 3 baris terpisah: (1)
+  toggle `autoSortEnabled` dari `SettingsRepository` (sumber kebenaran
+  UI Pengaturan, DIBACA LANGSUNG, bukan diturunkan dari WorkManager),
+  (2) state WorkManager apa adanya, (3) `WorkInfo.nextScheduleTimeMillis`
+  (tersedia sejak androidx.work 2.9.0, project sudah pakai 2.9.1) --
+  `Long.MAX_VALUE` (tidak ada jadwal diketahui, mis. worker CANCELLED)
+  diformat sbg teks "tidak diketahui", bukan angka mentah.
+- Fungsi diubah dari `private fun` jadi `private suspend fun` (perlu
+  `SettingsRepository.getAutoSortEnabled()` yang suspend) -- aman krn
+  satu2nya pemanggil sudah di dalam `LaunchedEffect` (coroutine scope).
+- 6 string baru (`diag_status_toggle_fmt`, `diag_toggle_on`,
+  `diag_toggle_off`, `diag_status_workinfo_fmt`, `diag_next_run_unknown`,
+  `diag_status_checked_fmt`), 1 string LAMA DIHAPUS (`diag_status_fmt`,
+  100% unreferenced setelah restrukturisasi ini -- diganti 3 string di
+  atas, bukan penghapusan file per Aturan #6 jadi tidak butuh izin
+  terpisah, murni penggantian resource string dalam 1 task).
+- **TIDAK disentuh**: `AutoSortWorker`/`WorkScheduler`/`ScanExecution`
+  (scan logic & scheduling), `AutoSortLifecycleLogic.kt` (v8.22.12,
+  tetap dipakai apa adanya), UI card lain di `DiagnosticsScreen.kt`
+  (crash log, downloads file names, manual verify steps).
+- File diubah (2): `ui/screens/DiagnosticsScreen.kt`, `res/values/strings.xml`.
+  `preflight_check.sh` 13/13 lolos. Confidence Rating: **92%** (perubahan
+  UI-only + baca DataStore/WorkManager yang sudah dipakai pola serupa di
+  tempat lain; turun dari 95%+ krn `nextScheduleTimeMillis` behaviour
+  persis di WorkManager versi tertentu/device tertentu belum pernah
+  diverifikasi visual di HP nyata).
+- **User WAJIB verifikasi**: build CI hijau, buka Diagnostik dari Home,
+  cek 3 baris (toggle/state/jadwal berikutnya) tampil masuk akal --
+  khususnya coba matikan Auto-Sort di Pengaturan lalu buka Diagnostik
+  lagi, toggle line harus langsung berubah NONAKTIF walau state
+  WorkManager mungkin masih nunjuk CANCELLED beberapa saat.
+- **⏳ PENDING QUEUE (1 item)**:
+  1. P2 #5-lanjutan: Setup Robolectric + `androidx.work:work-testing`,
+     test end-to-end reboot survival (BootCompletedReceiver) -- lihat
+     v8.22.12 utk alasan kenapa ditunda (risiko ubah dependency tanpa
+     verifikasi compile).
+- versionCode 139->140, versionName 8.22.12->8.22.13.
+
 ## v8.22.12 -- Pending queue P2 #5 (partial), pure-logic test lifecycle Auto-Sort (2026-08-22)
 - Eksekusi P2 #5 dari pending queue (v8.22.11): "Test lifecycle Auto-Sort
   belum lengkap (7 skenario ON/OFF/reboot/widget)". Batas 1 task/batch --

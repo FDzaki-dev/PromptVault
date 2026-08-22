@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.elprompter.promptvault.util.CrashLogger
+import com.elprompter.promptvault.data.SettingsRepository
 import com.elprompter.promptvault.worker.AutoSortWorker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -64,12 +65,27 @@ fun DiagnosticsScreen(
     val loadingStatusText = stringResource(id = R.string.diag_loading_status)
     val loadingLogText = stringResource(id = R.string.diag_loading_log)
     val statusNoneText = stringResource(id = R.string.diag_status_none)
-    val statusFmt = stringResource(id = R.string.diag_status_fmt)
     val statusErrorFmt = stringResource(id = R.string.diag_status_error_fmt)
+    val toggleFmt = stringResource(id = R.string.diag_status_toggle_fmt)
+    val toggleOnText = stringResource(id = R.string.diag_toggle_on)
+    val toggleOffText = stringResource(id = R.string.diag_toggle_off)
+    val workInfoFmt = stringResource(id = R.string.diag_status_workinfo_fmt)
+    val nextRunUnknownText = stringResource(id = R.string.diag_next_run_unknown)
+    val checkedFmt = stringResource(id = R.string.diag_status_checked_fmt)
 
     LaunchedEffect(Unit) {
         statusText = loadingStatusText
-        statusText = readWorkStatus(context, statusNoneText, statusFmt, statusErrorFmt)
+        statusText = readWorkStatus(
+            context = context,
+            toggleFmt = toggleFmt,
+            toggleOnText = toggleOnText,
+            toggleOffText = toggleOffText,
+            noneText = statusNoneText,
+            workInfoFmt = workInfoFmt,
+            nextRunUnknownText = nextRunUnknownText,
+            checkedFmt = checkedFmt,
+            errorFmt = statusErrorFmt
+        )
         crashLogs = withContext(Dispatchers.IO) { CrashLogger.listLogs(context) }
     }
 
@@ -212,23 +228,53 @@ fun DiagnosticsScreen(
     }
 }
 
-private fun readWorkStatus(
+/**
+ * [Pending queue P3 #6, dituntaskan 2026-08-22] Sebelumnya cuma tampilkan
+ * `WorkInfo.state` mentah -- tidak jelas apakah state itu MEMANG
+ * merefleksikan toggle Auto-Sort user (SettingsRepository, sumber
+ * kebenaran UI Pengaturan) atau WorkManager belum sempat sinkron, dan
+ * tidak ada info kapan scan berikutnya benar-benar akan jalan. Sekarang
+ * 3 hal ditampilkan terpisah & eksplisit: (1) toggle tersimpan di
+ * DataStore, (2) state WorkManager APA ADANYA (bisa beda sesaat dari
+ * toggle kalau baru saja diubah, WorkManager punya latency propagasi),
+ * (3) `nextScheduleTimeMillis` (androidx.work 2.9.1+) -- `Long.MAX_VALUE`
+ * berarti tidak ada jadwal berikut yang diketahui (worker CANCELLED atau
+ * one-shot beres), diformat sbg teks "tidak diketahui" alih-alih angka
+ * mentah yang membingungkan.
+ */
+private suspend fun readWorkStatus(
     context: Context,
+    toggleFmt: String,
+    toggleOnText: String,
+    toggleOffText: String,
     noneText: String,
-    statusFmt: String,
+    workInfoFmt: String,
+    nextRunUnknownText: String,
+    checkedFmt: String,
     errorFmt: String
 ): String {
     return try {
+        val autoSortEnabled = SettingsRepository(context).getAutoSortEnabled()
+        val toggleLine = String.format(toggleFmt, if (autoSortEnabled) toggleOnText else toggleOffText)
+
         val infos = WorkManager.getInstance(context)
             .getWorkInfosForUniqueWork(AutoSortWorker.WORK_NAME)
             .get()
-        if (infos.isNullOrEmpty()) {
+        val fmt = SimpleDateFormat("dd MMM yyyy HH:mm", Locale("id", "ID"))
+        val workInfoLine = if (infos.isNullOrEmpty()) {
             noneText
         } else {
             val info: WorkInfo = infos.first()
-            val fmt = SimpleDateFormat("dd MMM yyyy HH:mm", Locale("id", "ID"))
-            String.format(statusFmt, info.state, info.runAttemptCount, fmt.format(Date()))
+            val nextRunText = if (info.nextScheduleTimeMillis != Long.MAX_VALUE) {
+                fmt.format(Date(info.nextScheduleTimeMillis))
+            } else {
+                nextRunUnknownText
+            }
+            String.format(workInfoFmt, info.state, info.runAttemptCount, nextRunText)
         }
+        val checkedLine = String.format(checkedFmt, fmt.format(Date()))
+
+        "$toggleLine\n\n$workInfoLine\n\n$checkedLine"
     } catch (e: Exception) {
         String.format(errorFmt, e.message)
     }
