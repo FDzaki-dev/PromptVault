@@ -43,8 +43,26 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      # [fix root cause CI merah v8.22.16, 2026-08-22] SEBELUMNYA step ini
+      # tanpa `with:` -- setup-gradle cuma menyiapkan caching, TIDAK
+      # menyediakan binary `gradle` sendiri, jadi step "Generate pinned
+      # Gradle Wrapper" di bawah terpaksa pakai `gradle` AMBIEN bawaan image
+      # runner (bukan yang dipin). Image runner ternyata sudah bergeser ke
+      # Gradle 9.7.0 (terbukti dari configuration-cache-report.html di
+      # artifact log gagal -- link dokumentasi deprecation mengarah ke
+      # docs.gradle.org/9.7.0/...), lebih baru dari "9.6.1" yang diantisipasi
+      # komentar lama di bawah -- TIDAK KOMPATIBEL dgn AGP 8.5.2, bikin step
+      # wrapper-generation crash SEBELUM sempat menulis wrapper apa pun
+      # (makanya artifact log gagal TIDAK ada build-all.log sama sekali --
+      # gagalnya di sini, sebelum step compile/test/build yang bikin log itu
+      # pernah jalan). `gradle-version: '8.9'` eksplisit di sini bikin
+      # action ini SENDIRI yang provision binary 8.9 yang pasti kompatibel
+      # (download resmi dari action, bukan bergantung image runner) --
+      # menghilangkan sumber drift ini secara permanen, bukan cuma sekali.
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.9'
 
       - name: Read app version
         id: version
@@ -54,8 +72,12 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       # PENTING: runner GitHub Actions kadang sudah menyediakan Gradle versi
-      # sangat baru (pernah ketemu 9.6.1) yang TIDAK KOMPATIBEL dengan AGP
-      # 8.5.2 yang dipakai project ini. Kunci ke versi yang teruji cocok.
+      # sangat baru yang TIDAK KOMPATIBEL dengan AGP 8.5.2 yang dipakai
+      # project ini. [Update 2026-08-22] Jaminan UTAMA sekarang datang dari
+      # `gradle-version: '8.9'` di step "Setup Gradle" di atas (provisioning
+      # eksplisit, bukan bergantung image runner) -- step ini TETAP dipakai
+      # supaya file wrapper (gradlew, gradle-wrapper.properties) benar2
+      # tergenerate persis versi 8.9 utk dipakai step berikutnya.
       - name: Generate pinned Gradle Wrapper (8.9)
         run: gradle wrapper --gradle-version 8.9 --distribution-type bin
 

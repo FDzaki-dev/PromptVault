@@ -13,6 +13,47 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.22.17 -- FIX ROOT CAUSE CI: pin gradle-version di setup-gradle, bukan bug Robolectric (2026-08-22)
+- User upload build-failure-log-v8_22_16: **TIDAK ADA `build-all.log` sama
+  sekali** di artifact (beda total dari kegagalan v8.22.14 yang ada log
+  lengkap) -- cuma sisa `configuration-cache-report.html` dari step
+  sebelumnya. Artinya gagal SEBELUM step "Compile, test, and build release
+  APK" (yang bikin file log itu) sempat jalan -- 2 lapis fix Robolectric
+  v8.22.16 TIDAK RELEVAN dgn kegagalan ini (belum sempat diuji).
+- **Root cause ditemukan** dari isi `configuration-cache-report.html`
+  (embedded JSON diagnostics): link dokumentasi deprecation mengarah ke
+  `docs.gradle.org/9.7.0/...` -- runner image sudah menyediakan Gradle
+  ambien 9.7.0 (bergeser dari "9.6.1" yang diantisipasi komentar lama),
+  TIDAK KOMPATIBEL dgn AGP 8.5.2. Step "Setup Gradle" (`gradle/actions/
+  setup-gradle@v3`) SEBELUMNYA dipanggil TANPA `gradle-version:` -- cuma
+  nyiapkan caching, TIDAK provision binary sendiri -- jadi step berikutnya
+  ("Generate pinned Gradle Wrapper (8.9)") terpaksa pakai `gradle` ambien
+  9.7.0 utk MENJALANKAN `gradle wrapper --gradle-version 8.9`, yg berarti
+  Gradle 9.7.0 itu sendiri yang harus configure project (baca AGP 8.5.2)
+  SEBELUM sempat menghasilkan wrapper 8.9 -- crash duluan di situ.
+- **Fix**: `with: gradle-version: '8.9'` ditambahkan ke step "Setup Gradle"
+  -- action ini PROVISION sendiri binary Gradle 8.9 (download resmi dari
+  dalam action, tidak bergantung image runner), dipakai utk SEMUA step
+  Gradle berikutnya termasuk generate-wrapper. Menghilangkan sumber drift
+  versi ini secara PERMANEN (bukan cuma sekali), bukan cuma tambal
+  kejadian ini.
+- **TIDAK disentuh**: `testOptions`/Robolectric/`BootSurvivalWorkManagerTest.kt`
+  (v8.22.16, belum sempat diuji krn gagal duluan sebelum situ -- TETAP
+  status "belum terverifikasi", bukan berarti sudah gagal juga).
+- File diubah (1, PAS batas 1 task/batch -- fix root cause tunggal):
+  `.github/workflows/build.yml`.
+  `preflight_check.sh` lolos bersih (YAML valid).
+- **⚠️ Confidence 70%** -- fix ini ADALAH pola standar/dianjurkan resmi utk
+  masalah drift versi Gradle di CI (provision eksplisit lewat action,
+  bukan bergantung ambien), tapi TETAP belum bisa dijalankan nyata di
+  sesi ini (0 akses network/gradle). Kalau step ini lolos, langkah
+  berikutnya baru akan menguji Robolectric v8.22.16 utk PERTAMA KALINYA
+  -- kalau CI merah lagi, PERIKSA DULU apakah gagalnya di step Robolectric
+  (build-all.log ADA kali ini) atau masih di step Gradle/wrapper
+  (build-all.log TIDAK ADA lagi) -- dua kelas masalah yang beda, jangan
+  disamakan.
+- versionCode 143->144, versionName 8.22.16->8.22.17.
+
 ## v8.22.16 -- Re-add Robolectric dgn fix OOM eksplisit (maxParallelForks + CI 1-varian) (2026-08-22)
 - Lanjutan v8.22.15 (rollback): user minta reboot-survival test ditambah
   lagi TAPI kali ini beneran fix root cause OOM, bukan cuma revert.

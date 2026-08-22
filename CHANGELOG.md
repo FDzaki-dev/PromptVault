@@ -3,6 +3,28 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.22.17 (2026-08-22) — Fix root cause CI: pin gradle-version (bukan bug Robolectric)
+
+Build failure log v8.22.16 TIDAK punya `build-all.log` sama sekali — gagal
+sebelum step compile/test/build sempat jalan. Fix Robolectric v8.22.16 belum
+sempat diuji sama sekali.
+
+**Root cause**: `configuration-cache-report.html` sisa di artifact menunjuk
+ke docs Gradle 9.7.0 — runner image sudah bergeser ke Gradle ambien 9.7.0,
+tidak kompatibel dengan AGP 8.5.2. Step "Setup Gradle" sebelumnya tanpa
+`gradle-version:`, jadi step "Generate pinned Gradle Wrapper (8.9)" terpaksa
+pakai Gradle ambien 9.7.0 untuk configure project dulu — crash sebelum
+sempat generate wrapper 8.9.
+
+**Fix**: `gradle-version: '8.9'` eksplisit di `setup-gradle@v3` — action
+provision sendiri binary 8.9, tidak bergantung image runner. Permanen, bukan
+tambal sekali kejadian.
+
+1 file diubah: `.github/workflows/build.yml`. Confidence 70% — kalau lolos,
+Robolectric v8.22.16 baru akan teruji pertama kali.
+
+versionCode 143->144, versionName 8.22.16->8.22.17.
+
 ## v8.22.16 (2026-08-22) — Re-add Robolectric dengan fix OOM eksplisit
 
 Lanjutan v8.22.15: reboot-survival test ditambah lagi, kali ini dengan 2
