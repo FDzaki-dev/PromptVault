@@ -13,6 +13,48 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.22.4 -- FIX BUG NYATA (screenshot user): sudut widget mismatch/ganggu (2026-08-22)
+- **Gejala**: user "sudut-sudut widget nya ganggu banget" (setelah fix
+  resize v8.22.3 dikonfirmasi "mendingan"). Screenshot: rounded-rect
+  dgn stroke border warna keras terlihat jelas tidak menyatu dgn home
+  screen.
+- **Root cause**: `widget_scan_background.xml` gambar shape sendiri
+  (radius 20dp + stroke 1dp pv_primary_accent) DI DALAM area yang di
+  Android 12+ (API 31+) SUDAH di-clip/mask sistem dgn radius miliknya
+  sendiri (beda angka, tergantung launcher) -- 2 rounding independen yang
+  tidak match = sudut ganda kelihatan jelas, DIPERTEGAS oleh stroke warna
+  solid yang bikin selisihnya makin menonjol/"ganggu".
+- **Fix (2 file, bukan 1)**: `drawable/widget_scan_background.xml`
+  (fallback API 26-30, TIDAK ada dimen sistem di API ini) -- stroke
+  DIHAPUS TOTAL, radius 20dp->16dp (konvensi umum). BARU
+  `drawable-v31/widget_scan_background.xml` -- radius PERSIS ikut
+  `@android:dimen/system_app_widget_background_radius` (resmi Android
+  12+), 0 kemungkinan mismatch krn sumber angkanya SAMA dgn yang dipakai
+  launcher meng-clip widget. Kenapa 2 file (bukan 1 + fallback manual):
+  dimen sistem itu TIDAK EXIST di API<31, referensi langsung akan crash
+  `Resources.NotFoundException` di device lama -- qualifier folder
+  `-v31/` adalah cara resmi Android pisahkan resource per-API level.
+- **Insiden minor sendiri, ketangkap preflight**: `--` di komentar XML
+  baru (5 titik, KELAS BUG BERULANG sama persis v8.5.0b/v8.6.0/v8.22.3) --
+  diganti `;`, divalidasi ulang, 0 sisa.
+- **TIDAK disentuh**: `widget_scan_info.xml` (maxResizeWidth/Height
+  v8.22.3 tetap), `widget_scan.xml` layout (gravity/maxLines tetap),
+  `ScanWidgetProvider.kt`/`ScanExecution.kt` (logic v8.22.2 tidak
+  berubah) -- murni ganti drawable background, 0 wiring lain tersentuh.
+- File diubah (1) + 1 baru: `res/drawable/widget_scan_background.xml`,
+  BARU `res/drawable-v31/widget_scan_background.xml`. `preflight_check.sh`
+  13/13 lolos (1 iterasi fix `--` di atas). Confidence Rating: **85%**
+  (fix pakai dimen resmi Android, risiko rendah -- turun dari 90%+ krn
+  belum diverifikasi visual di device API 31+ asli, angka
+  `system_app_widget_background_radius` bisa sedikit beda antar
+  launcher/skin OEM meski sumbernya resmi sistem).
+- **User WAJIB verifikasi**: (1) build CI hijau, (2) hapus+pasang ulang
+  widget (resource `-v31/` baru butuh reinstall app, bukan cuma update
+  in-place), (3) sudut widget sekarang menyatu rapi dgn clip sistem (tidak
+  ada garis/sudut ganda lagi), (4) tidak ada lagi border warna keras di
+  tepi widget.
+- versionCode 130->131, versionName 8.22.3->8.22.4.
+
 ## v8.22.3 -- FIX BUG NYATA (screenshot user): widget di-resize jadi kotak kosong raksasa (2026-08-22)
 - **Gejala (screenshot)**: user resize widget besar -> kotak hitam raksasa,
   icon+"PromptVault"/"0 file • 08:40" numpuk kiri-atas, sisa ruang

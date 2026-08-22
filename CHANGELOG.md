@@ -3,6 +3,23 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.22.4 (2026-08-22) — FIX: sudut widget mismatch/ganggu vs system clip
+
+Laporan user: sudut widget "ganggu banget" setelah fix resize v8.22.3.
+Root cause: shape kita gambar radius+stroke sendiri (20dp + border warna
+keras) DI DALAM area yang di Android 12+ sudah di-clip sistem dgn radius
+berbeda — 2 rounding tidak match, dipertegas stroke solid.
+
+Fix: stroke dihapus total, radius fallback API 26-30 turun ke 16dp. Baru
+`drawable-v31/widget_scan_background.xml` — radius PERSIS ikut
+`@android:dimen/system_app_widget_background_radius` (resmi API 31+),
+0 mismatch krn sumber angka sama dgn launcher. 2 file terpisah krn dimen
+sistem itu tidak exist di API<31 (qualifier `-v31/` cara resmi Android).
+
+File diubah (1) + 1 baru. Preflight 13/13 PASS (1 iterasi fix `--` di
+komentar, kelas bug berulang sama v8.5.0b/v8.6.0/v8.22.3). versionCode
+130→131, versionName 8.22.3→8.22.4.
+
 ## v8.22.3 (2026-08-22) — FIX: widget di-resize jadi kotak kosong raksasa
 
 Laporan user (screenshot): widget yang di-resize besar jadi kotak hitam

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- [FIX laporan user, 2026-08-22] Override khusus API 31+ (Android 12+):
+     radius shape PERSIS ikut dimen sistem yang dipakai launcher untuk
+     clip/mask widget ("system_app_widget_background_radius"); 0
+     kemungkinan mismatch antara rounding kita vs rounding sistem, karena
+     angkanya sekarang SAMA-SAMA sumbernya. Stroke tetap dihapus (lihat
+     alasan lengkap di drawable/widget_scan_background.xml, fallback
+     API 26-30); resource dimen ini TIDAK ADA di API di bawah 31, WAJIB
+     tetap ada 2 file terpisah (folder -v31), bukan 1 file dgn fallback
+     value manual. -->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="?android:attr/colorControlHighlight">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/pv_amoled_background" />
+            <corners android:radius="@android:dimen/system_app_widget_background_radius" />
+        </shape>
+    </item>
+</ripple>

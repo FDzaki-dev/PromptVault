@@ -1,23 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- [Fase 3.1 roadmap, 2026-08-21] Background widget RemoteViews — warna
-     di-reuse PERSIS dari colors.xml (pv_amoled_background/pv_primary_accent,
-     sumber sama dgn Color.kt Compose) supaya widget di home screen tidak
-     kelihatan "beda app" dibanding UI utama.
-     [Fix cacat "beta testing", 2026-08-21] Dulu shape polos TANPA feedback
-     visual sama sekali saat diketuk; widget kelihatan tidak responsif
-     (satu-satunya interaksi widget ini malah tidak ada indikasi ketukan
-     diterima, padahal Toast baru muncul SETELAH broadcast diproses, ada
-     jeda). Dibungkus ripple (didukung sejak API 21, minSdk project ini
-     26, aman); efek ripple otomatis terpotong sesuai corners shape di
-     dalamnya (radius 20dp tetap terjaga, bukan ripple persegi lepas dari
-     bentuk kartu). -->
+<!-- [FIX laporan user, 2026-08-22] "Sudut-sudut widget ganggu"; root
+     cause: shape ini punya radius (20dp) + stroke border WARNA KERAS
+     sendiri, sementara Android 12+ (API 31+) SUDAH menerapkan clip/mask
+     radius sistem-nya SENDIRI di sekeliling widget host (biasanya beda
+     angka dari 20dp kita, tergantung launcher); 2 rounding+border yang
+     TIDAK match ini menghasilkan sudut ganda/mismatch yang kelihatan
+     jelas & ganggu, apalagi stroke warna solid mempertegas selisihnya.
+     Fix (API 26-30, fallback file ini): radius diturunkan 20dp->16dp
+     (konvensi umum widget non-S+) + stroke DIHAPUS TOTAL (fill polos,
+     tidak ada garis tepi keras yang menonjolkan mismatch). Versi API 31+
+     ADA file terpisah (drawable-v31/) yang match PERSIS radius sistem;
+     lihat file itu utk device modern (S+), fallback ini HANYA berlaku
+     API 26-30. -->
 <ripple xmlns:android="http://schemas.android.com/apk/res/android"
     android:color="?android:attr/colorControlHighlight">
     <item>
         <shape android:shape="rectangle">
             <solid android:color="@color/pv_amoled_background" />
-            <stroke android:width="1dp" android:color="@color/pv_primary_accent" />
-            <corners android:radius="20dp" />
+            <corners android:radius="16dp" />
         </shape>
     </item>
 </ripple>
