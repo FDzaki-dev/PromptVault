@@ -3,6 +3,14 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.22.10 (2026-08-22) — FIX: validasi invariant Import Rule (audit P2 #3)
+
+`RuleRepository.importFromJson` dulu percaya begitu saja isi JSON --
+sekarang tiap rule difilter lewat `isValidImportedRule` (pakai
+`validateRuleFolderName` yang sama dgn jalur manual) sebelum di-persist.
+Rule invalid (folder traversal, pattern kosong, min>max) di-skip diam2.
++9 unit test baru. 3 item audit lain masuk pending queue.
+
 ## v8.22.9 (2026-08-22) — FIX: rename extensionless trailing dot (audit P1 #2)
 
 `nextAvailableFileName` sekarang skip titik saat ekstensi kosong --

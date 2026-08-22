@@ -13,6 +13,53 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.22.10 -- Fix P2 audit #3, validasi invariant Import Rule (2026-08-22)
+- Lanjutan audit (batch v8.22.9 tutup P1 #2). Eksekusi P2 #3: Import Rule
+  belum validasi invariant sebelum persist. Batas 1 task/batch -- 3 item
+  audit sisanya TETAP di pending queue.
+- **Bug/celah**: `RuleRepository.importFromJson` decode JSON lalu LANGSUNG
+  merge+persist tanpa validasi apa pun -- padahal jalur TAMBAH/EDIT manual
+  (`AddEditRuleScreen`) sudah wajibkan `folderName` lolos
+  `validateRuleFolderName` sejak fix P0-1 (2026-08-16, cegah path
+  traversal "../"). Import JSON jadi CELAH BYPASS validator yang sama:
+  file JSON corrupt/edit manual/lama bisa selipkan `folderName` traversal,
+  `pattern` kosong, atau `minSizeKb > maxSizeKb`, lolos ke storage.
+- **Fix**: fungsi pure baru `isValidImportedRule(rule)` (top-level,
+  `RuleRepository.kt`, pola sama `nextAvailableFileName`) cek: id tidak
+  blank, `folderName` lolos `isValidRuleFolderName` (validator YANG SAMA
+  dgn jalur manual, bukan duplikasi logic baru), `pattern` tidak blank,
+  `minSizeKb`/`maxSizeKb` masing2 >=0 kalau tidak null, `minSizeKb <=
+  maxSizeKb` kalau keduanya ada. `importFromJson` filter tiap rule lewat
+  fungsi ini SEBELUM merge -- rule invalid di-SKIP diam-diam (bukan
+  gagalkan seluruh import), `importedCount` cuma hitung yang valid &
+  benar2 ter-persist.
+- **TIDAK disentuh** (sesuai instruksi audit "jangan refactor
+  repository"): struktur `ImportOutcome`/signature publik
+  `importFromJson` (tetap `(Boolean, Int)`), `exportAsJson`, `upsertRule`,
+  overlap/duplicate checker, `validateRuleFolderName` sendiri (dipakai
+  ulang apa adanya, bukan diduplikasi).
+- **Test baru**: `RuleRepositoryPureLogicTest.kt` (9 test) -- rule
+  well-formed lolos, id/pattern/folderName blank ditolak, folder
+  traversal (`../../etc`, `a/b`, `..`) ditolak, ukuran negatif ditolak,
+  min>max ditolak, min==max & null keduanya diterima.
+- File diubah (2) + 1 baru: `data/RuleRepository.kt`, BARU
+  `test/.../data/RuleRepositoryPureLogicTest.kt`. `preflight_check.sh`
+  13/13 lolos. Confidence Rating: **90%** (validator inti
+  `validateRuleFolderName` sudah battle-tested sejak P0-1, pure function
+  baru ditelusuri manual thd 9 test case -- turun dari 95%+ krn
+  `./gradlew test` belum dijalankan sungguhan di batch ini).
+- **User WAJIB verifikasi**: build CI hijau (termasuk 9 test baru),
+  coba import JSON berisi `folderName: "../evil"` atau `pattern: ""` --
+  rule itu TIDAK boleh muncul di daftar rule setelah import.
+- **⏳ PENDING QUEUE (3 item dari audit, batas 1 task/batch)**:
+  1. P2 #4: Notifikasi Manual Scan salah wording ("Auto-sort
+     berjalan/selesai" harusnya "Scan berjalan/selesai" generik).
+  2. P2 #5: Test lifecycle Auto-Sort belum lengkap (7 skenario ON/OFF/
+     reboot/widget) -- termasuk regression test race fix v8.22.8.
+  3. P3 #6: Diagnostics belum bedakan `autoSortEnabled` vs WorkManager
+     state vs next scheduled run.
+- versionCode 136->137, versionName 8.22.9->8.22.10.
+
 ## v8.22.9 -- Fix P1 audit #2, rename extensionless trailing dot (2026-08-22)
 - Lanjutan audit `PromptVault_v8_22_7_Final_Audit...md` (batch v8.22.8
   tutup P1 #1). Eksekusi P1 #2: rename extensionless salah, `README`

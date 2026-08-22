@@ -19,6 +19,34 @@ sealed class SaveRuleCheck {
     data class OverlapsWithOthers(val overlapping: List<Rule>) : SaveRuleCheck() // fitur lengkap, dipakai AddEditRuleScreen
 }
 
+/**
+ * [Fix audit P2 #3, 2026-08-22] Sebelumnya `importFromJson` percaya BEGITU
+ * SAJA isi array hasil decode JSON -- rule impor LANGSUNG di-merge & persist
+ * TANPA validasi apa pun, padahal `checkBeforeSave`/`AddEditRuleScreen` (jalur
+ * TAMBAH/EDIT manual) sudah wajibkan `folderName` lolos
+ * [com.elprompter.promptvault.util.validateRuleFolderName] sejak fix P0-1
+ * 2026-08-16. Import JSON jadi CELAH BYPASS: file JSON hasil edit manual/
+ * corrupt/lama bisa selipkan `folderName` berisi "../" atau `pattern` kosong,
+ * lolos ke storage tanpa pernah lewat validator yang sama.
+ * Pure top-level (pola sama dgn [nextAvailableFileName] di FileSorter.kt) --
+ * SENGAJA tidak jadi method [RuleRepository] supaya bisa di-unit-test JVM
+ * biasa tanpa Context/DataStore, lihat RuleRepositoryPureLogicTest.
+ * Rule tidak valid di-SKIP diam-diam (bukan gagalkan import semua) -- rule
+ * lain yang valid di array yang sama tetap masuk, konsisten dgn semantik
+ * "importedCount" yang sudah ada (parsial itu bukan error).
+ */
+fun isValidImportedRule(rule: Rule): Boolean {
+    if (rule.id.isBlank()) return false
+    if (!com.elprompter.promptvault.util.isValidRuleFolderName(rule.folderName)) return false
+    if (rule.pattern.isBlank()) return false
+    val min = rule.minSizeKb
+    val max = rule.maxSizeKb
+    if (min != null && min < 0) return false
+    if (max != null && max < 0) return false
+    if (min != null && max != null && min > max) return false
+    return true
+}
+
 class RuleRepository(private val context: Context) {
 
     private val key = stringPreferencesKey("rules_json")
@@ -131,6 +159,14 @@ class RuleRepository(private val context: Context) {
      * [ImportOutcome] eksplisit: [ImportOutcome.parseSuccess] = false HANYA
      * kalau `jsonText` gagal di-decode sama sekali (format salah), TETAP true
      * walau hasil array kosong (itu bukan error, cuma tidak ada yang diimpor).
+     * [Fix audit P2 #3, 2026-08-22] Setelah decode sukses, tiap rule di-filter
+     * lewat [isValidImportedRule] SEBELUM di-merge ke storage -- rule invalid
+     * (folderName mengandung "/"/"..", pattern kosong, ukuran min>max, dsb)
+     * di-SKIP diam-diam, TIDAK ikut ter-persist maupun terhitung
+     * `importedCount`. `imported.isEmpty()` di bawah cuma cek array MENTAH
+     * dari JSON (early-return pesan "array kosong" apa adanya); filter
+     * validitas terjadi SETELAHNYA supaya "0 krn array kosong" tidak
+     * tertukar semantiknya dgn "0 krn semua entry invalid".
      */
     data class ImportOutcome(val parseSuccess: Boolean, val importedCount: Int)
 
@@ -139,9 +175,11 @@ class RuleRepository(private val context: Context) {
         val imported = parseResult.getOrNull()
             ?: return ImportOutcome(parseSuccess = false, importedCount = 0)
         if (imported.isEmpty()) return ImportOutcome(parseSuccess = true, importedCount = 0)
+        val valid = imported.filter { isValidImportedRule(it) }
+        if (valid.isEmpty()) return ImportOutcome(parseSuccess = true, importedCount = 0)
         val current = getRules().associateBy { it.id }.toMutableMap()
-        imported.forEach { current[it.id] = it }
+        valid.forEach { current[it.id] = it }
         persist(current.values.toList())
-        return ImportOutcome(parseSuccess = true, importedCount = imported.size)
+        return ImportOutcome(parseSuccess = true, importedCount = valid.size)
     }
 }
