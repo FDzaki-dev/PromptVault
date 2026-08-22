@@ -3,6 +3,27 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.22.18 (2026-08-22) — CI merah lagi, tapi fix v8.22.17 terbukti jalan (gap diagnostik, bukan bug baru)
+
+Log gagal v8.22.17 masih tanpa `build-all.log` — tapi bukti kali ini beda:
+`documentationLink` sekarang `docs.gradle.org/8.9/...` (bukan 9.7.0 lagi),
+`totalProblemCount: 0`. **Fix v8.22.17 sukses** — step wrapper generation
+jalan bersih pakai Gradle 8.9 yang benar.
+
+Kegagalan sesungguhnya ada di step SETELAH itu (kemungkinan besar "Decode
+keystore") — tapi tidak ada cara melihat errornya karena cuma step
+"Compile, test, build" yang merekam output ke file sebelum ini.
+
+**Fix batch ini**: semua step sekarang rekam stdout+stderr sendiri via
+`exec > >(tee <nama>.log) 2>&1`, upload-on-failure ambil `*.log` (glob).
+Logic step-step itu sendiri TIDAK diubah — belum ada bukti itu sumber
+masalahnya.
+
+1 file diubah: `.github/workflows/build.yml`. Kalau masih merah, log yang
+di-upload sekarang akan berisi pesan error ASLI, bukan tebakan.
+
+versionCode 144->145, versionName 8.22.17->8.22.18.
+
 ## v8.22.17 (2026-08-22) — Fix root cause CI: pin gradle-version (bukan bug Robolectric)
 
 Build failure log v8.22.16 TIDAK punya `build-all.log` sama sekali — gagal

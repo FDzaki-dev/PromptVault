@@ -26,9 +26,25 @@ jobs:
       # yang sedang di-build dengan tip `main` SAAT INI di remote; kalau beda
       # (stale re-run / re-run manual dari commit lama), batalkan sebelum
       # buang waktu compile & sebelum publish release usang.
+      # [fix diagnostik gap v8.22.18, 2026-08-22] Kegagalan build-failure-log-
+      # v8.22.17 TIDAK punya build-all.log SAMA SEKALI, dan config-cache
+      # report yang tersisa justru menunjukkan step "Generate pinned Gradle
+      # Wrapper" SUKSES BERSIH (totalProblemCount=0, Gradle 8.9 benar
+      # terpakai -- fix v8.22.17 soal versi Gradle TERBUKTI jalan). Artinya
+      # kegagalan sesungguhnya ada di step SETELAHNYA ("Decode keystore")
+      # yang output-nya SEBELUM INI tidak pernah direkam ke file apa pun --
+      # cuma tampil di log step Actions yang tidak ikut ter-upload sebagai
+      # artifact. Sekarang SEMUA step (bukan cuma "Compile, test, build")
+      # merekam stdout+stderr ke file `.log` sendiri lewat `exec > >(tee ...)
+      # 2>&1` (BEDA dari pola `cmd | tee file` -- `exec` TIDAK membungkus
+      # command dalam pipe apa pun, jadi exit code script tetap exit code
+      # asli, tidak butuh workaround `pipefail` sama sekali), dan step upload
+      # di bawah sekarang ambil `*.log` (glob, bukan nama file satu-satu) --
+      # kegagalan step manapun ke depan otomatis punya log yang bisa dibaca.
       - name: Stale run guard (anti-desync)
         run: |
           set -euo pipefail
+          exec > >(tee stale-run-guard.log) 2>&1
           REMOTE_SHA=$(git ls-remote origin refs/heads/main | cut -f1)
           echo "Commit yang di-build : $GITHUB_SHA"
           echo "Tip main saat ini    : $REMOTE_SHA"
@@ -68,6 +84,7 @@ jobs:
         id: version
         run: |
           set -euo pipefail
+          exec > >(tee read-version.log) 2>&1
           VERSION=$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts)
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
@@ -79,7 +96,10 @@ jobs:
       # supaya file wrapper (gradlew, gradle-wrapper.properties) benar2
       # tergenerate persis versi 8.9 utk dipakai step berikutnya.
       - name: Generate pinned Gradle Wrapper (8.9)
-        run: gradle wrapper --gradle-version 8.9 --distribution-type bin
+        run: |
+          set -euo pipefail
+          exec > >(tee generate-wrapper.log) 2>&1
+          gradle wrapper --gradle-version 8.9 --distribution-type bin
 
       # set -euo pipefail WAJIB di setiap step yang pakai "| tee": tanpa ini,
       # exit code pipeline ikut "tee" (yang selalu sukses), bukan ikut
@@ -91,6 +111,7 @@ jobs:
       - name: Decode keystore
         run: |
           set -euo pipefail
+          exec > >(tee decode-keystore.log) 2>&1
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > "$GITHUB_WORKSPACE/release.keystore"
           # Verifikasi keystore benar-benar valid & tidak kosong -- kalau secret
           # kosong/salah, deteksi di sini dengan pesan jelas, bukan gagal
@@ -236,7 +257,7 @@ jobs:
         with:
           name: build-failure-log-v${{ steps.version.outputs.version }}
           path: |
-            build-all.log
+            *.log
             **/build/reports/**
           if-no-files-found: ignore
 

@@ -13,6 +13,45 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.22.18 -- CI merah LAGI, tapi kali ini fix v8.22.17 TERBUKTI jalan -- gap diagnostik, bukan bug baru (2026-08-22)
+- User upload build-failure-log-v8_22_17: **MASIH tanpa `build-all.log`**,
+  cuma sisa `configuration-cache-report.html` -- TAPI kali ini bukti di
+  dalamnya BEDA total dari v8.22.16: `documentationLink` mengarah ke
+  `docs.gradle.org/8.9/...` (BUKAN 9.7.0 lagi), `totalProblemCount: 0`,
+  `requestedTasks: "wrapper --gradle-version 8.9..."`. **Kesimpulan: fix
+  v8.22.17 (pin gradle-version 8.9) SUKSES** -- step "Generate pinned
+  Gradle Wrapper" sekarang jalan bersih pakai Gradle 8.9 yang benar.
+- **Masalah sebenarnya**: kegagalan v8.22.18 ini ada di step SETELAH
+  wrapper generation (paling mungkin "Decode keystore", satu-satunya step
+  tersisa sebelum "Compile, test, build") -- TAPI TIDAK ADA CARA melihat
+  errornya, karena SEBELUM batch ini cuma step "Compile, test, and build"
+  yang merekam output ke file (`build-all.log`). Step lain (Stale run
+  guard, Read app version, Generate wrapper, Decode keystore) cuma nulis
+  ke log step Actions bawaan, yang TIDAK ikut ter-upload oleh step
+  "Upload build log on failure" (cuma ambil `build-all.log` +
+  `**/build/reports/**`).
+- **Fix batch ini = TUTUP GAP DIAGNOSTIK ini**, bukan tebak-tebak isi
+  error "Decode keystore" tanpa bukti: SEMUA step sekarang rekam
+  stdout+stderr sendiri lewat `exec > >(tee <nama>.log) 2>&1` (bukan
+  `cmd | tee file` -- exec TIDAK bikin pipe yg bisa masking exit code,
+  jadi malah LEBIH aman dari pola `| tee` lama, tidak perlu trik pipefail
+  workaround). Upload-on-failure sekarang ambil `*.log` (glob), bukan 1
+  nama file spesifik -- kegagalan step manapun ke depan otomatis
+  ter-capture.
+- **TIDAK diubah**: isi step Decode keystore/Stale run guard/dst sendiri
+  (logic-nya, bukan cuma cara merekam output) -- BELUM TAHU itu memang
+  sumber masalahnya, jangan tebak sebelum ada bukti.
+- File diubah (1, PAS batas 1 task/batch): `.github/workflows/build.yml`.
+  `preflight_check.sh` lolos bersih (YAML valid).
+- **⚠️ Confidence 60%** utk build ini SENDIRI jadi hijau (belum tentu --
+  root cause aslinya masih belum diketahui!) tapi **95% kalau MASIH
+  merah, sekarang PASTI ketahuan tepat step & pesan errornya** dari log
+  yang di-upload. User: kalau merah lagi, upload ulang
+  build-failure-log-nya -- kali ini akan ada `decode-keystore.log` (atau
+  `stale-run-guard.log`/`read-version.log`/`generate-wrapper.log`) yang
+  isinya pesan error asli, bukan tebakan lagi.
+- versionCode 144->145, versionName 8.22.17->8.22.18.
+
 ## v8.22.17 -- FIX ROOT CAUSE CI: pin gradle-version di setup-gradle, bukan bug Robolectric (2026-08-22)
 - User upload build-failure-log-v8_22_16: **TIDAK ADA `build-all.log` sama
   sekali** di artifact (beda total dari kegagalan v8.22.14 yang ada log
