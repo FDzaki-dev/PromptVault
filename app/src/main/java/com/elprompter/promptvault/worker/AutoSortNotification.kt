@@ -59,10 +59,19 @@ object AutoSortNotification {
         manager.createNotificationChannel(channel)
     }
 
-    fun foregroundInfo(context: Context): ForegroundInfo {
+    fun foregroundInfo(context: Context, isManual: Boolean = false): ForegroundInfo {
         ensureChannel(context)
+        // [Fix audit P2 #4, 2026-08-22] Notifikasi ini dipakai BERSAMA oleh
+        // AutoSortWorker (periodik) & ManualScanWorker (widget/manual) lewat
+        // `runScanAndReport` yang di-share -- sebelumnya title SELALU
+        // "Auto-sort berjalan" walau scan-nya dipicu manual (audit user:
+        // "Notifikasi Manual Scan salah semantik"). `isManual` pilih string
+        // title yang sesuai; `text` di bawah TIDAK berubah (sudah generik
+        // sejak awal, "PromptVault sedang menyortir file di Downloads" tidak
+        // pernah sebut kata "Auto-sort").
+        val title = AutoSortLifecycleLogic.ongoingNotifTitleRes(isManual)
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setContentTitle(context.getString(R.string.auto_sort_notif_title))
+            .setContentTitle(context.getString(title))
             .setContentText(context.getString(R.string.auto_sort_notif_text))
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setOngoing(true)
@@ -89,7 +98,7 @@ object AutoSortNotification {
      * -- lihat komentar di [AutoSortWorker], pola sama dgn `computeHomeStats()`
      * v8.17.0: sumber data existing yang sudah bersih, bukan pipa baru).
      */
-    fun resultNotification(context: Context, totalMoved: Int, perRule: Map<String, Int>): Notification {
+    fun resultNotification(context: Context, totalMoved: Int, perRule: Map<String, Int>, isManual: Boolean = false): Notification {
         ensureChannel(context)
         val summary = context.getString(R.string.auto_sort_result_notif_text, totalMoved)
         // Baris per-rule diurutkan by count DESC (rule paling "sibuk" duluan) --
@@ -102,8 +111,13 @@ object AutoSortNotification {
         val style = NotificationCompat.BigTextStyle()
             .bigText(breakdown.ifEmpty { summary })
             .setSummaryText(summary)
+        // [Fix audit P2 #4, 2026-08-22] Sama seperti foregroundInfo di atas --
+        // title generik "Scan selesai" utk jalur manual, "Auto-sort selesai"
+        // tetap dipakai jalur periodik. `summary`/`breakdown` di atas TIDAK
+        // berubah (sudah generik, tidak sebut "Auto-sort").
+        val title = AutoSortLifecycleLogic.resultNotifTitleRes(isManual)
         return NotificationCompat.Builder(context, CHANNEL_ID)
-            .setContentTitle(context.getString(R.string.auto_sort_result_notif_title))
+            .setContentTitle(context.getString(title))
             .setContentText(summary)
             .setStyle(style)
             .setSmallIcon(R.drawable.ic_launcher_foreground)

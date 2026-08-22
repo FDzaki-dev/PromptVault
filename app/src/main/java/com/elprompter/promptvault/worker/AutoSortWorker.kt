@@ -27,10 +27,10 @@ class AutoSortWorker(appContext: Context, params: WorkerParameters) : CoroutineW
         // trigger manual lain) SENGAJA TIDAK punya gate ini sama sekali --
         // manual scan HARUS selalu jalan kapan pun diminta user, terlepas
         // status auto-sort. Lihat ManualScanWorker.kt.
-        if (!SettingsRepository(applicationContext).getAutoSortEnabled()) {
+        if (!AutoSortLifecycleLogic.shouldRunPeriodicScan(SettingsRepository(applicationContext).getAutoSortEnabled())) {
             return Result.success()
         }
-        return runScanAndReport(applicationContext)
+        return runScanAndReport(applicationContext, isManual = false)
     }
 
     companion object {

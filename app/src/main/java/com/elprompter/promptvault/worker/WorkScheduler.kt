@@ -99,7 +99,7 @@ object WorkScheduler {
     suspend fun syncFromSavedSettings(context: Context) {
         mutex.withLock {
             val repo = SettingsRepository(context)
-            if (repo.getAutoSortEnabled()) {
+            if (AutoSortLifecycleLogic.shouldScheduleWork(repo.getAutoSortEnabled())) {
                 schedule(context, repo.getIntervalMinutes())
             } else {
                 cancel(context)

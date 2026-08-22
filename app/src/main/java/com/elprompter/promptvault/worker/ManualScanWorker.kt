@@ -23,7 +23,7 @@ import androidx.work.WorkerParameters
  */
 class ManualScanWorker(appContext: Context, params: WorkerParameters) : CoroutineWorker(appContext, params) {
 
-    override suspend fun doWork(): Result = runScanAndReport(applicationContext)
+    override suspend fun doWork(): Result = runScanAndReport(applicationContext, isManual = true)
 
     companion object {
         const val WORK_NAME = "prompt_vault_manual_scan"

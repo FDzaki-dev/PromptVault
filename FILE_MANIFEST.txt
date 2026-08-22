@@ -1,5 +1,5 @@
 # FILE_MANIFEST.txt -- PromptVault
-# Regenerasi otomatis dari isi disk aktual (find), v8.22.4, 2026-08-22
+# Regenerasi otomatis dari isi disk aktual (find), v8.22.12, 2026-08-22
 
 .github/workflows/build.yml
 .gitignore
@@ -71,16 +71,17 @@ app/src/main/java/com/elprompter/promptvault/util/GlobMatcher.kt
 app/src/main/java/com/elprompter/promptvault/util/RuleFolderNameValidator.kt
 app/src/main/java/com/elprompter/promptvault/util/RuleOverlapChecker.kt
 app/src/main/java/com/elprompter/promptvault/util/VaultConfigBackup.kt
+app/src/main/java/com/elprompter/promptvault/widget/ScanWidgetProvider.kt
+app/src/main/java/com/elprompter/promptvault/worker/AutoSortLifecycleLogic.kt
 app/src/main/java/com/elprompter/promptvault/worker/AutoSortNotification.kt
 app/src/main/java/com/elprompter/promptvault/worker/AutoSortWorker.kt
 app/src/main/java/com/elprompter/promptvault/worker/BootCompletedReceiver.kt
 app/src/main/java/com/elprompter/promptvault/worker/ManualScanWorker.kt
 app/src/main/java/com/elprompter/promptvault/worker/ScanExecution.kt
 app/src/main/java/com/elprompter/promptvault/worker/WorkScheduler.kt
-app/src/main/java/com/elprompter/promptvault/widget/ScanWidgetProvider.kt
+app/src/main/res/drawable-v31/widget_scan_background.xml
 app/src/main/res/drawable/ic_launcher_foreground.xml
 app/src/main/res/drawable/widget_scan_background.xml
-app/src/main/res/drawable-v31/widget_scan_background.xml
 app/src/main/res/layout/widget_scan.xml
 app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
 app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
@@ -91,6 +92,7 @@ app/src/main/res/xml/backup_rules.xml
 app/src/main/res/xml/data_extraction_rules.xml
 app/src/main/res/xml/file_paths.xml
 app/src/main/res/xml/widget_scan_info.xml
+app/src/test/java/com/elprompter/promptvault/data/RuleRepositoryPureLogicTest.kt
 app/src/test/java/com/elprompter/promptvault/data/SettingsRepositoryConstantsTest.kt
 app/src/test/java/com/elprompter/promptvault/util/ExcludePatternTest.kt
 app/src/test/java/com/elprompter/promptvault/util/FileSorterPureLogicTest.kt
@@ -100,6 +102,7 @@ app/src/test/java/com/elprompter/promptvault/util/MultiPatternAndSizeTest.kt
 app/src/test/java/com/elprompter/promptvault/util/RuleFolderNameValidatorTest.kt
 app/src/test/java/com/elprompter/promptvault/util/RuleOverlapCheckerTest.kt
 app/src/test/java/com/elprompter/promptvault/util/VaultConfigBackupTest.kt
+app/src/test/java/com/elprompter/promptvault/worker/AutoSortLifecycleLogicTest.kt
 build.gradle.kts
 gradle.properties
 scripts/preflight_check.sh

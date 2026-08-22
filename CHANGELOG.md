@@ -3,6 +3,28 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.22.12 (2026-08-22) — Pending queue P2 #5 (partial): pure-logic test lifecycle Auto-Sort
+
+File baru `worker/AutoSortLifecycleLogic.kt` (5 fungsi pure) + rewire
+`AutoSortWorker`/`WorkScheduler`/`AutoSortNotification` -- 0 perubahan
+perilaku. Test baru `AutoSortLifecycleLogicTest.kt` (9 test JVM murni,
+0 Robolectric): gate ON/OFF periodik, manual selalu jalan, scheduler
+schedule/cancel, judul notif ongoing+hasil x manual/periodik.
+
+Reboot survival end-to-end & eksekusi `doWork()` nyata TIDAK tercakup
+(butuh Robolectric/work-testing, infra belum ada) -- diturunkan jadi
+item pending baru yang lebih sempit. Diagnostics (P3 #6) tetap pending.
+
+Preflight: 13/13 kategori PASS. versionCode 138→139, versionName
+8.22.11→8.22.12.
+
+## v8.22.11 (2026-08-22) — FIX: wording notifikasi Manual Scan (audit P2 #4)
+
+`runScanAndReport` sekarang bawa parameter `isManual` -- notifikasi
+widget/manual scan pakai title generik "Scan berjalan"/"Scan selesai",
+auto-scan periodik tetap "Auto-sort berjalan"/"Auto-sort selesai". 2
+item audit lain (test lifecycle, Diagnostics) masuk pending queue.
+
 ## v8.22.10 (2026-08-22) — FIX: validasi invariant Import Rule (audit P2 #3)
 
 `RuleRepository.importFromJson` dulu percaya begitu saja isi JSON --

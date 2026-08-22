@@ -13,6 +13,98 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.22.12 -- Pending queue P2 #5 (partial), pure-logic test lifecycle Auto-Sort (2026-08-22)
+- Eksekusi P2 #5 dari pending queue (v8.22.11): "Test lifecycle Auto-Sort
+  belum lengkap (7 skenario ON/OFF/reboot/widget)". Batas 1 task/batch --
+  P3 #6 (Diagnostics autoSortEnabled vs WorkManager state) TETAP pending.
+- **Scope**: project 0 infra Robolectric/instrumented (dikonfirmasi
+  v8.22.11) -- menambah itu butuh ubah dependency `app/build.gradle.kts`
+  (protected asset) yang TIDAK bisa diverifikasi compile/run di sesi ini
+  (tanpa akses gradle/Android SDK). Jalan aman: extract-function keputusan
+  PURE dari 3 file worker ke 1 file baru, test murni JVM (pola sama
+  `RuleRepositoryPureLogicTest`/`FileSorterPureLogicTest`), 0 dependency
+  baru.
+- **File baru**: `worker/AutoSortLifecycleLogic.kt` -- 5 fungsi pure:
+  `shouldRunPeriodicScan` (gate ON/OFF), `shouldRunManualScan` (selalu
+  true, regression guard asimetri manual), `shouldScheduleWork`
+  (scheduler ON->schedule/OFF->cancel), `ongoingNotifTitleRes` &
+  `resultNotifTitleRes` (pemilihan judul notif manual vs periodik,
+  v8.22.11).
+- **Rewire APA ADANYA** (0 perubahan perilaku, murni panggil fungsi baru):
+  `AutoSortWorker.doWork()`, `WorkScheduler.syncFromSavedSettings()`,
+  `AutoSortNotification.foregroundInfo()` + `resultNotification()`.
+- **Test baru**: `AutoSortLifecycleLogicTest.kt` (9 test) -- cover 6 dari
+  7 skenario audit: ON/OFF periodik (2), manual selalu jalan (1),
+  scheduler schedule/cancel (2), judul notif ongoing+hasil x manual/
+  periodik (4).
+- **TIDAK tercakup, TETAP pending** (bukan dianggap selesai): eksekusi
+  nyata `doWork()`/`WorkManager` end-to-end, dan reboot survival
+  (`BootCompletedReceiver` restart proses + enqueue ulang) -- keduanya
+  genuinely butuh Robolectric/instrumented test yg infra-nya belum ada.
+  P2 #5 diturunkan ke item pending baru yang LEBIH SEMPIT: "Setup
+  Robolectric + work-testing, tulis test end-to-end reboot survival."
+- File diubah (4): `worker/AutoSortWorker.kt`, `worker/WorkScheduler.kt`,
+  `worker/AutoSortNotification.kt`, BARU `worker/AutoSortLifecycleLogic.kt`,
+  BARU `test/.../worker/AutoSortLifecycleLogicTest.kt`. 0 string.xml
+  baru (reuse 4 string existing dari v8.22.11). `preflight_check.sh`
+  13/13 lolos. Confidence Rating: **90%** (extract-function murni,
+  semua call site ditelusuri; turun dari 95%+ krn `.kt` baru dgn
+  referensi `R.string.*` di unit test BELUM ada preseden di project ini
+  -- valid secara Gradle Android standar, tapi belum pernah dicoba di
+  codebase ini sebelumnya, tidak bisa dikompilasi-verifikasi di sesi ini).
+- **User WAJIB verifikasi**: build CI hijau, `./gradlew testDebugUnitTest`
+  lolos termasuk 9 test baru di `AutoSortLifecycleLogicTest`.
+- **⏳ PENDING QUEUE (2 item)**:
+  1. P2 #5-lanjutan: Setup Robolectric + `androidx.work:work-testing`,
+     test end-to-end reboot survival (BootCompletedReceiver).
+  2. P3 #6: Diagnostics belum bedakan `autoSortEnabled` vs WorkManager
+     state vs next scheduled run.
+- versionCode 138->139, versionName 8.22.11->8.22.12.
+
+## v8.22.11 -- Fix P2 audit #4, wording notifikasi Manual Scan (2026-08-22)
+- Lanjutan audit (batch v8.22.10 tutup P2 #3). Eksekusi P2 #4: notifikasi
+  Manual Scan salah semantik. Batas 1 task/batch -- 2 item audit sisanya
+  TETAP di pending queue.
+- **Bug**: `runScanAndReport` (ScanExecution.kt) di-share oleh
+  `AutoSortWorker` (periodik) & `ManualScanWorker` (widget/manual) --
+  notifikasi ongoing+hasil SELALU pakai title "Auto-sort berjalan"/
+  "Auto-sort selesai" walau scan-nya dipicu MANUAL, karena
+  `AutoSortNotification.foregroundInfo`/`resultNotification` tidak tahu
+  siapa pemanggilnya.
+- **Fix**: parameter `isManual: Boolean` baru di `runScanAndReport`
+  (diteruskan APA ADANYA ke `AutoSortNotification`, 0 pengaruh ke
+  FileSorter/scan logic). 2 string baru: `manual_scan_notif_title`
+  ("Scan berjalan"), `manual_scan_result_notif_title` ("Scan selesai").
+  `AutoSortNotification.foregroundInfo`/`resultNotification` pilih title
+  berdasarkan `isManual` -- string `text`/`summary`/breakdown per-rule
+  TIDAK diubah (sudah generik sejak awal, tidak pernah sebut "Auto-sort").
+  `AutoSortWorker` panggil `isManual = false`, `ManualScanWorker` panggil
+  `isManual = true`.
+- **TIDAK disentuh**: `FileSorter`, channel notifikasi (`CHANNEL_ID`
+  sama, 1 channel utk keduanya -- audit tidak minta channel terpisah),
+  `AutoSortWorker`/`ManualScanWorker` gate logic (v8.22.8 race fix tetap
+  utuh), widget (`ScanWidgetProvider`) tidak tersentuh sama sekali.
+- File diubah (4): `worker/ScanExecution.kt`, `worker/AutoSortNotification.kt`,
+  `worker/AutoSortWorker.kt`, `worker/ManualScanWorker.kt`, +2 string di
+  `strings.xml`. `preflight_check.sh` 13/13 lolos. **Regression test:
+  BELUM ditulis** (butuh Robolectric/instrumented utk uji Notification
+  builder asli, 0 infra itu ada di project -- termuat implisit di
+  pending queue #2 "test lifecycle Auto-Sort", bukan tambahan baru).
+  Confidence Rating: **90%** (perubahan straightforward, semua call site
+  ditelusuri & konsisten -- turun dari 95%+ krn belum ada test otomatis
+  utk notifikasi & belum diverifikasi visual notifikasi asli di device).
+- **User WAJIB verifikasi**: build CI hijau, (1) tap widget "Scan
+  Sekarang" -> notifikasi bilang "Scan berjalan"/"Scan selesai" (BUKAN
+  "Auto-sort..."), (2) tunggu auto-scan periodik jalan -> notifikasi
+  tetap "Auto-sort berjalan"/"Auto-sort selesai" seperti biasa.
+- **⏳ PENDING QUEUE (2 item dari audit, batas 1 task/batch)**:
+  1. P2 #5: Test lifecycle Auto-Sort belum lengkap (7 skenario ON/OFF/
+     reboot/widget) -- termasuk regression test race fix v8.22.8 & fix
+     wording notif v8.22.11 ini.
+  2. P3 #6: Diagnostics belum bedakan `autoSortEnabled` vs WorkManager
+     state vs next scheduled run.
+- versionCode 137->138, versionName 8.22.10->8.22.11.
+
 ## v8.22.10 -- Fix P2 audit #3, validasi invariant Import Rule (2026-08-22)
 - Lanjutan audit (batch v8.22.9 tutup P1 #2). Eksekusi P2 #3: Import Rule
   belum validasi invariant sebelum persist. Batas 1 task/batch -- 3 item

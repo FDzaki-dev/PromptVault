@@ -36,8 +36,15 @@ import java.util.Locale
  *
  * TIDAK menyentuh: FileSorter, SAF, Shizuku, Rule Engine, scheduler
  * Auto-Sort ([WorkScheduler]), atau sorting logic apa pun -- sesuai scope.
+ *
+ * [Fix audit P2 #4, 2026-08-22] Parameter [isManual] baru -- dulu
+ * notifikasi ongoing/hasil SELALU pakai wording "Auto-sort..." walau
+ * dipicu manual (widget/ManualScanWorker), audit user konfirmasi ini
+ * salah semantik. Diteruskan APA ADANYA ke [AutoSortNotification], TIDAK
+ * mempengaruhi FileSorter/scan logic sama sekali -- murni pilihan string
+ * title notifikasi.
  */
-internal suspend fun CoroutineWorker.runScanAndReport(applicationContext: Context): Result {
+internal suspend fun CoroutineWorker.runScanAndReport(applicationContext: Context, isManual: Boolean): Result {
     return try {
         // Batch §5: promosikan ke foreground service SEBELUM scan mulai, supaya
         // OS tidak menjeda/membunuh worker di tengah scan panjang (lihat
@@ -46,7 +53,7 @@ internal suspend fun CoroutineWorker.runScanAndReport(applicationContext: Contex
         // TETAP lanjut jalan sebagai background worker biasa -- jangan sampai
         // kegagalan promosi foreground menggagalkan seluruh proses sortir.
         try {
-            setForeground(AutoSortNotification.foregroundInfo(applicationContext))
+            setForeground(AutoSortNotification.foregroundInfo(applicationContext, isManual))
         } catch (e: Exception) {
             // sengaja ditelan -- lihat komentar di atas
         }
@@ -110,7 +117,7 @@ internal suspend fun CoroutineWorker.runScanAndReport(applicationContext: Contex
                     .eachCount()
                 NotificationManagerCompat.from(applicationContext).notify(
                     AutoSortNotification.RESULT_NOTIFICATION_ID,
-                    AutoSortNotification.resultNotification(applicationContext, result.filesMoved, perRule)
+                    AutoSortNotification.resultNotification(applicationContext, result.filesMoved, perRule, isManual)
                 )
             } catch (e: SecurityException) {
                 // Izin POST_NOTIFICATIONS dicabut runtime (Android 13+) --
