@@ -98,6 +98,18 @@ jobs:
       # dijalankan -- perilaku setara 3 step terpisah lama, cuma log
       # digabung jadi 1 file (`build-all.log`, lihat step upload log gagal
       # di bawah yang juga sudah disesuaikan).
+      #
+      # [fix OOM v8.22.15/v8.22.15b] SEBELUMNYA `testDebugUnitTest
+      # testReleaseUnitTest` DUA-DUANYA dijalankan -- dgn `org.gradle.parallel
+      # =true` (gradle.properties), Gradle boleh menjalankan keduanya
+      # BERSAMAAN, masing2 spawn JVM Robolectric sendiri (berat) di atas
+      # runner CI terbatas -> "Gradle Test Executor... exit value 10" (lihat
+      # PROJECT_STATE.md v8.22.15). Project ini TIDAK punya test source set
+      # per-buildType (`app/src/test/`, bukan `app/src/testDebug/` atau
+      # `testRelease/`) -- testDebugUnitTest & testReleaseUnitTest menjalankan
+      # KELAS TEST YANG SAMA PERSIS. Menjalankan cuma salah satu (debug) tidak
+      # mengurangi cakupan test sama sekali, cuma menghilangkan duplikasi JVM
+      # Robolectric yang jadi penyebab OOM.
       - name: Compile, test, and build release APK
         env:
           ANDROID_KEYSTORE_PATH: ${{ github.workspace }}/release.keystore
@@ -106,7 +118,7 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           set -euo pipefail
-          ./gradlew compileDebugKotlin testDebugUnitTest testReleaseUnitTest assembleRelease --stacktrace 2>&1 | tee build-all.log
+          ./gradlew compileDebugKotlin testDebugUnitTest assembleRelease --stacktrace 2>&1 | tee build-all.log
 
       # Diagnostik SELALU jalan (bukan cuma pas gagal) supaya kalau nama file
       # output ternyata beda dugaan (mis. "app-release-unsigned.apk" karena

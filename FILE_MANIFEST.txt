@@ -103,6 +103,7 @@ app/src/test/java/com/elprompter/promptvault/util/RuleFolderNameValidatorTest.kt
 app/src/test/java/com/elprompter/promptvault/util/RuleOverlapCheckerTest.kt
 app/src/test/java/com/elprompter/promptvault/util/VaultConfigBackupTest.kt
 app/src/test/java/com/elprompter/promptvault/worker/AutoSortLifecycleLogicTest.kt
+app/src/test/java/com/elprompter/promptvault/worker/BootSurvivalWorkManagerTest.kt
 build.gradle.kts
 gradle.properties
 scripts/preflight_check.sh

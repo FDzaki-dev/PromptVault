@@ -3,6 +3,31 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.22.16 (2026-08-22) — Re-add Robolectric dengan fix OOM eksplisit
+
+Lanjutan v8.22.15: reboot-survival test ditambah lagi, kali ini dengan 2
+lapis mitigasi OOM (bukan cuma revert):
+
+1. `testOptions.unitTests.all { maxParallelForks = 1; maxHeapSize = "2048m" }`
+   di `app/build.gradle.kts` — eksplisit, bukan default Gradle.
+2. CI (`build.yml`) sekarang cuma jalankan `testDebugUnitTest`, drop
+   `testReleaseUnitTest` — project tidak punya test source set per-buildType,
+   0 coverage hilang, cuma hilangkan 2 JVM Robolectric paralel.
+
+Dependency sama persis dengan v8.22.14 (versi bukan penyebab OOM).
+`worker/BootSurvivalWorkManagerTest.kt` ditulis ulang dari spesifikasi 4
+skenario di log v8.22.14 (file lama sudah dihapus di rollback, tidak sempat
+dibaca isinya) — reboot ON→ENQUEUED, reboot OFF→tidak ada worker aktif,
+reboot ON→OFF→ON→konsisten, `AutoSortWorker.doWork()` nyata dieksekusi saat
+OFF.
+
+**Belum bisa diverifikasi compile/run nyata di sesi ini.** Confidence 75%.
+**Pantau CI ekstra ketat** — kalau masih merah, opsi berikut: matikan
+`org.gradle.parallel` global, atau terima reboot-survival end-to-end sebagai
+gap test yang didokumentasikan.
+
+versionCode 142->143, versionName 8.22.15->8.22.16.
+
 ## v8.22.15 (2026-08-22) — ROLLBACK: CI merah, Robolectric crash
 
 CI benar-benar merah persis seperti diperingatkan di v8.22.14: `testReleaseUnitTest`

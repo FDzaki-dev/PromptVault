@@ -13,6 +13,52 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.22.16 -- Re-add Robolectric dgn fix OOM eksplisit (maxParallelForks + CI 1-varian) (2026-08-22)
+- Lanjutan v8.22.15 (rollback): user minta reboot-survival test ditambah
+  lagi TAPI kali ini beneran fix root cause OOM, bukan cuma revert.
+- **2 lapis mitigasi** (bukan cuma 1) atas root cause v8.22.14 (2 JVM
+  Robolectric paralel di runner CI terbatas):
+  1. `app/build.gradle.kts` -- `testOptions.unitTests.all { maxParallelForks
+     = 1; maxHeapSize = "2048m" }` (baru, eksplisit -- sebelumnya default
+     Gradle yg biasanya = jumlah core CPU runner).
+  2. `.github/workflows/build.yml` -- invocation gradlew SEKARANG cuma
+     `testDebugUnitTest` (drop `testReleaseUnitTest`). Project tidak punya
+     test source set per-buildType (`app/src/test/` tunggal, bukan
+     `testDebug/`/`testRelease/`) -- 0 coverage hilang, cuma hilangkan
+     duplikasi 2 JVM Robolectric jalan bersamaan.
+- Dependency `testImplementation` (Robolectric 4.13, androidx.test:core
+  1.6.1, androidx.test.ext:junit 1.2.1, androidx.work:work-testing 2.9.1) +
+  `testOptions.unitTests.isIncludeAndroidResources` DITAMBAH LAGI, versi
+  SAMA PERSIS dgn v8.22.14 (versi bukan penyebab OOM).
+- File test `worker/BootSurvivalWorkManagerTest.kt` ditulis ULANG dari
+  spesifikasi 4 skenario di log v8.22.14 (file lama sudah terlanjur
+  dihapus di rollback v8.22.15, TIDAK sempat dibaca isinya sebelum
+  dihapus) -- isi baru: `WorkManagerTestInitHelper`+`SynchronousExecutor`,
+  4 test (reboot ON->ENQUEUED, reboot OFF->tidak ada worker aktif, reboot
+  ON->OFF->ON->state akhir konsisten, `AutoSortWorker.doWork()` nyata
+  dieksekusi saat OFF->`Result.Success` no-op).
+- **TIDAK disentuh**: `AutoSortLifecycleLogic.kt`/`AutoSortLifecycleLogicTest.kt`,
+  `WorkScheduler`/`BootCompletedReceiver`/`AutoSortWorker` (production code,
+  0 perubahan, cuma dipakai apa adanya dari test), `gradle.properties`
+  (`org.gradle.parallel=true` TETAP -- tidak perlu dimatikan global, cukup
+  dibatasi di level test task + kurangi jadi 1 varian).
+- File diubah (3, PAS batas 1 task/batch): `app/build.gradle.kts`,
+  `.github/workflows/build.yml`, BARU `worker/BootSurvivalWorkManagerTest.kt`.
+  + `FILE_MANIFEST.txt` (bookkeeping, re-add 1 baris).
+  `preflight_check.sh` lolos bersih.
+- **⚠️ TETAP TIDAK BISA diverifikasi compile/run nyata di sesi ini** (0 akses
+  gradle/Android SDK/network) -- Confidence Rating **75%** (lebih rendah dari
+  v8.22.14/80% krn kali ini reconstructing test file dari spesifikasi log,
+  bukan dari file asli yang sempat dibaca). **User WAJIB pantau run CI
+  pertama ekstra ketat** -- kalau MASIH merah dgn sinyal OOM yang sama
+  meski sudah 2 lapis mitigasi, opsi berikutnya: turunkan
+  `org.gradle.parallel` jadi `false` (dampak lebih luas, belum dicoba), atau
+  skip Robolectric permanen & terima reboot-survival end-to-end sebagai gap
+  test yang didokumentasikan (bukan dites).
+- **⏳ PENDING QUEUE**: KOSONG kalau CI hijau. Kalau CI masih merah: lihat
+  opsi di atas.
+- versionCode 142->143, versionName 8.22.15->8.22.16.
+
 ## v8.22.15 -- ROLLBACK: CI merah, Robolectric bikin Gradle Test Executor crash (2026-08-22)
 - User upload `build-failure-log-v8.22.14`: `testReleaseUnitTest` +
   `testDebugUnitTest` SAMA-SAMA gagal, "Process 'Gradle Test Executor N'
