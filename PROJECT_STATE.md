@@ -13,6 +13,47 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.22.15 -- ROLLBACK: CI merah, Robolectric bikin Gradle Test Executor crash (2026-08-22)
+- User upload `build-failure-log-v8.22.14`: `testReleaseUnitTest` +
+  `testDebugUnitTest` SAMA-SAMA gagal, "Process 'Gradle Test Executor N'
+  finished with non-zero exit value 10" -- 0 stack trace/assertion, 0
+  output test spesifik apa pun. Bukan bug logic (kompilasi + lint vital +
+  packageRelease semua SUKSES duluan).
+- **Analisis**: sinyal ini (crash worker senyap, exit 10, KEDUA varian
+  gagal identik bersamaan, 0 assertion) klasik Robolectric OOM di runner
+  CI terbatas (`ubuntu-latest`, ~7GB) -- `org.gradle.parallel=true`
+  (gradle.properties) bikin `testDebugUnitTest`+`testReleaseUnitTest`
+  jalan BERSAMAAN dalam 1 invocation gradlew (`compileDebugKotlin
+  testDebugUnitTest testReleaseUnitTest assembleRelease`), masing2 spawn
+  JVM Robolectric sendiri (classloading shadow Android SDK berat) di atas
+  Gradle+Kotlin daemon yang masih resident dari fase compile. TEPAT
+  skenario yang sudah diperingatkan eksplisit di v8.22.14 (\"Confidence
+  Rating 80%\", \"user WAJIB pantau CI ekstra ketat\").
+- **Fix = ROLLBACK PERSIS sesuai kontingensi yang SUDAH ditulis di
+  v8.22.14** (bukan tambal baru): revert `app/build.gradle.kts` ke state
+  v8.22.13 (hapus 4 baris `testImplementation` Robolectric/androidx.test/
+  work-testing + block `testOptions.unitTests.isIncludeAndroidResources`),
+  hapus file test `worker/BootSurvivalWorkManagerTest.kt` (100%
+  unreferenced, murni test infra, 0 kode lain kena).
+- **TIDAK disentuh**: `AutoSortLifecycleLogic.kt`/`AutoSortLifecycleLogicTest.kt`
+  (v8.22.12, pure-logic test, TIDAK butuh Robolectric, TETAP jalan),
+  `DiagnosticsScreen.kt` (v8.22.13), scan logic, semua fitur non-test-infra.
+- File diubah (2) + 1 dihapus: `app/build.gradle.kts`,
+  `FILE_MANIFEST.txt`; DIHAPUS `worker/BootSurvivalWorkManagerTest.kt`.
+  `preflight_check.sh` lolos bersih.
+- **Pelajaran dicatat**: kalau reboot-survival/WorkManager end-to-end test
+  diminta lagi nanti, JANGAN Robolectric di 2 test task paralel tanpa
+  `maxParallelForks`/heap eksplisit di `testOptions.unitTests.all{}}`, ATAU
+  jalankan cuma 1 varian (`testDebugUnitTest` saja) di CI -- bukan
+  dilarang total, tapi butuh constraint eksplisit supaya tidak OOM di
+  runner terbatas. TIDAK dieksekusi sekarang (di luar scope rollback ini,
+  1 task/batch) -- dicatat di Pending Queue.
+- **⏳ PENDING QUEUE**: (1) Kalau reboot-survival test end-to-end tetap
+  diinginkan ke depan: setup ulang Robolectric TAPI dengan
+  `maxParallelForks=1`/heap eksplisit per test task, atau batasi CI cuma
+  jalankan 1 varian unit test.
+- versionCode 141->142, versionName 8.22.14->8.22.15.
+
 ## v8.22.14 -- Pending queue P2 #5-lanjutan, setup Robolectric + reboot survival test (2026-08-22)
 - Eksekusi item pending TERAKHIR dari antrean audit (v8.22.11 -> v8.22.12
   -> v8.22.13, semua item lain sudah tuntas). Batas 1 task/batch --

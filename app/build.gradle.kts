@@ -22,8 +22,8 @@ android {
         applicationId = "com.elprompter.promptvault"
         minSdk = 26
         targetSdk = 34
-        versionCode = 141
-        versionName = "8.22.14"
+        versionCode = 142
+        versionName = "8.22.15"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -71,16 +71,6 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
-        }
-    }
-    // [Pending queue P2 #5-lanjutan, 2026-08-22] Wajib true supaya
-    // Robolectric bisa baca AndroidManifest.xml/res/* saat unit test --
-    // tanpa ini test yg butuh Context asli (DataStore/WorkManager via
-    // Robolectric) akan gagal cari resource. HANYA mempengaruhi unit test
-    // (testImplementation), 0 pengaruh ke instrumented test/release build.
-    testOptions {
-        unitTests {
-            isIncludeAndroidResources = true
         }
     }
 }
@@ -140,17 +130,6 @@ dependencies {
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
-    // [Pending queue P2 #5-lanjutan, 2026-08-22] Robolectric + work-testing:
-    // versi dipilih konsisten (work-testing PERSIS versi work-runtime-ktx
-    // di atas, wajib -- API internal WorkManager sensitif ke mismatch
-    // versi). Robolectric 4.13 & androidx.test:core 1.6.1 dipilih sbg
-    // rilis stabil yg dikenal luas kompatibel compileSdk/targetSdk 34 --
-    // BELUM diverifikasi lewat Gradle asli (tidak ada akses network di
-    // sesi ini, pola sama dgn caveat dependency Shizuku di atas).
-    testImplementation("org.robolectric:robolectric:4.13")
-    testImplementation("androidx.test:core:1.6.1")
-    testImplementation("androidx.test.ext:junit:1.2.1")
-    testImplementation("androidx.work:work-testing:2.9.1")
 
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")

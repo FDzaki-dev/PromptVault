@@ -3,6 +3,26 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.22.15 (2026-08-22) — ROLLBACK: CI merah, Robolectric crash
+
+CI benar-benar merah persis seperti diperingatkan di v8.22.14: `testReleaseUnitTest`
++ `testDebugUnitTest` gagal identik, "Gradle Test Executor... exit value 10",
+0 assertion/stack trace — sinyal klasik Robolectric OOM (2 varian jalan
+paralel via `org.gradle.parallel=true`, masing2 spawn JVM Robolectric berat
+di atas runner CI terbatas).
+
+**Rollback persis sesuai kontingensi yang sudah ditulis di v8.22.14**: hapus
+4 dependency `testImplementation` Robolectric/androidx.test/work-testing +
+block `testOptions.unitTests.isIncludeAndroidResources` di
+`app/build.gradle.kts`, hapus `worker/BootSurvivalWorkManagerTest.kt`.
+Kembali ke behavior v8.22.13. Tidak ada fitur lain yang kena — scope batch
+v8.22.14 murni test infra.
+
+Pending: kalau reboot-survival test diinginkan lagi, perlu `maxParallelForks`/heap
+eksplisit di `testOptions.unitTests.all{}`, atau CI cuma jalankan 1 varian.
+
+versionCode 141->142, versionName 8.22.14->8.22.15.
+
 ## v8.22.14 (2026-08-22) — Pending queue P2 #5-lanjutan: setup Robolectric + reboot survival test ⚠️
 
 **RISIKO**: mengubah `app/build.gradle.kts` (dependency test baru) TANPA
