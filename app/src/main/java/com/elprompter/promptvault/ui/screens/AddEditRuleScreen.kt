@@ -68,15 +68,15 @@ import java.util.UUID
  * (ekstensi generik vs prefix nama spesifik), bukan cuma satu pola yang
  * bisa disalahpahami sbg "cara satu-satunya".
  */
-private data class RulePreset(val label: String, val folder: String, val pattern: String)
+private data class RulePreset(@androidx.annotation.StringRes val labelRes: Int, val folder: String, val pattern: String)
 
 private val rulePresets = listOf(
-    RulePreset("Gambar", "Gambar", "*.jpg, *.jpeg, *.png, *.webp, *.heic"),
-    RulePreset("PDF", "PDF", "*.pdf"),
-    RulePreset("Video", "Video", "*.mp4, *.mkv, *.mov, *.3gp"),
-    RulePreset("Arsip (ZIP/RAR)", "Arsip", "*.zip, *.rar, *.7z"),
-    RulePreset("Dokumen Office", "Dokumen", "*.doc, *.docx, *.xls, *.xlsx, *.ppt, *.pptx"),
-    RulePreset("Screenshot", "Screenshot", "Screenshot_*.png, Screenshot_*.jpg")
+    RulePreset(R.string.rule_edit_preset_gambar, "Gambar", "*.jpg, *.jpeg, *.png, *.webp, *.heic"),
+    RulePreset(R.string.rule_edit_preset_pdf, "PDF", "*.pdf"),
+    RulePreset(R.string.rule_edit_preset_video, "Video", "*.mp4, *.mkv, *.mov, *.3gp"),
+    RulePreset(R.string.rule_edit_preset_arsip, "Arsip", "*.zip, *.rar, *.7z"),
+    RulePreset(R.string.rule_edit_preset_dokumen, "Dokumen", "*.doc, *.docx, *.xls, *.xlsx, *.ppt, *.pptx"),
+    RulePreset(R.string.rule_edit_preset_screenshot, "Screenshot", "Screenshot_*.png, Screenshot_*.jpg")
 )
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
@@ -160,7 +160,7 @@ fun AddEditRuleScreen(
                                 folderName = preset.folder
                                 pattern = preset.pattern
                             },
-                            label = { Text(preset.label) }
+                            label = { Text(stringResource(preset.labelRes)) }
                         )
                     }
                 }

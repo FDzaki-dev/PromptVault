@@ -13,6 +13,29 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.22.5 -- Tutup PENDING QUEUE #2: chip preset stringResource (2026-08-22)
+- Eksekusi item #2 pending queue v8.22.1 (chip preset `AddEditRuleScreen.kt`
+  pakai Kotlin string literal, bukan `stringResource` -- regresi kecil dari
+  standar 100% stringResource Fase 1.3). Pending queue v8.15.0/v8.22.1 KINI
+  TUTUP SELURUHNYA (0 item tersisa).
+- **Fix**: `RulePreset.label: String` -> `RulePreset.labelRes: @StringRes
+  Int`, 6 literal (`"Gambar"`, `"PDF"`, `"Video"`, `"Arsip (ZIP/RAR)"`,
+  `"Dokumen Office"`, `"Screenshot"`) dipindah ke 6 string resource baru
+  (`rule_edit_preset_gambar/pdf/video/arsip/dokumen/screenshot`) di
+  `strings.xml`. `label = { Text(preset.label) }` -> `Text(stringResource(
+  preset.labelRes))` di lokasi render chip (`FlowRow` preset).
+- **TIDAK disentuh**: `folder`/`pattern` field `RulePreset` (bukan teks
+  UI-facing yang perlu i18n -- `folder` jadi nama folder tujuan aktual,
+  `pattern` jadi contoh pattern yang diisi ke field, keduanya BUKAN label
+  tampilan lepas), 6 baris data preset lain (jumlah/isi entry) tetap sama.
+- File diubah (2): `ui/screens/AddEditRuleScreen.kt`,
+  `res/values/strings.xml` (+6 string). `preflight_check.sh` 13/13 lolos.
+  Confidence Rating: **95%** (refactor kecil, 1:1 substitusi tipe, tidak
+  ada perubahan logic/wiring lain).
+- **User WAJIB verifikasi**: build CI hijau, layar Tambah/Edit Rule ->
+  6 chip preset tetap tampil label sama persis seperti sebelumnya.
+- versionCode 131->132, versionName 8.22.4->8.22.5.
+
 ## v8.22.4 -- FIX BUG NYATA (screenshot user): sudut widget mismatch/ganggu (2026-08-22)
 - **Gejala**: user "sudut-sudut widget nya ganggu banget" (setelah fix
   resize v8.22.3 dikonfirmasi "mendingan"). Screenshot: rounded-rect

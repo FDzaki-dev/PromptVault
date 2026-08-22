@@ -3,6 +3,12 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.22.5 (2026-08-22) — Tutup pending queue #2: chip preset stringResource
+
+`RulePreset.label: String` (6 literal Kotlin) → `labelRes: @StringRes Int`
++ 6 string resource baru di `strings.xml`. Standar 100% stringResource
+Fase 1.3 kembali penuh. Pending queue v8.15.0/v8.22.1: 0 item tersisa.
+
 ## v8.22.4 (2026-08-22) — FIX: sudut widget mismatch/ganggu vs system clip
 
 Laporan user: sudut widget "ganggu banget" setelah fix resize v8.22.3.

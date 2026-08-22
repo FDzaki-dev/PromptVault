@@ -28,6 +28,12 @@
     <string name="rule_edit_folder_label">Nama folder tujuan</string>
     <!-- [Preset cepat, 2026-08-21] -->
     <string name="rule_edit_preset_title">Preset Cepat (opsional)</string>
+    <string name="rule_edit_preset_gambar">Gambar</string>
+    <string name="rule_edit_preset_pdf">PDF</string>
+    <string name="rule_edit_preset_video">Video</string>
+    <string name="rule_edit_preset_arsip">Arsip (ZIP/RAR)</string>
+    <string name="rule_edit_preset_dokumen">Dokumen Office</string>
+    <string name="rule_edit_preset_screenshot">Screenshot</string>
     <string name="rule_edit_preset_hint">Ketuk buat isi folder &amp; pattern otomatis — tetap bisa diedit sebelum disimpan. Contoh nyata cara pattern &amp; folder tujuan dipasangkan.</string>
     <string name="rule_edit_pattern_label">Pattern (mis. invoice_*.zip)</string>
     <string name="rule_edit_pattern_hint">Gunakan * untuk banyak karakter dan ? untuk satu karakter. Contoh: *.txt, laporan_*.zip</string>
