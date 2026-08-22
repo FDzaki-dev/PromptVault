@@ -3,6 +3,24 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.22.19 (2026-08-22) — Fix race condition di logging v8.22.18 sendiri
+
+Log gagal v8.22.18 masih tanpa `decode-keystore.log`, padahal itu tepat
+yang perlu dilihat. Root cause: `exec > >(tee file) 2>&1` (ditambahkan
+v8.22.18) menjalankan tee di subshell background — kalau step exit cepat
+(`exit 1` segera setelah baris exec), shell utama bisa selesai sebelum tee
+sempat menulis apa pun ke disk. Race condition di fix sendiri, bukan bug
+keystore.
+
+**Fix**: ganti ke `{ block; } 2>&1 | tee file` (tee foreground, pipeline
+biasa) di 4 step terkait — pola yang sudah terbukti reliable di "Compile,
+test, build" sejak awal.
+
+1 file diubah: `.github/workflows/build.yml`. Isi step-step itu sendiri
+tidak diubah — belum ada bukti nyata sumber masalah aslinya.
+
+versionCode 145->146, versionName 8.22.18->8.22.19.
+
 ## v8.22.18 (2026-08-22) — CI merah lagi, tapi fix v8.22.17 terbukti jalan (gap diagnostik, bukan bug baru)
 
 Log gagal v8.22.17 masih tanpa `build-all.log` — tapi bukti kali ini beda:

@@ -13,6 +13,37 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.22.19 -- Fix RACE CONDITION di logging v8.22.18 sendiri: exec>tee kehilangan log step yang exit cepat (2026-08-22)
+- User upload build-failure-log-v8_22_18: ADA `stale-run-guard.log`,
+  `read-version.log`, `generate-wrapper.log` -- TAPI TETAP TIDAK ADA
+  `decode-keystore.log`, padahal step "Decode keystore" persis yang perlu
+  dilihat (step SETELAH generate-wrapper yg terakhir berhasil).
+- **Root cause (bug di fix v8.22.18 sendiri, bukan CI/keystore)**: pola
+  `exec > >(tee file) 2>&1` yang ditambahkan v8.22.18 menjalankan `tee` di
+  SUBSHELL BACKGROUND lewat process substitution -- kalau step exit CEPAT
+  (mis. langsung `exit 1` tak lama setelah baris `exec`), shell utama bisa
+  selesai/step di-terminate SEBELUM subshell tee sempat membuka/menulis
+  file ke disk sama sekali. Race condition murni, bukan bug logic di
+  keystore/secret.
+- **Fix**: ganti ke pola `{ block; } 2>&1 | tee file` (tee FOREGROUND,
+  anggota pipeline biasa -- shell WAJIB tunggu tee selesai sebelum
+  pipeline dianggap kelar) di ke-4 step yang kena (Stale run guard, Read
+  app version, Generate wrapper, Decode keystore) -- PERSIS pola yang
+  SUDAH terbukti reliable di "Compile, test, and build" sejak awal
+  (build-all.log SELALU lengkap di setiap kegagalan sebelumnya, termasuk
+  v8.22.14).
+- File diubah (1, PAS batas 1 task/batch): `.github/workflows/build.yml`.
+  `preflight_check.sh` lolos bersih.
+- **Isi step Decode keystore/dst SENDIRI TETAP TIDAK diubah** -- masih
+  belum ada bukti nyata itu sumber masalah aslinya (SEKARANG baru akan
+  ketahuan dari `decode-keystore.log` kalau memang di situ yang gagal).
+- Confidence 65% utk logging kali ini AKHIRNYA lengkap. Kalau masih
+  hilang log tertentu lagi, kemungkinan ada step LAIN yang perlu pola
+  sama (mis. "Rename APK"/"Force-flag Latest") -- belum disentuh sesi
+  ini, di luar scope (Decode keystore prioritas krn itu yang sedang
+  dicurigai).
+- versionCode 145->146, versionName 8.22.18->8.22.19.
+
 ## v8.22.18 -- CI merah LAGI, tapi kali ini fix v8.22.17 TERBUKTI jalan -- gap diagnostik, bukan bug baru (2026-08-22)
 - User upload build-failure-log-v8_22_17: **MASIH tanpa `build-all.log`**,
   cuma sisa `configuration-cache-report.html` -- TAPI kali ini bukti di
