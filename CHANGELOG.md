@@ -3,6 +3,13 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.22.21 (2026-08-22) — Rollback: Robolectric OOM terulang, sudah 2x mitigasi gagal
+`testDebugUnitTest` exit 10 (OOM silent) identik v8.22.14 walau maxParallelForks=1
++ maxHeapSize=2048m sudah aktif jalan (baru bisa dites nyata sekarang). Sesuai
+kontingensi tertulis v8.22.16: Robolectric + dependency terkait dihapus lagi,
+`BootSurvivalWorkManagerTest.kt` dihapus (100% unreferenced). Reboot-survival
+end-to-end jadi gap test terdokumentasi, bukan dites.
+
 ## v8.22.20 (2026-08-22) — Compile-fix: `unitTests.all{}` implicit receiver Kotlin DSL
 `maxParallelForks`/`maxHeapSize` di `app/build.gradle.kts` diakses tanpa `it.`
 prefix di dalam `all(Action<Test>)` -- Kotlin DSL tidak treat itu sbg implicit

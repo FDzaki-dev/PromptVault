@@ -13,6 +13,16 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.22.21 ROLLBACK -- Robolectric OOM TERULANG PERSIS walau 2 lapis mitigasi v8.22.16 sudah aktif (2026-08-22)
+- **Gejala**: user upload `build-failure-log-v8_22_20.zip`. Compile SUKSES (fix DSL v8.22.20 terbukti jalan), TAPI `:app:testDebugUnitTest FAILED` -- "Process 'Gradle Test Executor 1' finished with non-zero exit value 10", 0 stack trace/assertion. **Sinyal identik 1:1 dgn v8.22.14** (yang memicu rollback v8.22.15).
+- **Konteks penting**: ini kali PERTAMA `testOptions.unitTests.all{}` (maxParallelForks=1 + maxHeapSize=2048m, ditulis v8.22.16) BENAR-BENAR jalan -- sebelumnya keburu gagal di step Gradle-version (v8.22.17) lalu gap diagnostik (v8.22.18) lalu bug syntax DSL sendiri (v8.22.20). Sekarang teruji nyata: 2 lapis mitigasi TIDAK CUKUP, runner CI (~7GB) tetap OOM menjalankan Robolectric.
+- **Fix = ROLLBACK sesuai kontingensi yang SUDAH ditulis eksplisit di v8.22.16** ("kalau MASIH merah dgn sinyal OOM sama meski 2 lapis mitigasi -> skip Robolectric permanen, terima reboot-survival end-to-end sbg gap test terdokumentasi"): hapus `testOptions.unitTests{}` block + 4 baris `testImplementation` (Robolectric/androidx.test:core/androidx.test.ext:junit/work-testing) di `app/build.gradle.kts`, hapus file `worker/BootSurvivalWorkManagerTest.kt` (diverifikasi 100% unreferenced via grep sebelum hapus).
+- **TIDAK dicoba**: `org.gradle.parallel=false` (opsi lain yg sempat ditulis di v8.22.16, TAPI belum ada bukti itu akan berhasil & dampaknya lebih luas -- prioritas "regresi dilarang keras" = kembali ke state TERBUKTI hijau, bukan coba tebakan ke-3).
+- **TIDAK disentuh**: `AutoSortLifecycleLogic.kt`/`AutoSortLifecycleLogicTest.kt` (pure-logic, TIDAK butuh Robolectric, tetap jalan), semua production code.
+- File diubah (2) + 1 dihapus: `app/build.gradle.kts`, `FILE_MANIFEST.txt`; DIHAPUS `worker/BootSurvivalWorkManagerTest.kt`.
+- **⏳ PENDING QUEUE**: reboot-survival end-to-end test via Robolectric TIDAK dicoba lagi kecuali user eksplisit minta & terima risiko OOM CI (sudah 2x percobaan gagal identik: v8.22.14, sekarang). Kalau diminta lagi: opsi belum tercoba = `org.gradle.parallel=false` global, atau jalankan test di runner GitHub Actions yg lebih besar (`ubuntu-latest-4-cores`/self-hosted).
+- versionCode 147->148, versionName 8.22.20->8.22.21.
+
 ## v8.22.20 COMPILE-FIX -- Kotlin DSL `unitTests.all{}` implicit receiver: `maxParallelForks`/`maxHeapSize` unresolved (2026-08-22)
 - **Gejala**: user upload `build-failure-log-v8_22_19.zip`. `Configure project :app` gagal -- `Unresolved reference: maxParallelForks` & `maxHeapSize` di `app/build.gradle.kts:89-90`.
 - **Root cause**: `unitTests { all { maxParallelForks = 1; maxHeapSize = "2048m" } }` (ditambah v8.22.16) -- lambda `all(Action<Test>)` di Kotlin DSL TIDAK memberi implicit receiver `Test`, cuma parameter `it: Test`. Akses properti bare (`maxParallelForks = 1`) salah resolve ke scope luar, bukan ke `it`.

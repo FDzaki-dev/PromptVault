@@ -22,8 +22,8 @@ android {
         applicationId = "com.elprompter.promptvault"
         minSdk = 26
         targetSdk = 34
-        versionCode = 147
-        versionName = "8.22.20"
+        versionCode = 148
+        versionName = "8.22.21"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -73,24 +73,16 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
-    // [v8.22.15b, re-add setelah rollback v8.22.15] isIncludeAndroidResources
-    // wajib true supaya Robolectric bisa baca AndroidManifest.xml/res/* saat
-    // unit test. BARU kali ini: `all{}` maxParallelForks=1 (paksa test dalam
-    // 1 task jalan 1 JVM fork pada satu waktu, bukan sebanyak core CPU
-    // runner) + maxHeapSize eksplisit (Robolectric shadow-classload Android
-    // SDK berat -- default heap Gradle test worker sering tidak cukup).
-    // Digabung dengan build.yml yang sekarang cuma jalankan testDebugUnitTest
-    // (bukan +testReleaseUnitTest paralel) -- 2 lapis mitigasi utk root cause
-    // OOM v8.22.14 (lihat PROJECT_STATE.md v8.22.15/v8.22.15b), bukan cuma 1.
-    testOptions {
-        unitTests {
-            isIncludeAndroidResources = true
-            all {
-                it.maxParallelForks = 1
-                it.maxHeapSize = "2048m"
-            }
-        }
-    }
+    // [v8.22.21 ROLLBACK] Robolectric DIHAPUS LAGI -- exit value 10 (OOM
+    // silent-crash) TERULANG PERSIS sama walau 2 lapis mitigasi v8.22.16
+    // (maxParallelForks=1 + maxHeapSize=2048m + testDebugUnitTest-only)
+    // SUDAH aktif jalan (baru bisa dites nyata sekarang, DSL-nya sempat
+    // salah syntax di v8.22.19->20). Sesuai kontingensi yang SUDAH ditulis
+    // eksplisit di v8.22.16: "kalau MASIH merah dgn sinyal OOM yang sama
+    // meski sudah 2 lapis mitigasi -> skip Robolectric permanen, terima
+    // reboot-survival end-to-end sbg gap test terdokumentasi". Runner CI
+    // (~7GB) terbukti tidak cukup utk Robolectric shadow-classload Android
+    // SDK + Gradle/Kotlin daemon resident, TERLEPAS dari tuning heap/fork.
 }
 
 dependencies {
@@ -148,19 +140,9 @@ dependencies {
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
-    // [v8.22.15b, re-add setelah rollback v8.22.15] Versi PERSIS sama dgn
-    // percobaan pertama (v8.22.14) -- versi bukan penyebab OOM, root cause
-    // adalah 2 JVM Robolectric paralel (testDebugUnitTest+testReleaseUnitTest
-    // bersamaan) tanpa batas fork/heap eksplisit. Fix kali ini ADA DI 2
-    // TEMPAT LAIN: `testOptions.unitTests.all{}` di bawah (maxParallelForks=1,
-    // maxHeapSize) + `.github/workflows/build.yml` (CI sekarang cuma jalankan
-    // testDebugUnitTest, bukan +testReleaseUnitTest -- source set test SAMA
-    // persis utk kedua varian, 0 coverage hilang, tinggal 1 JVM Robolectric
-    // yg jalan, bukan 2 bersamaan).
-    testImplementation("org.robolectric:robolectric:4.13")
-    testImplementation("androidx.test:core:1.6.1")
-    testImplementation("androidx.test.ext:junit:1.2.1")
-    testImplementation("androidx.work:work-testing:2.9.1")
+    // [v8.22.21 ROLLBACK] testImplementation Robolectric/androidx.test/
+    // work-testing DIHAPUS -- lihat catatan lengkap di `testOptions` block
+    // atas (yang juga dihapus) & PROJECT_STATE.md v8.22.21.
 
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
