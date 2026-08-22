@@ -13,6 +13,47 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.22.9 -- Fix P1 audit #2, rename extensionless trailing dot (2026-08-22)
+- Lanjutan audit `PromptVault_v8_22_7_Final_Audit...md` (batch v8.22.8
+  tutup P1 #1). Eksekusi P1 #2: rename extensionless salah, `README`
+  jadi `README_1.` (titik trailing nyasar). Batas 1 task/batch --
+  4 item audit sisanya TETAP di pending queue.
+- **Bug**: `nextAvailableFileName` (FileSorter.kt) SELALU format
+  `"${base}_$counter.$ext"` walau `ext` kosong -- hasil titik trailing
+  nyasar. Bug ini SEBELUMNYA sengaja dipertahankan (Fase 1.1 ekstraksi
+  "bug-for-bug parity"), tapi audit user konfirmasi ini bug NYATA, bukan
+  perilaku yang perlu dijaga -- 3 blok rename lain di file yang sama
+  (`restoreTarget` undo, ~3 lokasi) SUDAH benar sejak awal (cek
+  `ext.isNotEmpty()`), cuma fungsi ini yang ketinggalan.
+- **Fix**: `candidate = if (ext.isNotEmpty()) "${base}_$counter.$ext"
+  else "${base}_$counter"` -- `README` (conflict) -> `README_1` (tanpa
+  titik), file berekstensi tidak berubah sama sekali (path `ext.isNotEmpty()`
+  identik dgn sebelumnya).
+- **Test**: `FileSorterPureLogicTest.kt` -- test lama yang MENGUNCI bug
+  (`"README_1."` expected) diganti mengunci perilaku BENAR (`"README_1"`),
+  +1 test baru (multi-conflict extensionless, `README_3`). Test lain di
+  file yang sama (conflict berekstensi) TIDAK disentuh, tetap lolos.
+- **TIDAK disentuh**: 3 blok rename undo (`restoreTarget`, sudah benar),
+  logic scan/match/pattern, SAF/Shizuku, arsitektur.
+- File diubah (2): `util/FileSorter.kt`, `test/.../FileSorterPureLogicTest.kt`.
+  `preflight_check.sh` 13/13 lolos. Confidence Rating: **95%** (fix 1
+  baris + regression test lokal terverifikasi manual thd 2 kasus
+  (single & multi-conflict), risiko regresi sangat rendah -- turun dari
+  100% krn `./gradlew test` belum dijalankan sungguhan di batch ini,
+  cuma ditelusuri manual).
+- **User WAJIB verifikasi**: build CI hijau (`testDebugUnitTest`/
+  `testReleaseUnitTest` termasuk test baru ini).
+- **⏳ PENDING QUEUE (4 item dari audit, batas 1 task/batch)**:
+  1. P2 #3: Import Rule belum validasi invariant sebelum persist
+     (folderName, pattern, minKb/maxKb >=0 & minKb<=maxKb, ID/payload).
+  2. P2 #4: Notifikasi Manual Scan salah wording ("Auto-sort
+     berjalan/selesai" harusnya "Scan berjalan/selesai" generik).
+  3. P2 #5: Test lifecycle Auto-Sort belum lengkap (7 skenario ON/OFF/
+     reboot/widget) -- termasuk regression test race fix v8.22.8.
+  4. P3 #6: Diagnostics belum bedakan `autoSortEnabled` vs WorkManager
+     state vs next scheduled run.
+- versionCode 135->136, versionName 8.22.8->8.22.9.
+
 ## v8.22.8 -- CABUT DISCONTINUED: fix P1 audit #1, scheduler race ON/OFF (2026-08-22)
 - Status DISCONTINUED (v8.22.7) DICABUT -- user upload audit bug baru
   (`PromptVault_v8_22_7_Final_Audit_Straight_To_The_Point.md`, 6 item).

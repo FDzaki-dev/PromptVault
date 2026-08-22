@@ -108,12 +108,20 @@ class FileSorterPureLogicTest {
     }
 
     @Test
-    fun `extensionless file name still gets a trailing dot -- bug-for-bug parity with production`() {
-        // SENGAJA menguji perilaku "aneh" ini (bukan memperbaikinya) --
-        // lihat KDoc nextAvailableFileName di FileSorter.kt kenapa ini
-        // dipertahankan apa adanya di batch ekstraksi ini.
+    fun `extensionless file name gets counter without trailing dot`() {
+        // [Fix audit P1 #2, 2026-08-22] Dulu test ini justru MENGUNCI bug
+        // "README_1." (titik trailing nyasar) sbg "bug-for-bug parity yang
+        // disengaja". Audit user konfirmasi itu bug nyata -- sekarang
+        // mengunci perilaku BENAR: tanpa ekstensi, tidak ada titik trailing.
         val existing = setOf("README")
         val name = nextAvailableFileName("README") { it in existing }
-        assertEquals("README_1.", name)
+        assertEquals("README_1", name)
+    }
+
+    @Test
+    fun `extensionless file name increments counter across multiple conflicts`() {
+        val existing = setOf("README", "README_1", "README_2")
+        val name = nextAvailableFileName("README") { it in existing }
+        assertEquals("README_3", name)
     }
 }

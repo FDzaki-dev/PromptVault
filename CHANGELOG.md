@@ -3,6 +3,13 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.22.9 (2026-08-22) — FIX: rename extensionless trailing dot (audit P1 #2)
+
+`nextAvailableFileName` sekarang skip titik saat ekstensi kosong --
+`README` (conflict) -> `README_1`, bukan `README_1.`. Test lama yang
+mengunci bug ini diganti mengunci perilaku benar. 4 item audit lain
+masuk pending queue.
+
 ## v8.22.8 (2026-08-22) — FIX: race condition scheduler ON/OFF (audit P1 #1)
 
 `WorkScheduler` diserialkan pakai `Mutex` + baca DataStore FRESH di

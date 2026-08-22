@@ -197,12 +197,15 @@ fun nextAvailableFileName(originalName: String, exists: (String) -> Boolean): St
     var counter = 1
     var candidate: String
     do {
-        // Sengaja SELALU "_$counter.$ext" (bahkan kalau ext kosong, hasil
-        // "nama_1." dgn titik trailing) -- ini bug-for-bug parity dgn
-        // perilaku produksi asli (`"${file.nameWithoutExtension}_$counter.${file.extension}"`
-        // tanpa pengecualian ext kosong). TIDAK diperbaiki di batch ini --
-        // itu perubahan perilaku terpisah, di luar scope "ekstrak murni".
-        candidate = "${base}_$counter.$ext"
+        // [Fix audit P1 #2, 2026-08-22] Dulu SELALU "_$counter.$ext" bahkan
+        // saat `ext` kosong (mis. "README" -> "README_1." dgn titik
+        // trailing nyasar) -- bug-for-bug parity yg SENGAJA dipertahankan
+        // sejak ekstraksi Fase 1.1, TAPI audit user konfirmasi ini memang
+        // bug nyata (bukan perilaku yang perlu dipertahankan), dan 3 blok
+        // rename lain di file ini (`restoreTarget`, baris ~744/1467/1535)
+        // SUDAH benar sejak awal (cek `ext.isNotEmpty()`) -- fungsi ini
+        // yang ketinggalan, sekarang disamakan.
+        candidate = if (ext.isNotEmpty()) "${base}_$counter.$ext" else "${base}_$counter"
         counter++
     } while (exists(candidate))
     return candidate
