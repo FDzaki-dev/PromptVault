@@ -13,6 +13,13 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.22.20 COMPILE-FIX -- Kotlin DSL `unitTests.all{}` implicit receiver: `maxParallelForks`/`maxHeapSize` unresolved (2026-08-22)
+- **Gejala**: user upload `build-failure-log-v8_22_19.zip`. `Configure project :app` gagal -- `Unresolved reference: maxParallelForks` & `maxHeapSize` di `app/build.gradle.kts:89-90`.
+- **Root cause**: `unitTests { all { maxParallelForks = 1; maxHeapSize = "2048m" } }` (ditambah v8.22.16) -- lambda `all(Action<Test>)` di Kotlin DSL TIDAK memberi implicit receiver `Test`, cuma parameter `it: Test`. Akses properti bare (`maxParallelForks = 1`) salah resolve ke scope luar, bukan ke `it`.
+- **Fix**: `it.maxParallelForks = 1` & `it.maxHeapSize = "2048m"`. 2 baris, nol perubahan logika/nilai.
+- versionCode 146->147, versionName 8.22.19->8.22.20.
+- **Belum diverifikasi CI hijau** -- WAJIB dicek run Actions berikutnya.
+
 ## v8.22.19 -- Fix RACE CONDITION di logging v8.22.18 sendiri: exec>tee kehilangan log step yang exit cepat (2026-08-22)
 - User upload build-failure-log-v8_22_18: ADA `stale-run-guard.log`,
   `read-version.log`, `generate-wrapper.log` -- TAPI TETAP TIDAK ADA

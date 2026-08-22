@@ -22,8 +22,8 @@ android {
         applicationId = "com.elprompter.promptvault"
         minSdk = 26
         targetSdk = 34
-        versionCode = 146
-        versionName = "8.22.19"
+        versionCode = 147
+        versionName = "8.22.20"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -86,8 +86,8 @@ android {
         unitTests {
             isIncludeAndroidResources = true
             all {
-                maxParallelForks = 1
-                maxHeapSize = "2048m"
+                it.maxParallelForks = 1
+                it.maxHeapSize = "2048m"
             }
         }
     }

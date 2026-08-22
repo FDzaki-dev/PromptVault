@@ -3,6 +3,11 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.22.20 (2026-08-22) — Compile-fix: `unitTests.all{}` implicit receiver Kotlin DSL
+`maxParallelForks`/`maxHeapSize` di `app/build.gradle.kts` diakses tanpa `it.`
+prefix di dalam `all(Action<Test>)` -- Kotlin DSL tidak treat itu sbg implicit
+receiver. Fix: `it.maxParallelForks` / `it.maxHeapSize`. 2 baris.
+
 ## v8.22.19 (2026-08-22) — Fix race condition di logging v8.22.18 sendiri
 
 Log gagal v8.22.18 masih tanpa `decode-keystore.log`, padahal itu tepat
