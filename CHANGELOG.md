@@ -3,6 +3,32 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.25.4 (2026-08-22) — GANTI TEKNIK KE-4: border bevel → dual soft-shadow genuine
+
+User kirim palet+spec CSS literal (base #181a20, convex/concave dual
+`box-shadow` eksak hex+offset+blur, accent neon 3-stop). Root cause
+v8.25.3 (bevel border) masih "belum sempurna": garis tegas beda teknik
+dari soft-shadow neumorphism genuine (2 shadow blur yg melebur ke
+background, bukan garis presisi).
+
+Fix: `Paint.setShadowLayer` dual-offset dual-warna (native Android,
+terjemahan persis CSS box-shadow). `NeumorphTokens.kt` rewrite penuh
+ke-4x (token 1:1 dari spec + `convexShadow()`/`concaveShadow()`
+extension). `TactileSurface.kt` cabang Neumorphism: `Surface` M3 dilepas
+(cuma solid Color) → `Box` + shadow drawBehind (layer bawah) +
+clip+background brush (layer atas) + clickable+ripple manual.
+
+Accent neon (pink-oranye-emas) DISEDIAKAN sbg token tapi TIDAK dipasang
+ke elemen mana pun — brand accent app ini biru periwinkle konsisten
+lintas seluruh app, ganti hue = rebrand global di luar scope. Dial
+gauge/bottom-nav di image referensi murni mood-board gaya, bukan
+permintaan fitur (app ini file-sorter, tidak relevan).
+
+File diubah (2). Preflight 14/14 PASS langsung. versionCode 160→161,
+versionName 8.25.3→8.25.4. **Paling kritis diverifikasi**: API native
+`setShadowLayer` via Compose `drawIntoCanvas` belum ada preseden compile
+di project ini — cek CI hijau dulu sebelum device test.
+
 ## v8.25.3 (2026-08-22) — GANTI TEKNIK: fill tint -> border bevel (Neumorphism)
 
 Root cause final: fill wash (v8.24.0-v8.25.2) PASTI dibatasi alpha

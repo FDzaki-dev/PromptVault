@@ -13,6 +13,73 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.25.4 -- GANTI TEKNIK KE-4: border bevel -> dual soft-shadow genuine (2026-08-22)
+- User kirim palet+spec CSS literal PERSIS (base #181a20, convex/concave
+  dual `box-shadow` dgn hex+offset+blur eksak, accent neon 3-stop) hasil
+  ekstraksi dari referensi visual asli (dashboard neumorphism genuine) --
+  "sudah menunjukkan Neumorphism yang diinginkan, tapi belum sempurna".
+- **Root cause v8.25.3 (bevel border) msh "belum sempurna"**: garis
+  bingkai TEGAS 2dp itu SECARA TEKNIK beda dari soft-shadow neumorphism
+  genuine -- neumorphism asli TIDAK PERNAH pakai garis tepi solid, tapi
+  2 shadow BLUR (terang+gelap) yang MELEBUR halus ke background
+  sekitarnya, itu sumber kesan "empuk"-nya, bukan garis presisi.
+- **Fix (ganti total ke-4x)**: implementasi shadow ganda SUNGGUHAN via
+  `Paint.setShadowLayer` (Android native, dual-offset dual-warna) --
+  PERSIS terjemahan `box-shadow` CSS user. `NeumorphTokens.kt` REWRITE
+  PENUH: token warna 1:1 dari spec (`ConvexGradientStart/End`,
+  `ConvexShadowDark/Light`, versi Concave dibalik arah + teknik inset
+  clip+stroke, `AccentGradientColors`/`AccentShadowColor` disediakan tapi
+  SENGAJA belum dipasang -- lihat poin scope di bawah), + 2 fungsi
+  extension `Modifier.convexShadow()`/`concaveShadow()`. `TactileSurface.kt`
+  cabang Neumorphism: `Surface` M3 DILEPAS (cuma terima solid `Color`,
+  tidak bisa gradient `Brush`) -> `Box` polos + shadow (drawBehind, layer
+  BAWAH) + `.clip(shape).background(brush)` (layer ATAS, nutup badan
+  shadow, cuma sisakan bagian yg "mengintip" di tepi -- PERSIS efek CSS
+  box-shadow ganda) + `clickable`+`ripple()` M3 manual (gantikan
+  interaksi bawaan `Surface` yg hilang).
+- **Scope decision (accent neon TIDAK di-wire)**: token
+  `AccentGradientColors` (pink-oranye-emas) DISEDIAKAN persis spec, TAPI
+  TIDAK dipasang ke tombol/elemen mana pun batch ini -- brand accent app
+  ini biru periwinkle (`pv_primary_accent`) dipakai KONSISTEN lintas 3
+  gaya tema & puluhan file/screen; menimpanya jadi gradient hangat di
+  sini = REBRAND GLOBAL tak diminta, di luar scope "benerin kartu
+  neumorphism yg belum sempurna" (dikonfirmasi dari screenshot user:
+  keluhan soal KARTU/toggle, bukan warna aksen). Token siap dipakai kalau
+  user tunjuk elemen spesifik mana yg dimaksud "accent aktif".
+- **Circular dial gauge/bottom nav bar (image 3) TIDAK dibangun**:
+  gambar itu murni referensi GAYA/TEKNIK shadow (mood board), bukan
+  permintaan fitur baru -- app ini file-sorter, 0 use-case dial/bottom-
+  nav yg masuk akal ditambahkan. Diadaptasi sesuai instruksi "adaptasi",
+  bukan disalin literal fitur yg tidak relevan.
+- **Kenapa `Paint.setShadowLayer` (bukan `BlurMaskFilter`/kombinasi lain)**:
+  shadow shape (bukan teks) baru didukung PENUH hardware-accelerated
+  canvas sejak API 28 -- project ini eksplisit target arsitektur modern
+  API 31+ (aturan pinned), jadi trade-off "shadow tidak tampak di API<28,
+  fallback flat gradient polos TANPA crash" DITERIMA sesuai arahan
+  "dilarang overthinking backward-compat OS lama".
+- File diubah (2): `ui/theme/NeumorphTokens.kt` (rewrite penuh ke-4x),
+  `ui/components/TactileSurface.kt` (cabang Neumorphism, teknik ke-4).
+  `preflight_check.sh` 14/14 lolos LANGSUNG (0 iterasi fix -- KDoc baru
+  konsisten pakai `(v8.25.4)`).
+  Confidence Rating: **75%** (teknik `setShadowLayer` dual-offset adalah
+  solusi yg TERBUKTI dipakai luas di komunitas Compose utk kasus PERSIS
+  ini, TAPI turun dari rating batch lain krn: (1) riwayat 3x percobaan
+  neumorphism sebelumnya semua terbukti "belum sempurna" di device asli
+  meski masing2 terlihat solid secara kode/preflight, (2) fungsi extension
+  member di dalam `object` -- pola `with(NeumorphTokens) { modifier.
+  convexShadow(...) }` -- BELUM ada preseden dipakai di codebase ini
+  sebelumnya, sintaks valid Kotlin tapi kombinasi dgn `drawIntoCanvas`+
+  `nativeCanvas`+`setShadowLayer` di Compose BELUM pernah divalidasi
+  compile/runtime nyata di project spesifik ini).
+- **User WAJIB verifikasi**: (1) build CI hijau (paling kritis batch ini,
+  API framework native jarang dipakai sebelumnya), (2) buka Neumorphism
+  -- shadow ganda blur terlihat di tepi kartu (terang kiri-atas, gelap
+  kanan-bawah utk kartu biasa), (3) toggle/track OFF (recessed) kesan
+  cekung (gelap kiri-atas, terang kanan-bawah, DI DALAM tepi), (4) tap
+  kartu/tombol tetap ada ripple (interaksi tidak hilang meski `Surface`
+  M3 dilepas).
+- versionCode 160->161, versionName 8.25.3->8.25.4.
+
 ## v8.25.3 -- GANTI TEKNIK KE-3: fill tint -> border bevel (root cause final) (2026-08-22)
 - User laporkan v8.25.2 (screenshot): "jadi default lagi sih, tapi efek
   glow nya masih ganggu gak sesuai Neumorphism murni. dan masih flat

@@ -2,13 +2,16 @@ package com.elprompter.promptvault.ui.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.ripple.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Dp
@@ -47,16 +50,18 @@ import com.elprompter.promptvault.ui.theme.VaultTheme
  *    mengambang, insting glassmorphism standar: raised vs sunken beda
  *    treatment cahaya, BUKAN keluar dari gaya desain itu sendiri).
  *
- * ## Neumorphism (v8.23.2, GANTI TEKNIK ke-3 kalinya di v8.25.3 -- lihat
+ * ## Neumorphism (v8.23.2, GANTI TEKNIK ke-4 kalinya di v8.25.4 -- lihat
  * javadoc lengkap & root cause final di `NeumorphTokens.kt`)
  * Berlaku saat `VaultTheme.style == NEUMORPHISM` -- treatment BEDA TOTAL
- * (bukan varian dari Glass): fill OPAQUE polos (`color` caller apa
- * adanya, TIDAK ditint), TANPA sheen glass. Kedalaman SEKARANG murni
- * dari **garis bingkai (bevel) dual-tone** -- `Modifier.border` dgn
- * `NeumorphTokens.bevelBrush()` (diagonal terang->gelap, TEPAT di tepi
- * shape, TIDAK ada fill/glow/blob apa pun lagi di dalam ATAU di luar
- * bentuk). `recessed=true` membalik arah (gelap di kiri-atas, terang di
- * kanan-bawah -- kesan "ditekan ke dalam").
+ * (bukan varian dari Glass ATAU M3 `Surface`): `Box` polos + gradient
+ * fill diagonal (`NeumorphTokens.convexBrush`/`concaveBrush`) + SHADOW
+ * GANDA genuine (`NeumorphTokens.convexShadow`/`concaveShadow`, teknik
+ * `Paint.setShadowLayer` dual-offset dual-warna, PERSIS terjemahan CSS
+ * `box-shadow` yg dikasih user) -- BUKAN lagi `Modifier.border` bevel
+ * (v8.25.3, garis tegas terbukti "belum sempurna" krn beda teknik dari
+ * soft-shadow neumorphism genuine). `recessed=true` pakai versi
+ * concave (cekung, shadow inset via clip+stroke) alih-alih convex
+ * (timbul, shadow di luar bentuk).
  *
  * @param recessed permukaan "tenggelam" (track switch/segmented control
  *   OFF, grabber pill sheet) -- tonal & shadow elevation SAMA-SAMA
@@ -82,39 +87,37 @@ fun TactileSurface(
     val effectiveElevation = if (recessed) 0.dp else elevation
 
     if (style == ThemeStyleOption.NEUMORPHISM) {
-        // [v8.25.3] Fill tint gradient (v8.24.0-v8.25.2, DI DALAM bentuk)
-        // DIHAPUS TOTAL -- diganti border bevel tipis, lihat javadoc di
-        // atas & NeumorphTokens.kt utk root cause lengkap kenapa fill
-        // tint tidak pernah bisa cukup terlihat (dibatasi WCAG teks).
-        val bevelBrush = if (recessed) {
-            NeumorphTokens.bevelBrush(NeumorphTokens.BevelDarkColor, NeumorphTokens.BevelLightColor)
-        } else {
-            NeumorphTokens.bevelBrush(NeumorphTokens.BevelLightColor, NeumorphTokens.BevelDarkColor)
+        // (v8.25.4) `Surface` M3 DILEPAS utk gaya ini -- `color`-nya cuma
+        // terima solid `Color`, tidak bisa gradient `Brush`. Shadow GANDA
+        // (di `NeumorphTokens`) WAJIB digambar di layer TERPISAH & DI
+        // BAWAH fill gradient (lihat urutan modifier: shadow dulu baru
+        // `.background(brush, shape)`), supaya cuma bagian shadow yg
+        // "mengintip" di tepi luar/dalam yg tampak -- PERSIS efek CSS
+        // box-shadow ganda, bukan shadow nutup seluruh badan.
+        val shadowModifier = with(NeumorphTokens) {
+            if (recessed) Modifier.concaveShadow(shape) else Modifier.convexShadow(shape)
         }
-        val bevelBorder = border ?: BorderStroke(NeumorphTokens.BevelWidth, bevelBrush)
-        if (onClick != null) {
-            Surface(
-                onClick = onClick,
-                enabled = enabled,
-                modifier = modifier,
-                shape = shape,
-                color = color,
-                border = bevelBorder,
-                tonalElevation = 0.dp,
-                shadowElevation = 0.dp,
+        val brush = if (recessed) NeumorphTokens.concaveBrush() else NeumorphTokens.convexBrush()
+        val clickModifier = if (onClick != null) {
+            Modifier.clickable(
                 interactionSource = interactionSource,
-                content = content
+                indication = ripple(),
+                enabled = enabled,
+                onClick = onClick
             )
-        } else {
-            Surface(
-                modifier = modifier,
-                shape = shape,
-                color = color,
-                border = bevelBorder,
-                tonalElevation = 0.dp,
-                shadowElevation = 0.dp,
-                content = content
+        } else Modifier
+        Box(
+            modifier = modifier
+                .then(shadowModifier)
+                .then(clickModifier)
+        ) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .clip(shape)
+                    .background(brush)
             )
+            content()
         }
         return
     }
