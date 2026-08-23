@@ -3,6 +3,17 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.28.2 (2026-08-23) — Border Neumorphism: solid → gradient diagonal fade
+
+User lapor border v8.28.1 solid rata ("neon"), maunya fade kiri-atas ke
+kanan-bawah. Fix: `GoldBorderColor` (Color) → `goldBorderBrush()`
+(`Brush.linearGradient` default start/end, resolve jadi diagonal
+otomatis lintas ukuran). `BorderStroke(width, brush)` di
+`TactileSurface.kt`.
+
+Preflight: 14/14 kategori PASS. versionCode 166→167, versionName
+8.28.1→8.28.2.
+
 ## v8.28.1 (2026-08-23) — Border keemasan Neumorphism dikembalikan
 
 Border sempat hilang tanpa sengaja saat emergency fix v8.28.0 (fokus

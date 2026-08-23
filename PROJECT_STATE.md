@@ -13,6 +13,25 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.28.2 -- Border Neumorphism: solid -> gradient diagonal fade (2026-08-23)
+- User lapor via 4 screenshot: border emas v8.28.1 "lebih mirip border
+  neon emas" (solid rata di semua sisi) -- maksud sebenarnya "muncul
+  dari sisi kiri atas membentang lalu fade out ke sisi kanan bawah".
+- **Fix**: `NeumorphTokens.GoldBorderColor: Color` (solid) diganti
+  `goldBorderBrush(): Brush` -- `Brush.linearGradient(listOf(Tertiary,
+  Color.Transparent))` TANPA `start`/`end` eksplisit (default
+  `start=Offset.Zero`/kiri-atas, `end=Offset.Infinite` -> Compose resolve
+  jadi diagonal PERSIS ukuran elemen saat digambar, sama arah persis dgn
+  `fillHighlightBrush()`/`fillShadeBrush()` yang sudah ada -- 1 arah
+  cahaya konsisten). `TactileSurface.kt`: `BorderStroke(width, brush)`
+  (overload yang menerima `Brush`, bukan cuma `Color` -- API standar
+  `androidx.compose.foundation.BorderStroke`).
+- File diubah (2): `ui/theme/NeumorphTokens.kt`,
+  `ui/components/TactileSurface.kt`. `preflight_check.sh` 14/14 lolos.
+- **User WAJIB verifikasi**: border sekarang pekat di sudut kiri-atas
+  tiap kartu, meluruh transparan menuju kanan-bawah -- bukan rata solid.
+- versionCode 166->167, versionName 8.28.1->8.28.2.
+
 ## v8.28.1 -- Border keemasan Neumorphism dikembalikan (2026-08-23)
 - User lapor via 2 screenshot (Beranda + tab Tampilan, saklar Neumorphism
   ON): "kembalikan sekat pembatas luar/Border keemasan yang timbul itu,

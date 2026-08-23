@@ -86,6 +86,20 @@ object NeumorphTokens {
      * sama prinsipnya dgn [OutlineVariant]/border glass-edge Glassmorphism
      * -- TIDAK tunduk ambang 3:1 WCAG 1.4.11.
      */
-    val GoldBorderColor: Color = Tertiary
+    /**
+     * v8.28.2 — Border diubah dari SOLID jadi GRADIENT diagonal, diminta
+     * eksplisit user (lapor via screenshot: solid "kek border neon", maunya
+     * "muncul dari sisi kiri atas membentang lalu fade out ke sisi kanan
+     * bawah"). `Brush.linearGradient(colors)` TANPA `start`/`end` eksplisit
+     * default `start=Offset.Zero` (kiri-atas) & `end=Offset.Infinite` --
+     * Compose resolve `Offset.Infinite` jadi diagonal PERSIS ukuran elemen
+     * saat digambar (bukan piksel tetap), otomatis benar lintas ukuran
+     * kartu tanpa perlu `BoxWithConstraints` manual -- arah SAMA persis dgn
+     * `fillHighlightBrush()`/`fillShadeBrush()` di atas (konsisten 1 arah
+     * cahaya di seluruh gaya Neumorphism).
+     */
+    fun goldBorderBrush(): Brush = Brush.linearGradient(
+        colors = listOf(Tertiary, Color.Transparent)
+    )
     val GoldBorderWidth: Dp = 1.5.dp
 }

@@ -118,7 +118,7 @@ fun TactileSurface(
         }
 
         val neumorphElevation = if (recessed) 0.dp else NeumorphTokens.ShadowElevation
-        val neumorphBorder = border ?: BorderStroke(NeumorphTokens.GoldBorderWidth, NeumorphTokens.GoldBorderColor)
+        val neumorphBorder = border ?: BorderStroke(NeumorphTokens.GoldBorderWidth, NeumorphTokens.goldBorderBrush())
         if (onClick != null) {
             Surface(
                 onClick = onClick,
