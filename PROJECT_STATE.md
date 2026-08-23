@@ -13,6 +13,68 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.23.2 -- Glassmorphism batch 2/N: toggle "Tampilan" LIVE, Neumorphism ditambah (2026-08-22)
+- User eksplisit: "toggle dikerjakan sungguhan (switch Glass<->Neumorphism)"
+  -- lanjut pending item v8.23.0 #2/#3 (switch runtime + persistensi),
+  SEKALIGUS menuntaskan gaya Neumorphism yang sebelumnya cuma nama opsi
+  di toggle tanpa engine.
+- **Data layer**: `ThemeStyleOption` (GLASSMORPHISM/NEUMORPHISM) DIPINDAH
+  dari `ui/components/ThemeStyleToggle.kt` ke `data/SettingsRepository.kt`
+  (pola sama `ConflictStrategy`) -- persisten via DataStore
+  (`theme_style_option` key), default GLASSMORPHISM (match visual de
+  facto sejak v8.23.1, 0 regresi tampilan utk user existing).
+- **CompositionLocal**: `LocalThemeStyle` baru di `Theme.kt`, diekspos
+  `VaultTheme.style`. `PromptVaultTheme(themeStyle = ...)` param baru
+  (default GLASSMORPHISM, non-breaking). `MainActivity.kt` (protected,
+  edit parsial) koleksi `viewModel.themeStyle` sebelum `PromptVaultTheme`,
+  teruskan sbg param -- 1 sumber kebenaran utk SELURUH subtree app.
+- **Neumorphism BARU DIIMPLEMENTASI PENUH** (bukan cuma placeholder):
+  file baru `NeumorphTokens.kt` (shadow offset/blur/warna terang-gelap,
+  netral bukan warm) + `TactileSurface.kt` cabang total saat
+  `NEUMORPHISM` -- fill OPAQUE (beda dari Glass yang translucent), TANPA
+  border/sheen, kedalaman dari sepasang `Modifier.shadow` (terang
+  kiri-atas, gelap kanan-bawah, offset berlawanan) dgn 2 `Box` diletak
+  DI BAWAH `Surface` fill (fill menutupi titik asal, sisi meleber keluar
+  yang kebaca -- ciri khas soft-UI). `recessed=true` membalik arah
+  shadow (kesan "ditekan", bukan "timbul").
+- **Audit ulang 3 syarat user (berlaku KEDUA gaya)**: (1) murni tanpa
+  campur aduk -- Neumorphism 0 pakai token Glass (translucency/border/
+  sheen) & sebaliknya, dua cabang kode terpisah total di
+  `TactileSurface`. (2) calm/bukan warm -- shadow Neumorphism netral
+  (hitam/putih alpha), 0 hue baru; hue dasar (H222 biru) tetap dari
+  Color.kt, tidak disentuh di kedua gaya. (3) WCAG -- Neumorphism fill
+  100% OPAQUE (bukan translucent), kontras teks PERSIS angka worst-case
+  yang sudah diverifikasi Color.kt, 0 ketidakpastian tambahan (lebih
+  simpel drpd Glass yg translucent).
+- **Toggle "Segera hadir" DIHAPUS** (`ThemeStyleToggle.kt` + string
+  `theme_toggle_coming_soon` dihapus, `theme_toggle_description` diubah)
+  -- badge itu sekarang salah/tidak akurat krn pilihan MEMANG berefek
+  nyata. `HomeScreen.kt` param `themeStyle`/`onSelectThemeStyle` baru
+  (ganti `remember` lokal), `MainViewModel.kt` expose
+  `themeStyle: StateFlow` + `setThemeStyle()` (pola manual StateFlow
+  PERSIS sama dgn `conflictStrategy`, BUKAN `.stateIn` -- konsisten
+  konvensi file, hindari import belum-terverifikasi).
+- **Koreksi kesalahan saat menulis batch ini**: sempat salah sisip baris
+  baru DI TENGAH chain `.let{}` milik `conflictStrategy` (memutus
+  ekspresi multi-baris) -- ketahuan & diperbaiki SEBELUM lanjut, pola
+  StateFlow manual utk `themeStyle` ditulis ulang identik strukturnya.
+  Dicatat di sini sesuai prinsip transparansi log, BUKAN disembunyikan.
+- File diubah (6) + 1 baru: `data/SettingsRepository.kt`,
+  `ui/MainViewModel.kt`, `ui/components/ThemeStyleToggle.kt`,
+  `ui/theme/Theme.kt`, `ui/components/TactileSurface.kt`,
+  `ui/screens/HomeScreen.kt`, `MainActivity.kt` (protected, edit
+  parsial), `res/values/strings.xml`, BARU `ui/theme/NeumorphTokens.kt`.
+  `preflight_check.sh` 13/13 lolos.
+- **User WAJIB verifikasi visual**: buka tab "Tampilan" di Beranda,
+  pilih Neumorphism -- SEMUA kartu/kontrol app harus berubah jadi flat
+  opaque + shadow ganda (bukan glass lagi). Pilih Glassmorphism lagi --
+  balik ke translucent+glint+sheen. Tutup & buka app lagi -- pilihan
+  harus PERSISTEN (DataStore, bukan reset ke Glassmorphism).
+- **⏳ Pending queue**: audit komponen LAIN yang mungkin tidak lewat
+  `TactileSurface` (v8.23.1, masih belum diaudit -- dibawa dari batch
+  sebelumnya).
+- versionCode 150->151, versionName 8.23.1->8.23.2.
+
 ## v8.23.1 -- Glassmorphism batch 1/N: engine visual di TactileSurface (2026-08-22)
 - Lanjut pending queue item #1 dari v8.23.0 ("definisi token warna aktual
   per-gaya, Glassmorphism: border+gradient kaca") -- permintaan baru user

@@ -17,26 +17,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.elprompter.promptvault.R
+import com.elprompter.promptvault.data.ThemeStyleOption
 import com.elprompter.promptvault.ui.theme.TactileTokens
 import androidx.compose.ui.unit.dp
 
 /**
- * [Pending Queue, roadmap tab "Tampilan"] KERANGKA SAJA -- picker visual 2
- * gaya tema kustom (Glassmorphism / Neumorphism) yang DISEBUTKAN user secara
- * eksplisit, TAPI belum ada engine render di baliknya. `selected`/`onSelect`
- * murni state lokal di `HomeScreen` (`remember`) -- TIDAK ditulis ke
- * DataStore/Prefs, TIDAK memengaruhi `Theme.kt`/`Color.kt`/komponen manapun.
- * Pilihan apa pun yang ditekan di sini TIDAK mengubah tampilan app SAMA
- * SEKALI saat ini -- sengaja, sesuai instruksi "jangan kerjakan isinya
- * dulu, cukup kerangkanya saja". Badge "Segera hadir" menandai ini eksplisit
- * ke user supaya tidak dikira bug kalau pilihan tidak berefek.
- *
- * Menyusul (di luar scope batch ini, PENDING QUEUE): definisi token warna
- * per-gaya, mekanisme switch runtime di `Theme.kt` (kemungkinan
- * `CompositionLocal` baru), persistensi pilihan (DataStore, pola sama
- * dengan preferensi lain di `SettingsScreen.kt`).
+ * [v8.23.2] Toggle gaya visual LIVE -- `selected`/`onSelect` sekarang
+ * ditulis ke `SettingsRepository` (DataStore) lewat `MainViewModel.setThemeStyle`
+ * dan dibaca via `MainViewModel.themeStyle`/`VaultTheme.style` (`Theme.kt`),
+ * bukan lagi state lokal `remember` (v8.23.0, kerangka). Memilih opsi di
+ * sini LANGSUNG mengubah tampilan `TactileSurface` app-wide (lihat
+ * `TactileSurface.kt`/`GlassTokens.kt`/`NeumorphTokens.kt`). Badge "Segera
+ * hadir" DIHAPUS (sudah tidak akurat -- pilihan sekarang berefek nyata).
  */
-enum class ThemeStyleOption { GLASSMORPHISM, NEUMORPHISM }
 
 @Composable
 fun ThemeStyleToggle(
@@ -55,13 +48,6 @@ fun ThemeStyleToggle(
             stringResource(R.string.theme_toggle_description),
             style = MaterialTheme.typography.bodySmall,
             color = colors.onSurfaceVariant
-        )
-        // Badge "Segera hadir" -- lihat KDoc atas: toggle ini murni kerangka,
-        // pilihan TIDAK mengubah tampilan app sama sekali saat ini.
-        Text(
-            stringResource(R.string.theme_toggle_coming_soon),
-            style = MaterialTheme.typography.labelMedium,
-            color = colors.tertiary
         )
         ThemeStyleOptionRow(
             label = stringResource(R.string.theme_toggle_glassmorphism),

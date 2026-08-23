@@ -17,6 +17,15 @@ enum class ConflictStrategy {
 }
 
 /**
+ * [v8.23.2] Gaya visual primitif `TactileSurface` -- DIPINDAH ke sini dari
+ * `ui/components/ThemeStyleToggle.kt` (v8.23.0, kerangka) supaya lapisan
+ * data yang punya persistensi, bukan komponen UI. Default GLASSMORPHISM
+ * (sudah jadi visual de facto app sejak v8.23.1 -- bukan perubahan default
+ * baru, cuma sekarang eksplisit tersimpan & bisa diganti user).
+ */
+enum class ThemeStyleOption { GLASSMORPHISM, NEUMORPHISM }
+
+/**
  * Menyimpan interval auto-scan dan strategi konflik nama file.
  *
  * v2.16.0 -- `ThemeMode` (SYSTEM/LIGHT/DARK) DIHAPUS TOTAL (technical debt
@@ -33,6 +42,7 @@ class SettingsRepository(private val context: Context) {
 
     private val intervalKey = intPreferencesKey("auto_scan_interval_minutes")
     private val conflictKey = stringPreferencesKey("conflict_strategy")
+    private val themeStyleKey = stringPreferencesKey("theme_style_option")
     private val safTreeUriKey = stringPreferencesKey("saf_tree_uri")
     private val autoSortEnabledKey = booleanPreferencesKey("auto_sort_enabled")
     private val scanConcurrencyKey = intPreferencesKey("scan_concurrency")
@@ -50,6 +60,7 @@ class SettingsRepository(private val context: Context) {
         const val DEFAULT_INTERVAL_MINUTES = 15
         val ALLOWED_INTERVALS = listOf(15, 30, 60, 120, 240)
         val DEFAULT_CONFLICT_STRATEGY = ConflictStrategy.RENAME
+        val DEFAULT_THEME_STYLE = ThemeStyleOption.GLASSMORPHISM
 
         /**
          * [Technical debt #4 di PROJECT_STATE.md, dieksekusi 2026-08-13 atas
@@ -105,6 +116,16 @@ class SettingsRepository(private val context: Context) {
 
     suspend fun setConflictStrategy(strategy: ConflictStrategy) {
         context.promptVaultDataStore.edit { prefs -> prefs[conflictKey] = strategy.name }
+    }
+
+    val themeStyleFlow: Flow<ThemeStyleOption> = context.promptVaultDataStore.data.map { prefs ->
+        runCatching { ThemeStyleOption.valueOf(prefs[themeStyleKey] ?: "") }.getOrDefault(DEFAULT_THEME_STYLE)
+    }
+
+    suspend fun getThemeStyle(): ThemeStyleOption = themeStyleFlow.first()
+
+    suspend fun setThemeStyle(option: ThemeStyleOption) {
+        context.promptVaultDataStore.edit { prefs -> prefs[themeStyleKey] = option.name }
     }
 
     /**

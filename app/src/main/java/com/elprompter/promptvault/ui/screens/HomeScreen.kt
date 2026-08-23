@@ -53,7 +53,6 @@ import com.elprompter.promptvault.ui.components.GroupedList
 import com.elprompter.promptvault.ui.components.GroupedListRow
 import com.elprompter.promptvault.ui.components.SegmentedControl
 import com.elprompter.promptvault.ui.components.TactileSurface
-import com.elprompter.promptvault.ui.components.ThemeStyleOption
 import com.elprompter.promptvault.ui.components.ThemeStyleToggle
 import com.elprompter.promptvault.ui.components.VaultCard
 import com.elprompter.promptvault.ui.theme.TactileTokens
@@ -86,7 +85,10 @@ fun HomeScreen(
     // discoverable ke PanduanScreen -- ditaruh di grouped menu Home (bukan
     // cuma di Pengaturan) supaya user baru yang belum pernah buka Pengaturan
     // sama sekali tetap gampang menemukan referensi lengkap kapan saja.
-    onOpenPanduan: () -> Unit
+    onOpenPanduan: () -> Unit,
+    // [v8.23.2] Toggle gaya tema LIVE -- lihat ThemeStyleToggle.kt.
+    themeStyle: com.elprompter.promptvault.data.ThemeStyleOption,
+    onSelectThemeStyle: (com.elprompter.promptvault.data.ThemeStyleOption) -> Unit
 ) {
     val colors = MaterialTheme.colorScheme
     // [v8.0.0] Riwayat panjang Insiden #9/#10 (baseColor vs wash gradient,
@@ -157,13 +159,10 @@ fun HomeScreen(
             Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineMedium, color = colors.onBackground)
             Text(stringResource(R.string.home_subtitle), style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
 
-            // [Pending Queue, "Tampilan" tab -- KERANGKA SAJA] Tab kedua di
-            // Beranda, isi cuma picker gaya tema (lihat KDoc lengkap di
-            // `ThemeStyleToggle.kt`) -- 0 pengaruh ke tampilan app saat ini,
-            // murni state lokal `remember` (pola sama dgn tab Log/Undo di
-            // `ActivityLogScreen.kt`, `SegmentedControl` yang sama direuse).
+            // [v8.23.2] Tab "Tampilan" sekarang LIVE -- ThemeStyleToggle
+            // baca/tulis lewat param themeStyle/onSelectThemeStyle (dari
+            // MainViewModel.themeStyle, DataStore), bukan lagi remember lokal.
             var selectedHomeTab by remember { mutableStateOf(0) }
-            var themeStyleSelection by remember { mutableStateOf(ThemeStyleOption.GLASSMORPHISM) }
             SegmentedControl(
                 options = listOf(stringResource(R.string.home_tab_beranda), stringResource(R.string.home_tab_tampilan)),
                 selectedIndex = selectedHomeTab,
@@ -172,8 +171,8 @@ fun HomeScreen(
 
             if (selectedHomeTab == 1) {
                 ThemeStyleToggle(
-                    selected = themeStyleSelection,
-                    onSelect = { themeStyleSelection = it }
+                    selected = themeStyle,
+                    onSelect = onSelectThemeStyle
                 )
             } else {
 

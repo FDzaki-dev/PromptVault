@@ -222,10 +222,9 @@
     <string name="home_tab_beranda">Beranda</string>
     <string name="home_tab_tampilan">Tampilan</string>
     <string name="theme_toggle_title">Gaya Tema</string>
-    <string name="theme_toggle_description">Pilih gaya visual custom untuk app. Perubahan belum diterapkan ke tampilan -- placeholder untuk fitur mendatang.</string>
+    <string name="theme_toggle_description">Pilih gaya visual untuk app. Berlaku langsung ke seluruh kartu &amp; kontrol.</string>
     <string name="theme_toggle_glassmorphism">Glassmorphism</string>
     <string name="theme_toggle_neumorphism">Neumorphism</string>
-    <string name="theme_toggle_coming_soon">Segera hadir -- pilihan belum berefek ke tampilan</string>
 
 
     <!-- [Roadmap Fase 1.3 batch 6/N, 2026-08-20] Ekstraksi MURNI OnboardingScreen.kt -->

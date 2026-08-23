@@ -15,6 +15,7 @@ import com.elprompter.promptvault.data.Rule
 import com.elprompter.promptvault.data.RuleRepository
 import com.elprompter.promptvault.data.SaveRuleCheck
 import com.elprompter.promptvault.data.SettingsRepository
+import com.elprompter.promptvault.data.ThemeStyleOption
 import com.elprompter.promptvault.shizuku.ShizukuManager
 import com.elprompter.promptvault.update.DownloadState
 import com.elprompter.promptvault.update.GithubAssetDto
@@ -152,6 +153,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val conflictStrategy: StateFlow<ConflictStrategy> = settingsRepository.conflictStrategyFlow
         .let { flow ->
             val state = MutableStateFlow(SettingsRepository.DEFAULT_CONFLICT_STRATEGY)
+            viewModelScope.launch { flow.collect { state.value = it } }
+            state.asStateFlow()
+        }
+
+    /** [v8.23.2] Gaya Glassmorphism/Neumorphism -- pola StateFlow manual PERSIS sama dgn [conflictStrategy] di atas (bukan `.stateIn`, konsisten dgn konvensi file ini). */
+    val themeStyle: StateFlow<ThemeStyleOption> = settingsRepository.themeStyleFlow
+        .let { flow ->
+            val state = MutableStateFlow(SettingsRepository.DEFAULT_THEME_STYLE)
             viewModelScope.launch { flow.collect { state.value = it } }
             state.asStateFlow()
         }
@@ -376,6 +385,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setConflictStrategy(strategy: ConflictStrategy) {
         viewModelScope.launch { settingsRepository.setConflictStrategy(strategy) }
+    }
+
+    fun setThemeStyle(option: ThemeStyleOption) {
+        viewModelScope.launch { settingsRepository.setThemeStyle(option) }
     }
 
     /** [Technical debt #4] Lihat dokumentasi lengkap di SettingsRepository.setScanConcurrency. */

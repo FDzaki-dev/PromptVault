@@ -3,6 +3,27 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.23.2 (2026-08-22) — Glassmorphism batch 2/N: toggle "Tampilan" LIVE + Neumorphism diimplementasikan penuh
+
+`ThemeStyleOption` dipindah ke `SettingsRepository` (persisten DataStore,
+default GLASSMORPHISM). `LocalThemeStyle` CompositionLocal baru di
+`Theme.kt`, dikoleksi di `MainActivity.kt` & diteruskan ke seluruh app.
+
+Neumorphism BARU diimplementasikan penuh (bukan placeholder):
+`NeumorphTokens.kt` baru + `TactileSurface.kt` cabang total -- fill
+opaque, sepasang shadow terarah (terang kiri-atas/gelap kanan-bawah),
+0 border/sheen (beda total dari Glass, bukan varian dari itu).
+
+Kedua gaya diaudit ulang 3 syarat user: murni (0 campur token), calm
+(shadow netral, hue dasar tidak disentuh), WCAG (Neumorphism opaque =
+kontras persis angka yang sudah diverifikasi).
+
+Badge "Segera hadir" dihapus (sudah tidak akurat). `HomeScreen`/
+`MainViewModel`/`MainActivity` diwire penuh (bukan lagi `remember` lokal).
+
+Preflight: 13/13 kategori PASS. versionCode 150→151, versionName
+8.23.1→8.23.2.
+
 ## v8.23.1 (2026-08-22) — Glassmorphism batch 1/N: engine visual di TactileSurface
 
 File baru `GlassTokens.kt` (fill translucent alpha, border glass-edge,

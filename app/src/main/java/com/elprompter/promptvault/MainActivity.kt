@@ -153,7 +153,12 @@ class MainActivity : ComponentActivity() {
             // TOTAL (rombak tema ke Material 3 murni, lihat Theme.kt) --
             // status/nav bar sekarang statis `AppBackground`, tidak perlu
             // `SideEffect` reaktif lagi (cuma 1 warna, tidak pernah berubah).
-            PromptVaultTheme {
+            // v8.23.2 -- `themeStyle` dikoleksi di sini (Glassmorphism/
+            // Neumorphism, DataStore via MainViewModel) & diteruskan ke
+            // PromptVaultTheme supaya CompositionLocal (LocalThemeStyle,
+            // Theme.kt) tersedia utk seluruh subtree, termasuk TactileSurface.
+            val themeStyle by viewModel.themeStyle.collectAsStateWithLifecycle()
+            PromptVaultTheme(themeStyle = themeStyle) {
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     PromptVaultRoot(
                         viewModel = viewModel,
@@ -300,6 +305,7 @@ private fun PromptVaultRoot(
             val skipped by viewModel.lastSkippedFiles.collectAsStateWithLifecycle()
             val scanFeedback by viewModel.scanFeedback.collectAsStateWithLifecycle()
             val homeStats by viewModel.homeStats.collectAsStateWithLifecycle()
+            val themeStyleHome by viewModel.themeStyle.collectAsStateWithLifecycle()
 
             HomeScreen(
                 ruleCount = rules.count { it.enabled },
@@ -318,7 +324,9 @@ private fun PromptVaultRoot(
                 onOpenDiagnostics = { navController.navigate(Routes.DIAGNOSTICS) },
                 onOpenSkippedFiles = { navController.navigate(Routes.SKIPPED_FILES) },
                 onOpenPanduan = { navController.navigate(Routes.PANDUAN) },
-                onOpenStatistics = { navController.navigate(Routes.STATISTICS) }
+                onOpenStatistics = { navController.navigate(Routes.STATISTICS) },
+                themeStyle = themeStyleHome,
+                onSelectThemeStyle = { viewModel.setThemeStyle(it) }
             )
         }
         composable(Routes.STATISTICS) {

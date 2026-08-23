@@ -7,6 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import com.elprompter.promptvault.data.ThemeStyleOption
 
 /**
  * v8.0.0 — ROMBAK TOTAL tema (lihat javadoc lengkap di Color.kt). Toggle
@@ -75,14 +76,29 @@ private val VaultExtra = VaultExtraColors(slate = SettingsAccent, slateContainer
 
 val LocalVaultExtraColors = staticCompositionLocalOf { VaultExtra }
 
+/** [v8.23.2] Gaya visual aktif (`TactileSurface` konsumsi ini) -- default GLASSMORPHISM, sama seperti v8.23.1 sebelum toggle nyata ada. */
+val LocalThemeStyle = staticCompositionLocalOf { ThemeStyleOption.GLASSMORPHISM }
+
 object VaultTheme {
     val extraColors: VaultExtraColors
         @Composable get() = LocalVaultExtraColors.current
+
+    val style: ThemeStyleOption
+        @Composable get() = LocalThemeStyle.current
 }
 
+/**
+ * [v8.23.2] Parameter `themeStyle` baru -- default `GLASSMORPHISM` supaya
+ * call site lama (`MainActivity.kt` sebelum wiring) tetap valid tanpa
+ * ubah signature secara breaking. Pemanggil sekarang (`MainActivity.kt`)
+ * mengirim nilai nyata dari `MainViewModel.themeStyle` (DataStore).
+ */
 @Composable
-fun PromptVaultTheme(content: @Composable () -> Unit) {
-    CompositionLocalProvider(LocalVaultExtraColors provides VaultExtra) {
+fun PromptVaultTheme(themeStyle: ThemeStyleOption = ThemeStyleOption.GLASSMORPHISM, content: @Composable () -> Unit) {
+    CompositionLocalProvider(
+        LocalVaultExtraColors provides VaultExtra,
+        LocalThemeStyle provides themeStyle
+    ) {
         MaterialTheme(
             colorScheme = PromptVaultColors,
             typography = PromptVaultTypography,
