@@ -3,6 +3,16 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.28.3 (2026-08-23) — Border Neumorphism: warna emas → Ice Cyan
+
+User pilih "Ice Cyan" (0xFF7DD3E0) dari 5 opsi yang diusulkan Claude,
+gradient diagonal (v8.28.2) dipertahankan. `NeumorphTokens.kt`: token
+`IceCyan` baru, fungsi/nama di-rename (`goldBorderBrush`→`borderBrush`,
+`GoldBorderWidth`→`BorderWidth`) biar tidak menyesatkan.
+
+Preflight: 14/14 kategori PASS. versionCode 167→168, versionName
+8.28.2→8.28.3.
+
 ## v8.28.2 (2026-08-23) — Border Neumorphism: solid → gradient diagonal fade
 
 User lapor border v8.28.1 solid rata ("neon"), maunya fade kiri-atas ke

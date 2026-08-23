@@ -13,6 +13,23 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.28.3 -- Border Neumorphism: warna emas -> Ice Cyan (2026-08-23)
+- User tanya saran warna border pengganti emas -- Claude usulkan 5 opsi
+  (Ice Cyan/Lavender/Platinum/Electric Indigo/Mint), user pilih **Ice
+  Cyan** eksplisit + tegaskan gradient diagonal (v8.28.2) TETAP
+  dipertahankan, cuma warnanya yang ganti.
+- **Fix**: `NeumorphTokens.kt` -- `IceCyan = Color(0xFF7DD3E0)` token
+  baru, dipakai gantikan `Tertiary` di brush gradient. Fungsi/token
+  di-rename biar tidak menyesatkan (bukan emas lagi):
+  `goldBorderBrush()` -> `borderBrush()`, `GoldBorderWidth` ->
+  `BorderWidth` (`GoldBorderColor` solid sudah dihapus di v8.28.2,
+  tidak relevan lagi). `TactileSurface.kt` ikut update ke nama baru.
+  Arah gradient (`Brush.linearGradient` default start/end, diagonal
+  kiri-atas->kanan-bawah) 0 berubah dari v8.28.2, sesuai instruksi.
+- File diubah (2): `ui/theme/NeumorphTokens.kt`,
+  `ui/components/TactileSurface.kt`. `preflight_check.sh` 14/14 lolos.
+- versionCode 167->168, versionName 8.28.2->8.28.3.
+
 ## v8.28.2 -- Border Neumorphism: solid -> gradient diagonal fade (2026-08-23)
 - User lapor via 4 screenshot: border emas v8.28.1 "lebih mirip border
   neon emas" (solid rata di semua sisi) -- maksud sebenarnya "muncul

@@ -97,9 +97,16 @@ object NeumorphTokens {
      * kartu tanpa perlu `BoxWithConstraints` manual -- arah SAMA persis dgn
      * `fillHighlightBrush()`/`fillShadeBrush()` di atas (konsisten 1 arah
      * cahaya di seluruh gaya Neumorphism).
+     *
+     * v8.28.3 — Warna diganti dari `Tertiary` (emas/tan) ke `IceCyan` baru
+     * (0xFF7DD3E0), user pilih dari 5 opsi yang diusulkan Claude ("Ice
+     * Cyan -- dingin, kontras tegas, beda cukup jauh dari Primary biru
+     * dominan"). Gradient diagonal (poin di atas) TETAP dipertahankan
+     * apa adanya, cuma warnanya yang ganti -- diminta eksplisit user.
      */
-    fun goldBorderBrush(): Brush = Brush.linearGradient(
-        colors = listOf(Tertiary, Color.Transparent)
+    val IceCyan: Color = Color(0xFF7DD3E0)
+    fun borderBrush(): Brush = Brush.linearGradient(
+        colors = listOf(IceCyan, Color.Transparent)
     )
-    val GoldBorderWidth: Dp = 1.5.dp
+    val BorderWidth: Dp = 1.5.dp
 }
