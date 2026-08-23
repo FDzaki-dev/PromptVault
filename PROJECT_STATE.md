@@ -13,6 +13,30 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.25.5 -- Fix compile error: 2 import hilang (ripple, toArgb) (2026-08-23)
+- User upload build-failure-log-v8_25_4: `compileDebugKotlin`+
+  `compileReleaseKotlin` FAILED, 6 error unik (12 total, x2 varian) --
+  SEMUA "Unresolved reference", BUKAN masalah bracket/parser seperti
+  batch-batch sebelumnya. Real missing-import compile error.
+- **Root cause #1**: `TactileSurface.kt` import
+  `androidx.compose.material3.ripple.ripple` -- fungsi factory `ripple()`
+  versi baru ini butuh Material3 lebih baru dari yang disediakan
+  compose-bom 2024.06.00 project ini (belum tersedia di versi itu).
+- **Fix #1**: ganti ke `androidx.compose.material.ripple.rememberRipple()`
+  -- API lama, stabil, selalu tersedia, valid dipakai sbg `Indication`
+  walau di app berbasis Material3 (pola umum/luas dipakai).
+- **Root cause #2**: `NeumorphTokens.kt` (teknik dual soft-shadow
+  `drawBehind`+`nativeCanvas`+`setShadowLayer`, "teknik ke-4" dari
+  v8.25.4) manggil `.toArgb()` di 4 tempat tanpa
+  `import androidx.compose.ui.graphics.toArgb` -- extension function
+  Compose, wajib import eksplisit.
+- **Fix #2**: import ditambahkan.
+- File diubah (2, PAS batas 1 task/batch): `ui/components/TactileSurface.kt`,
+  `ui/theme/NeumorphTokens.kt`. `preflight_check.sh` lolos bersih.
+- Confidence 90% -- fix berdasar pesan compiler ASLI+presisi (nama symbol
+  hilang persis disebutkan), bukan tebakan.
+- versionCode 161->162, versionName 8.25.4->8.25.5.
+
 ## v8.25.4 -- GANTI TEKNIK KE-4: border bevel -> dual soft-shadow genuine (2026-08-22)
 - User kirim palet+spec CSS literal PERSIS (base #181a20, convex/concave
   dual `box-shadow` dgn hex+offset+blur eksak, accent neon 3-stop) hasil

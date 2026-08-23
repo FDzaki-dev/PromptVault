@@ -3,6 +3,23 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.25.5 (2026-08-23) — Fix compile error: 2 import hilang (ripple, toArgb)
+
+Build failure log v8.25.4: compileDebugKotlin+compileReleaseKotlin FAILED,
+6 error unik, semua "Unresolved reference" — real missing-import error,
+bukan bug parser seperti batch sebelumnya.
+
+`TactileSurface.kt`: `androidx.compose.material3.ripple.ripple` butuh
+Material3 lebih baru dari compose-bom 2024.06.00 — ganti ke
+`androidx.compose.material.ripple.rememberRipple()` (API lama, stabil).
+
+`NeumorphTokens.kt`: 4x `.toArgb()` tanpa
+`import androidx.compose.ui.graphics.toArgb` — ditambahkan.
+
+2 file diubah. Confidence 90% — fix berdasar pesan compiler asli+presisi.
+
+versionCode 161->162, versionName 8.25.4->8.25.5.
+
 ## v8.25.4 (2026-08-22) — GANTI TEKNIK KE-4: border bevel → dual soft-shadow genuine
 
 User kirim palet+spec CSS literal (base #181a20, convex/concave dual
