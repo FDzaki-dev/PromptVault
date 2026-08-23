@@ -3,6 +3,14 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.28.0 (2026-08-23) — Fix regresi v8.27.0: tab "Tampilan" hilang + kartu blank
+Root cause: wrapper `Box` (shadow-caster offset custom v8.27.0) bikin
+`modifier` caller (mis. `Modifier.weight(1f)` di `SegmentedControl.kt`)
+nempel di cucu Row, bukan anak langsung -- weight diabaikan, layout Row
+rusak. Fix: wrapper `Box` + shadow offset custom dihapus total, balik ke
+SATU `Surface(shadowElevation=)` polos (pola sama Glass/Material3). Fill
+gradient tint (v8.27.0) tidak diubah, tetap sumber utama kesan timbul/cekung.
+
 ## v8.27.0 (2026-08-23) — Maksimalkan timbul/cekung Neumorphism (tanpa glow/blooming) + fix tone
 Drop-shadow asli 1 sisi (`Surface.shadowElevation` default color, ikut bentuk
 kartu) + tint gradient fill (Primary brand, bukan putih polos) -- 0 teknik

@@ -4,7 +4,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.offset
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -79,14 +78,31 @@ fun TactileSurface(
     val effectiveElevation = if (recessed) 0.dp else elevation
 
     if (style == ThemeStyleOption.NEUMORPHISM) {
-        // [v8.27.0] Ganti total dari border-polos v8.26.0 -- lihat javadoc
-        // lengkap alasan teknik & histori 4x percobaan gagal sebelumnya di
-        // `NeumorphTokens.kt`. HANYA 2 primitif yang SUDAH terbukti stabil
-        // di codebase ini: `Surface(shadowElevation=)` warna DEFAULT (bukan
-        // custom ambientColor/spotColor, bukan glow/blob) utk drop-shadow
-        // gelap satu sisi, + `Brush.linearGradient` fill tint (persis
-        // teknik sheen Glass yang sudah live) utk kesan "menangkap cahaya"
-        // di sisi terang -- TIDAK ADA teknik baru, TIDAK ADA glow/blooming.
+        // [v8.28.0 -- FIX REGRESI NYATA dari v8.27.0, ditemukan user via
+        // screenshot: tab "Tampilan" hilang total + kartu kosong blank di
+        // beberapa layar] Root cause: v8.27.0 membungkus `Surface` konten
+        // dalam `Box { shadowCasterSurface; Surface(modifier=modifier) }`
+        // supaya bisa taruh shadow-caster offset DI BELAKANG-nya -- tapi
+        // `modifier` (berisi `Modifier.weight(1f)` dari caller spt
+        // `SegmentedControl.kt`) jadinya nempel di `Surface` yang merupakan
+        // CUCU dari `Row`/`Column` (via `Box` pembungkus), BUKAN anak
+        // LANGSUNG -- `RowScope.weight()`/`BoxScope.align()` HANYA
+        // dikenali kalau modifier ada di anak LANGSUNG scope itu. Row jadi
+        // tidak tahu elemen itu punya weight, distribusi lebar rusak total
+        // (1 tab "menghilang", kartu lain kolaps/blank tak terduga).
+        // FIX: buang wrapper `Box` + shadow-caster offset SEPENUHNYA,
+        // balik ke SATU `Surface(modifier=modifier, shadowElevation=)` --
+        // PERSIS pola cabang Glass/Material3 di bawah (1 node, `modifier`
+        // caller nempel LANGSUNG di situ, weight/align caller manapun
+        // otomatis benar lagi, TERBUKTI aman krn dipakai identik di 2
+        // cabang lain tanpa masalah). Konsekuensi: shadow jadi SATU arah
+        // native Android (bukan lagi "dual-offset" custom) -- tapi
+        // stabilitas layout jauh lebih penting drpd itu, apalagi sudah 3x
+        // percobaan versi "lebih canggih" berturut-turut gagal dgn cara
+        // BEDA-BEDA (lemah tak terlihat -> washed-out -> layout rusak).
+        // Fill gradient tint (poin 2, TIDAK diubah) TETAP jadi sumber
+        // utama kesan "timbul/cekung" -- itu 100% aman krn cuma di DALAM
+        // `content()`, tidak pernah menyentuh struktur node di luar Surface.
         val highlightBrush = if (recessed) NeumorphTokens.fillShadeBrush() else NeumorphTokens.fillHighlightBrush()
         val shadeBrush = if (recessed) NeumorphTokens.fillHighlightBrush() else NeumorphTokens.fillShadeBrush()
 
@@ -101,46 +117,28 @@ fun TactileSurface(
             }
         }
 
-        Box {
-            // Drop-shadow gelap SATU sisi saja, kanan-bawah -- DILEWATI saat
-            // `recessed` (elemen cekung tidak menonjol keluar, sama logika
-            // "cekung tidak boleh berkilau" yang sudah ada di cabang Glass).
-            if (!recessed) {
-                Surface(
-                    modifier = Modifier
-                        .matchParentSize()
-                        .offset(x = NeumorphTokens.ShadowOffset, y = NeumorphTokens.ShadowOffset),
-                    shape = shape,
-                    color = MaterialTheme.colorScheme.background,
-                    shadowElevation = NeumorphTokens.ShadowElevation,
-                    content = {}
-                )
-            }
-            // `modifier` (fillMaxWidth dkk dari pemanggil) WAJIB di sini,
-            // BUKAN di Box induk -- pola sama fix regresi wrap-content yang
-            // sudah pernah ditemukan di batch fill-3-lapis sebelumnya.
-            if (onClick != null) {
-                Surface(
-                    onClick = onClick,
-                    enabled = enabled,
-                    modifier = modifier,
-                    shape = shape,
-                    color = color,
-                    tonalElevation = 0.dp,
-                    shadowElevation = 0.dp,
-                    interactionSource = interactionSource,
-                    content = neumorphContent
-                )
-            } else {
-                Surface(
-                    modifier = modifier,
-                    shape = shape,
-                    color = color,
-                    tonalElevation = 0.dp,
-                    shadowElevation = 0.dp,
-                    content = neumorphContent
-                )
-            }
+        val neumorphElevation = if (recessed) 0.dp else NeumorphTokens.ShadowElevation
+        if (onClick != null) {
+            Surface(
+                onClick = onClick,
+                enabled = enabled,
+                modifier = modifier,
+                shape = shape,
+                color = color,
+                tonalElevation = 0.dp,
+                shadowElevation = neumorphElevation,
+                interactionSource = interactionSource,
+                content = neumorphContent
+            )
+        } else {
+            Surface(
+                modifier = modifier,
+                shape = shape,
+                color = color,
+                tonalElevation = 0.dp,
+                shadowElevation = neumorphElevation,
+                content = neumorphContent
+            )
         }
         return
     }

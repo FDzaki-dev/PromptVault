@@ -13,6 +13,55 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.28.0 -- FIX REGRESI NYATA v8.27.0: tab "Tampilan" hilang + kartu blank (2026-08-23)
+- **User laporan via 3 screenshot** (Kelola Rule, Riwayat Aktivitas,
+  Beranda), nada frustrasi: "kenapa banyak yang ke distorsi/anomali sih,
+  mana tab theme hilang juga!!". Bukti konkret: SegmentedControl "Tampilan"
+  tab HILANG TOTAL (cuma "Beranda" muncul), beberapa kartu render sbg kotak
+  KOSONG blank besar (Log list & VaultCard Beranda).
+- **Root cause ditemukan**: v8.27.0 membungkus `Surface` konten dalam
+  `Box { shadowCasterSurface (offset); Surface(modifier=modifier) }` supaya
+  shadow-caster bisa digambar DI BELAKANG dgn offset -- TAPI ini artinya
+  `modifier` caller (yang di `SegmentedControl.kt` berisi `Modifier.
+  weight(1f)` utk 2 tab 50/50) jadi nempel di `Surface` yang merupakan
+  CUCU dari `Row`, BUKAN anak LANGSUNG (`Row` cuma lihat `Box` pembungkus
+  sbg anaknya). `RowScope.weight()`/`BoxScope.align()` HANYA dikenali kalau
+  modifier itu ada tepat di anak LANGSUNG scope-nya -- Row jadi tidak tahu
+  elemen itu punya weight, distribusi lebar 2 tab ambyar total (1 "hilang",
+  yang lain kolaps/blank). Kelas bug BARU (beda dari 3 kegagalan
+  sebelumnya: lemah tak terlihat / washed-out / SEKARANG layout rusak) --
+  konsekuensi tak terduga dari menambah 1 layer `Box` pembungkus.
+- **Fix**: wrapper `Box` + shadow-caster offset custom DIHAPUS TOTAL,
+  balik ke SATU `Surface(shadowElevation=)` polos (tanpa offset manual) --
+  PERSIS pola cabang Glass/Material3 yang TERBUKTI aman (1 node, modifier
+  caller nempel LANGSUNG, weight/align otomatis benar lagi krn Row/Column
+  sekarang benar-benar lihat node yang punya weight). Token `ShadowOffset`
+  (v8.27.0) dihapus dari `NeumorphTokens.kt` (sudah tidak relevan). Fill
+  gradient tint (terang kiri-atas pakai `Primary`/gelap kanan-bawah, v8.27.0
+  poin 2) **TIDAK diubah sama sekali** -- itu 100% aman krn terjadi DI
+  DALAM `content()`, tidak pernah menyentuh struktur node luar `Surface`,
+  jadi tetap jadi sumber utama kesan "timbul/cekung" sekarang.
+- **Konsekuensi yang disadari & diterima**: shadow sekarang SATU arah
+  native Android standar (bukan lagi "dual-offset custom" v8.27.0) --
+  trade-off SADAR: stabilitas layout (weight/align semua caller, bukan
+  cuma SegmentedControl -- diverifikasi grep SEMUA caller `TactileSurface`
+  di app, 0 pemakaian weight/align lain yang keliru) jauh lebih prioritas
+  drpd efek visual "lebih canggih" setelah 3 percobaan berturut-turut
+  gagal dgn cara BEDA-BEDA (v8.23.x/v8.25.x/v8.27.0).
+- File diubah (2): `ui/components/TactileSurface.kt` (cabang Neumorphism
+  saja), `ui/theme/NeumorphTokens.kt` (hapus 1 token unused). `preflight_
+  check.sh` lolos bersih (14/14). Balance kurung/kurung-siku 0 di kedua
+  file.
+- **BELUM PERNAH lewat `./gradlew` asli atau device fisik**. Mengingat
+  pola kegagalan berulang (4x sekarang), user SANGAT DIANJURKAN
+  verifikasi ketat sebelum lanjut fitur lain: (1) tab "Beranda"/"Tampilan"
+  KEDUANYA muncul & proporsi 50/50 benar; (2) 0 kartu/kotak blank di
+  MANAPUN (Kelola Rule, Riwayat Aktivitas, Beranda, semua layar lain yang
+  belum di-screenshot); (3) kesan timbul/cekung masih ada (dari fill tint,
+  mungkin lebih halus drpd v8.27.0 krn shadow tidak lagi dual-offset);
+  (4) Glassmorphism & Material3 Murni 0 berubah (tidak disentuh batch ini).
+- versionCode 164->165, versionName 8.27.0->8.28.0.
+
 ## v8.27.0 -- Maksimalkan efek timbul/cekung Neumorphism (dilarang glow/blooming) + fix "tone kurang" (2026-08-23)
 - **User feedback via 2 screenshot** (Beranda + tab Tampilan, state v8.26.0
   revert darurat): "udah normal sih, tapi kek ada yang kurang gitu tone
