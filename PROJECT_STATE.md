@@ -13,6 +13,21 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.28.4 -- Border Neumorphism: Ice Cyan -> Platinum (nyaru, bukan aksen) (2026-08-23)
+- User: "keknya emang lebih cocok pakai tone warna yang nyaru deh" --
+  ganti dari `IceCyan` (aksen kontras, v8.28.3) ke `Platinum`
+  (0xFFC8CDD6, opsi lain yang SAMA-SAMA sudah diusulkan Claude
+  sebelumnya: "netral abu-terang, klasik neumorphism, MONOKROM bukan
+  warna aksen"). Filosofi beda: bukan cari kontras mencolok, tapi blend
+  ke palet gelap netral app.
+- **Fix**: `NeumorphTokens.kt` -- `IceCyan` dihapus, `Platinum` token
+  baru. `borderBrush()` pakai `Platinum`. Nama fungsi/`BorderWidth`
+  TIDAK berubah (sudah netral sejak v8.28.3). Gradient diagonal
+  (v8.28.2) 0 berubah.
+- File diubah (1): `ui/theme/NeumorphTokens.kt`. `preflight_check.sh`
+  14/14 lolos.
+- versionCode 168->169, versionName 8.28.3->8.28.4.
+
 ## v8.28.3 -- Border Neumorphism: warna emas -> Ice Cyan (2026-08-23)
 - User tanya saran warna border pengganti emas -- Claude usulkan 5 opsi
   (Ice Cyan/Lavender/Platinum/Electric Indigo/Mint), user pilih **Ice

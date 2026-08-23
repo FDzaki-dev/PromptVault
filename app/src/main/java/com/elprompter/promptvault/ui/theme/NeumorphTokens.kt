@@ -98,15 +98,19 @@ object NeumorphTokens {
      * `fillHighlightBrush()`/`fillShadeBrush()` di atas (konsisten 1 arah
      * cahaya di seluruh gaya Neumorphism).
      *
-     * v8.28.3 — Warna diganti dari `Tertiary` (emas/tan) ke `IceCyan` baru
-     * (0xFF7DD3E0), user pilih dari 5 opsi yang diusulkan Claude ("Ice
-     * Cyan -- dingin, kontras tegas, beda cukup jauh dari Primary biru
-     * dominan"). Gradient diagonal (poin di atas) TETAP dipertahankan
-     * apa adanya, cuma warnanya yang ganti -- diminta eksplisit user.
+     * v8.28.3 — Warna diganti dari `Tertiary` (emas/tan) ke `IceCyan`
+     * (0xFF7DD3E0), user pilih dari 5 opsi yang diusulkan Claude.
+     *
+     * v8.28.4 — User: "lebih cocok pakai tone warna yang nyaru" -- ganti
+     * lagi ke `Platinum` (0xFFC8CDD6, opsi lain yang sama-sama diusulkan
+     * Claude: "netral abu-terang, klasik neumorphism, MONOKROM bukan
+     * warna aksen"). Beda filosofi dari `IceCyan`: bukan cari kontras
+     * mencolok, tapi BLEND ke palet gelap netral app -- gradient diagonal
+     * (v8.28.2) tetap 0 berubah.
      */
-    val IceCyan: Color = Color(0xFF7DD3E0)
+    val Platinum: Color = Color(0xFFC8CDD6)
     fun borderBrush(): Brush = Brush.linearGradient(
-        colors = listOf(IceCyan, Color.Transparent)
+        colors = listOf(Platinum, Color.Transparent)
     )
     val BorderWidth: Dp = 1.5.dp
 }

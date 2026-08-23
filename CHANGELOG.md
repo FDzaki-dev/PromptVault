@@ -3,6 +3,15 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.28.4 (2026-08-23) — Border Neumorphism: Ice Cyan → Platinum (nyaru, bukan aksen)
+
+User minta tone yang "nyaru" (blend), bukan aksen kontras. Ganti
+`IceCyan` → `Platinum` (0xFFC8CDD6, netral abu-terang, monokrom).
+Gradient diagonal & nama fungsi tidak berubah.
+
+Preflight: 14/14 kategori PASS. versionCode 168→169, versionName
+8.28.3→8.28.4.
+
 ## v8.28.3 (2026-08-23) — Border Neumorphism: warna emas → Ice Cyan
 
 User pilih "Ice Cyan" (0xFF7DD3E0) dari 5 opsi yang diusulkan Claude,
