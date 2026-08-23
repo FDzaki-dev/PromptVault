@@ -161,6 +161,33 @@ else
 fi
 
 echo ""
+echo "== 14. Tag KDoc bracket siku '[vX.Y.Z]' di block comment (bug KSP, v8.23.5) =="
+# [ditambahkan 2026-08-22, fix v8.25.1 build failure -- INI 2X TERJADI]
+# Root cause asli: v8.23.5 (lihat PROJECT_STATE.md). KSP mem-parse `[...]`
+# di dalam `/** */` sbg referensi KDoc bernama, tersandung pas ketemu
+# "v8.25.0" (angka+titik langsung setelah "v") -> "Closing bracket
+# expected". Tag `//` (line comment) AMAN, cuma `/** */` (block comment)
+# yang vulnerable -- v8.23.5 sudah nemu & fix manual, TAPI regresi lagi di
+# v8.25.0 krn tidak ada guard OTOMATIS -- makanya ditambah di sini sekarang.
+BAD_KDOC_TAG=$(python3 -c "
+import re, glob
+pattern = re.compile(r'\[v\d+\.\d+')
+for path in glob.glob('$KT_DIR/**/*.kt', recursive=True):
+    text = open(path, encoding='utf-8').read()
+    for m in re.finditer(r'/\*\*.*?\*/', text, re.DOTALL):
+        block = m.group(0)
+        if pattern.search(block):
+            line_no = text[:m.start()].count(chr(10)) + 1
+            print(f'{path}:~{line_no}: tag [vX.Y.Z] ditemukan di block comment')
+")
+if [ -n "$BAD_KDOC_TAG" ]; then
+  fail "Tag KDoc '[vX.Y.Z]' di block comment (ganti '(vX.Y.Z)', kurung biasa):"
+  echo "$BAD_KDOC_TAG"
+else
+  ok "Tidak ada tag '[vX.Y.Z]' di block comment manapun"
+fi
+
+echo ""
 if [ "$FAIL" -eq 0 ]; then
   echo "🟢 SEMUA AMAN -- boleh lanjut package ZIP."
 else

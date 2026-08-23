@@ -51,7 +51,7 @@ import androidx.compose.ui.unit.dp
  *    teks/1.4.11 sama sekali, sama seperti teknik lama.
  */
 object NeumorphTokens {
-    /** [v8.25.0] Seberapa besar blob glow dibanding ukuran kartu asli --
+    /** (v8.25.0) Seberapa besar blob glow dibanding ukuran kartu asli --
      * kunci "kerasa" -- blob HARUS jauh lebih besar dari kartu supaya
      * bagian yang meleber di luar tepi kartu cukup luas utk kebaca sbg
      * "glow lembut", bukan garis tipis di pinggir. */

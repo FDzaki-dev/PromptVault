@@ -13,6 +13,37 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.25.1 -- FIX BUILD FAILURE: regresi bug KDoc `[vX.Y.Z]` di NeumorphTokens.kt (2026-08-22)
+- User upload `build-failure-log-v8_25_0.zip`: `kspDebugKotlin`+
+  `kspReleaseKotlin` FAILED, 2x "Closing bracket expected" di
+  `NeumorphTokens.kt:54:12`. Hitung kurung manual (exclude comment) --
+  file 100% seimbang, konsisten dgn insiden LAMA v8.23.5.
+- **Root cause**: PERSIS root cause v8.23.5 (lihat log v8.23.5 di bawah)
+  -- KDoc `[v8.25.0]` di block comment `/** */` (baris 54, rewrite total
+  file utk teknik gradient baru) tersandung parser referensi KDoc KSP di
+  "8.25.0" (angka+titik). REGRESI: fix v8.23.5 cuma manual (6 tag diganti
+  saat itu), TIDAK ada guard otomatis -- rewrite total file di v8.25.0
+  reintroduce pola yang sama persis tanpa sadar.
+- **Fix**: `[v8.25.0]` -> `(v8.25.0)` (kurung biasa) di baris 54,
+  SATU-SATUNYA lokasi tag `[vX.Y.Z]` di block comment `/** */` di seluruh
+  project (grep project-wide dijalankan -- 5 lokasi lain semua `//` line
+  comment, TIDAK vulnerable, TIDAK disentuh).
+- **Guard permanen ditambah** (`scripts/preflight_check.sh`, check #14
+  baru): scan semua block comment `/** ... */` di seluruh `.kt`, cari
+  pola `[v<digit>.<digit>` -- FAIL kalau ketemu. Disanity-test manual:
+  reintroduce bug sementara -> check #14 KETANGKEP -> revert -> lolos
+  lagi. Guard ini yang TIDAK ADA saat v8.23.5, sekarang ADA supaya kelas
+  bug ini TIDAK BISA lolos preflight lagi ke-3 kalinya.
+- File diubah (2): `ui/theme/NeumorphTokens.kt` (1 baris),
+  `scripts/preflight_check.sh` (+check #14). `preflight_check.sh` 14/14
+  lolos (13 lama + 1 baru). Confidence Rating: **95%** (root cause
+  sudah PERSIS terverifikasi sebelumnya di v8.23.5 dgn build CI asli,
+  fix identik pola yang sudah terbukti berhasil + guard baru
+  disanity-test manual berhasil tangkap & lolos ulang).
+- **User WAJIB verifikasi**: build CI hijau (`kspDebugKotlin`/
+  `kspReleaseKotlin` lolos).
+- versionCode 157->158, versionName 8.25.0->8.25.1.
+
 ## v8.25.0 -- ROOT CAUSE FIX: shadow Neumorphism diganti total, terbukti tak terlihat vs referensi asli (2026-08-23)
 - **User bandingkan langsung** (2 screenshot: referensi desain Neumorphism
   asli vs Beranda app) -- "jelas-jelas punya kamu gak terasa sama sekali

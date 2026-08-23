@@ -3,6 +3,13 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.25.1 (2026-08-22) — FIX build failure: regresi bug KDoc `[vX.Y.Z]`
+
+Rewrite total `NeumorphTokens.kt` di v8.25.0 reintroduce bug KSP lama
+(v8.23.5): tag `[v8.25.0]` di block comment tersandung parser referensi
+KDoc. Fix: `(v8.25.0)`. + guard permanen baru di `preflight_check.sh`
+(check #14) supaya kelas bug ini ketangkep otomatis ke depan.
+
 ## v8.25.0 (2026-08-23) — Root cause fix: shadow Neumorphism diganti total (Modifier.shadow -> Brush.radialGradient)
 User bandingkan langsung dgn referensi desain asli -- kartu masih terlihat
 flat walau v8.23.6 (naikkan alpha) + v8.24.0 (fill 3-lapis). Root cause:
