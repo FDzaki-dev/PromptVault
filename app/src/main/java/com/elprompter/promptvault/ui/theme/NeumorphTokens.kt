@@ -76,4 +76,16 @@ object NeumorphTokens {
     fun fillShadeBrush(): Brush = Brush.linearGradient(
         colors = listOf(Color.Transparent, FillShadeTint)
     )
+
+    /**
+     * v8.28.1 — Border "keemasan timbul" dikembalikan sbg identitas unik
+     * Neumorphism, diminta eksplisit user (sempat hilang tanpa sengaja
+     * saat emergency fix layout v8.28.0). Pakai [Tertiary] (0xFFDABF81,
+     * SUDAH ada di palette -- dipakai ikon "Panduan"/"Auto-scan" dll,
+     * 0 hue baru diperkenalkan) -- dekoratif (garis tepi, bukan teks),
+     * sama prinsipnya dgn [OutlineVariant]/border glass-edge Glassmorphism
+     * -- TIDAK tunduk ambang 3:1 WCAG 1.4.11.
+     */
+    val GoldBorderColor: Color = Tertiary
+    val GoldBorderWidth: Dp = 1.5.dp
 }

@@ -13,6 +13,30 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.28.1 -- Border keemasan Neumorphism dikembalikan (2026-08-23)
+- User lapor via 2 screenshot (Beranda + tab Tampilan, saklar Neumorphism
+  ON): "kembalikan sekat pembatas luar/Border keemasan yang timbul itu,
+  biar jadi identitas unik dari theme Neumorphism ini" -- border sempat
+  hilang tanpa sengaja saat emergency fix layout v8.28.0 (fix itu HANYA
+  fokus buang wrapper `Box`/shadow-caster yang merusak `weight()`, tidak
+  sadar `border` juga ikut tidak diteruskan ke `Surface()` di 2 titik).
+- **Fix**: `NeumorphTokens.kt` -- 2 token baru, `GoldBorderColor` (pakai
+  `Tertiary`/0xFFDABF81, SUDAH ada di palette -- 0 hue baru) &
+  `GoldBorderWidth` (1.5dp). `TactileSurface.kt` -- `border =
+  neumorphBorder` (fallback ke gold token, TAPI hormati `border` caller
+  eksplisit kalau ada, pola sama persis cabang Glassmorphism) ditambah
+  ke KEDUA `Surface()` (onClick & non-onClick) cabang NEUMORPHISM.
+- **WCAG**: border dekoratif (garis tepi, bukan teks) -- prinsip sama
+  `OutlineVariant`/glass-edge Glassmorphism, TIDAK tunduk ambang 3:1.
+- File diubah (2): `ui/theme/NeumorphTokens.kt`,
+  `ui/components/TactileSurface.kt`. `preflight_check.sh` 14/14 lolos
+  (termasuk check #14 baru, bug KDoc bracket `[vX.Y.Z]` v8.23.5 -- 0
+  pelanggaran, dicek eksplisit sebelum commit ini krn NeumorphTokens.kt
+  disentuh).
+- **User WAJIB verifikasi**: tab Tampilan -> nyalakan Neumorphism ->
+  semua kartu/kontrol harus punya garis tepi emas/tan tipis timbul.
+- versionCode 165->166, versionName 8.28.0->8.28.1.
+
 ## v8.28.0 -- FIX REGRESI NYATA v8.27.0: tab "Tampilan" hilang + kartu blank (2026-08-23)
 - **User laporan via 3 screenshot** (Kelola Rule, Riwayat Aktivitas,
   Beranda), nada frustrasi: "kenapa banyak yang ke distorsi/anomali sih,

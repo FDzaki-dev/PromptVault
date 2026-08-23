@@ -3,6 +3,18 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.28.1 (2026-08-23) — Border keemasan Neumorphism dikembalikan
+
+Border sempat hilang tanpa sengaja saat emergency fix v8.28.0 (fokus
+buang wrapper Box, tidak sadar `border` juga ikut tidak diteruskan).
+Fix: `NeumorphTokens.GoldBorderColor` (pakai `Tertiary`, 0 hue baru) +
+`GoldBorderWidth` (1.5dp), diwire ke kedua `Surface()` cabang
+Neumorphism di `TactileSurface.kt` (hormati `border` caller eksplisit
+kalau ada).
+
+Preflight: 14/14 kategori PASS. versionCode 165→166, versionName
+8.28.0→8.28.1.
+
 ## v8.28.0 (2026-08-23) — Fix regresi v8.27.0: tab "Tampilan" hilang + kartu blank
 Root cause: wrapper `Box` (shadow-caster offset custom v8.27.0) bikin
 `modifier` caller (mis. `Modifier.weight(1f)` di `SegmentedControl.kt`)
