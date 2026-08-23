@@ -13,6 +13,62 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.25.3 -- GANTI TEKNIK KE-3: fill tint -> border bevel (root cause final) (2026-08-22)
+- User laporkan v8.25.2 (screenshot): "jadi default lagi sih, tapi efek
+  glow nya masih ganggu gak sesuai Neumorphism murni. dan masih flat
+  macam tema yang lain (gak ada unsur cekung+timbul realistis)" -- 2
+  masalah: (a) MASIH ada residu "glow" yang dirasa gak fit, (b) fill
+  tint v8.25.2 (alpha 0.16/0.42, dibatasi WCAG) TERBUKTI nyaris tak
+  kebaca di layar HP nyata -- terlalu subtle utk disebut "cekung+timbul".
+- **Root cause FINAL ditemukan**: neumorphism genuine (referensi user)
+  TIDAK PERNAH mewarnai SELURUH badan elemen (fill wash) -- kesan
+  timbulnya dari BINGKAI/TEPI (rim light+shadow) yang SEMPIT. Fill wash
+  PASTI harus dibatasi alpha rendah krn menimpa area teks (WCAG), padahal
+  garis bingkai TIPIS (2dp) di TEPI TIDAK PERNAH ditempati teks (semua
+  card punya padding konten >=16dp) -- BEBAS dari batas WCAG sama sekali,
+  alpha bisa jauh lebih tinggi & tetap 100% aman. Ini kelas teknik BEDA
+  dari 2 percobaan sebelumnya (v8.24.0 fill wash lemah, v8.25.0 glow blob
+  luar "uncanny", v8.25.2 fill wash WCAG-safe tapi tetap lemah) -- bukan
+  tuning ulang, GANTI PENDEKATAN.
+- **Fix**: `NeumorphTokens.kt` rewrite total -- token fill
+  (`SurfaceHighlightTint`/`SurfaceShadeTint`/`surfaceHighlightBrush`/
+  `surfaceShadeBrush`) DIHAPUS, ganti `BevelWidth` (2dp),
+  `BevelLightColor`/`BevelDarkColor` (alpha 0.65, JAUH lebih tinggi krn 0
+  kewajiban WCAG teks), `bevelBrush(lightCorner, darkCorner)` (diagonal
+  linear, arah ditentukan parameter, 1 fungsi bukan 2). `TactileSurface.kt`
+  -- 2 `Box` tint DI BELAKANG content() DIHAPUS, ganti
+  `Modifier.border(BorderStroke(BevelWidth, bevelBrush), shape)` via
+  parameter `border` `Surface` M3 (built-in, otomatis clip ke `shape`,
+  otomatis dihormati kalau caller suatu saat kirim `border` sendiri --
+  `border ?: BorderStroke(...)`, pola sama persis cabang Glass).
+  `recessed` membalik urutan warna di `bevelBrush()` (bukan brush
+  terpisah lagi, cukup tukar argumen).
+- **Kenapa ini juga jawab keluhan (a) "glow masih ganggu"**: teknik
+  BARU ini 0% overlap dgn definisi "glow" dlm bentuk apa pun -- tidak ada
+  blur/scale/offset (itu v8.25.0), tidak ada fill wash tipis yang
+  terlihat spt kabut (itu v8.24.0-v8.25.2) -- garis bingkai TEGAS &
+  presisi di tepi shape, teknik neumorphism paling standar/umum dipakai.
+- **TIDAK disentuh**: Glassmorphism/Material3 branch, `Color.kt`,
+  `GlassTokens.kt`, default tema.
+- File diubah (2): `ui/theme/NeumorphTokens.kt` (rewrite penuh),
+  `ui/components/TactileSurface.kt` (branch Neumorphism, teknik ke-3).
+  `preflight_check.sh` 14/14 lolos (termasuk check #14 -- KDoc baru sudah
+  ditulis pakai `(v8.25.3)`, bukan `[v8.25.3]`, dari awal kali ini).
+  Confidence Rating: **80%** (root cause analysis kali ini lebih kuat
+  drpd 2 percobaan sebelumnya -- teknik border-bevel adalah standar
+  industri utk neumorphism, bukan lagi tuning alpha yang sudah 2x
+  dilaporkan gagal -- tapi TETAP belum diverifikasi di device fisik,
+  turun dari 90%+ krn riwayat berkali-kali salah duga sebelumnya di gaya
+  visual ini spesifik).
+- **User WAJIB verifikasi**: build CI hijau, buka Neumorphism -- cek (1)
+  garis tepi kartu terlihat jelas (terang kiri-atas, gelap kanan-bawah),
+  (2) 0 elemen blur/blob di luar kartu, (3) 0 wash/tint yang menutupi
+  seluruh badan kartu. Kalau bingkai 2dp masih kurang tebal/kurang
+  kontras secara visual, next step realistis: naikkan `BevelWidth`
+  (bukan alpha lagi, sudah di 0.65 yang cukup tinggi) -- dicatat kalau
+  dilaporkan.
+- versionCode 159->160, versionName 8.25.2->8.25.3.
+
 ## v8.25.2 -- REVERT total glow-blob Neumorphism, fokus cekung+timbul saja (2026-08-22)
 - User upload screenshot app ASLI (image1) vs referensi desain soft-UI
   neumorphism genuine (image2): "jadi uncanny gini, balikin semua setelan

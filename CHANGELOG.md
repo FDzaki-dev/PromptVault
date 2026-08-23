@@ -3,6 +3,14 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.25.3 (2026-08-22) — GANTI TEKNIK: fill tint -> border bevel (Neumorphism)
+
+Root cause final: fill wash (v8.24.0-v8.25.2) PASTI dibatasi alpha
+rendah krn menimpa teks (WCAG) -- makanya selalu "flat"/tak kebaca.
+Ganti teknik ke garis bingkai (border) 2dp diagonal terang->gelap di
+TEPI shape saja -- area itu tidak pernah ditempati teks, jadi alpha bisa
+0.65 (0 batas WCAG) & hasilnya jauh lebih terlihat sbg cekung/timbul.
+
 ## v8.25.2 (2026-08-22) — REVERT: glow-blob Neumorphism dihapus, fokus cekung+timbul
 
 Teknik "glow blob luar kartu" (v8.25.0) bikin app "uncanny" (halo blur

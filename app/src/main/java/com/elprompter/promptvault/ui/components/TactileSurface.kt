@@ -47,21 +47,16 @@ import com.elprompter.promptvault.ui.theme.VaultTheme
  *    mengambang, insting glassmorphism standar: raised vs sunken beda
  *    treatment cahaya, BUKAN keluar dari gaya desain itu sendiri).
  *
- * ## Neumorphism (v8.23.2, fill 3-lapis sejak v8.24.0, REVERT glow-luar
- * sejak v8.25.2 -- lihat javadoc lengkap di `NeumorphTokens.kt`)
+ * ## Neumorphism (v8.23.2, GANTI TEKNIK ke-3 kalinya di v8.25.3 -- lihat
+ * javadoc lengkap & root cause final di `NeumorphTokens.kt`)
  * Berlaku saat `VaultTheme.style == NEUMORPHISM` -- treatment BEDA TOTAL
- * (bukan varian dari Glass): fill OPAQUE (tanpa alpha), TANPA border,
- * TANPA sheen glass, TANPA `Surface.border` glass-edge. Kedalaman
- * SEKARANG murni dari SATU sumber (v8.25.2, disederhanakan dari 2 lapisan
- * lama setelah user laporkan hasilnya "uncanny" -- screenshot dibanding
- * langsung referensi desain asli): **fill "puffy" DI DALAM bentuk**
- * (`NeumorphTokens.surfaceHighlightBrush()`/`surfaceShadeBrush()`, tint
- * gradient diagonal terang kiri-atas + gelap kanan-bawah DI ATAS fill
- * solid dasar, DI BELAKANG `content()`). Teknik "glow blob DI LUAR
- * kartu" (v8.25.0, `Brush.radialGradient` di-scale+offset) DIHAPUS TOTAL
- * -- itu yang bikin efeknya jadi halo/blob acak, bukan kesan
- * cekung/timbul genuine. `recessed=true` membalik arah tint (gelap di
- * kiri-atas, terang di kanan-bawah -- kesan "ditekan ke dalam").
+ * (bukan varian dari Glass): fill OPAQUE polos (`color` caller apa
+ * adanya, TIDAK ditint), TANPA sheen glass. Kedalaman SEKARANG murni
+ * dari **garis bingkai (bevel) dual-tone** -- `Modifier.border` dgn
+ * `NeumorphTokens.bevelBrush()` (diagonal terang->gelap, TEPAT di tepi
+ * shape, TIDAK ada fill/glow/blob apa pun lagi di dalam ATAU di luar
+ * bentuk). `recessed=true` membalik arah (gelap di kiri-atas, terang di
+ * kanan-bawah -- kesan "ditekan ke dalam").
  *
  * @param recessed permukaan "tenggelam" (track switch/segmented control
  *   OFF, grabber pill sheet) -- tonal & shadow elevation SAMA-SAMA
@@ -87,27 +82,16 @@ fun TactileSurface(
     val effectiveElevation = if (recessed) 0.dp else elevation
 
     if (style == ThemeStyleOption.NEUMORPHISM) {
-        // [v8.25.2] `lightColor`/`darkColor` (glow blob luar) DIHAPUS --
-        // lihat javadoc di atas & NeumorphTokens.kt. Cuma tint fill DALAM
-        // yang tersisa sekarang.
-        val highlightBrush = if (recessed) NeumorphTokens.surfaceShadeBrush() else NeumorphTokens.surfaceHighlightBrush()
-        val shadeBrush = if (recessed) NeumorphTokens.surfaceHighlightBrush() else NeumorphTokens.surfaceShadeBrush()
-        // Content dibungkus sama seperti cabang Glass di bawah (2 Box brush
-        // dekoratif DI BELAKANG content() asli, `propagateMinConstraints =
-        // true` WAJIB -- fix regresi centering yang SAMA persis sudah
-        // ditemukan & didokumentasikan di cabang Glass, dicegah terulang di
-        // sini dari awal, bukan nunggu dilaporkan lagi).
-        val neumorphContent: @Composable () -> Unit = {
-            Box(propagateMinConstraints = true) {
-                Box(modifier = Modifier.matchParentSize().background(highlightBrush))
-                Box(modifier = Modifier.matchParentSize().background(shadeBrush))
-                content()
-            }
+        // [v8.25.3] Fill tint gradient (v8.24.0-v8.25.2, DI DALAM bentuk)
+        // DIHAPUS TOTAL -- diganti border bevel tipis, lihat javadoc di
+        // atas & NeumorphTokens.kt utk root cause lengkap kenapa fill
+        // tint tidak pernah bisa cukup terlihat (dibatasi WCAG teks).
+        val bevelBrush = if (recessed) {
+            NeumorphTokens.bevelBrush(NeumorphTokens.BevelDarkColor, NeumorphTokens.BevelLightColor)
+        } else {
+            NeumorphTokens.bevelBrush(NeumorphTokens.BevelLightColor, NeumorphTokens.BevelDarkColor)
         }
-        // [v8.25.2] Wrapper Box luar (dulu dipakai utk posisikan 2 layer
-        // glow blob di luar batas `Surface`) DIHAPUS -- `modifier` sekarang
-        // langsung di `Surface`, konsisten dgn cabang Glass/Material3 di
-        // bawah, tidak ada lagi elemen di luar batas kartu sama sekali.
+        val bevelBorder = border ?: BorderStroke(NeumorphTokens.BevelWidth, bevelBrush)
         if (onClick != null) {
             Surface(
                 onClick = onClick,
@@ -115,21 +99,21 @@ fun TactileSurface(
                 modifier = modifier,
                 shape = shape,
                 color = color,
-                border = border,
+                border = bevelBorder,
                 tonalElevation = 0.dp,
                 shadowElevation = 0.dp,
                 interactionSource = interactionSource,
-                content = neumorphContent
+                content = content
             )
         } else {
             Surface(
                 modifier = modifier,
                 shape = shape,
                 color = color,
-                border = border,
+                border = bevelBorder,
                 tonalElevation = 0.dp,
                 shadowElevation = 0.dp,
-                content = neumorphContent
+                content = content
             )
         }
         return
