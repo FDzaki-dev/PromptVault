@@ -13,6 +13,63 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.25.2 -- REVERT total glow-blob Neumorphism, fokus cekung+timbul saja (2026-08-22)
+- User upload screenshot app ASLI (image1) vs referensi desain soft-UI
+  neumorphism genuine (image2): "jadi uncanny gini, balikin semua setelan
+  nya ke default, fokus tingkatkan 'cekung+timbul' only". Teknik "glow
+  blob di luar kartu" (v8.25.0, radial gradient di-scale 1.7x+offset
+  16dp) menghasilkan halo/blob blur besar di sekeliling tiap kartu --
+  BUKAN kesan cekung/timbul genuine spt referensi, malah kayak artifact
+  render aneh.
+- **Revert (bukan tuning, HAPUS TOTAL)**: seluruh teknik glow-luar
+  (`GlowScale`/`GlowOffset`/`LightGlowColor`/`DarkGlowColor`/
+  `glowBrush()` di `NeumorphTokens.kt`, 2 layer `Box` offset+scale di
+  `TactileSurface.kt`) DIHAPUS -- tidak ada elemen visual di luar batas
+  kartu sama sekali lagi, PERSIS spt referensi (efek timbul HANYA dari
+  tint di dalam bentuk, tidak pernah "meleber" keluar).
+- **Fokus "cekung+timbul" diperkuat** (satu2nya lapisan tersisa, fill
+  gradient v8.24.0): `SurfaceHighlightTint` 0.14->0.16 (batas atas
+  MUTLAK WCAG-aman, dihitung PRESIS ulang via formula relative-luminance
+  -- 0.16=4.53:1 lulus AA, 0.18=4.25:1 GAGAL, jadi TIDAK dinaikkan lebih
+  dari itu), `SurfaceShadeTint` 0.22->0.42 (0 batas WCAG, sisi gelap
+  bebas dikuatkan). Area gradient DILEBARKAN (stop 0.55/0.45 -> 0.65/0.35)
+  supaya tint kelihatan menutupi bidang lebih luas TANPA menaikkan alpha
+  puncak -- cara kedua menaikkan kesan "timbul" yang tidak mengubah angka
+  WCAG worst-case sama sekali.
+- **Struktur disederhanakan**: wrapper `Box` luar (dulu utk posisikan
+  glow blob) dihapus, `modifier` sekarang langsung di `Surface`, sekarang
+  konsisten dgn cabang Glass/Material3 (dulu Neumorphism satu2nya cabang
+  yg beda struktur). Import `scale`/`offset` yang jadi tidak terpakai
+  ikut dihapus.
+- **Insiden preflight tercatat**: draft awal batch ini SEMPAT kena
+  ketangkep check #14 (guard baru v8.25.1) -- KDoc baru yang ditulis
+  pakai tag `[v8.25.2]` (pola sama persis yang baru saja di-guard).
+  Diperbaiki jadi `(v8.25.2)` SEBELUM sempat di-zip -- bukti guard
+  v8.25.1 langsung berguna di sesi berikutnya.
+- **TIDAK disentuh**: gaya Glassmorphism & Material3 (branch lain di
+  `TactileSurface.kt`), `Color.kt`, pilihan tema default user (tetap
+  `SettingsRepository.DEFAULT_THEME_STYLE`, bukan diganti ke tema lain --
+  "balikin ke default" ditafsirkan sbg parameter Neumorphism-nya sendiri,
+  BUKAN pindah gaya tema, sesuai instruksi "fokus tingkatkan cekung+timbul
+  ONLY" yang menyiratkan tetap di Neumorphism).
+- File diubah (2): `ui/theme/NeumorphTokens.kt` (rewrite penuh, token
+  glow dihapus), `ui/components/TactileSurface.kt` (branch Neumorphism
+  disederhanakan + import dibersihkan). `preflight_check.sh` 14/14
+  lolos. Confidence Rating: **85%** (perhitungan WCAG presisi & sanity
+  check preflight sudah solid, tapi hasil visual akhir "apakah sekarang
+  terasa cekung+timbul cukup" tetap SUBJEKTIF & belum diverifikasi
+  langsung di device fisik -- turun dari 90%+ krn itu, konsisten dgn
+  pola riwayat v8.23.6/v8.24.0/v8.25.0 yang berkali-kali user laporkan
+  "masih belum kerasa" sampai akhirnya ketemu masalahnya bukan di alpha).
+- **User WAJIB verifikasi**: build CI hijau, buka toggle "Tampilan" ->
+  Neumorphism -- pastikan (1) TIDAK ADA lagi blob/halo blur di luar
+  kartu, (2) efek cekung/timbul di DALAM kartu terasa (walau lebih halus
+  drpd referensi krn batas WCAG). Kalau MASIH kurang kerasa dgn batas
+  WCAG saat ini, opsi berikutnya BUKAN naikkan alpha lagi (sudah di batas
+  mutlak) -- perlu teknik lain (mis. `drawBehind` custom shape bevel,
+  bukan gradient linear polos), dicatat sbg next step kalau dilaporkan.
+- versionCode 158->159, versionName 8.25.1->8.25.2.
+
 ## v8.25.1 -- FIX BUILD FAILURE: regresi bug KDoc `[vX.Y.Z]` di NeumorphTokens.kt (2026-08-22)
 - User upload `build-failure-log-v8_25_0.zip`: `kspDebugKotlin`+
   `kspReleaseKotlin` FAILED, 2x "Closing bracket expected" di

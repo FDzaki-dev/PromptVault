@@ -3,6 +3,14 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.25.2 (2026-08-22) — REVERT: glow-blob Neumorphism dihapus, fokus cekung+timbul
+
+Teknik "glow blob luar kartu" (v8.25.0) bikin app "uncanny" (halo blur
+acak vs referensi soft-UI genuine). Dihapus total -- kedalaman sekarang
+murni dari tint gradient DI DALAM fill (highlight 0.16 = batas WCAG AA
+presisi, shade 0.42, area gradient dilebarkan). Struktur `TactileSurface`
+disederhanakan, konsisten dgn branch Glass/Material3.
+
 ## v8.25.1 (2026-08-22) — FIX build failure: regresi bug KDoc `[vX.Y.Z]`
 
 Rewrite total `NeumorphTokens.kt` di v8.25.0 reintroduce bug KSP lama

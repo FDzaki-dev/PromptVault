@@ -4,13 +4,11 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.offset
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Dp
@@ -49,34 +47,21 @@ import com.elprompter.promptvault.ui.theme.VaultTheme
  *    mengambang, insting glassmorphism standar: raised vs sunken beda
  *    treatment cahaya, BUKAN keluar dari gaya desain itu sendiri).
  *
- * ## Neumorphism (v8.23.2, fill 3-lapis sejak v8.24.0, glow via gradient sejak v8.25.0)
+ * ## Neumorphism (v8.23.2, fill 3-lapis sejak v8.24.0, REVERT glow-luar
+ * sejak v8.25.2 -- lihat javadoc lengkap di `NeumorphTokens.kt`)
  * Berlaku saat `VaultTheme.style == NEUMORPHISM` -- treatment BEDA TOTAL
  * (bukan varian dari Glass): fill OPAQUE (tanpa alpha), TANPA border,
- * TANPA sheen glass, TANPA `Surface.border` glass-edge. Kedalaman dari 2
- * sumber terpisah yang SENGAJA dipisah (permintaan eksplisit user, "bukan
- * bagian shadow/opaque yang diutak-atik, background kartu yang dibikin
- * berlapis 3" -- lalu direvisi lagi v8.25.0 setelah user bandingkan
- * langsung dgn referensi asli & shadow lama terbukti nyaris tak terlihat):
- * 1. **Glow DI LUAR bentuk** (v8.25.0, GANTI TOTAL dari teknik v8.23.2):
- *    `Brush.radialGradient` (BUKAN lagi `Modifier.shadow` bawaan Android
- *    View -- root cause lengkap kenapa diganti ada di `NeumorphTokens.kt`)
- *    digambar SEBELUM `Surface` fill lewat 2 `Box` beroffset + `scale()`
- *    (blob JAUH lebih besar dari kartu, lihat `NeumorphTokens.GlowScale`)
- *    -- fill di atasnya menutupi titik asal, cuma bagian yang "meleber"
- *    keluar tepi yang terlihat (ciri khas soft-UI), sekarang jauh lebih
- *    jelas kebaca krn area bleed jauh lebih luas & tidak bergantung
- *    renderer shadow platform yang tidak reliable utk warna terang.
- * 2. **Fill "puffy" DI DALAM bentuk** (v8.24.0, TIDAK disentuh v8.25.0):
- *    2 brush gradient dekoratif (terang sudut kiri-atas, gelap sudut
- *    kanan-bawah -- token `NeumorphTokens.surfaceHighlightBrush()`/
- *    `surfaceShadeBrush()`) ditumpuk DI ATAS fill solid dasar, DI BELAKANG
- *    `content()` -- total 3 lapis per kartu (fill dasar + gradient terang
- *    + gradient gelap), memunculkan kesan permukaan cembung/3D. Fill TETAP
- *    100% opaque (bab WCAG `NeumorphTokens`) -- 0 translucency sungguhan,
- *    beda total dari teknik Glassmorphism di atas.
- * `recessed=true` di gaya ini membalik arah KEDUANYA (glow LUAR & fill
- * DALAM sama-sama: gelap di kiri-atas, terang di kanan-bawah -- kesan
- * "ditekan ke dalam", satu sumber cahaya konsisten utk 2 lapisan itu).
+ * TANPA sheen glass, TANPA `Surface.border` glass-edge. Kedalaman
+ * SEKARANG murni dari SATU sumber (v8.25.2, disederhanakan dari 2 lapisan
+ * lama setelah user laporkan hasilnya "uncanny" -- screenshot dibanding
+ * langsung referensi desain asli): **fill "puffy" DI DALAM bentuk**
+ * (`NeumorphTokens.surfaceHighlightBrush()`/`surfaceShadeBrush()`, tint
+ * gradient diagonal terang kiri-atas + gelap kanan-bawah DI ATAS fill
+ * solid dasar, DI BELAKANG `content()`). Teknik "glow blob DI LUAR
+ * kartu" (v8.25.0, `Brush.radialGradient` di-scale+offset) DIHAPUS TOTAL
+ * -- itu yang bikin efeknya jadi halo/blob acak, bukan kesan
+ * cekung/timbul genuine. `recessed=true` membalik arah tint (gelap di
+ * kiri-atas, terang di kanan-bawah -- kesan "ditekan ke dalam").
  *
  * @param recessed permukaan "tenggelam" (track switch/segmented control
  *   OFF, grabber pill sheet) -- tonal & shadow elevation SAMA-SAMA
@@ -102,12 +87,9 @@ fun TactileSurface(
     val effectiveElevation = if (recessed) 0.dp else elevation
 
     if (style == ThemeStyleOption.NEUMORPHISM) {
-        val lightColor = if (recessed) NeumorphTokens.DarkGlowColor else NeumorphTokens.LightGlowColor
-        val darkColor = if (recessed) NeumorphTokens.LightGlowColor else NeumorphTokens.DarkGlowColor
-        // [v8.24.0] Brush lapis-2/3 (fill "puffy" -- lihat javadoc lengkap
-        // di NeumorphTokens.kt) ikut DIBALIK arahnya saat `recessed`, PERSIS
-        // pola yang SUDAH ada utk lightColor/darkColor shadow di atas --
-        // konsisten satu "sumber cahaya" yang sama utk shadow DAN fill.
+        // [v8.25.2] `lightColor`/`darkColor` (glow blob luar) DIHAPUS --
+        // lihat javadoc di atas & NeumorphTokens.kt. Cuma tint fill DALAM
+        // yang tersisa sekarang.
         val highlightBrush = if (recessed) NeumorphTokens.surfaceShadeBrush() else NeumorphTokens.surfaceHighlightBrush()
         val shadeBrush = if (recessed) NeumorphTokens.surfaceHighlightBrush() else NeumorphTokens.surfaceShadeBrush()
         // Content dibungkus sama seperti cabang Glass di bawah (2 Box brush
@@ -122,59 +104,33 @@ fun TactileSurface(
                 content()
             }
         }
-        // [Fix, 2026-08-23] `Surface` (BUKAN `matchParentSize()`) harus jadi
-        // 1 anchor child yang menentukan ukuran Box -- kalau SEMUA 3 child
-        // (2 shadow + Surface) pakai matchParentSize, Box tidak punya sumber
-        // ukuran sama sekali & collapse ke 0x0 (`modifier` cuma set lebar via
-        // fillMaxWidth, tinggi tetap butuh diturunkan dari konten). `modifier`
-        // asli (mis. fillMaxWidth dari CTA) dipasang di Box terluar +
-        // `propagateMinConstraints = true` supaya tight-constraint tetap
-        // diteruskan ke `Surface` (sama alasan dgn fix di cabang Glass di atas).
-        Box(modifier = modifier, propagateMinConstraints = true) {
-            // [v8.25.0 -- GANTI TOTAL teknik, lihat javadoc & NeumorphTokens.kt
-            // utk root cause lengkap] `Modifier.shadow(ambientColor/spotColor)`
-            // (v8.23.2-v8.23.6) DIBUANG -- renderer shadow bawaan Android View
-            // terbukti tidak reliable menampilkan glow warna terang di device
-            // fisik. Diganti `Brush.radialGradient` murni Compose (SELALU
-            // render sama di semua API/GPU) + `scale(GlowScale)` supaya blob
-            // JAUH lebih besar & "meleber" jelas di luar tepi kartu -- bukan
-            // cuma beberapa dp tipis seperti sebelumnya.
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .offset(x = -NeumorphTokens.GlowOffset, y = -NeumorphTokens.GlowOffset)
-                    .scale(NeumorphTokens.GlowScale)
-                    .background(NeumorphTokens.glowBrush(lightColor))
+        // [v8.25.2] Wrapper Box luar (dulu dipakai utk posisikan 2 layer
+        // glow blob di luar batas `Surface`) DIHAPUS -- `modifier` sekarang
+        // langsung di `Surface`, konsisten dgn cabang Glass/Material3 di
+        // bawah, tidak ada lagi elemen di luar batas kartu sama sekali.
+        if (onClick != null) {
+            Surface(
+                onClick = onClick,
+                enabled = enabled,
+                modifier = modifier,
+                shape = shape,
+                color = color,
+                border = border,
+                tonalElevation = 0.dp,
+                shadowElevation = 0.dp,
+                interactionSource = interactionSource,
+                content = neumorphContent
             )
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .offset(x = NeumorphTokens.GlowOffset, y = NeumorphTokens.GlowOffset)
-                    .scale(NeumorphTokens.GlowScale)
-                    .background(NeumorphTokens.glowBrush(darkColor))
+        } else {
+            Surface(
+                modifier = modifier,
+                shape = shape,
+                color = color,
+                border = border,
+                tonalElevation = 0.dp,
+                shadowElevation = 0.dp,
+                content = neumorphContent
             )
-            if (onClick != null) {
-                Surface(
-                    onClick = onClick,
-                    enabled = enabled,
-                    shape = shape,
-                    color = color,
-                    border = border,
-                    tonalElevation = 0.dp,
-                    shadowElevation = 0.dp,
-                    interactionSource = interactionSource,
-                    content = neumorphContent
-                )
-            } else {
-                Surface(
-                    shape = shape,
-                    color = color,
-                    border = border,
-                    tonalElevation = 0.dp,
-                    shadowElevation = 0.dp,
-                    content = neumorphContent
-                )
-            }
         }
         return
     }
