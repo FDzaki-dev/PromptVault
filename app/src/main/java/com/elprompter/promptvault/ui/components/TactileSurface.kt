@@ -2,16 +2,13 @@ package com.elprompter.promptvault.ui.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Dp
@@ -50,18 +47,12 @@ import com.elprompter.promptvault.ui.theme.VaultTheme
  *    mengambang, insting glassmorphism standar: raised vs sunken beda
  *    treatment cahaya, BUKAN keluar dari gaya desain itu sendiri).
  *
- * ## Neumorphism (v8.23.2, GANTI TEKNIK ke-4 kalinya di v8.25.4 -- lihat
- * javadoc lengkap & root cause final di `NeumorphTokens.kt`)
- * Berlaku saat `VaultTheme.style == NEUMORPHISM` -- treatment BEDA TOTAL
- * (bukan varian dari Glass ATAU M3 `Surface`): `Box` polos + gradient
- * fill diagonal (`NeumorphTokens.convexBrush`/`concaveBrush`) + SHADOW
- * GANDA genuine (`NeumorphTokens.convexShadow`/`concaveShadow`, teknik
- * `Paint.setShadowLayer` dual-offset dual-warna, PERSIS terjemahan CSS
- * `box-shadow` yg dikasih user) -- BUKAN lagi `Modifier.border` bevel
- * (v8.25.3, garis tegas terbukti "belum sempurna" krn beda teknik dari
- * soft-shadow neumorphism genuine). `recessed=true` pakai versi
- * concave (cekung, shadow inset via clip+stroke) alih-alih convex
- * (timbul, shadow di luar bentuk).
+ * ## Neumorphism (v8.23.2, REVERT DARURAT ke Surface+border polos di
+ * v8.26.0 -- lihat komentar lengkap di titik cabang NEUMORPHISM di bawah)
+ * Teknik shadow-ganda custom (drawBehind/nativeCanvas, v8.23.2-v8.25.4)
+ * DIHAPUS TOTAL setelah terbukti bikin seluruh UI washed-out di device
+ * nyata. Sekarang: `Surface` M3 baku + `BorderStroke` solid lebih tebal --
+ * pembeda dari Material3 Murni cuma border, bukan shadow/gradient custom.
  *
  * @param recessed permukaan "tenggelam" (track switch/segmented control
  *   OFF, grabber pill sheet) -- tonal & shadow elevation SAMA-SAMA
@@ -87,37 +78,48 @@ fun TactileSurface(
     val effectiveElevation = if (recessed) 0.dp else elevation
 
     if (style == ThemeStyleOption.NEUMORPHISM) {
-        // (v8.25.4) `Surface` M3 DILEPAS utk gaya ini -- `color`-nya cuma
-        // terima solid `Color`, tidak bisa gradient `Brush`. Shadow GANDA
-        // (di `NeumorphTokens`) WAJIB digambar di layer TERPISAH & DI
-        // BAWAH fill gradient (lihat urutan modifier: shadow dulu baru
-        // `.background(brush, shape)`), supaya cuma bagian shadow yg
-        // "mengintip" di tepi luar/dalam yg tampak -- PERSIS efek CSS
-        // box-shadow ganda, bukan shadow nutup seluruh badan.
-        val shadowModifier = with(NeumorphTokens) {
-            if (recessed) Modifier.concaveShadow(shape) else Modifier.convexShadow(shape)
-        }
-        val brush = if (recessed) NeumorphTokens.concaveBrush() else NeumorphTokens.convexBrush()
-        val clickModifier = if (onClick != null) {
-            Modifier.clickable(
-                interactionSource = interactionSource,
-                indication = rememberRipple(),
+        // [REVERT DARURAT, 2026-08-23] Teknik shadow-ganda "genuine" (v8.25.4,
+        // drawBehind+nativeCanvas+setShadowLayer+gradient brush custom di
+        // NeumorphTokens) menyebabkan SELURUH UI washed-out/nyaris tak
+        // terlihat di device nyata -- dilaporkan user lewat screenshot
+        // (Beranda DAN Tampilan sama-sama pudar total, krn VaultTheme.style
+        // global -> semua TactileSurface app-wide kena). User eksplisit minta
+        // revert ke rupa sebelumnya (screenshot referensi: border solid
+        // terlihat jelas di semua kartu/baris, kontras normal).
+        //
+        // Rollback ke rendering AMAN: `Surface` M3 baku + `BorderStroke` solid
+        // -- PERSIS pola yang SUDAH terbukti stabil di cabang MATERIAL3 di
+        // bawah (sama sekali TIDAK pernah dilaporkan bermasalah). Border lebih
+        // tebal + warna netral jadi pembeda visual dari Material3 Murni (yang
+        // border-nya polos/caller-default), TANPA risiko shadow/brush custom
+        // yang sudah gagal 2x dengan cara berbeda (v8.23.2-v8.23.6 terlalu
+        // tipis, v8.25.4 malah washed-out total). Prioritas STABIL & KELIHATAN
+        // dulu -- efek "timbul" custom bisa dicoba lagi lain kali dgn lebih
+        // hati-hati, TIDAK sekarang.
+        val neumorphBorder = border ?: BorderStroke(NeumorphTokens.BorderWidth, NeumorphTokens.BorderColor)
+        if (onClick != null) {
+            Surface(
+                onClick = onClick,
                 enabled = enabled,
-                onClick = onClick
+                modifier = modifier,
+                shape = shape,
+                color = color,
+                border = neumorphBorder,
+                tonalElevation = effectiveElevation,
+                shadowElevation = effectiveElevation,
+                interactionSource = interactionSource,
+                content = content
             )
-        } else Modifier
-        Box(
-            modifier = modifier
-                .then(shadowModifier)
-                .then(clickModifier)
-        ) {
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .clip(shape)
-                    .background(brush)
+        } else {
+            Surface(
+                modifier = modifier,
+                shape = shape,
+                color = color,
+                border = neumorphBorder,
+                tonalElevation = effectiveElevation,
+                shadowElevation = effectiveElevation,
+                content = content
             )
-            content()
         }
         return
     }

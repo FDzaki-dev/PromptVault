@@ -13,6 +13,50 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.26.0 -- REVERT DARURAT: teknik shadow Neumorphism bikin SELURUH UI washed-out (2026-08-23)
+- User laporan pakai (2x screenshot, Beranda DAN Tampilan sama-sama pudar
+  total, hampir semua elemen nyaris tak terlihat) + eksplisit minta
+  "revert ke versi sebelumnya" + screenshot referensi rupa yang benar
+  (border solid jelas di semua kartu, kontras normal).
+- **Root cause**: teknik "shadow ganda genuine" (v8.25.4,
+  `drawBehind`+`nativeCanvas`+`Paint.setShadowLayer`+gradient brush
+  custom di `NeumorphTokens`) -- teknik ke-4 percobaan efek "timbul"
+  Neumorphism (v8.23.2 tipis -> v8.23.6 dinaikkan alpha, masih kurang ->
+  v8.25.3 border bevel -> v8.25.4 shadow genuine) -- kali ini BUKAN cuma
+  "kurang kelihatan", tapi BENAR-BENAR MERUSAK kontras di SELURUH app.
+  Karena `VaultTheme.style` global (dipakai SEMUA `TactileSurface`), user
+  yang testing Neumorphism sebagai tema aktif jadi kena washout di
+  SETIAP layar (Beranda, Tampilan, dst), bukan cuma baris toggle-nya.
+  Root cause TEKNIS pastinya TIDAK ditelusuri lebih lanjut (di luar scope
+  revert darurat -- prioritas STABIL dulu).
+- **Fix = REVERT TOTAL** teknik shadow/brush custom: cabang NEUMORPHISM
+  di `TactileSurface.kt` sekarang `Surface` M3 baku + `BorderStroke`
+  solid (`NeumorphTokens.BorderWidth`/`BorderColor`, 1.5dp, putih alpha
+  0.35f) -- PERSIS pola aman yang sudah terbukti stabil di cabang
+  Material3 Murni (0 masalah dilaporkan sepanjang riwayat). Pembeda dari
+  Material3 Murni SEKARANG cuma border, bukan lagi shadow/gradient
+  custom apa pun.
+- `NeumorphTokens.kt` ditulis ulang TOTAL -- `concaveBrush`/`convexBrush`/
+  `concaveShadow`/`convexShadow`/token warna shadow lama semua DIHAPUS
+  (0 file lain reference simbol2 itu, dikonfirmasi lewat grep sebelum
+  hapus). Cuma sisa 2 token: `BorderWidth`, `BorderColor`.
+- File diubah (2, PAS batas 1 task/batch): `ui/components/TactileSurface.kt`,
+  `ui/theme/NeumorphTokens.kt`. `preflight_check.sh` lolos bersih.
+- **Pelajaran dicatat (WAJIB dibaca sebelum coba efek "timbul" custom
+  lagi)**: 4 percobaan berturut-turut (v8.23.2/v8.23.6/v8.25.3/v8.25.4)
+  semua gagal dgn cara BEDA-BEDA (tipis, masih tipis, "belum sempurna",
+  lalu MERUSAK TOTAL) -- pola ini nunjukin teknik shadow/brush custom di
+  Compose (tanpa akses visual nyata utk verifikasi tiap percobaan) risiko
+  tinggi utk fitur dekoratif murni. Kalau diminta lagi: WAJIB user
+  verifikasi screenshot SETIAP iterasi sebelum lanjut ke iterasi
+  berikutnya (bukan berturut-turut tanpa jeda konfirmasi), ATAU terima
+  border-only sebagai batas aman permanen utk gaya ini.
+- Confidence 85% -- perbaikan pakai API paling sederhana & paling
+  terbukti stabil di seluruh project (Surface+BorderStroke, dipakai
+  puluhan tempat lain tanpa masalah), TAPI tetap belum bisa dites visual
+  nyata di sesi ini.
+- versionCode 162->163, versionName 8.25.5->8.26.0.
+
 ## v8.25.5 -- Fix compile error: 2 import hilang (ripple, toArgb) (2026-08-23)
 - User upload build-failure-log-v8_25_4: `compileDebugKotlin`+
   `compileReleaseKotlin` FAILED, 6 error unik (12 total, x2 varian) --

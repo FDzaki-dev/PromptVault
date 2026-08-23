@@ -3,6 +3,30 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.26.0 (2026-08-23) — REVERT DARURAT: teknik shadow Neumorphism bikin seluruh UI washed-out
+
+Laporan user (screenshot 2x + referensi rupa benar): Beranda dan Tampilan
+sama-sama pudar total, hampir semua elemen nyaris tak terlihat. Root cause:
+teknik "shadow ganda genuine" (v8.25.4, drawBehind+nativeCanvas+
+setShadowLayer+gradient brush custom) — percobaan ke-4 efek "timbul"
+Neumorphism, kali ini bukan cuma kurang kelihatan tapi merusak kontras di
+SELURUH app (VaultTheme.style global → semua TactileSurface kena).
+
+**Fix = revert total**: cabang NEUMORPHISM sekarang `Surface` M3 baku +
+`BorderStroke` solid (1.5dp, putih 0.35f) — pola sama yang sudah stabil di
+Material3 Murni. `NeumorphTokens.kt` ditulis ulang total, semua fungsi
+brush/shadow custom dihapus, tinggal 2 token border.
+
+2 file diubah. Confidence 85% — pakai API paling sederhana & terbukti
+stabil, tapi belum bisa dites visual nyata.
+
+**Pelajaran**: 4 percobaan efek timbul custom (v8.23.2→v8.23.6→v8.25.3→
+v8.25.4) semua gagal dengan cara berbeda-beda. Kalau dicoba lagi:
+verifikasi screenshot tiap iterasi, atau terima border-only sebagai batas
+aman permanen.
+
+versionCode 162->163, versionName 8.25.5->8.26.0.
+
 ## v8.25.5 (2026-08-23) — Fix compile error: 2 import hilang (ripple, toArgb)
 
 Build failure log v8.25.4: compileDebugKotlin+compileReleaseKotlin FAILED,
