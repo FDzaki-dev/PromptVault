@@ -3,6 +3,14 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.25.0 (2026-08-23) — Root cause fix: shadow Neumorphism diganti total (Modifier.shadow -> Brush.radialGradient)
+User bandingkan langsung dgn referensi desain asli -- kartu masih terlihat
+flat walau v8.23.6 (naikkan alpha) + v8.24.0 (fill 3-lapis). Root cause:
+`Modifier.shadow` (renderer Android View bawaan) tidak reliable render glow
+warna terang di device fisik. Diganti `Brush.radialGradient` murni Compose
+(3-stop falloff) + blob discale 1.7x & offset 16dp (naik dari 7dp) supaya
+"meleber" jauh lebih luas & jelas kebaca. Fill 3-lapis v8.24.0 tidak disentuh.
+
 ## v8.24.0 (2026-08-23) — Neumorphism: fill "puffy" 3-lapis, shadow tidak disentuh
 Fill Surface Neumorphism dulu 1 lapis flat polos -- ditambah 2 brush gradient
 dekoratif (terang kiri-atas, gelap kanan-bawah) DI ATAS fill dasar, DI

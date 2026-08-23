@@ -13,6 +13,55 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.25.0 -- ROOT CAUSE FIX: shadow Neumorphism diganti total, terbukti tak terlihat vs referensi asli (2026-08-23)
+- **User bandingkan langsung** (2 screenshot: referensi desain Neumorphism
+  asli vs Beranda app) -- "jelas-jelas punya kamu gak terasa sama sekali
+  unsur Neumorphism (efek timbul+cekung)". Bukti konkret: fix alpha
+  v8.23.6 + fill 3-lapis v8.24.0 TIDAK CUKUP, kartu masih terlihat flat.
+- **Root cause SEBENARNYA ditemukan**: `Modifier.shadow(ambientColor=,
+  spotColor=)` (teknik v8.23.2) memakai renderer shadow BAWAAN Android
+  View (elevation/ambient+spot light) -- didesain utk shadow GELAP OPAK
+  standar Material, BUKAN "glow" warna TERANG custom. Sisi terang nyaris
+  tidak pernah benar-benar render di device fisik APAPUN besar alpha-nya
+  -- ini KENAPA fix v8.23.6 (cuma naikkan alpha, teknik sama) tetap gagal.
+- **Fix**: `Modifier.shadow` DIBUANG TOTAL di cabang Neumorphism, diganti
+  `Brush.radialGradient` murni Compose (3-stop, falloff lembut, TIDAK
+  bergantung renderer shadow platform sama sekali -- selalu render
+  identik semua API/GPU, teknik SAMA yang sudah terbukti aman dipakai
+  `GlassTokens.highlightBrush()`/fill 3-lapis v8.24.0). Blob digambar
+  `.scale(1.7f)` (jauh lebih besar dari kartu) + offset 16dp (naik dari
+  7dp lama) supaya area "meleber" di luar kartu jauh lebih luas & jelas
+  kebaca, bukan beberapa dp tipis di tepi seperti sebelumnya.
+- **`NeumorphTokens.kt`**: `ShadowOffset`/`ShadowBlurRadius`/
+  `LightShadowColor`/`DarkShadowColor` (era `Modifier.shadow`) DIHAPUS,
+  diganti `GlowScale`/`GlowOffset`/`LightGlowColor`(0.50f)/
+  `DarkGlowColor`(0.90f)/`glowBrush()`. `SurfaceHighlightTint`/
+  `SurfaceShadeTint`/`surfaceHighlightBrush()`/`surfaceShadeBrush()`
+  (fill 3-lapis, v8.24.0) **TIDAK disentuh sama sekali** -- laporan bug
+  kali ini murni soal glow LUAR, bukan fill DALAM yang sudah oke.
+- **3 syarat user ditelusuri ulang** (metodologi sama persis): (1) murni
+  gradient dekoratif, 0 border/translucency; (2) White/Black netral, 0 hue
+  baru; (3) WCAG -- glow 100% di area KOSONG luar kartu (bukan di atas
+  teks), 0 pasangan teks/ikon baru diperkenalkan, fill tetap 100% opaque
+  (pasangan teks/kontras yang sudah diverifikasi v8.0.0-v8.24.0 100%
+  tidak berubah) -- 0 perhitungan ulang diperlukan.
+- File diubah (2): `ui/theme/NeumorphTokens.kt`, `ui/components/
+  TactileSurface.kt` (cabang Neumorphism saja; cabang Glass & Material3
+  Murni 0 disentuh). `preflight_check.sh` lolos bersih (13/13), balance
+  kurung 0 di kedua file.
+- **BELUM PERNAH lewat `./gradlew` asli atau device fisik di sandbox ini**
+  -- klaim "root cause" di atas MASUK AKAL secara teknis (dikonfirmasi 2
+  siklus fix-gagal berturut2 dgn teknik lama) tapi TETAP HARUS
+  diverifikasi visual nyata oleh user, bukan diasumsikan pasti benar.
+  User WAJIB verifikasi: (1) kartu Neumorphism SEKARANG kelihatan blob
+  lembut besar di sekitar tepi (terang kiri-atas, gelap kanan-bawah),
+  bukan cuma garis tipis; (2) fill "puffy" dalam (v8.24.0) masih ada,
+  tidak hilang; (3) Glassmorphism & Material 3 Murni 0 berubah; (4) blob
+  besar tidak sampai menutupi/mengganggu keterbacaan konten SEKITAR kartu
+  (kartu lain, teks di luar kartu) -- kalau terlalu agresif, `GlowScale`/
+  `GlowOffset` bisa diturunkan di batch berikutnya.
+- versionCode 156->157, versionName 8.24.0->8.25.0.
+
 ## v8.24.0 -- Neumorphism: fill "puffy" 3-lapis (permintaan eksplisit: bukan shadow/opaque yang diutak-atik) (2026-08-23)
 - **User minta eksplisit** (via screenshot tab "Tampilan" + Beranda):
   "bukan bagian shadow/opaque nya yang diutak-atik, tapi background kartu
