@@ -3,6 +3,13 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.27.0 (2026-08-23) — Maksimalkan timbul/cekung Neumorphism (tanpa glow/blooming) + fix tone
+Drop-shadow asli 1 sisi (`Surface.shadowElevation` default color, ikut bentuk
+kartu) + tint gradient fill (Primary brand, bukan putih polos) -- 0 teknik
+baru, 100% reuse primitif yang sudah stabil (shadow default + sheen brush
+Glass). Border v8.26.0 dihapus (neumorphism otentik tidak pakai outline).
+WCAG worst-case 5.13:1 AA.
+
 ## v8.26.0 (2026-08-23) — REVERT DARURAT: teknik shadow Neumorphism bikin seluruh UI washed-out
 
 Laporan user (screenshot 2x + referensi rupa benar): Beranda dan Tampilan

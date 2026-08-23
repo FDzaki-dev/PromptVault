@@ -13,6 +13,54 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.27.0 -- Maksimalkan efek timbul/cekung Neumorphism (dilarang glow/blooming) + fix "tone kurang" (2026-08-23)
+- **User feedback via 2 screenshot** (Beranda + tab Tampilan, state v8.26.0
+  revert darurat): "udah normal sih, tapi kek ada yang kurang gitu tone
+  warnanya. dan mungkin masih bisa dimaksimalkan lagi untuk efek
+  timbul+cekungan nya (**dilarang keras pakai teknik: glow, blooming, dan
+  sejenisnya!!**)".
+- **Analisis**: v8.26.0 (revert darurat) = `Surface` M3 baku + border polos,
+  0 depth custom -- makanya "kurang". Percobaan v8.25.x yang GAGAL sebelum
+  revert pakai `Brush.radialGradient` blob (blur lingkaran simetris) --
+  ITU PERSIS definisi "glow/blooming" yang sekarang dilarang eksplisit,
+  jadi TIDAK dicoba lagi sama sekali dgn cara apa pun.
+- **Fix, HANYA 2 primitif yang SUDAH terbukti stabil, 0 teknik baru**:
+  (1) Drop-shadow asli SATU sisi (gelap, kanan-bawah) via `Surface(
+  shadowElevation=)` warna DEFAULT (bukan ambientColor/spotColor custom --
+  itu akar masalah v8.23.2-v8.23.6) -- shadow ini mengikuti BENTUK kartu
+  (rounded-rect), bukan blob lingkaran, jadi bukan glow. (2) Tint gradient
+  DI DALAM fill (terang kiri-atas, gelap kanan-bawah) via `Brush.
+  linearGradient` -- PERSIS teknik `GlassTokens.highlightBrush()` (sheen)
+  yang sudah live & stabil di cabang Glass, tinggal dipakai lagi di sini.
+  Border v8.26.0 DIHAPUS -- neumorphism otentik tidak pernah pakai outline,
+  bentuknya murni dari shadow+fill.
+- **Fix "tone kurang"**: tint terang sekarang pakai `Primary` (biru-cool
+  brand app, sudah ada, dipakai tombol "Scan Sekarang") BUKAN putih
+  generik -- kartu jadi ikatan warna sama identitas app. TETAP calm/cool
+  (warna itu sendiri sudah calm, direuse apa adanya, 0 hue baru).
+- **WCAG**: worst-case `TextSecondary` diblend titik puncak tint Primary di
+  tier surface paling terang: alpha 0.20 -> 5.13:1 (AA, margin disisakan --
+  0.22 sudah 4.94:1, lebih mepet). Dihitung skrip Python formula W3C.
+  Drop-shadow 100% di area kosong luar kartu, 0 relevansi WCAG teks.
+- **`border` param TactileSurface**: diverifikasi via grep SEBELUM
+  dihapus dari cabang Neumorphism -- 0 caller manapun (`VaultCard`,
+  `GroupedListRow`, `TactileSwitch`, dst) pernah mengirim `border`
+  eksplisit, jadi 0 regresi fungsional dari penghapusan itu.
+- File diubah (2): `ui/theme/NeumorphTokens.kt` (rewrite total, 3
+  percobaan gagal sebelumnya di-dokumentasikan di javadoc, bukan dihapus
+  dari histori), `ui/components/TactileSurface.kt` (cabang Neumorphism
+  saja). `preflight_check.sh` lolos bersih (14/14, termasuk check #14 KDoc
+  bracket-tag yang jadi biang error compile v8.25.x kemarin -- 0 tag
+  `[vX.Y.Z]` di block comment file ini). Balance kurung/kurung-siku 0.
+- **BELUM PERNAH lewat `./gradlew` asli atau device fisik**. Mengingat 2x
+  kegagalan sebelumnya (lemah tak terlihat, lalu washed-out total), user
+  WAJIB verifikasi visual nyata sebelum dianggap final: (1) shadow gelap
+  kanan-bawah kartu terlihat jelas & mengikuti bentuk kartu (bukan blob
+  lingkaran); (2) sisi terang kiri-atas terasa "menangkap cahaya" (tint
+  Primary, di DALAM bentuk, bukan meleber keluar); (3) 0 washed-out/pudar
+  di permukaan MANAPUN; (4) Glassmorphism & Material3 Murni 0 berubah.
+- versionCode 163->164, versionName 8.26.0->8.27.0.
+
 ## v8.26.0 -- REVERT DARURAT: teknik shadow Neumorphism bikin SELURUH UI washed-out (2026-08-23)
 - User laporan pakai (2x screenshot, Beranda DAN Tampilan sama-sama pudar
   total, hampir semua elemen nyaris tak terlihat) + eksplisit minta

@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.offset
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -78,48 +79,68 @@ fun TactileSurface(
     val effectiveElevation = if (recessed) 0.dp else elevation
 
     if (style == ThemeStyleOption.NEUMORPHISM) {
-        // [REVERT DARURAT, 2026-08-23] Teknik shadow-ganda "genuine" (v8.25.4,
-        // drawBehind+nativeCanvas+setShadowLayer+gradient brush custom di
-        // NeumorphTokens) menyebabkan SELURUH UI washed-out/nyaris tak
-        // terlihat di device nyata -- dilaporkan user lewat screenshot
-        // (Beranda DAN Tampilan sama-sama pudar total, krn VaultTheme.style
-        // global -> semua TactileSurface app-wide kena). User eksplisit minta
-        // revert ke rupa sebelumnya (screenshot referensi: border solid
-        // terlihat jelas di semua kartu/baris, kontras normal).
-        //
-        // Rollback ke rendering AMAN: `Surface` M3 baku + `BorderStroke` solid
-        // -- PERSIS pola yang SUDAH terbukti stabil di cabang MATERIAL3 di
-        // bawah (sama sekali TIDAK pernah dilaporkan bermasalah). Border lebih
-        // tebal + warna netral jadi pembeda visual dari Material3 Murni (yang
-        // border-nya polos/caller-default), TANPA risiko shadow/brush custom
-        // yang sudah gagal 2x dengan cara berbeda (v8.23.2-v8.23.6 terlalu
-        // tipis, v8.25.4 malah washed-out total). Prioritas STABIL & KELIHATAN
-        // dulu -- efek "timbul" custom bisa dicoba lagi lain kali dgn lebih
-        // hati-hati, TIDAK sekarang.
-        val neumorphBorder = border ?: BorderStroke(NeumorphTokens.BorderWidth, NeumorphTokens.BorderColor)
-        if (onClick != null) {
-            Surface(
-                onClick = onClick,
-                enabled = enabled,
-                modifier = modifier,
-                shape = shape,
-                color = color,
-                border = neumorphBorder,
-                tonalElevation = effectiveElevation,
-                shadowElevation = effectiveElevation,
-                interactionSource = interactionSource,
-                content = content
-            )
-        } else {
-            Surface(
-                modifier = modifier,
-                shape = shape,
-                color = color,
-                border = neumorphBorder,
-                tonalElevation = effectiveElevation,
-                shadowElevation = effectiveElevation,
-                content = content
-            )
+        // [v8.27.0] Ganti total dari border-polos v8.26.0 -- lihat javadoc
+        // lengkap alasan teknik & histori 4x percobaan gagal sebelumnya di
+        // `NeumorphTokens.kt`. HANYA 2 primitif yang SUDAH terbukti stabil
+        // di codebase ini: `Surface(shadowElevation=)` warna DEFAULT (bukan
+        // custom ambientColor/spotColor, bukan glow/blob) utk drop-shadow
+        // gelap satu sisi, + `Brush.linearGradient` fill tint (persis
+        // teknik sheen Glass yang sudah live) utk kesan "menangkap cahaya"
+        // di sisi terang -- TIDAK ADA teknik baru, TIDAK ADA glow/blooming.
+        val highlightBrush = if (recessed) NeumorphTokens.fillShadeBrush() else NeumorphTokens.fillHighlightBrush()
+        val shadeBrush = if (recessed) NeumorphTokens.fillHighlightBrush() else NeumorphTokens.fillShadeBrush()
+
+        val neumorphContent: @Composable () -> Unit = {
+            // `propagateMinConstraints = true` WAJIB -- pola sama persis
+            // fix regresi centering yang sudah didokumentasikan di cabang
+            // Glass di bawah, dicegah terulang di sini dari awal.
+            Box(propagateMinConstraints = true) {
+                Box(modifier = Modifier.matchParentSize().background(highlightBrush))
+                Box(modifier = Modifier.matchParentSize().background(shadeBrush))
+                content()
+            }
+        }
+
+        Box {
+            // Drop-shadow gelap SATU sisi saja, kanan-bawah -- DILEWATI saat
+            // `recessed` (elemen cekung tidak menonjol keluar, sama logika
+            // "cekung tidak boleh berkilau" yang sudah ada di cabang Glass).
+            if (!recessed) {
+                Surface(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .offset(x = NeumorphTokens.ShadowOffset, y = NeumorphTokens.ShadowOffset),
+                    shape = shape,
+                    color = MaterialTheme.colorScheme.background,
+                    shadowElevation = NeumorphTokens.ShadowElevation,
+                    content = {}
+                )
+            }
+            // `modifier` (fillMaxWidth dkk dari pemanggil) WAJIB di sini,
+            // BUKAN di Box induk -- pola sama fix regresi wrap-content yang
+            // sudah pernah ditemukan di batch fill-3-lapis sebelumnya.
+            if (onClick != null) {
+                Surface(
+                    onClick = onClick,
+                    enabled = enabled,
+                    modifier = modifier,
+                    shape = shape,
+                    color = color,
+                    tonalElevation = 0.dp,
+                    shadowElevation = 0.dp,
+                    interactionSource = interactionSource,
+                    content = neumorphContent
+                )
+            } else {
+                Surface(
+                    modifier = modifier,
+                    shape = shape,
+                    color = color,
+                    tonalElevation = 0.dp,
+                    shadowElevation = 0.dp,
+                    content = neumorphContent
+                )
+            }
         }
         return
     }
