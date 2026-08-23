@@ -51,7 +51,10 @@ import com.elprompter.promptvault.R
 import com.elprompter.promptvault.ui.MainViewModel
 import com.elprompter.promptvault.ui.components.GroupedList
 import com.elprompter.promptvault.ui.components.GroupedListRow
+import com.elprompter.promptvault.ui.components.SegmentedControl
 import com.elprompter.promptvault.ui.components.TactileSurface
+import com.elprompter.promptvault.ui.components.ThemeStyleOption
+import com.elprompter.promptvault.ui.components.ThemeStyleToggle
 import com.elprompter.promptvault.ui.components.VaultCard
 import com.elprompter.promptvault.ui.theme.TactileTokens
 import com.elprompter.promptvault.ui.theme.VaultTheme
@@ -154,6 +157,26 @@ fun HomeScreen(
             Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineMedium, color = colors.onBackground)
             Text(stringResource(R.string.home_subtitle), style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
 
+            // [Pending Queue, "Tampilan" tab -- KERANGKA SAJA] Tab kedua di
+            // Beranda, isi cuma picker gaya tema (lihat KDoc lengkap di
+            // `ThemeStyleToggle.kt`) -- 0 pengaruh ke tampilan app saat ini,
+            // murni state lokal `remember` (pola sama dgn tab Log/Undo di
+            // `ActivityLogScreen.kt`, `SegmentedControl` yang sama direuse).
+            var selectedHomeTab by remember { mutableStateOf(0) }
+            var themeStyleSelection by remember { mutableStateOf(ThemeStyleOption.GLASSMORPHISM) }
+            SegmentedControl(
+                options = listOf(stringResource(R.string.home_tab_beranda), stringResource(R.string.home_tab_tampilan)),
+                selectedIndex = selectedHomeTab,
+                onSelect = { selectedHomeTab = it }
+            )
+
+            if (selectedHomeTab == 1) {
+                ThemeStyleToggle(
+                    selected = themeStyleSelection,
+                    onSelect = { themeStyleSelection = it }
+                )
+            } else {
+
             VaultCard(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     ManifestRow(icon = Icons.Filled.Rule, tint = colors.primary, label = stringResource(R.string.home_stat_rule_active), value = "$ruleCount")
@@ -225,6 +248,7 @@ fun HomeScreen(
                     { GroupedListRow(Icons.Filled.BugReport, stringResource(R.string.diag_title), colors.error, onOpenDiagnostics) }
                 )
             )
+            }
         }
         }
     }

@@ -13,6 +13,50 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.23.0 -- FITUR BARU (KERANGKA): tab "Tampilan" di Beranda, picker gaya tema Glassmorphism/Neumorphism -- 2026-08-22
+- **User minta eksplisit**: tab baru di Beranda khusus toggle 2 gaya tema
+  custom (Glassmorphism/Neumorphism), TEGAS diinstruksikan "jangan kerjakan
+  isinya dulu, cukup kerangkanya saja" -- BUKAN permintaan full engine
+  switch tema, murni scaffold UI.
+- **Implementasi**: `SegmentedControl` (komponen existing, sama yg dipakai
+  tab Log/Undo di `ActivityLogScreen.kt`, 0 perubahan pada komponen itu
+  sendiri) ditambah di atas `Column` Beranda -- 2 opsi "Beranda"/"Tampilan".
+  Tab "Beranda" (index 0) = konten LAMA persis (VaultCard+CTA+GroupedList),
+  dibungkus `else` block, 0 perubahan logic/tampilan. Tab "Tampilan"
+  (index 1) = komponen BARU `ThemeStyleToggle` (`ui/components/
+  ThemeStyleToggle.kt`) -- 2 opsi selectable (`TactileSurface` + ikon
+  check/radio), badge "Segera hadir" eksplisit.
+- **KERANGKA MURNI, ditulis eksplisit di KDoc `ThemeStyleToggle.kt`**: state
+  pilihan (`enum class ThemeStyleOption`) & tab aktif SAMA-SAMA `remember`
+  LOKAL di `HomeScreen.kt` -- TIDAK ditulis ke DataStore/Prefs manapun,
+  TIDAK menyentuh `Theme.kt`/`Color.kt`/`TactileSurface.kt`/komponen render
+  manapun. Menekan opsi Glassmorphism/Neumorphism **0 efek visual** ke app
+  saat ini -- sengaja, badge "Segera hadir" menjelaskan ini ke user supaya
+  tidak dikira bug.
+- **Bug ditemukan & DIPERBAIKI sebelum packaging**: komentar XML baru di
+  `strings.xml` sempat pakai `--` di dalam `<!-- ... -->` -- **kelas bug
+  berulang ke-5** (v2.6.0, v2.24.1, v7.0.0, v8.5.0b, sekarang) -- preflight
+  kategori #10 menangkapnya benar SEBELUM packaging kali ini (bukan lolos
+  ke CI dulu baru ketahuan seperti v8.5.0b). Fix: ganti `--` jadi `;`.
+- **Pending Queue (DI LUAR SCOPE batch ini, menyusul kalau diminta)**:
+  (1) definisi token warna aktual per-gaya (Glassmorphism: border+gradient
+  kaca; Neumorphism: dual-shadow terarah -- referensi teknik dari sesi lain
+  yang pernah dikerjakan di base v2.x project ini, TIDAK ikut ter-carry ke
+  v8.x krn 2 base sempat divergen, lihat riwayat chat), (2) mekanisme
+  switch runtime nyata di `Theme.kt` (kemungkinan `CompositionLocal` baru
+  utk pilih teknik render per komponen), (3) persistensi pilihan user
+  (DataStore, pola sama `SettingsScreen.kt`).
+- File diubah (3) + 1 baru: `ui/screens/HomeScreen.kt`, `res/values/
+  strings.xml`, `FILE_MANIFEST.txt`; BARU `ui/components/
+  ThemeStyleToggle.kt`. `preflight_check.sh` lolos bersih (13/13, termasuk
+  well-formedness XML setelah fix `--`).
+- **BELUM PERNAH lewat `./gradlew` asli di sandbox ini**. User WAJIB
+  verifikasi: (1) tab "Beranda"/"Tampilan" muncul & switch mulus tanpa
+  crash; (2) tab "Beranda" tampilannya IDENTIK sebelum batch ini (0
+  regresi); (3) tab "Tampilan" nampilin 2 opsi + badge "Segera hadir",
+  tekan opsi TIDAK mengubah tampilan app (memang sengaja).
+- versionCode 148->149, versionName 8.22.21->8.23.0.
+
 ## v8.22.21 ROLLBACK -- Robolectric OOM TERULANG PERSIS walau 2 lapis mitigasi v8.22.16 sudah aktif (2026-08-22)
 - **Gejala**: user upload `build-failure-log-v8_22_20.zip`. Compile SUKSES (fix DSL v8.22.20 terbukti jalan), TAPI `:app:testDebugUnitTest FAILED` -- "Process 'Gradle Test Executor 1' finished with non-zero exit value 10", 0 stack trace/assertion. **Sinyal identik 1:1 dgn v8.22.14** (yang memicu rollback v8.22.15).
 - **Konteks penting**: ini kali PERTAMA `testOptions.unitTests.all{}` (maxParallelForks=1 + maxHeapSize=2048m, ditulis v8.22.16) BENAR-BENAR jalan -- sebelumnya keburu gagal di step Gradle-version (v8.22.17) lalu gap diagnostik (v8.22.18) lalu bug syntax DSL sendiri (v8.22.20). Sekarang teruji nyata: 2 lapis mitigasi TIDAK CUKUP, runner CI (~7GB) tetap OOM menjalankan Robolectric.

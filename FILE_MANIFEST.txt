@@ -1,5 +1,5 @@
 # FILE_MANIFEST.txt -- PromptVault
-# Regenerasi otomatis dari isi disk aktual (find), v8.22.14, 2026-08-22
+# Regenerasi otomatis dari isi disk aktual (find), v8.23.0, 2026-08-22
 
 .github/workflows/build.yml
 .gitignore
@@ -44,6 +44,7 @@ app/src/main/java/com/elprompter/promptvault/ui/components/SegmentedControl.kt
 app/src/main/java/com/elprompter/promptvault/ui/components/SortedStamp.kt
 app/src/main/java/com/elprompter/promptvault/ui/components/TactileSurface.kt
 app/src/main/java/com/elprompter/promptvault/ui/components/TactileSwitch.kt
+app/src/main/java/com/elprompter/promptvault/ui/components/ThemeStyleToggle.kt
 app/src/main/java/com/elprompter/promptvault/ui/components/VaultActionSheet.kt
 app/src/main/java/com/elprompter/promptvault/ui/components/VaultCard.kt
 app/src/main/java/com/elprompter/promptvault/ui/components/VaultTopBar.kt

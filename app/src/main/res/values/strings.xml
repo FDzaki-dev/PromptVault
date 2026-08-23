@@ -218,6 +218,16 @@
     <string name="home_menu_riwayat">Riwayat Aktivitas &amp; Undo</string>
     <string name="home_menu_statistik">Statistik</string>
 
+    <!-- [Pending Queue, tab "Tampilan"; KERANGKA SAJA, belum wired ke engine tema] -->
+    <string name="home_tab_beranda">Beranda</string>
+    <string name="home_tab_tampilan">Tampilan</string>
+    <string name="theme_toggle_title">Gaya Tema</string>
+    <string name="theme_toggle_description">Pilih gaya visual custom untuk app. Perubahan belum diterapkan ke tampilan -- placeholder untuk fitur mendatang.</string>
+    <string name="theme_toggle_glassmorphism">Glassmorphism</string>
+    <string name="theme_toggle_neumorphism">Neumorphism</string>
+    <string name="theme_toggle_coming_soon">Segera hadir -- pilihan belum berefek ke tampilan</string>
+
+
     <!-- [Roadmap Fase 1.3 batch 6/N, 2026-08-20] Ekstraksi MURNI OnboardingScreen.kt -->
     <string name="onboarding_step1_title">Selamat datang di PromptVault</string>
     <string name="onboarding_step1_body">App ini memindai folder Downloads kamu dan memindahkan file (ekstensi apa saja) ke folder tujuan, sesuai rule yang kamu buat sendiri. Tidak ada rule = tidak ada file yang dipindah.</string>

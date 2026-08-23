@@ -3,6 +3,13 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.23.0 (2026-08-22) — Fitur baru (kerangka): tab "Tampilan" di Beranda, picker Glassmorphism/Neumorphism
+Tab kedua di Beranda (`SegmentedControl` existing) berisi `ThemeStyleToggle`
+baru -- 2 opsi selectable, badge "Segera hadir". KERANGKA MURNI sesuai
+instruksi eksplisit: state cuma `remember` lokal, 0 wiring ke Theme.kt/
+engine render, menekan opsi tidak mengubah tampilan app. Bug `--` di
+komentar XML (kelas berulang ke-5) ketangkap preflight sebelum packaging.
+
 ## v8.22.21 (2026-08-22) — Rollback: Robolectric OOM terulang, sudah 2x mitigasi gagal
 `testDebugUnitTest` exit 10 (OOM silent) identik v8.22.14 walau maxParallelForks=1
 + maxHeapSize=2048m sudah aktif jalan (baru bisa dites nyata sekarang). Sesuai
