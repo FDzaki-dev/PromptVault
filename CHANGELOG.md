@@ -3,6 +3,14 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.24.0 (2026-08-23) — Neumorphism: fill "puffy" 3-lapis, shadow tidak disentuh
+Fill Surface Neumorphism dulu 1 lapis flat polos -- ditambah 2 brush gradient
+dekoratif (terang kiri-atas, gelap kanan-bawah) DI ATAS fill dasar, DI
+BELAKANG content(), total 3 lapis per kartu -- kesan cembung/3D otentik ala
+Neumorphism, bukan cuma shadow di tepi. Shadow ganda existing (v8.23.2/
+v8.23.6) 0 baris diubah sesuai permintaan eksplisit. Alpha (0.14 terang/0.22
+gelap) diverifikasi WCAG worst-case AA (4.84:1), margin sengaja disisakan.
+
 ## v8.23.6 (2026-08-23) — Fix: Neumorphism sama Material3 gak kelihatan beda
 
 Laporan user (screenshot): toggle Neumorphism vs Material 3 Murni terlihat

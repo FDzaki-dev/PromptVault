@@ -13,6 +13,50 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.24.0 -- Neumorphism: fill "puffy" 3-lapis (permintaan eksplisit: bukan shadow/opaque yang diutak-atik) (2026-08-23)
+- **User minta eksplisit** (via screenshot tab "Tampilan" + Beranda):
+  "bukan bagian shadow/opaque nya yang diutak-atik, tapi background kartu
+  nya dibikin berlapis 3 sehingga memunculkan desain 3D khas Neumorphism
+  asli". Konteks: shadow ganda (v8.23.2, dinaikkan kontrasnya v8.23.6)
+  SUDAH oke & TIDAK boleh disentuh -- yang kurang otentik adalah fill
+  Surface-nya sendiri, dulu 1 lapis flat polos (0 kesan cembung/3D di
+  DALAM bentuknya sendiri, kedalaman 100% dari shadow di LUAR saja).
+- **Fix**: `NeumorphTokens.kt` -- `ShadowOffset`/`ShadowBlurRadius`/
+  `LightShadowColor`/`DarkShadowColor` (v8.23.2/v8.23.6) **0 baris
+  diubah**, murni TAMBAHAN token baru: `SurfaceHighlightTint` (White
+  alpha 0.14f) + `SurfaceShadeTint` (Black alpha 0.22f) +
+  `surfaceHighlightBrush()`/`surfaceShadeBrush()` (pola sama persis
+  `GlassTokens.highlightBrush()`, `Brush.linearGradient` tanpa start/end
+  eksplisit). `TactileSurface.kt` cabang Neumorphism: `content()`
+  dibungkus 2 `Box` brush dekoratif (`propagateMinConstraints = true` --
+  fix pola yang SAMA PERSIS dgn regresi centering yang sudah pernah
+  ditemukan di cabang Glass, dicegah terulang dari awal, bukan nunggu
+  dilaporkan). `recessed` membalik arah fill-brush, konsisten dgn shadow
+  arah (satu "sumber cahaya" yang sama utk kedua lapisan).
+- **3 syarat user ditelusuri** (sama persis metodologi `NeumorphTokens.kt`
+  javadoc): (1) murni gradient dekoratif DI DALAM fill opaque, bukan
+  border/translucency ala Glass; (2) White/Black netral, 0 hue baru;
+  (3) WCAG dihitung ulang -- worst-case `TextSecondary` (kontras terkecil)
+  diblend dgn TITIK PUNCAK gradient terang di tier surface paling terang:
+  alpha 0.14 -> 4.84:1 (AA, margin disisakan sengaja -- 0.16 sudah mepet
+  4.53:1, makanya TIDAK dipakai). Sisi gelap 0 batas atas WCAG (menggelapkan
+  bg cuma menaikkan kontras teks terang, tidak pernah menurunkan) -- dipilih
+  0.22 (lebih kuat dari sisi terang, rasio sama spirit dgn LightShadowColor:
+  DarkShadowColor 0.35:0.70 di atasnya).
+- File diubah (2): `ui/theme/NeumorphTokens.kt` (append-only, 0 baris lama
+  diubah), `ui/components/TactileSurface.kt` (cabang Neumorphism saja,
+  cabang Glass & Material3 Murni 0 disentuh). `preflight_check.sh` lolos
+  bersih (13/13), balance kurung/tanda kurung 0 di kedua file.
+- **BELUM PERNAH lewat `./gradlew` asli di sandbox ini**. User WAJIB
+  verifikasi: (1) kartu Neumorphism sekarang kelihatan "cembung"/3D nyata
+  (gradient terang kiri-atas, gelap kanan-bawah, DI DALAM bentuk kartu,
+  bukan cuma shadow di tepi); (2) shadow di luar bentuk TIDAK berubah sama
+  sekali dari v8.23.6; (3) gaya Glassmorphism & Material 3 Murni 0 berubah
+  (cabang lain di `TactileSurface.kt` tidak disentuh); (4) teks di dalam
+  kartu (termasuk di sudut paling terang) tetap kebaca jelas, 0 kontras
+  drop yang kentara.
+- versionCode 155->156, versionName 8.23.6->8.24.0.
+
 ## v8.23.6 -- FIX BUG NYATA: Neumorphism sama Material3 gak kelihatan beda (2026-08-23)
 - User laporan pakai (screenshot 2x, toggle Neumorphism vs Material 3
   Murni): visualnya IDENTIK, 0 perbedaan kelihatan.

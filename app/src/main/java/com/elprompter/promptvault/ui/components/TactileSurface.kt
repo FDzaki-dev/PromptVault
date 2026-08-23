@@ -49,16 +49,31 @@ import com.elprompter.promptvault.ui.theme.VaultTheme
  *    mengambang, insting glassmorphism standar: raised vs sunken beda
  *    treatment cahaya, BUKAN keluar dari gaya desain itu sendiri).
  *
- * ## Neumorphism (v8.23.2)
+ * ## Neumorphism (v8.23.2, fill 3-lapis sejak v8.24.0)
  * Berlaku saat `VaultTheme.style == NEUMORPHISM` -- treatment BEDA TOTAL
  * (bukan varian dari Glass): fill OPAQUE (tanpa alpha), TANPA border,
- * TANPA sheen, TANPA `Surface.border` glass-edge. Kedalaman murni dari
- * SEPASANG `Modifier.shadow` (terang kiri-atas, gelap kanan-kanan-bawah,
- * lihat `NeumorphTokens`) yang digambar SEBELUM `Surface` fill lewat 2
- * `Box` beroffset -- fill di atasnya menutupi titik asal shadow, cuma
- * bagian yang "meleber" keluar tepi yang terlihat (ciri khas soft-UI).
- * `recessed=true` di gaya ini membalik arah (gelap di kiri-atas, terang
- * di kanan-bawah -- kesan "ditekan ke dalam", bukan "timbul keluar").
+ * TANPA sheen glass, TANPA `Surface.border` glass-edge. Kedalaman dari 2
+ * sumber terpisah yang SENGAJA dipisah (permintaan eksplisit user, "bukan
+ * bagian shadow/opaque yang diutak-atik, background kartu yang dibikin
+ * berlapis 3"):
+ * 1. **Shadow DI LUAR bentuk** (v8.23.2, TIDAK disentuh sama sekali di
+ *    v8.24.0): SEPASANG `Modifier.shadow` (terang kiri-atas, gelap kanan-
+ *    bawah, lihat `NeumorphTokens`) digambar SEBELUM `Surface` fill lewat 2
+ *    `Box` beroffset -- fill di atasnya menutupi titik asal shadow, cuma
+ *    bagian yang "meleber" keluar tepi yang terlihat (ciri khas soft-UI).
+ * 2. **Fill "puffy" DI DALAM bentuk** (BARU v8.24.0): 2 brush gradient
+ *    dekoratif (terang sudut kiri-atas, gelap sudut kanan-bawah -- token
+ *    `NeumorphTokens.surfaceHighlightBrush()`/`surfaceShadeBrush()`)
+ *    ditumpuk DI ATAS fill solid dasar, DI BELAKANG `content()` -- total
+ *    3 lapis per kartu (fill dasar + gradient terang + gradient gelap),
+ *    memunculkan kesan permukaan cembung/3D yang jadi ciri khas Neumorphism
+ *    OTENTIK, bukan cuma shadow rata di tepi. Fill TETAP 100% opaque
+ *    (bab WCAG `NeumorphTokens`, alpha cuma di brush overlay-nya, bukan di
+ *    fill dasar) -- 0 translucency sungguhan, beda total dari teknik
+ *    Glassmorphism di atas.
+ * `recessed=true` di gaya ini membalik arah KEDUANYA (shadow LUAR & fill
+ * DALAM sama-sama: gelap di kiri-atas, terang di kanan-bawah -- kesan
+ * "ditekan ke dalam", satu sumber cahaya konsisten utk 2 lapisan itu).
  *
  * @param recessed permukaan "tenggelam" (track switch/segmented control
  *   OFF, grabber pill sheet) -- tonal & shadow elevation SAMA-SAMA
@@ -86,6 +101,24 @@ fun TactileSurface(
     if (style == ThemeStyleOption.NEUMORPHISM) {
         val lightColor = if (recessed) NeumorphTokens.DarkShadowColor else NeumorphTokens.LightShadowColor
         val darkColor = if (recessed) NeumorphTokens.LightShadowColor else NeumorphTokens.DarkShadowColor
+        // [v8.24.0] Brush lapis-2/3 (fill "puffy" -- lihat javadoc lengkap
+        // di NeumorphTokens.kt) ikut DIBALIK arahnya saat `recessed`, PERSIS
+        // pola yang SUDAH ada utk lightColor/darkColor shadow di atas --
+        // konsisten satu "sumber cahaya" yang sama utk shadow DAN fill.
+        val highlightBrush = if (recessed) NeumorphTokens.surfaceShadeBrush() else NeumorphTokens.surfaceHighlightBrush()
+        val shadeBrush = if (recessed) NeumorphTokens.surfaceHighlightBrush() else NeumorphTokens.surfaceShadeBrush()
+        // Content dibungkus sama seperti cabang Glass di bawah (2 Box brush
+        // dekoratif DI BELAKANG content() asli, `propagateMinConstraints =
+        // true` WAJIB -- fix regresi centering yang SAMA persis sudah
+        // ditemukan & didokumentasikan di cabang Glass, dicegah terulang di
+        // sini dari awal, bukan nunggu dilaporkan lagi).
+        val neumorphContent: @Composable () -> Unit = {
+            Box(propagateMinConstraints = true) {
+                Box(modifier = Modifier.matchParentSize().background(highlightBrush))
+                Box(modifier = Modifier.matchParentSize().background(shadeBrush))
+                content()
+            }
+        }
         // [Fix, 2026-08-23] `Surface` (BUKAN `matchParentSize()`) harus jadi
         // 1 anchor child yang menentukan ukuran Box -- kalau SEMUA 3 child
         // (2 shadow + Surface) pakai matchParentSize, Box tidak punya sumber
@@ -117,7 +150,7 @@ fun TactileSurface(
                     tonalElevation = 0.dp,
                     shadowElevation = 0.dp,
                     interactionSource = interactionSource,
-                    content = content
+                    content = neumorphContent
                 )
             } else {
                 Surface(
@@ -126,7 +159,7 @@ fun TactileSurface(
                     border = border,
                     tonalElevation = 0.dp,
                     shadowElevation = 0.dp,
-                    content = content
+                    content = neumorphContent
                 )
             }
         }
