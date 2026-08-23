@@ -13,6 +13,70 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.23.1 -- Glassmorphism batch 1/N: engine visual di TactileSurface (2026-08-22)
+- Lanjut pending queue item #1 dari v8.23.0 ("definisi token warna aktual
+  per-gaya, Glassmorphism: border+gradient kaca") -- permintaan baru user
+  eksplisit: "mulai dari glassmorphism, secara bertahap, sampai tuntas",
+  3 syarat: (1) gaya visual Glassmorphism MURNI tanpa keluar dari gaya
+  desain itu sendiri, (2) base color WAJIB calm/bukan warm, (3) 100%
+  WCAG. Batas 1 task/batch -- strategi "bertahap": ubah SATU primitif
+  fondasi (`TactileSurface`), efek menjalar otomatis ke SELURUH app
+  (VaultCard/RuleCard/GroupedListRow/dst, semua 0 disentuh) tanpa perlu
+  batch terpisah per layar.
+- **File baru**: `ui/theme/GlassTokens.kt` -- token alpha fill (raised
+  0.82f/recessed 0.60f), alpha border glass-edge (0.16f/0.07f), brush
+  sheen highlight vertikal. Javadoc lengkap menelusuri 3 syarat user +
+  audit WCAG (lihat poin di bawah).
+- **File diubah**: `ui/components/TactileSurface.kt` -- signature publik
+  **0 berubah** (semua call site existing otomatis dapat wajah glass baru
+  tanpa disentuh). 3 lapisan: fill translucent (alpha dari GlassTokens,
+  hue/warna dasar TIDAK diganti -- tetap H222 biru calm dari Color.kt
+  v8.0.0, TIDAK disentuh sesi ini), border glass-edge default (HANYA
+  kalau caller tidak kirim `border` sendiri -- diverifikasi 0 call site
+  saat ini yang kirim `border` eksplisit), sheen gradient vertikal
+  (dilewati saat `recessed=true`, kesan cekung tidak boleh "berkilau").
+- **Audit WCAG (syarat #3)**: backdrop app SELALU tema gelap sendiri
+  (AppBackground/SurfaceContainer*, tidak pernah foto/konten terang) &
+  SELALU sama-gelap-atau-lebih-gelap dari tingkat surface manapun --
+  fill translucent HANYA bisa bergeser LEBIH GELAP dari nilai opaque
+  nominalnya, TIDAK PERNAH lebih terang. Artinya kontras teks terang di
+  atasnya SELALU >= angka worst-case opaque yang sudah diverifikasi
+  Color.kt (11.64:1/7.54:1), termasuk kasus paling ketat yang ditelusuri
+  manual: label `SegmentedControl` (warna `Primary`, worst-case opaque
+  5.89:1) duduk LANGSUNG di atas fill `recessed` -- fill nyata di sana
+  (`SurfaceContainerHigh`) SUDAH lebih gelap dari acuan worst-case
+  (`SurfaceContainerHighest`), jadi makin aman, bukan makin mepet.
+  Border/sheen 100% dekoratif (prinsip sama `OutlineVariant`), TIDAK
+  tunduk ambang 3:1.
+- **⚠️ BELUM diwire ke `ThemeStyleToggle`/tab "Tampilan" (scaffold
+  v8.23.0)**: Glass sekarang berlaku GLOBAL/tidak bersyarat di
+  `TactileSurface` (bukan dipicu toggle Glassmorphism yang masih
+  "Segera hadir" & 0 efek). Ini artinya badge "Segera hadir" di tab
+  Tampilan sekarang SEDIKIT tidak akurat (Glass SUDAH ada efek nyata di
+  app, walau bukan lewat toggle itu) -- **butuh keputusan user**: (a)
+  toggle nanti dikerjakan sungguhan jadi switch Glass<->Neumorphism (2
+  pending item v8.23.0 #2/#3, CompositionLocal + DataStore), ATAU
+  (b) toggle scaffold dihapus krn Glass sekarang "satu-satunya gaya"
+  bukan pilihan. TIDAK diputuskan sepihak sesi ini -- di luar cakupan
+  "mulai dari glassmorphism" yang diminta (murni visual primitif).
+- **TIDAK disentuh**: `Color.kt`/`Theme.kt` (hue/base color 0 berubah,
+  sesuai syarat #2 -- tetap H222 calm), `TactileTokens.kt` (elevasi M3
+  0 berubah), layout/spacing/typography semua layar, Robolectric/test
+  infra (TETAP dihapus permanen sejak v8.22.21 -- lihat riwayat, TIDAK
+  disinggung/dicoba lagi sesi ini).
+- File diubah (1) + 1 baru: `ui/components/TactileSurface.kt`, BARU
+  `ui/theme/GlassTokens.kt`. `preflight_check.sh` 13/13 lolos.
+- **User WAJIB verifikasi visual**: buka semua layar, cek kartu/kontrol
+  terlihat translucent+glint+sheen (bukan flat opaque M3 lama), teks
+  tetap terbaca jelas di semua kondisi (termasuk elemen recessed:
+  switch OFF, grabber sheet, segmented control track).
+- **⏳ Pending queue (lanjut batch berikutnya)**: sisa gaya
+  Glassmorphism di komponen LAIN yang TIDAK lewat `TactileSurface` (cek
+  ada/tidaknya -- perlu audit), keputusan wiring `ThemeStyleToggle` di
+  atas, item lama v8.23.0 #2/#3 (switch runtime, persistensi) MASIH
+  pending independen dari keputusan itu.
+- versionCode 149->150, versionName 8.23.0->8.23.1.
+
 ## v8.23.0 -- FITUR BARU (KERANGKA): tab "Tampilan" di Beranda, picker gaya tema Glassmorphism/Neumorphism -- 2026-08-22
 - **User minta eksplisit**: tab baru di Beranda khusus toggle 2 gaya tema
   custom (Glassmorphism/Neumorphism), TEGAS diinstruksikan "jangan kerjakan

@@ -1,7 +1,9 @@
 package com.elprompter.promptvault.ui.components
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -11,30 +13,42 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.elprompter.promptvault.ui.theme.GlassTokens
 import com.elprompter.promptvault.ui.theme.TactileTokens
 
 /**
- * v8.0.0 — Primitif tunggal "Premium Tactile", MENGGANTIKAN `GlassPanel.kt`
- * (glassmorphism, DIHAPUS TOTAL -- permintaan eksplisit user: rombak total
- * ke "default Material 3 murni", lihat javadoc lengkap di
- * `ui/theme/Color.kt`/`TactileTokens.kt`).
+ * v8.23.0 — Glassmorphism DIHIDUPKAN KEMBALI (lihat javadoc lengkap alasan
+ * & audit WCAG di `ui/theme/GlassTokens.kt`). Signature publik primitif
+ * ini TIDAK BERUBAH SAMA SEKALI dari v8.0.0 -- semua pemanggil
+ * (`VaultCard`, `RuleCard`, `GroupedListRow`, dst) otomatis dapat wajah
+ * glass baru TANPA perlu disentuh satu pun, sesuai permintaan "bertahap,
+ * mulai dari sini" (primitif tunggal, efek menjalar ke seluruh app).
  *
- * ## Beda dari `GlassPanel` lama
- * `GlassPanel` menggambar bahasa visual Glassmorphism KHUSUS (border
- * hairline putih-alpha, overlay gradient "highlight" vertikal, shadow warna
- * kustom lewat `Modifier.shadow(ambientColor=, spotColor=)`) -- semua itu
- * BUKAN bagian dari Material 3 baku, murni dekorasi tambahan era v7.x.
- * `TactileSurface` HANYA memakai `Surface` M3 BAWAAN dengan `tonalElevation`
- * + `shadowElevation` -- mekanisme kedalaman RESMI M3 (semakin tinggi
- * elevasi, M3 OTOMATIS mencampur tint `primary` ke warna permukaan lewat
- * `surfaceColorAtElevation`, ini API M3 baku, bukan hitungan manual) --
- * jadi "premium" & "tactile"-nya datang dari FISIKA M3 asli (tonal shift +
- * shadow asli), bukan lagi overlay dekoratif custom.
+ * 3 lapisan glass, SEMUA murni dekoratif (`GlassTokens`), TIDAK mengubah
+ * mekanisme elevasi M3 asli (`tonalElevation`/`shadowElevation`, tetap
+ * dipertahankan dari v8.0.0 -- "premium tactile" via elevasi RESMI M3 +
+ * glass finish, bukan salah satu doang):
+ * 1. **Fill translucent**: `color` pemanggil di-alpha (bukan diganti hue-nya)
+ *    -- `recessed` pakai [GlassTokens.FillAlphaRecessed] (paling transparan,
+ *    kesan cekung), selainnya [GlassTokens.FillAlphaRaised].
+ * 2. **Glass-edge border**: kalau pemanggil TIDAK kirim `border` eksplisit
+ *    (semua call site saat ini memang begitu, diverifikasi sebelum
+ *    menulis file ini), otomatis pakai hairline putih-alpha
+ *    [GlassTokens.borderColor]. Kalau pemanggil suatu saat kirim `border`
+ *    sendiri (mis. state error/fungsional), itu DIHORMATI apa adanya,
+ *    bukan ditimpa.
+ * 3. **Sheen highlight**: gradien vertikal tipis di lapisan PALING ATAS
+ *    konten (dalam `Box`, di belakang `content()` asli) -- ikut ter-clip
+ *    ke `shape` otomatis krn `Surface` M3 sudah clip slot kontennya.
+ *    DILEWATI saat `recessed=true` (cekung tidak boleh "berkilau" seperti
+ *    mengambang, insting glassmorphism standar: raised vs sunken beda
+ *    treatment cahaya, BUKAN keluar dari gaya desain itu sendiri).
  *
  * @param recessed permukaan "tenggelam" (track switch/segmented control
  *   OFF, grabber pill sheet) -- tonal & shadow elevation SAMA-SAMA
  *   dipaksa 0dp, `color` pemanggil (biasanya `colorScheme.surfaceContainerLowest`,
- *   lebih gelap) yang membawa kesan cekung.
+ *   lebih gelap) yang membawa kesan cekung; fill lebih transparan & TANPA
+ *   sheen menguatkan kesan itu di gaya glass.
  */
 @Composable
 fun TactileSurface(
@@ -50,6 +64,24 @@ fun TactileSurface(
     content: @Composable () -> Unit
 ) {
     val effectiveElevation = if (recessed) 0.dp else elevation
+    val fillAlpha = if (recessed) GlassTokens.FillAlphaRecessed else GlassTokens.FillAlphaRaised
+    val glassColor = color.copy(alpha = fillAlpha)
+    val glassBorder = border ?: BorderStroke(GlassTokens.BorderWidthDefault, GlassTokens.borderColor(recessed))
+
+    val glassContent: @Composable () -> Unit = {
+        if (recessed) {
+            content()
+        } else {
+            Box {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .background(GlassTokens.highlightBrush())
+                )
+                content()
+            }
+        }
+    }
 
     if (onClick != null) {
         Surface(
@@ -57,22 +89,22 @@ fun TactileSurface(
             enabled = enabled,
             modifier = modifier,
             shape = shape,
-            color = color,
-            border = border,
+            color = glassColor,
+            border = glassBorder,
             tonalElevation = effectiveElevation,
             shadowElevation = effectiveElevation,
             interactionSource = interactionSource,
-            content = content
+            content = glassContent
         )
     } else {
         Surface(
             modifier = modifier,
             shape = shape,
-            color = color,
-            border = border,
+            color = glassColor,
+            border = glassBorder,
             tonalElevation = effectiveElevation,
             shadowElevation = effectiveElevation,
-            content = content
+            content = glassContent
         )
     }
 }

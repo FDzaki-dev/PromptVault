@@ -3,6 +3,25 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.23.1 (2026-08-22) — Glassmorphism batch 1/N: engine visual di TactileSurface
+
+File baru `GlassTokens.kt` (fill translucent alpha, border glass-edge,
+sheen gradient). `TactileSurface.kt` diubah -- signature publik 0
+berubah, semua call site otomatis dapat wajah glass. Hue/base color
+TIDAK disentuh (tetap H222 calm, Color.kt v8.0.0 utuh).
+
+Audit WCAG: backdrop app selalu sama-gelap-atau-lebih-gelap dari
+surface manapun → translucency cuma bisa geser LEBIH gelap, kontras
+teks selalu >= worst-case opaque yang sudah diverifikasi (termasuk
+kasus terketat: label `SegmentedControl` di atas fill recessed).
+
+⚠️ Glass berlaku global, BELUM diwire ke toggle `ThemeStyleToggle`
+(scaffold v8.23.0, masih "Segera hadir" & 0 efek) -- butuh keputusan
+user menyusul. Robolectric/test infra tetap dihapus permanen (v8.22.21).
+
+Preflight: 13/13 kategori PASS. versionCode 149→150, versionName
+8.23.0→8.23.1.
+
 ## v8.23.0 (2026-08-22) — Fitur baru (kerangka): tab "Tampilan" di Beranda, picker Glassmorphism/Neumorphism
 Tab kedua di Beranda (`SegmentedControl` existing) berisi `ThemeStyleToggle`
 baru -- 2 opsi selectable, badge "Segera hadir". KERANGKA MURNI sesuai
