@@ -86,7 +86,15 @@ fun TactileSurface(
     if (style == ThemeStyleOption.NEUMORPHISM) {
         val lightColor = if (recessed) NeumorphTokens.DarkShadowColor else NeumorphTokens.LightShadowColor
         val darkColor = if (recessed) NeumorphTokens.LightShadowColor else NeumorphTokens.DarkShadowColor
-        Box(modifier = modifier) {
+        // [Fix, 2026-08-23] `Surface` (BUKAN `matchParentSize()`) harus jadi
+        // 1 anchor child yang menentukan ukuran Box -- kalau SEMUA 3 child
+        // (2 shadow + Surface) pakai matchParentSize, Box tidak punya sumber
+        // ukuran sama sekali & collapse ke 0x0 (`modifier` cuma set lebar via
+        // fillMaxWidth, tinggi tetap butuh diturunkan dari konten). `modifier`
+        // asli (mis. fillMaxWidth dari CTA) dipasang di Box terluar +
+        // `propagateMinConstraints = true` supaya tight-constraint tetap
+        // diteruskan ke `Surface` (sama alasan dgn fix di cabang Glass di atas).
+        Box(modifier = modifier, propagateMinConstraints = true) {
             Box(
                 modifier = Modifier
                     .matchParentSize()
@@ -103,7 +111,6 @@ fun TactileSurface(
                 Surface(
                     onClick = onClick,
                     enabled = enabled,
-                    modifier = Modifier.matchParentSize(),
                     shape = shape,
                     color = color,
                     border = border,
@@ -114,7 +121,6 @@ fun TactileSurface(
                 )
             } else {
                 Surface(
-                    modifier = Modifier.matchParentSize(),
                     shape = shape,
                     color = color,
                     border = border,
@@ -127,6 +133,39 @@ fun TactileSurface(
         return
     }
 
+    if (style == ThemeStyleOption.MATERIAL3) {
+        // [v8.23.4] Gaya ke-3: "Material 3 Murni" -- PERSIS perilaku
+        // `TactileSurface` v8.0.0 SEBELUM Glassmorphism dihidupkan lagi
+        // (v8.23.1): `Surface` M3 baku, `color`/`border` caller APA ADANYA
+        // (0 alpha, 0 override border, 0 sheen). Kedalaman murni dari
+        // tonal+shadow elevation M3 resmi.
+        if (onClick != null) {
+            Surface(
+                onClick = onClick,
+                enabled = enabled,
+                modifier = modifier,
+                shape = shape,
+                color = color,
+                border = border,
+                tonalElevation = effectiveElevation,
+                shadowElevation = effectiveElevation,
+                interactionSource = interactionSource,
+                content = content
+            )
+        } else {
+            Surface(
+                modifier = modifier,
+                shape = shape,
+                color = color,
+                border = border,
+                tonalElevation = effectiveElevation,
+                shadowElevation = effectiveElevation,
+                content = content
+            )
+        }
+        return
+    }
+
     val fillAlpha = if (recessed) GlassTokens.FillAlphaRecessed else GlassTokens.FillAlphaRaised
     val glassColor = color.copy(alpha = fillAlpha)
     val glassBorder = border ?: BorderStroke(GlassTokens.BorderWidthDefault, GlassTokens.borderColor(recessed))
@@ -135,7 +174,16 @@ fun TactileSurface(
         if (recessed) {
             content()
         } else {
-            Box {
+            // [Fix regresi centering, 2026-08-23] `propagateMinConstraints = true`
+            // WAJIB -- tanpa ini, min-constraint (mis. fillMaxWidth/fillMaxSize
+            // dari M3 Surface internal) TIDAK diteruskan ke `content()` (Box
+            // default melonggarkan min ke 0 utk child non-matchParentSize),
+            // bikin caller yang tadinya otomatis "fill" (CTA "Scan Sekarang",
+            // kotak ikon GroupedListRow, dst -- SEMUA lewat primitif ini) balik
+            // ke wrap-content & nempel kiri-atas. Bug dilaporkan user via
+            // screenshot, root cause DITEMUKAN di sini (bukan di caller manapun
+            // -- 0 file lain perlu diubah).
+            Box(propagateMinConstraints = true) {
                 Box(
                     modifier = Modifier
                         .matchParentSize()

@@ -5,11 +5,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.RadioButtonUnchecked
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -22,15 +17,19 @@ import com.elprompter.promptvault.ui.theme.TactileTokens
 import androidx.compose.ui.unit.dp
 
 /**
- * [v8.23.2] Toggle gaya visual LIVE -- `selected`/`onSelect` sekarang
- * ditulis ke `SettingsRepository` (DataStore) lewat `MainViewModel.setThemeStyle`
- * dan dibaca via `MainViewModel.themeStyle`/`VaultTheme.style` (`Theme.kt`),
- * bukan lagi state lokal `remember` (v8.23.0, kerangka). Memilih opsi di
- * sini LANGSUNG mengubah tampilan `TactileSurface` app-wide (lihat
- * `TactileSurface.kt`/`GlassTokens.kt`/`NeumorphTokens.kt`). Badge "Segera
- * hadir" DIHAPUS (sudah tidak akurat -- pilihan sekarang berefek nyata).
+ * [v8.23.4] UI diganti dari radio-row (checkmark, cuma 1 bisa aktif via
+ * tap-select) jadi SAKLAR ON/OFF (`TactileSwitch`) per baris -- diminta
+ * eksplisit user. Tetap mutually exclusive (cuma 1 gaya aktif dalam satu
+ * waktu, sesuai sifat `TactileSurface` yang cuma bisa render 1 gaya per
+ * panggilan) -- switch OPSI LAIN otomatis OFF saat 1 dinyalakan (state
+ * `selected` tunggal dari `MainViewModel.themeStyle`, BUKAN 3 boolean
+ * independen). Menekan switch yang SEDANG ON tidak melakukan apa-apa
+ * (`onCheckedChange` cuma diteruskan saat `checked=true` -- mencegah
+ * "0 gaya aktif" yang tidak valid).
+ *
+ * 3 opsi (v8.23.4, sebelumnya 2): Glassmorphism, Neumorphism, Material 3
+ * Murni (flat/opaque, gaya asli v8.0.0).
  */
-
 @Composable
 fun ThemeStyleToggle(
     selected: ThemeStyleOption,
@@ -49,45 +48,44 @@ fun ThemeStyleToggle(
             style = MaterialTheme.typography.bodySmall,
             color = colors.onSurfaceVariant
         )
-        ThemeStyleOptionRow(
+        ThemeStyleSwitchRow(
             label = stringResource(R.string.theme_toggle_glassmorphism),
-            isSelected = selected == ThemeStyleOption.GLASSMORPHISM,
-            onClick = { onSelect(ThemeStyleOption.GLASSMORPHISM) }
+            checked = selected == ThemeStyleOption.GLASSMORPHISM,
+            onCheckedChange = { if (it) onSelect(ThemeStyleOption.GLASSMORPHISM) }
         )
-        ThemeStyleOptionRow(
+        ThemeStyleSwitchRow(
             label = stringResource(R.string.theme_toggle_neumorphism),
-            isSelected = selected == ThemeStyleOption.NEUMORPHISM,
-            onClick = { onSelect(ThemeStyleOption.NEUMORPHISM) }
+            checked = selected == ThemeStyleOption.NEUMORPHISM,
+            onCheckedChange = { if (it) onSelect(ThemeStyleOption.NEUMORPHISM) }
+        )
+        ThemeStyleSwitchRow(
+            label = stringResource(R.string.theme_toggle_material3),
+            checked = selected == ThemeStyleOption.MATERIAL3,
+            onCheckedChange = { if (it) onSelect(ThemeStyleOption.MATERIAL3) }
         )
     }
 }
 
 @Composable
-private fun ThemeStyleOptionRow(label: String, isSelected: Boolean, onClick: () -> Unit) {
+private fun ThemeStyleSwitchRow(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
     val colors = MaterialTheme.colorScheme
     TactileSurface(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
-        color = if (isSelected) colors.primaryContainer else colors.surfaceContainer,
-        elevation = if (isSelected) TactileTokens.TactileElevationControl else 0.dp,
-        onClick = onClick
+        color = if (checked) colors.primaryContainer else colors.surfaceContainer,
+        elevation = if (checked) TactileTokens.TactileElevationControl else 0.dp
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Icon(
-                if (isSelected) Icons.Filled.Check else Icons.Filled.RadioButtonUnchecked,
-                contentDescription = null,
-                tint = if (isSelected) colors.onPrimaryContainer else colors.onSurfaceVariant,
-                modifier = Modifier.size(20.dp)
-            )
             Text(
                 label,
                 style = MaterialTheme.typography.bodyLarge,
-                color = if (isSelected) colors.onPrimaryContainer else colors.onSurface
+                color = if (checked) colors.onPrimaryContainer else colors.onSurface
             )
+            TactileSwitch(checked = checked, onCheckedChange = onCheckedChange)
         }
     }
 }

@@ -225,6 +225,7 @@
     <string name="theme_toggle_description">Pilih gaya visual untuk app. Berlaku langsung ke seluruh kartu &amp; kontrol.</string>
     <string name="theme_toggle_glassmorphism">Glassmorphism</string>
     <string name="theme_toggle_neumorphism">Neumorphism</string>
+    <string name="theme_toggle_material3">Material 3 Murni</string>
 
 
     <!-- [Roadmap Fase 1.3 batch 6/N, 2026-08-20] Ekstraksi MURNI OnboardingScreen.kt -->

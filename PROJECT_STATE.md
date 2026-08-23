@@ -13,6 +13,81 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.23.4 -- Glassmorphism batch 3: saklar ON/OFF (bukan radio) + tema ke-3 (2026-08-23)
+- User eksplisit: "saya juga mintanya saklar on-off, bukan radio button.
+  biar 3 theme bisa digunakan" -- 2 perubahan sekaligus, 1 batch krn
+  saling terkait (UI switch + jumlah opsi).
+- **Tema ke-3 ditambah**: `MATERIAL3` (flat/opaque) -- `ThemeStyleOption`
+  sekarang `GLASSMORPHISM`/`NEUMORPHISM`/`MATERIAL3`. Cabang baru di
+  `TactileSurface.kt`: PERSIS perilaku primitif v8.0.0 SEBELUM
+  Glassmorphism dihidupkan lagi (`Surface` M3 baku, `color`/`border`
+  caller apa adanya, 0 alpha/sheen/shadow ganda) -- bukan implementasi
+  baru, restorasi kode lama yang sudah pernah diverifikasi.
+- **UI diganti radio->switch**: `ThemeStyleToggle.kt` -- baris opsi
+  sekarang pakai `TactileSwitch` (bukan ikon Check/RadioButtonUnchecked +
+  tap-select seluruh baris). Tetap MUTUALLY EXCLUSIVE (state `selected`
+  tunggal dari DataStore, BUKAN 3 boolean independen -- tidak mungkin ada
+  situasi 2 gaya "ON" bersamaan atau 0 gaya aktif, sesuai sifat
+  `TactileSurface` yg cuma render 1 gaya per panggilan). Menyalakan
+  switch lain otomatis mematikan switch sebelumnya (via recomposition
+  `checked = selected == option`), menekan switch yang SEDANG ON
+  di-ignore (`onCheckedChange` cuma diteruskan saat `checked=true`) --
+  mencegah state tidak valid "0 gaya aktif".
+- 1 string baru (`theme_toggle_material3`), 0 string dihapus (
+  `theme_toggle_coming_soon` sudah dihapus di v8.23.2, tidak diulang).
+- **TIDAK disentuh**: default tetap GLASSMORPHISM (`SettingsRepository.DEFAULT_THEME_STYLE`,
+  0 regresi user existing), `GlassTokens.kt`/`NeumorphTokens.kt`/
+  `Color.kt` (0 perubahan token warna/WCAG di batch ini -- murni
+  penambahan 1 opsi + ganti komponen UI pemilihnya).
+- File diubah (3): `ui/components/TactileSurface.kt`,
+  `data/SettingsRepository.kt`, `ui/components/ThemeStyleToggle.kt`,
+  `res/values/strings.xml`. `preflight_check.sh` 13/13 lolos.
+- **User WAJIB verifikasi visual**: tab "Tampilan" sekarang tampil 3
+  baris dgn saklar (bukan radio-check), nyalakan salah satu otomatis
+  matikan yg lain, pilih Material 3 Murni -> app balik flat/opaque
+  (tanpa glass/shadow ganda) spt sebelum v8.23.0.
+- versionCode 152->153, versionName 8.23.3->8.23.4.
+
+## v8.23.3 -- FIX REGRESI: centering rusak akibat Glassmorphism (v8.23.1) (2026-08-23)
+- User lapor via screenshot: teks "Scan Sekarang" & ikon di semua menu
+  grouped list tiba-tiba tidak center (nempel kiri-atas). Root cause
+  DITEMUKAN & DIPERBAIKI di `TactileSurface.kt` -- 0 file caller
+  (`HomeScreen.kt`, dst) perlu disentuh, bug murni di primitif v8.23.1.
+- **Akar masalah**: `Box` pembungkus sheen highlight (v8.23.1) TIDAK
+  diberi `propagateMinConstraints = true`. Default Compose Box
+  melonggarkan min-constraint ke 0 utk child non-`matchParentSize` --
+  memutus tight-constraint (mis. `fillMaxWidth` dari CTA) yang
+  sebelumnya (v8.0.0-v8.23.0, `content()` langsung jadi child `Surface`)
+  MENGALIR OTOMATIS ke `content()` lewat `propagateMinConstraints=true`
+  internal M3 `Surface`. Efeknya: `Box(padding, contentAlignment=Center)`
+  di caller (tanpa `fillMaxWidth` eksplisit, MENGANDALKAN constraint yg
+  diteruskan) balik ke ukuran wrap-content sekecil teksnya -- terlihat
+  seolah "nempel kiri-atas" krn Box-nya sendiri jadi sekecil itu, BUKAN
+  krn `contentAlignment=Center` berhenti berfungsi.
+- **Fix**: tambah `propagateMinConstraints = true` ke Box pembungkus
+  sheen (cabang Glassmorphism).
+- **Bug KEDUA ditemukan SAAT audit fix di atas** (BELUM sempat dilaporkan
+  user, ditangkap sebelum jadi masalah nyata): cabang Neumorphism
+  (v8.23.2) SEMUA 3 child (2 shadow + `Surface`) pakai `matchParentSize()`
+  -- 0 child "anchor" utk menentukan ukuran Box, resiko collapse ke
+  tinggi 0 di device beneran (tidak kelihatan simetris di deskripsi teks
+  manapun, cuma ketahuan dari audit ulang kode). Fix: `Surface` (BUKA
+  `matchParentSize()`) jadi anchor, 2 shadow Box match ke situ,
+  `modifier` asli (mis. fillMaxWidth CTA) pindah ke Box terluar +
+  `propagateMinConstraints=true` (pola sama fix di atas).
+- **Pelajaran dicatat eksplisit**: WAJIB pertimbangkan
+  `propagateMinConstraints` SETIAP kali menambah lapisan `Box` pembungkus
+  DI ANTARA `Surface`/M3 primitif dan `content()` caller -- constraint
+  propagation Compose Box TIDAK otomatis transparan, beda dgn asumsi
+  intuitif "cuma nambah 1 layer visual, harusnya 0 efek layout".
+- File diubah (1): `ui/components/TactileSurface.kt`. `preflight_check.sh`
+  13/13 lolos.
+- **User WAJIB verifikasi**: buka Beranda, cek "Scan Sekarang" & ikon
+  semua menu center lagi spt sebelum v8.23.1. Cek juga mode Neumorphism
+  (tab Tampilan) -- kartu/kontrol harus tetap render normal (tidak
+  collapse/hilang).
+- versionCode 151->152, versionName 8.23.2->8.23.3.
+
 ## v8.23.2 -- Glassmorphism batch 2/N: toggle "Tampilan" LIVE, Neumorphism ditambah (2026-08-22)
 - User eksplisit: "toggle dikerjakan sungguhan (switch Glass<->Neumorphism)"
   -- lanjut pending item v8.23.0 #2/#3 (switch runtime + persistensi),

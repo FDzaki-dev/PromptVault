@@ -3,6 +3,36 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.23.4 (2026-08-23) — Saklar ON/OFF (bukan radio) + tema ke-3 (Material 3 Murni)
+
+`ThemeStyleOption` tambah `MATERIAL3` (flat/opaque, restorasi perilaku
+`TactileSurface` v8.0.0 pre-Glassmorphism). `ThemeStyleToggle.kt` ganti
+UI dari radio-row jadi `TactileSwitch` per baris -- tetap mutually
+exclusive (state tunggal dari DataStore), menyalakan 1 otomatis matikan
+lainnya, menekan yang sedang ON di-ignore (cegah 0 gaya aktif).
+
+Default tetap GLASSMORPHISM, 0 perubahan token warna/WCAG di batch ini.
+
+Preflight: 13/13 kategori PASS. versionCode 152→153, versionName
+8.23.3→8.23.4.
+
+## v8.23.3 (2026-08-23) — FIX REGRESI: centering rusak akibat Glassmorphism
+
+`Box` pembungkus sheen highlight (v8.23.1) tidak diberi
+`propagateMinConstraints = true` -- memutus tight-constraint
+(fillMaxWidth dll) yang tadinya mengalir otomatis lewat M3 `Surface`.
+Efek: "Scan Sekarang" & ikon menu balik ke wrap-content, terlihat
+nempel kiri-atas (bukan bug `contentAlignment`, tapi Box-nya sendiri
+jadi sekecil kontennya).
+
+Bug KEDUA ditemukan saat audit (belum sempat dilaporkan): cabang
+Neumorphism (v8.23.2) 0 child anchor untuk ukuran Box (semua
+`matchParentSize`), resiko collapse tinggi 0. Keduanya diperbaiki di
+`TactileSurface.kt` -- 0 file caller disentuh.
+
+Preflight: 13/13 kategori PASS. versionCode 151→152, versionName
+8.23.2→8.23.3.
+
 ## v8.23.2 (2026-08-22) — Glassmorphism batch 2/N: toggle "Tampilan" LIVE + Neumorphism diimplementasikan penuh
 
 `ThemeStyleOption` dipindah ke `SettingsRepository` (persisten DataStore,
