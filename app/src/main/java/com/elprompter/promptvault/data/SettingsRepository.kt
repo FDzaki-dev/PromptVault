@@ -17,13 +17,13 @@ enum class ConflictStrategy {
 }
 
 /**
- * [v8.23.2] Gaya visual primitif `TactileSurface` -- DIPINDAH ke sini dari
+ * (v8.23.2) Gaya visual primitif `TactileSurface` -- DIPINDAH ke sini dari
  * `ui/components/ThemeStyleToggle.kt` (v8.23.0, kerangka) supaya lapisan
  * data yang punya persistensi, bukan komponen UI. Default GLASSMORPHISM
  * (sudah jadi visual de facto app sejak v8.23.1 -- bukan perubahan default
  * baru, cuma sekarang eksplisit tersimpan & bisa diganti user).
  *
- * [v8.23.4] `MATERIAL3` ditambah -- gaya ke-3, flat/opaque (perilaku
+ * (v8.23.4) `MATERIAL3` ditambah -- gaya ke-3, flat/opaque (perilaku
  * `TactileSurface` v8.0.0 sebelum Glassmorphism dihidupkan lagi), diminta
  * eksplisit user ("biar 3 theme bisa digunakan").
  */

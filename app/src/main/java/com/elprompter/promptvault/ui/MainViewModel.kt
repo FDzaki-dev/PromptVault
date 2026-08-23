@@ -157,7 +157,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             state.asStateFlow()
         }
 
-    /** [v8.23.2] Gaya Glassmorphism/Neumorphism -- pola StateFlow manual PERSIS sama dgn [conflictStrategy] di atas (bukan `.stateIn`, konsisten dgn konvensi file ini). */
+    /** (v8.23.2) Gaya Glassmorphism/Neumorphism -- pola StateFlow manual PERSIS sama dgn [conflictStrategy] di atas (bukan `.stateIn`, konsisten dgn konvensi file ini). */
     val themeStyle: StateFlow<ThemeStyleOption> = settingsRepository.themeStyleFlow
         .let { flow ->
             val state = MutableStateFlow(SettingsRepository.DEFAULT_THEME_STYLE)

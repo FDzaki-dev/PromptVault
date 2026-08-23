@@ -3,6 +3,24 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.23.5 (2026-08-23) — Fix root cause: bug parser KDoc KSP di tag [vX.Y.Z]
+
+Build failure log v8.23.4: 6x "Closing bracket expected" di 4 file, semua
+di baris komentar. Cek manual bracket per file — semua seimbang. Root cause
+asli: KSP mem-parse `[...]` di KDoc sebagai referensi bernama, tersandung di
+"." dalam tag `[v8.23.2]` (digit tidak valid sebagai lanjutan identifier
+setelah titik). Tag `//` dengan pola sama di file lain tidak kena — KDoc
+reference-parsing cuma aktif di `/** */`.
+
+Fix: 6 tag `[v8.23.2]`/`[v8.23.4]` diganti `(v8.23.2)`/`(v8.23.4)` (kurung
+biasa, bukan siku). 4 file diubah: SettingsRepository.kt, MainViewModel.kt,
+ThemeStyleToggle.kt, Theme.kt.
+
+Confidence 90% — pertama kali fix berdasar pesan compiler asli+posisi kolom
+presisi, bukan tebakan.
+
+versionCode 153->154, versionName 8.23.4->8.23.5.
+
 ## v8.23.4 (2026-08-23) — Saklar ON/OFF (bukan radio) + tema ke-3 (Material 3 Murni)
 
 `ThemeStyleOption` tambah `MATERIAL3` (flat/opaque, restorasi perilaku

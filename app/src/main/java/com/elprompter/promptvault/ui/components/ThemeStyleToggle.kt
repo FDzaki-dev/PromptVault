@@ -17,7 +17,7 @@ import com.elprompter.promptvault.ui.theme.TactileTokens
 import androidx.compose.ui.unit.dp
 
 /**
- * [v8.23.4] UI diganti dari radio-row (checkmark, cuma 1 bisa aktif via
+ * (v8.23.4) UI diganti dari radio-row (checkmark, cuma 1 bisa aktif via
  * tap-select) jadi SAKLAR ON/OFF (`TactileSwitch`) per baris -- diminta
  * eksplisit user. Tetap mutually exclusive (cuma 1 gaya aktif dalam satu
  * waktu, sesuai sifat `TactileSurface` yang cuma bisa render 1 gaya per

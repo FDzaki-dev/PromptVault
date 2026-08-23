@@ -13,6 +13,45 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.23.5 -- FIX ROOT CAUSE: bug parser KDoc KSP di tag `[vX.Y.Z]`, bukan bug bracket biasa (2026-08-23)
+- User upload build-failure-log-v8_23_4: `kspDebugKotlin`+`kspReleaseKotlin`
+  FAILED, 6x "Closing bracket expected" tersebar di 4 file berbeda
+  (SettingsRepository.kt x2, MainViewModel.kt, ThemeStyleToggle.kt,
+  Theme.kt x2) -- SEMUA di baris komentar `/** ... */`, TIDAK ADA di kode
+  asli. Cek manual (hitung kurung per file, exclude comment/string) --
+  KEENAM file 100% seimbang. Preflight check bawaan project (hitung
+  `{`/`}` polos) juga bilang "seimbang" -- keduanya BENAR, tapi salah
+  kelas masalah.
+- **Root cause SEBENARNYA ditemukan**: posisi kolom error di KEENAM
+  kejadian PERSIS di karakter "." tepat setelah "v8" dalam tag komentar
+  `[v8.23.X]` -- KSP (compiler Kotlin utk Symbol Processing, beda dari
+  compiler utama) mem-parse `[...]` di dalam KDoc sebagai REFERENSI
+  BERNAMA (`[MyClass.myMethod]`-style, fitur KDoc asli), lalu tersandung
+  pas ketemu `.23` (digit tidak valid sbg lanjutan identifier setelah
+  titik) -- bukan bug bracket biasa, tapi salah tafsir `[v8.23.2]` sebagai
+  usaha referensi qualified-name yg gagal separuh jalan. Tag `//` (line
+  comment) di file LAIN (TactileSurface.kt, HomeScreen.kt) yg pakai pola
+  SAMA `[v8.23.X]` TIDAK kena -- KDoc reference-parsing cuma aktif di
+  `/** */` block comment, bukan `//`.
+- **Fix**: 6 tag `[v8.23.2]`/`[v8.23.4]` di dalam KDoc diganti jadi
+  `(v8.23.2)`/`(v8.23.4)` (kurung biasa, bukan siku) -- kurung biasa TIDAK
+  dianggap sintaks referensi KDoc apa pun, aman total. 5 tag `//` di
+  file lain TIDAK disentuh (tidak vulnerable, sudah dikonfirmasi lewat
+  daftar error yang TIDAK menyebut file2 itu).
+- File diubah (4, PAS batas 1 task/batch -- fix root cause tunggal):
+  `data/SettingsRepository.kt`, `ui/MainViewModel.kt`,
+  `ui/components/ThemeStyleToggle.kt`, `ui/theme/Theme.kt`.
+  `preflight_check.sh` lolos bersih.
+- **Pelajaran dicatat**: JANGAN pakai tag KDoc `[vX.Y.Z]` (bracket siku +
+  angka bertitik) di comment block `/** */` manapun ke depan -- selalu
+  pakai `(vX.Y.Z)` (kurung biasa) atau tulis di line comment `//`. Ini
+  BUKAN gaya penulisan project yang salah secara umum (ratusan tag
+  `[SAF v2, ...]`/`[fix audit P0 ...]` di file lain AMAN krn ada teks
+  sebelum angka/titik, bukan `v` langsung diikuti digit-titik-digit).
+- Confidence 90% -- ini PERTAMA KALINYA sesi ini fix berdasar pesan error
+  compiler ASLI+dianalisis presisi (posisi kolom persis), bukan tebakan.
+- versionCode 153->154, versionName 8.23.4->8.23.5.
+
 ## v8.23.4 -- Glassmorphism batch 3: saklar ON/OFF (bukan radio) + tema ke-3 (2026-08-23)
 - User eksplisit: "saya juga mintanya saklar on-off, bukan radio button.
   biar 3 theme bisa digunakan" -- 2 perubahan sekaligus, 1 batch krn

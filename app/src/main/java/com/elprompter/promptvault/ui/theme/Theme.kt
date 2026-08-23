@@ -76,7 +76,7 @@ private val VaultExtra = VaultExtraColors(slate = SettingsAccent, slateContainer
 
 val LocalVaultExtraColors = staticCompositionLocalOf { VaultExtra }
 
-/** [v8.23.2] Gaya visual aktif (`TactileSurface` konsumsi ini) -- default GLASSMORPHISM, sama seperti v8.23.1 sebelum toggle nyata ada. */
+/** (v8.23.2) Gaya visual aktif (`TactileSurface` konsumsi ini) -- default GLASSMORPHISM, sama seperti v8.23.1 sebelum toggle nyata ada. */
 val LocalThemeStyle = staticCompositionLocalOf { ThemeStyleOption.GLASSMORPHISM }
 
 object VaultTheme {
@@ -88,7 +88,7 @@ object VaultTheme {
 }
 
 /**
- * [v8.23.2] Parameter `themeStyle` baru -- default `GLASSMORPHISM` supaya
+ * (v8.23.2) Parameter `themeStyle` baru -- default `GLASSMORPHISM` supaya
  * call site lama (`MainActivity.kt` sebelum wiring) tetap valid tanpa
  * ubah signature secara breaking. Pemanggil sekarang (`MainActivity.kt`)
  * mengirim nilai nyata dari `MainViewModel.themeStyle` (DataStore).
