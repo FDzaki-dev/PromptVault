@@ -13,6 +13,30 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.23.6 -- FIX BUG NYATA: Neumorphism sama Material3 gak kelihatan beda (2026-08-23)
+- User laporan pakai (screenshot 2x, toggle Neumorphism vs Material 3
+  Murni): visualnya IDENTIK, 0 perbedaan kelihatan.
+- **Root cause**: kode branch-nya SUDAH benar (`TactileSurface.kt` -- dua
+  jalur berbeda total), tapi `NeumorphTokens` (v8.23.2) alpha shadow-nya
+  jauh terlalu tipis: putih 0.06f / hitam 0.45f. Shadow neumorphism cuma
+  kelihatan sebagai "bleed" tipis DI LUAR bentuk konten (fill di atasnya
+  nutup sisanya) -- di alpha seringan itu, terutama sisi terang (6%!),
+  efeknya nyaris 0% kebaca di layar HP nyata. BUKAN bug rendering/salah
+  cabang -- efeknya beneran ada, cuma nyaris tak terlihat.
+- **Fix**: alpha dinaikkan jauh (putih 0.06f->0.35f, hitam 0.45f->0.70f),
+  blur radius 12dp->18dp, offset 6dp->7dp -- teknik (2 Box beroffset +
+  Modifier.shadow) TIDAK direstrukturisasi, cuma kontras dinaikkan biar
+  "efek timbul" (permintaan awal fitur ini) beneran kebaca, bukan cuma
+  ada di kode doang.
+- File diubah (1, PAS batas 1 task/batch): `ui/theme/NeumorphTokens.kt`.
+  `preflight_check.sh` lolos bersih.
+- Confidence 70% -- perbaikan berdasar analisis kode+screenshot (bukan
+  compiler), TIDAK bisa dites visual nyata di sesi ini (0 emulator/device).
+  Kalau MASIH kurang kelihatan, next step: naikkan lagi alpha atau
+  restrukturisasi teknik shadow (mis. drawBehind manual, bukan
+  Modifier.shadow bawaan) -- belum dicoba, dicatat kalau perlu.
+- versionCode 154->155, versionName 8.23.5->8.23.6.
+
 ## v8.23.5 -- FIX ROOT CAUSE: bug parser KDoc KSP di tag `[vX.Y.Z]`, bukan bug bracket biasa (2026-08-23)
 - User upload build-failure-log-v8_23_4: `kspDebugKotlin`+`kspReleaseKotlin`
   FAILED, 6x "Closing bracket expected" tersebar di 4 file berbeda

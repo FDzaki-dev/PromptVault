@@ -29,14 +29,25 @@ import androidx.compose.ui.unit.dp
  */
 object NeumorphTokens {
     /** Jarak offset shadow dari tepi permukaan (kedua arah, simetris). */
-    val ShadowOffset: Dp = 6.dp
+    val ShadowOffset: Dp = 7.dp
 
     /** Radius blur shadow -- lebih besar dari offset supaya terasa "lembut" (ciri khas neumorphism, bukan shadow tegas M3 biasa). */
-    val ShadowBlurRadius: Dp = 12.dp
+    val ShadowBlurRadius: Dp = 18.dp
+
+    // [fix bug nyata, 2026-08-23 -- laporan user "Neumorphism sama Material3
+    // gak ada bedanya sama sekali"] ROOT CAUSE: shadow SECARA TEKNIS memang
+    // render (kode sudah benar, dua Box beroffset + Modifier.shadow), TAPI
+    // alpha lama (putih 0.06f / hitam 0.45f) jauh terlalu tipis utk terlihat
+    // -- yang kelihatan cuma "bleed" tipis di LUAR bentuk konten (fill di
+    // atasnya menutupi sisanya, lihat TactileSurface.kt), jadi di alpha
+    // serendah itu efeknya nyaris 0% kebaca di layar HP nyata, apalagi warna
+    // terang di atas latar app yang sudah gelap total. Dinaikkan jauh lebih
+    // kuat di sini -- BUKAN restrukturisasi teknik (offset+shadow tetap sama
+    // persis), murni kontras dinaikkan supaya "efek timbul" benar2 terlihat.
 
     /** Shadow terang (kiri-atas) -- putih alpha rendah, netral, bukan warm. */
-    val LightShadowColor: Color = Color.White.copy(alpha = 0.06f)
+    val LightShadowColor: Color = Color.White.copy(alpha = 0.35f)
 
     /** Shadow gelap (kanan-bawah) -- hitam alpha lebih tinggi (latar app sudah gelap, perlu sedikit lebih kuat drpd shadow terang supaya kedua arah sama-sama kebaca). */
-    val DarkShadowColor: Color = Color.Black.copy(alpha = 0.45f)
+    val DarkShadowColor: Color = Color.Black.copy(alpha = 0.70f)
 }

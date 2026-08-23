@@ -3,6 +3,23 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.23.6 (2026-08-23) — Fix: Neumorphism sama Material3 gak kelihatan beda
+
+Laporan user (screenshot): toggle Neumorphism vs Material 3 Murni terlihat
+identik. Root cause: kode branch sudah benar, tapi alpha shadow
+`NeumorphTokens` (putih 0.06f/hitam 0.45f) jauh terlalu tipis — shadow cuma
+kelihatan sebagai bleed tipis di luar konten, nyaris 0% kebaca di layar
+nyata.
+
+Fix: alpha putih 0.06f→0.35f, hitam 0.45f→0.70f, blur 12dp→18dp, offset
+6dp→7dp. Teknik (offset Box + Modifier.shadow) tidak diubah, cuma kontras
+dinaikkan.
+
+1 file diubah: `ui/theme/NeumorphTokens.kt`. Confidence 70% — belum bisa
+dites visual nyata di sesi ini.
+
+versionCode 154->155, versionName 8.23.5->8.23.6.
+
 ## v8.23.5 (2026-08-23) — Fix root cause: bug parser KDoc KSP di tag [vX.Y.Z]
 
 Build failure log v8.23.4: 6x "Closing bracket expected" di 4 file, semua
