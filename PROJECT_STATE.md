@@ -13,6 +13,30 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.30.4 -- FIX: rotasi kipas "kasar & truncated" di kartu tinggi (2026-08-24)
+- User lapor via screenshot: "agak kasar dan truncated yah" -- rotasi
+  v8.30.3 kelihatan ekstrem & kepotong tepi layar, KHUSUSNYA di kartu
+  tinggi (grouped-list menu 6 baris "Kelola Rule" dst), meski kartu
+  kecil ("Rule aktif") kelihatan wajar.
+- **Root cause**: pivot rotasi di POJOK kiri-atas (`Offset.Zero`,
+  v8.30.3) -- jarak dari pivot ke sudut jauh kartu = DIAGONAL PENUH,
+  makin tinggi kartu makin jauh diagonalnya, makin besar sapuan rotasi
+  di sudut jauh (bisa puluhan-ratusan px utk kartu tinggi) -- jauh
+  melebihi layar, kepotong tepi. Efek jadi TIDAK PROPORSIONAL antar
+  ukuran kartu (kecil vs tinggi beda drastis).
+- **Fix**: pivot pindah ke TENGAH kartu (`size.center`) -- jarak ke
+  sudut jauh jadi SETENGAH diagonal, otomatis ~separuh sapuan. Sudut
+  `StackedFanAngle` juga diperkecil 3.5° -> 1.2° per layer. Kombinasi
+  keduanya: sapuan max di kartu TERTINGGI app (grouped-list ~700dp)
+  turun dari puluhan-ratusan px jadi ~16px -- proporsional & terkendali
+  di SEMUA ukuran kartu, bukan cuma yang kecil.
+- File diubah (1): `ui/theme/NeumorphTokens.kt`. `preflight_check.sh`
+  14/14 lolos.
+- **User WAJIB verifikasi**: cek kartu "Kelola Rule" (grouped-list
+  panjang) DAN kartu "Rule aktif" (pendek) -- keduanya harus terlihat
+  proporsional, tidak ada yang kepotong tepi layar lagi.
+- versionCode 174->175, versionName 8.30.3->8.30.4.
+
 ## v8.30.3 -- Poles Stacked Cards Effect: rotasi kipas + offset diperbesar (2026-08-24)
 - User: "bisa lebih wah lagi??" -- lanjut poles setelah v8.30.2 (garis
   tepi). Efek offset lurus sejajar dirasa masih kurang "hidup".

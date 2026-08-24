@@ -190,21 +190,29 @@ object NeumorphTokens {
      * (bukan teks) sama prinsipnya dgn border utama.
      *
      * v8.30.3 — Poles lagi ("lebih wah"): tambah ROTASI kipas (`rotate()`
-     * DrawScope, pivot pojok kiri-atas -- geometris murni, BUKAN
-     * shadow/gradient, tetap patuh "0 pencahayaan") supaya lapis
-     * belakang sedikit MEMUTAR, bukan cuma geser sejajar -- kesan
-     * "kartu dikocok/terfan" klasik, jauh lebih hidup drpd offset lurus
-     * doang. Offset dasar juga dinaikkan 7dp/14dp -> 9dp/18dp biar lebih
-     * kebaca. Pivot di pojok yang SAMA dgn arah offset (kiri-atas ->
-     * kartu memutar & bergeser konsisten ke kanan-bawah, 1 arah gerak).
+     * DrawScope) sebelum digambar -- geometris murni, BUKAN
+     * shadow/gradient, tetap patuh "0 pencahayaan" dari v8.30.0.
+     *
+     * v8.30.4 — FIX: user lapor "agak kasar dan truncated" -- pivot di
+     * POJOK kiri-atas (v8.30.3) bikin sapuan rotasi SEBANDING DIAGONAL
+     * kartu (jarak dari pivot ke sudut jauh), jadi utk kartu TINGGI (mis.
+     * grouped-list menu 6 baris) sapuannya jadi puluhan-ratusan px --
+     * jauh melebihi layar, kepotong tepi (truncated), kesannya kasar.
+     * Fix: pivot pindah ke TENGAH kartu (`size.center`, bukan pojok) --
+     * jarak dari pivot ke sudut jauh jadi SETENGAH diagonal (bukan
+     * diagonal penuh), sapuan otomatis ~separuh utk sudut ekstrem. Sudut
+     * rotasi JUGA diperkecil 3.5° -> 1.2° per layer -- kombinasi
+     * keduanya bikin efek proporsional & terkendali di SEMUA ukuran
+     * kartu (kecil maupun tinggi), bukan cuma di kartu kecil.
      */
-    val StackedFanAngle: Float = 3.5f
+    val StackedFanAngle: Float = 1.2f
     val StackedOutline: Color = OutlineVariant
     val StackedOutlineWidth: Dp = 1.dp
 
     fun Modifier.stackedCards(): Modifier = this.drawBehind {
         val radius = CornerRadius(StackedCardCornerRadius.toPx())
         val outlinePx = StackedOutlineWidth.toPx()
+        val pivot = Offset(size.width / 2f, size.height / 2f)
         // Digambar dari PALING JAUH -> PALING DEKAT (offset besar dulu)
         // supaya lapis lebih dekat menimpa sebagian lapis lebih jauh --
         // efek "kartu terfan" yang benar, bukan tumpang tindih acak.
@@ -212,7 +220,7 @@ object NeumorphTokens {
             val layerIndex = i + 1
             val shift = StackedCardOffset.toPx() * layerIndex
             val topLeft = Offset(shift, shift)
-            rotate(degrees = StackedFanAngle * layerIndex, pivot = Offset.Zero) {
+            rotate(degrees = StackedFanAngle * layerIndex, pivot = pivot) {
                 drawRoundRect(
                     color = StackedCardColors[i],
                     topLeft = topLeft,

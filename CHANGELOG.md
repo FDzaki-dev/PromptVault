@@ -3,6 +3,17 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.30.4 (2026-08-24) — FIX: rotasi kipas "kasar & truncated" di kartu tinggi
+
+Pivot rotasi di pojok (v8.30.3) bikin sapuan sebanding DIAGONAL PENUH
+kartu -- kartu tinggi (grouped-list menu) sapuannya jadi ekstrem,
+kepotong tepi layar. Fix: pivot pindah ke TENGAH kartu (setengah
+diagonal) + sudut diperkecil 3.5°→1.2° -- sapuan max turun drastis,
+proporsional di semua ukuran kartu.
+
+Preflight: 14/14 kategori PASS. versionCode 174→175, versionName
+8.30.3→8.30.4.
+
 ## v8.30.3 (2026-08-24) — Poles Stacked Cards Effect: rotasi kipas + offset diperbesar
 
 Tiap lapis stacked-card sekarang dirotasi (`rotate()` DrawScope, pivot
