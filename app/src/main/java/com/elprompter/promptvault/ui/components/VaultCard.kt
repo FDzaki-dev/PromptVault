@@ -14,6 +14,13 @@ import com.elprompter.promptvault.ui.theme.TactileTokens
  * `TactileSurface` (lihat `TactileSurface.kt`). `color` sekarang
  * `colorScheme.surfaceContainer` (peran M3 BAKU utk permukaan kartu
  * "naik" 1 tingkat dari root), menggantikan token literal `GlassSurface`.
+ *
+ * v8.30.0 — "Stacked Cards Effect" diaktifkan di sini (`stackedCards =
+ * true`), permintaan eksplisit user, khusus tema Neumorphism (opt-in di
+ * `TactileSurface`, 0 dampak ke gaya Glass/Material3 Murni atau komponen
+ * lain -- lihat javadoc lengkap `NeumorphTokens.kt`). VaultCard dipilih
+ * krn kartu PALING besar/dominan di app -- efek tumpukan paling masuk
+ * akal & terlihat di sini, bukan di kotak ikon kecil/kontrol.
  */
 @Composable
 fun VaultCard(
@@ -25,6 +32,7 @@ fun VaultCard(
         shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surfaceContainer,
         elevation = TactileTokens.TactileElevationCard,
+        stackedCards = true,
         content = content
     )
 }

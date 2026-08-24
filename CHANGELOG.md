@@ -3,6 +3,13 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.30.0 (2026-08-24) — Stacked Cards Effect di Neumorphism (tanpa utak-atik pencahayaan & icon menu)
+`NeumorphTokens.stackedCards()` -- `Modifier.drawBehind{}` ditempel langsung
+ke chain `Surface` (bukan `Box` baru, aman dari regresi weight/align
+v8.28.0). 2 lapis rounded-rect flat solid mengintip di sudut kanan-bawah
+VaultCard. Opt-in param `stackedCards=false` default -- 0 dampak ke icon
+menu/switch/dll, pencahayaan existing 0 baris berubah.
+
 ## v8.29.0 (2026-08-23) — Sempurnakan UI/UX: WarningBanner ikut tema aktif
 `WarningBanner` (SAF custom destination & Mode Shizuku) dulu flat
 `Modifier.background()` polos, bypass total sistem tema. Diganti

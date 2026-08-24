@@ -1,5 +1,9 @@
 package com.elprompter.promptvault.ui.theme
 
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
@@ -113,4 +117,69 @@ object NeumorphTokens {
         colors = listOf(Platinum, Color.Transparent)
     )
     val BorderWidth: Dp = 1.5.dp
+
+    /**
+     * v8.30.0 — "Stacked Cards Effect", permintaan eksplisit user: "tanpa
+     * utak-atik pencahayaan dan icon menu sama sekali". Ditelusuri ketat:
+     * 1. **Pencahayaan 0 disentuh**: `ShadowElevation`/`FillHighlightTint`/
+     *    `FillShadeTint`/`fillHighlightBrush()`/`fillShadeBrush()`/border
+     *    di atas SEMUA 0 baris berubah. Lapis stacked-cards di bawah FLAT
+     *    SOLID murni (`drawRoundRect(color=...)`, TANPA shadow/gradient/
+     *    alpha-blend apa pun) -- mekanisme YANG SAMA SEKALI TERPISAH dari
+     *    sistem pencahayaan existing, bukan modifikasi atasnya.
+     * 2. **Icon menu 0 disentuh**: token & fungsi di bawah HANYA dipakai
+     *    lewat parameter opt-in BARU `TactileSurface(stackedCards=...)`
+     *    default `false` -- 0 dampak ke caller manapun yang tidak eksplisit
+     *    mengaktifkan. Diaktifkan HANYA di `VaultCard.kt` (kartu utama).
+     *    `GroupedListRow` (kotak ikon menu), `EmptyState` (lingkaran ikon),
+     *    `TactileSwitch`, `SegmentedControl`, dll TIDAK disentuh -- tetap
+     *    default `false`, 0 baris kode-nya berubah.
+     *
+     * Teknik: `Modifier.drawBehind{}` (BUKAN `Box` pembungkus baru --
+     * lihat histori regresi v8.28.0 di PROJECT_STATE.md soal `Box`
+     * pembungkus merusak `Modifier.weight()`/`align()` caller, TIDAK BOLEH
+     * terulang) ditempel LANGSUNG ke modifier chain yang SAMA dgn `Surface`
+     * -- gambar rounded-rect solid, offset kumulatif kanan-bawah (arah
+     * SAMA dgn shadow existing, 1 sumber "kedalaman" konsisten). Karena
+     * `drawBehind` ini berada SEBELUM `clip(shape)` internal `Surface`
+     * dalam urutan chain (modifier pemanggil selalu di-prepend, `Surface`
+     * menambahkan clip/background-nya SENDIRI setelahnya), bagian yang
+     * ke-gambar DI DALAM bentuk kartu tertutup fill utama Surface (Lapis
+     * 1, tidak berubah) -- HANYA bagian yang offset MELEBIHI tepi kartu
+     * yang terlihat mengintip, PERSIS efek "tumpukan kartu" klasik, tanpa
+     * clip Surface memotongnya (clip cuma berlaku ke draw SETELAHNYA di
+     * chain, bukan retroaktif ke draw SEBELUMNYA -- prinsip yang sama
+     * persis knp `Modifier.shadow()` bisa "bleed" di luar shape).
+     */
+    val StackedCardOffset: Dp = 7.dp
+
+    /** Radius sudut lapis stacked-card -- SAMA dgn shape kartu utama
+     * (`shapes.medium`/[TactileTokens.ControlCornerRadius]) supaya
+     * terlihat sbg tumpukan kartu SEBENTUK, bukan kotak acak. */
+    val StackedCardCornerRadius: Dp = TactileTokens.ControlCornerRadius
+
+    /** Warna tiap lapis, index 0 = PALING DEKAT (mengintip paling sedikit)
+     * -> index terakhir = PALING JAUH. Reuse tier `SurfaceContainerLow`/
+     * `SurfaceContainerLowest` yang SUDAH ada (0 hue baru) -- makin jauh
+     * makin redup/gelap, konsisten konvensi depth app ("makin gelap =
+     * makin ke dalam"). FLAT, tanpa alpha/gradient (lihat poin 1 atas). */
+    val StackedCardColors: List<Color> = listOf(SurfaceContainerLow, SurfaceContainerLowest)
+
+    /** Modifier stacked-cards -- ditempel LANGSUNG ke chain yang sama dgn
+     * `Surface` (bukan `Box` baru), lihat javadoc lengkap di atas. */
+    fun Modifier.stackedCards(): Modifier = this.drawBehind {
+        val radius = CornerRadius(StackedCardCornerRadius.toPx())
+        // Digambar dari PALING JAUH -> PALING DEKAT (offset besar dulu)
+        // supaya lapis lebih dekat menimpa sebagian lapis lebih jauh --
+        // efek "kartu terfan" yang benar, bukan tumpang tindih acak.
+        for (i in StackedCardColors.indices.reversed()) {
+            val shift = StackedCardOffset.toPx() * (i + 1)
+            drawRoundRect(
+                color = StackedCardColors[i],
+                topLeft = Offset(shift, shift),
+                size = size,
+                cornerRadius = radius
+            )
+        }
+    }
 }

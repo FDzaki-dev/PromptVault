@@ -13,6 +13,51 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.30.0 -- Stacked Cards Effect di tema Neumorphism (permintaan eksplisit: tanpa utak-atik pencahayaan & icon menu) (2026-08-24)
+- **User**: "tambahkan Stacked Cards Effect pada theme Neumorphism tanpa
+  utak-atik pencahayaan dan icon menu sama sekali ok!!".
+- **Teknik**: `NeumorphTokens.stackedCards()` -- `Modifier.drawBehind{}`
+  ditempel LANGSUNG ke modifier chain yang SAMA dgn `Surface` (BUKAN `Box`
+  pembungkus baru -- histori regresi v8.28.0 soal `Box` merusak
+  `Modifier.weight()`/`align()` TIDAK BOLEH terulang). Gambar 2 lapis
+  rounded-rect FLAT SOLID (reuse `SurfaceContainerLow`/
+  `SurfaceContainerLowest`, 0 hue baru), offset kumulatif 7dp/14dp ke
+  kanan-bawah (arah SAMA dgn shadow existing). Karena `drawBehind` ada
+  SEBELUM `clip(shape)` internal `Surface` di urutan chain, bagian di
+  DALAM kartu tertutup fill utama (tidak berubah) -- HANYA bagian yang
+  offset MELEBIHI tepi kartu yang mengintip terlihat, PERSIS efek
+  "tumpukan kartu" -- prinsip sama persis knp `Modifier.shadow()` bisa
+  "bleed" di luar shape (clip cuma berlaku ke draw SETELAHNYA di chain).
+- **"Tanpa utak-atik pencahayaan"**: `ShadowElevation`/`FillHighlightTint`/
+  `FillShadeTint`/`fillHighlightBrush()`/`fillShadeBrush()`/border di
+  `NeumorphTokens.kt` **0 baris berubah**. Lapis stacked-card FLAT SOLID
+  murni, TANPA shadow/gradient/alpha -- mekanisme terpisah total.
+- **"Tanpa utak-atik icon menu sama sekali"**: parameter opt-in BARU
+  `TactileSurface(stackedCards: Boolean = false)`, default `false` di
+  SEMUA caller existing -- `GroupedListRow` (kotak ikon menu),
+  `EmptyState`, `TactileSwitch`, `SegmentedControl`, `WarningBanner`,
+  `VaultActionSheet` **0 baris disentuh sama sekali**, tetap `false`.
+  HANYA `VaultCard.kt` diaktifkan (`stackedCards = true`) -- kartu paling
+  besar/dominan, efek tumpukan paling masuk akal di situ, bukan kotak
+  ikon kecil. `RuleCard.kt` otomatis ikut (dipanggil via `VaultCard`, 0
+  perubahan file itu sendiri).
+- Digerbang `!recessed` juga (elemen cekung "tenggelam", kontradiktif dgn
+  efek tumpukan yang menonjol keluar) & `style == NEUMORPHISM` saja
+  (efek ini eksklusif tema itu, tidak menjalar ke Glass/Material3 Murni).
+- File diubah (3): `ui/theme/NeumorphTokens.kt` (token + fungsi baru,
+  append-only), `ui/components/TactileSurface.kt` (parameter opt-in +
+  wiring di cabang NEUMORPHISM saja), `ui/components/VaultCard.kt`
+  (aktifkan flag). `preflight_check.sh` 14/14 lolos. Balance kurung/siku 0
+  di ketiga file.
+- **BELUM PERNAH lewat `./gradlew` asli atau device fisik**. Mengingat
+  histori regresi berulang di area Neumorphism, user WAJIB verifikasi: (1)
+  VaultCard (Beranda, Kelola Rule via RuleCard) sekarang punya 1-2 lapis
+  "kartu" gelap mengintip di sudut kanan-bawah; (2) `Modifier.weight()`
+  MANA PUN (SegmentedControl 2 tab) TETAP proporsional 50/50, 0 regresi
+  kelas v8.28.0; (3) kotak ikon GroupedListRow/EmptyState/switch/dst 0
+  berubah sama sekali; (4) Glassmorphism & Material3 Murni 0 berubah.
+- versionCode 170->171, versionName 8.29.0->8.30.0.
+
 ## v8.29.0 -- Sempurnakan UI/UX: WarningBanner ikut tema aktif (dulu bypass semua gaya) (2026-08-23)
 - **User**: "lanjutkan sempurnakan UI/UX" (tanpa target spesifik). Audit
   cepat: grep semua komponen `ui/components/` yang TIDAK referensi

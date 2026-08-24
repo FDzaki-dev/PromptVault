@@ -72,6 +72,12 @@ fun TactileSurface(
     onClick: (() -> Unit)? = null,
     enabled: Boolean = true,
     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
+    // [v8.30.0] Opt-in murni -- default `false`, 0 dampak ke caller manapun
+    // yang tidak eksplisit mengaktifkan (lihat javadoc lengkap "Stacked
+    // Cards Effect" di `NeumorphTokens.kt`). HANYA diaktifkan di
+    // `VaultCard.kt` -- `GroupedListRow`/`EmptyState`/`TactileSwitch`/dst
+    // (termasuk kotak ikon menu) TIDAK disentuh sama sekali.
+    stackedCards: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val style = VaultTheme.style
@@ -119,11 +125,23 @@ fun TactileSurface(
 
         val neumorphElevation = if (recessed) 0.dp else NeumorphTokens.ShadowElevation
         val neumorphBorder = border ?: BorderStroke(NeumorphTokens.BorderWidth, NeumorphTokens.borderBrush())
+        // [v8.30.0] Stacked Cards Effect -- `drawBehind` ditempel LANGSUNG
+        // ke `modifier` yang SAMA dipakai `Surface` di bawah (BUKAN `Box`
+        // pembungkus baru, lihat javadoc lengkap alasan di
+        // `NeumorphTokens.kt`) -- 0 risiko ke `Modifier.weight()`/`align()`
+        // pemanggil (kelas regresi v8.28.0 TIDAK terulang). `!recessed`
+        // krn elemen cekung "tenggelam", kontradiktif dgn efek tumpukan
+        // kartu yang menonjol keluar.
+        val neumorphModifier = if (stackedCards && !recessed) {
+            with(NeumorphTokens) { modifier.stackedCards() }
+        } else {
+            modifier
+        }
         if (onClick != null) {
             Surface(
                 onClick = onClick,
                 enabled = enabled,
-                modifier = modifier,
+                modifier = neumorphModifier,
                 shape = shape,
                 color = color,
                 border = neumorphBorder,
@@ -134,7 +152,7 @@ fun TactileSurface(
             )
         } else {
             Surface(
-                modifier = modifier,
+                modifier = neumorphModifier,
                 shape = shape,
                 color = color,
                 border = neumorphBorder,
