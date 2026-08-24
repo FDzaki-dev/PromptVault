@@ -156,8 +156,16 @@ object NeumorphTokens {
      * 9dp->15dp (bekas 2-lapis 9dp/18dp, sekarang 1-lapis 15dp) supaya
      * sliver yang mengintip tetap terasa "chunky", bukan makin tipis krn
      * cuma 1 lapis.
+     *
+     * v8.30.8 — User lapor via screenshot device asli: 15dp KEBERLEBIHAN,
+     * sliver mengintip terlalu jauh ke kanan+bawah kartu (arah offset,
+     * lihat `topLeft = Offset(shift, shift)` di `stackedCards()` bawah --
+     * shift POSITIF selalu ke kanan+bawah, BUKAN kiri, arah tidak berubah
+     * dari awal fitur ini dibuat). Turunkan ke 10dp -- masih terasa 1
+     * lapis "tebal" (vs 9dp lama yg cuma bekas-2-lapis), tapi sliver tidak
+     * lagi mengintip berlebihan.
      */
-    val StackedCardOffset: Dp = 15.dp
+    val StackedCardOffset: Dp = 10.dp
 
     /** Radius sudut lapis stacked-card -- SAMA dgn shape kartu utama
      * (`shapes.medium`/[TactileTokens.ControlCornerRadius]) supaya

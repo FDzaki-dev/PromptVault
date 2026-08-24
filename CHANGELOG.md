@@ -3,6 +3,19 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.30.8 (2026-08-24) — Fix: stacked card offset kebablasan ke kanan+bawah
+
+Laporan user via screenshot device asli: 15dp (v8.30.7) kelewatan, sliver
+mengintip terlalu jauh. `StackedCardOffset` diturunkan 15dp -> 10dp -- tetap
+lebih "tebal" drpd 9dp lama (yang itu bekas skema 2-lapis), tapi tidak lagi
+berlebihan. Arah offset (kanan+bawah, dari `Offset(shift, shift)` positif)
+TIDAK berubah -- itu memang arah aslinya sejak fitur dibuat, bukan bug baru.
+
+File diubah (1): `NeumorphTokens.kt`. `preflight_check.sh` 14/14 lolos.
+Confidence Rating: **80%** (nilai spesifik 10dp best-guess dari deskripsi
+"jangan terlalu over", belum dikonfirmasi user pas di angka ini atau perlu
+turun lagi). versionCode 178->179, versionName 8.30.7->8.30.8.
+
 ## v8.30.7 (2026-08-24) — Stacked cards: 1 lapis aja, tapi agak tebal
 
 Instruksi langsung user. `StackedCardColors` dipersempit 2 warna -> 1

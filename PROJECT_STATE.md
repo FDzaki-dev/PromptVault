@@ -13,6 +13,15 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.30.8 -- Fix: stacked card offset kebablasan ke kanan+bawah (2026-08-24)
+- Laporan user via screenshot device asli: 15dp (v8.30.7) kelewatan.
+  `StackedCardOffset` 15dp -> 10dp. Arah offset (kanan+bawah) tidak berubah
+  -- memang arah aslinya, bukan bug baru.
+- File diubah (1): `NeumorphTokens.kt`. `preflight_check.sh` 14/14 lolos.
+- Confidence Rating: **80%** -- nilai 10dp best-guess, belum dikonfirmasi
+  user pas atau perlu turun lagi.
+- versionCode 178->179, versionName 8.30.7->8.30.8.
+
 ## v8.30.7 -- Stacked cards: 1 lapis aja, tapi agak tebal (2026-08-24)
 - Instruksi langsung user (di luar pending queue widget). `StackedCardColors`
   2 warna -> 1 (`SurfaceContainerHighest`). `StackedCardOffset` 9dp -> 15dp
