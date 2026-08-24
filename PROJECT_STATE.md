@@ -13,6 +13,20 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.30.2 -- Poles Stacked Cards Effect: tambah garis tepi per lapis (2026-08-24)
+- User: "bisa lebih dipoles lagi effect nya??" -- efek v8.30.1 sudah
+  terlihat tapi tiap lapis cuma blok fill polos, kurang kebaca sbg
+  kartu terpisah.
+- **Fix**: `NeumorphTokens.stackedCards()` -- tiap lapis sekarang dapat
+  `drawRoundRect(style = Stroke(...))` di atas fill-nya (garis tepi 1dp,
+  warna `StackedOutline` = reuse `OutlineVariant`, 0 hue baru). TETAP
+  flat solid (`Stroke` bukan alpha/gradient/shadow) -- prinsip "0
+  pencahayaan" dari v8.30.0 tetap dipegang, murni tambahan definisi
+  tepi.
+- File diubah (1): `ui/theme/NeumorphTokens.kt`. `preflight_check.sh`
+  14/14 lolos.
+- versionCode 172->173, versionName 8.30.1->8.30.2.
+
 ## v8.30.1 -- FIX: Stacked Cards Effect invisible, warna nyaris sama gelap (2026-08-24)
 - User lapor via 2 screenshot (Beranda, tab Tampilan): "mana Stacked
   Cards Effect nya" -- efek v8.30.0 TIDAK terlihat sama sekali di HP.

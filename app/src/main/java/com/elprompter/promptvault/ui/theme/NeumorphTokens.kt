@@ -6,6 +6,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
@@ -178,19 +179,39 @@ object NeumorphTokens {
     val StackedCardColors: List<Color> = listOf(SurfaceContainerHigh, SurfaceContainerHighest)
 
     /** Modifier stacked-cards -- ditempel LANGSUNG ke chain yang sama dgn
-     * `Surface` (bukan `Box` baru), lihat javadoc lengkap di atas. */
+     * `Surface` (bukan `Box` baru), lihat javadoc lengkap di atas.
+     *
+     * v8.30.2 — Poles: tiap lapis sekarang dapat GARIS TEPI tipis (flat
+     * solid, `Stroke` -- BUKAN alpha/gradient, tetap patuh prinsip "0
+     * pencahayaan") supaya kebaca sbg kartu TERPISAH yang berbatas jelas,
+     * bukan cuma blok warna nempel. Warna garis = `StackedOutline`
+     * (reuse `OutlineVariant`, sudah ada -- 0 hue baru), dekoratif murni
+     * (bukan teks) sama prinsipnya dgn border utama.
+     */
+    val StackedOutline: Color = OutlineVariant
+    val StackedOutlineWidth: Dp = 1.dp
+
     fun Modifier.stackedCards(): Modifier = this.drawBehind {
         val radius = CornerRadius(StackedCardCornerRadius.toPx())
+        val outlinePx = StackedOutlineWidth.toPx()
         // Digambar dari PALING JAUH -> PALING DEKAT (offset besar dulu)
         // supaya lapis lebih dekat menimpa sebagian lapis lebih jauh --
         // efek "kartu terfan" yang benar, bukan tumpang tindih acak.
         for (i in StackedCardColors.indices.reversed()) {
             val shift = StackedCardOffset.toPx() * (i + 1)
+            val topLeft = Offset(shift, shift)
             drawRoundRect(
                 color = StackedCardColors[i],
-                topLeft = Offset(shift, shift),
+                topLeft = topLeft,
                 size = size,
                 cornerRadius = radius
+            )
+            drawRoundRect(
+                color = StackedOutline,
+                topLeft = topLeft,
+                size = size,
+                cornerRadius = radius,
+                style = Stroke(width = outlinePx)
             )
         }
     }

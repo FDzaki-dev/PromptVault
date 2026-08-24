@@ -3,6 +3,16 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.30.2 (2026-08-24) — Poles Stacked Cards Effect: tambah garis tepi per lapis
+
+Tiap lapis stacked-card sekarang dapat `Stroke` outline 1dp (warna
+`OutlineVariant`, reuse existing) di atas fill flat-nya -- kebaca sbg
+kartu terpisah, bukan blok warna polos. Tetap flat solid, 0
+shadow/gradient/alpha ditambahkan.
+
+Preflight: 14/14 kategori PASS. versionCode 172→173, versionName
+8.30.1→8.30.2.
+
 ## v8.30.1 (2026-08-24) — FIX: Stacked Cards Effect invisible, warna nyaris sama gelap
 
 Bukan bug teknik (drawBehind+chain-order sudah benar) -- murni pilihan
