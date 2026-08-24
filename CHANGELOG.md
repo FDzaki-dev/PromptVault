@@ -3,6 +3,22 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.30.9 (2026-08-24) — Fix: sliver stacked card dibuat menyatu, bukan kelihatan kartu terpisah
+
+User: "dibuat seakan-akan tersambung, bisa??". Root cause "keliatan
+kepisah/mengambang": outline stroke (`StackedOutline`, v8.30.2) membungkus
+seluruh sisi lapis-bawah termasuk sisi yang mengintip -- kebaca sbg "tepi
+kartu LAIN yang berbatas jelas", kontradiktif dgn "1 lapis nyambung jadi
+satu ketebalan" (v8.30.7). Fix: outline stroke dihapus total
+(`StackedOutline`/`StackedOutlineWidth` ikut dihapus, sudah 0 pemakaian
+lain). Sliver sekarang solid flat tanpa garis pembatas sendiri -- terbaca
+sbg ketebalan menyatu, bukan objek terpisah. Fill/offset/warna (v8.30.8,
+10dp) TIDAK berubah.
+
+File diubah (1): `NeumorphTokens.kt` (+hapus import `Stroke` yang jadi
+unused). `preflight_check.sh` 14/14 lolos. Confidence Rating: **85%**.
+versionCode 179->180, versionName 8.30.8->8.30.9.
+
 ## v8.30.8 (2026-08-24) — Fix: stacked card offset kebablasan ke kanan+bawah
 
 Laporan user via screenshot device asli: 15dp (v8.30.7) kelewatan, sliver

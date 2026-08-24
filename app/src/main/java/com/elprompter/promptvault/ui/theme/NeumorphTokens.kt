@@ -6,7 +6,6 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
@@ -219,13 +218,23 @@ object NeumorphTokens {
      * v8.30.7 — "1 lapis aja, tapi agak tebal": [StackedCardColors]
      * dipersempit ke 1 warna, [StackedCardOffset] dinaikkan 9dp->15dp.
      * Fungsi loop di bawah 0 diubah -- sudah generik thd panjang list.
+     *
+     * v8.30.9 — User: "dibuat seakan-akan tersambung". Root cause "keliatan
+     * kepisah/mengambang" (bukan sekadar jarak offset yang sudah dibenahi
+     * v8.30.8): garis tepi `StackedOutline` (v8.30.2) MEMBUNGKUS SELURUH
+     * bentuk lapis-bawah termasuk sisi bawah+kanan sliver yang mengintip --
+     * sisi itu jadi kebaca sbg "tepi kartu LAIN yang berbatas jelas", persis
+     * kesan "kartu terpisah" yang metafornya cocok utk gaya STACK lama
+     * (banyak kartu fan-out), tapi KONTRADIKTIF dgn "1 lapis nyambung jadi
+     * satu ketebalan" yang diminta sejak v8.30.7. Fix: outline stroke
+     * DIHAPUS TOTAL (`StackedOutline`/`StackedOutlineWidth` ikut dihapus,
+     * sudah tidak dipakai di mana pun lagi) -- sliver sekarang solid FLAT
+     * tanpa garis pembatas sendiri, terbaca sbg ketebalan MENYATU dgn kartu
+     * utama di atasnya, bukan objek terpisah. Fill/offset/warna (v8.30.8)
+     * TIDAK berubah.
      */
-    val StackedOutline: Color = OutlineVariant
-    val StackedOutlineWidth: Dp = 1.dp
-
     fun Modifier.stackedCards(): Modifier = this.drawBehind {
         val radius = CornerRadius(StackedCardCornerRadius.toPx())
-        val outlinePx = StackedOutlineWidth.toPx()
         // Digambar dari PALING JAUH -> PALING DEKAT (offset besar dulu)
         // supaya lapis lebih dekat menimpa sebagian lapis lebih jauh --
         // efek "kartu terfan" yang benar, bukan tumpang tindih acak.
@@ -237,13 +246,6 @@ object NeumorphTokens {
                 topLeft = topLeft,
                 size = size,
                 cornerRadius = radius
-            )
-            drawRoundRect(
-                color = StackedOutline,
-                topLeft = topLeft,
-                size = size,
-                cornerRadius = radius,
-                style = Stroke(width = outlinePx)
             )
         }
     }

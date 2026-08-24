@@ -13,6 +13,17 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.30.9 -- Fix: sliver stacked card dibuat menyatu, bukan terpisah (2026-08-24)
+- User: "dibuat seakan-akan tersambung". Root cause: outline stroke
+  (v8.30.2) membungkus sisi sliver yang mengintip -- kebaca sbg "tepi kartu
+  lain", kontradiktif dgn maksud "1 lapis nyambung" (v8.30.7).
+- Fix: outline stroke dihapus total (`StackedOutline`/`StackedOutlineWidth`
+  dihapus, sudah 0 pemakaian lain), sliver jadi solid flat tanpa garis
+  pembatas sendiri. Fill/offset (10dp, v8.30.8) TIDAK berubah.
+- File diubah (1): `NeumorphTokens.kt`. `preflight_check.sh` 14/14 lolos.
+- Confidence Rating: **85%**. versionCode 179->180, versionName
+  8.30.8->8.30.9.
+
 ## v8.30.8 -- Fix: stacked card offset kebablasan ke kanan+bawah (2026-08-24)
 - Laporan user via screenshot device asli: 15dp (v8.30.7) kelewatan.
   `StackedCardOffset` 15dp -> 10dp. Arah offset (kanan+bawah) tidak berubah
