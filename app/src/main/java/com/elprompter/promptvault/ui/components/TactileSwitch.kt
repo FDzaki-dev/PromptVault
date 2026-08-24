@@ -39,6 +39,19 @@ private val ThumbTravel = TrackWidth - ThumbSize - 6.dp // 3dp inset tiap sisi
  * visual Glassmorphism, bukan M3). ON/OFF TIDAK bergantung HANYA pada
  * kedalaman -- posisi thumb kiri/kanan + warna track tetap jadi penanda
  * kedua (Accessibility), tidak berubah.
+ *
+ * v8.30.6 -- [Pending Queue item #1, permintaan eksplisit user] Track
+ * SEBELUMNYA `recessed = true` PERMANEN (v8.0.0: "track SELALU cekung baik
+ * ON/OFF, warna isi yang bertugas sinyal status, bukan kedalaman"). User
+ * eksplisit minta efek tenggelam-timbul ikut ON/OFF: "track cekung saat
+ * OFF, thumb timbul saat ON". Fix: track ikut `recessed = !checked` --
+ * PERSIS pola yang SUDAH dipakai thumb sejak awal (lihat di bawah, 0
+ * berubah di situ) -- sekarang KEDUA permukaan sama-sama membalik
+ * kedalaman serentak: OFF = track+thumb cekung ("tertekan/mati"), ON =
+ * track+thumb timbul ("terangkat/hidup"), sinyal tactile yang jauh lebih
+ * tegas drpd cuma 1 dari 2 permukaan yang berubah. Warna (poin kedua
+ * Accessibility) + posisi thumb TETAP tidak berubah -- 0 dampak ke
+ * penanda non-visual/kontras.
  */
 @Composable
 fun TactileSwitch(
@@ -82,18 +95,21 @@ fun TactileSwitch(
             ),
         contentAlignment = Alignment.Center
     ) {
-        // Track: TactileSurface `recessed = true` permanen -- track SELALU
-        // terbaca sbg "wadah cekung" (baik ON maupun OFF), warna isi
-        // (trackColor) yang berubah utk sinyal status, bukan kedalamannya.
+        // Track: [v8.30.6] `recessed = !checked` -- cekung saat OFF, timbul
+        // saat ON (SEBELUMNYA `true` permanen, lihat javadoc di atas).
+        // `trackColor` (warna) TETAP jadi penanda status utama/Accessibility,
+        // kedalaman kini penguat visual TAMBAHAN, bukan pengganti.
         TactileSurface(
             modifier = Modifier.size(width = TrackWidth, height = TrackHeight),
             shape = RoundedCornerShape(50),
             color = trackColor,
-            recessed = true
+            recessed = !checked
         ) {
             Box(contentAlignment = Alignment.CenterStart) {
-                // Thumb: TactileSurface timbul kecil saat ON (tonal+shadow
-                // elevation M3 baku), recessed (tanpa elevasi) saat OFF.
+                // Thumb: TactileSurface timbul saat ON (tonal+shadow elevation
+                // M3 baku), recessed saat OFF -- pola `recessed = !checked` ini
+                // yang JADI ACUAN track di atas ikut sejak v8.30.6 (sebelumnya
+                // cuma thumb yang begini, track statis).
                 TactileSurface(
                     modifier = Modifier
                         .offset(x = 3.dp + thumbOffset)

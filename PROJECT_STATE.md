@@ -13,6 +13,18 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.30.6 -- Pending Queue #1: Saklar tenggelam-timbul ikut ON/OFF (2026-08-24)
+- Batas 1 task/batch, item #1 dari 4 pending queue v8.30.5. Track
+  `TactileSwitch.kt` SEBELUMNYA `recessed = true` PERMANEN -- fix: ikut
+  `recessed = !checked`, pola SAMA PERSIS yang sudah dipakai thumb (thumb
+  0 diubah). OFF = track+thumb cekung, ON = track+thumb timbul.
+- File diubah (1): `TactileSwitch.kt`. `preflight_check.sh` 14/14 lolos.
+- **⏳ Sisa Pending Queue (3 dari 4, urutan bebas)**: (2) Tombol CTA efek
+  "ketekan", (3) kotak ikon menu concave, (4) tab aktif SegmentedControl
+  timbul.
+- Confidence Rating: **85%** -- belum verifikasi device asli.
+  versionCode 176->177, versionName 8.30.5->8.30.6.
+
 ## v8.30.5 -- REVERT rotasi kartu tumpuk ke flat + 4 item polish baru masuk pending queue (2026-08-24)
 - User diberi 4 opsi elemen lain yang bisa dipoles ala Neumorphism
   (via `ask_user_input_v0`), user pilih SEMUA 4 + 1 instruksi tambahan:

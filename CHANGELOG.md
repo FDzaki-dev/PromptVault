@@ -3,6 +3,29 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.30.6 (2026-08-24) — Pending Queue #1: Saklar tenggelam-timbul ikut ON/OFF
+
+Batas 1 task/batch. Track `TactileSwitch.kt` SEBELUMNYA `recessed = true`
+PERMANEN (v8.0.0: warna yang sinyal status, bukan kedalaman) -- fix: track
+ikut `recessed = !checked`, PERSIS pola yang sudah dipakai thumb sejak awal
+(thumb 0 berubah). Hasil: OFF = track+thumb SAMA-SAMA cekung, ON =
+track+thumb SAMA-SAMA timbul -- sinyal tactile 2x lebih tegas drpd sebelumnya
+(cuma thumb yang berubah kedalaman). Warna track (penanda Accessibility) +
+posisi/travel thumb TIDAK disentuh.
+
+File diubah (1): `ui/components/TactileSwitch.kt`. `preflight_check.sh`
+14/14 lolos.
+
+**⏳ PENDING QUEUE (3 item tersisa dari 4, urutan bebas)**:
+2. Tombol CTA -- efek "ketekan" visual saat ditap.
+3. Kotak ikon menu (`GroupedListRow.kt`) -- concave/cekung.
+4. Tab Beranda/Tampilan (`SegmentedControl.kt`) -- tab aktif "timbul".
+
+Confidence Rating: **85%** (logic reuse pola yang SUDAH terbukti jalan di
+thumb -- risiko utama cuma "kombinasi timbul+timbul kelihatan aneh secara
+visual", belum ada verifikasi device asli). versionCode 176->177,
+versionName 8.30.5->8.30.6.
+
 ## v8.30.5 (2026-08-24) — Revert rotasi kartu tumpuk ke flat + 4 item polish baru di pending queue
 
 User minta revert rotasi ("gak miring lagi") + 4 elemen lain dipoles
