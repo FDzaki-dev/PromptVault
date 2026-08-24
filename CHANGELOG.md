@@ -3,6 +3,15 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.30.3 (2026-08-24) — Poles Stacked Cards Effect: rotasi kipas + offset diperbesar
+
+Tiap lapis stacked-card sekarang dirotasi (`rotate()` DrawScope, pivot
+kiri-atas, geometris murni -- tetap 0 pencahayaan) -- kesan "kartu
+terfan/dikocok", bukan cuma geser sejajar. Offset 7dp→9dp.
+
+Preflight: 14/14 kategori PASS. versionCode 173→174, versionName
+8.30.2→8.30.3.
+
 ## v8.30.2 (2026-08-24) — Poles Stacked Cards Effect: tambah garis tepi per lapis
 
 Tiap lapis stacked-card sekarang dapat `Stroke` outline 1dp (warna

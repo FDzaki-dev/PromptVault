@@ -13,6 +13,25 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.30.3 -- Poles Stacked Cards Effect: rotasi kipas + offset diperbesar (2026-08-24)
+- User: "bisa lebih wah lagi??" -- lanjut poles setelah v8.30.2 (garis
+  tepi). Efek offset lurus sejajar dirasa masih kurang "hidup".
+- **Fix**: `NeumorphTokens.stackedCards()` -- tiap lapis sekarang
+  dibungkus `rotate(degrees=, pivot=Offset.Zero)` (DrawScope, geometris
+  murni -- BUKAN shadow/gradient, tetap patuh "0 pencahayaan" dari
+  v8.30.0) sebelum digambar, `StackedFanAngle = 3.5f` derajat dikali
+  index layer -- kesan "kartu terfan/dikocok" klasik, bukan cuma geser
+  sejajar. Pivot di pojok kiri-atas (SAMA dgn arah offset existing) --
+  kartu memutar & bergeser konsisten 1 arah ke kanan-bawah.
+  `StackedCardOffset` juga dinaikkan 7dp->9dp biar makin kebaca.
+- **Regresi kecil ketahuan & diperbaiki SENDIRI saat proses**: draft awal
+  edit tidak sengaja menghapus deklarasi `StackedOutline`/
+  `StackedOutlineWidth` (v8.30.2) saat replace block -- ketahuan lewat
+  grep verifikasi SEBELUM commit, ditambahkan kembali.
+- File diubah (1): `ui/theme/NeumorphTokens.kt`. `preflight_check.sh`
+  14/14 lolos.
+- versionCode 173->174, versionName 8.30.2->8.30.3.
+
 ## v8.30.2 -- Poles Stacked Cards Effect: tambah garis tepi per lapis (2026-08-24)
 - User: "bisa lebih dipoles lagi effect nya??" -- efek v8.30.1 sudah
   terlihat tapi tiap lapis cuma blok fill polos, kurang kebaca sbg

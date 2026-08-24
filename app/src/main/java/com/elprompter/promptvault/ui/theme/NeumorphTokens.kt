@@ -7,6 +7,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
@@ -152,7 +153,7 @@ object NeumorphTokens {
      * chain, bukan retroaktif ke draw SEBELUMNYA -- prinsip yang sama
      * persis knp `Modifier.shadow()` bisa "bleed" di luar shape).
      */
-    val StackedCardOffset: Dp = 7.dp
+    val StackedCardOffset: Dp = 9.dp
 
     /** Radius sudut lapis stacked-card -- SAMA dgn shape kartu utama
      * (`shapes.medium`/[TactileTokens.ControlCornerRadius]) supaya
@@ -187,7 +188,17 @@ object NeumorphTokens {
      * bukan cuma blok warna nempel. Warna garis = `StackedOutline`
      * (reuse `OutlineVariant`, sudah ada -- 0 hue baru), dekoratif murni
      * (bukan teks) sama prinsipnya dgn border utama.
+     *
+     * v8.30.3 — Poles lagi ("lebih wah"): tambah ROTASI kipas (`rotate()`
+     * DrawScope, pivot pojok kiri-atas -- geometris murni, BUKAN
+     * shadow/gradient, tetap patuh "0 pencahayaan") supaya lapis
+     * belakang sedikit MEMUTAR, bukan cuma geser sejajar -- kesan
+     * "kartu dikocok/terfan" klasik, jauh lebih hidup drpd offset lurus
+     * doang. Offset dasar juga dinaikkan 7dp/14dp -> 9dp/18dp biar lebih
+     * kebaca. Pivot di pojok yang SAMA dgn arah offset (kiri-atas ->
+     * kartu memutar & bergeser konsisten ke kanan-bawah, 1 arah gerak).
      */
+    val StackedFanAngle: Float = 3.5f
     val StackedOutline: Color = OutlineVariant
     val StackedOutlineWidth: Dp = 1.dp
 
@@ -198,21 +209,24 @@ object NeumorphTokens {
         // supaya lapis lebih dekat menimpa sebagian lapis lebih jauh --
         // efek "kartu terfan" yang benar, bukan tumpang tindih acak.
         for (i in StackedCardColors.indices.reversed()) {
-            val shift = StackedCardOffset.toPx() * (i + 1)
+            val layerIndex = i + 1
+            val shift = StackedCardOffset.toPx() * layerIndex
             val topLeft = Offset(shift, shift)
-            drawRoundRect(
-                color = StackedCardColors[i],
-                topLeft = topLeft,
-                size = size,
-                cornerRadius = radius
-            )
-            drawRoundRect(
-                color = StackedOutline,
-                topLeft = topLeft,
-                size = size,
-                cornerRadius = radius,
-                style = Stroke(width = outlinePx)
-            )
+            rotate(degrees = StackedFanAngle * layerIndex, pivot = Offset.Zero) {
+                drawRoundRect(
+                    color = StackedCardColors[i],
+                    topLeft = topLeft,
+                    size = size,
+                    cornerRadius = radius
+                )
+                drawRoundRect(
+                    color = StackedOutline,
+                    topLeft = topLeft,
+                    size = size,
+                    cornerRadius = radius,
+                    style = Stroke(width = outlinePx)
+                )
+            }
         }
     }
 }
