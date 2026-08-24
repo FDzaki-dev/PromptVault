@@ -3,6 +3,18 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.30.7 (2026-08-24) — Stacked cards: 1 lapis aja, tapi agak tebal
+
+Instruksi langsung user. `StackedCardColors` dipersempit 2 warna -> 1
+(`SurfaceContainerHighest` saja, paling kontras dari 2 opsi lama).
+`StackedCardOffset` dinaikkan 9dp -> 15dp supaya sliver tunggal yang
+mengintip tetap terasa "chunky", bukan makin tipis krn cuma 1 lapis.
+`stackedCards()` (fungsi loop) 0 diubah -- sudah generik thd panjang list.
+
+File diubah (1): `ui/theme/NeumorphTokens.kt`. `preflight_check.sh` 14/14
+lolos. Confidence Rating: **85%** -- perubahan token murni, belum
+verifikasi device asli. versionCode 177->178, versionName 8.30.6->8.30.7.
+
 ## v8.30.6 (2026-08-24) — Pending Queue #1: Saklar tenggelam-timbul ikut ON/OFF
 
 Batas 1 task/batch. Track `TactileSwitch.kt` SEBELUMNYA `recessed = true`

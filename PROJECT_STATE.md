@@ -13,6 +13,16 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.30.7 -- Stacked cards: 1 lapis aja, tapi agak tebal (2026-08-24)
+- Instruksi langsung user (di luar pending queue widget). `StackedCardColors`
+  2 warna -> 1 (`SurfaceContainerHighest`). `StackedCardOffset` 9dp -> 15dp
+  biar sliver tunggal tetap chunky. Fungsi `stackedCards()` 0 diubah.
+- File diubah (1): `NeumorphTokens.kt`. `preflight_check.sh` 14/14 lolos.
+- Pending queue widget (tombol CTA/ikon menu/tab SegmentedControl) TIDAK
+  disentuh, masih 3 item nunggu.
+- Confidence Rating: **85%**. versionCode 177->178, versionName
+  8.30.6->8.30.7.
+
 ## v8.30.6 -- Pending Queue #1: Saklar tenggelam-timbul ikut ON/OFF (2026-08-24)
 - Batas 1 task/batch, item #1 dari 4 pending queue v8.30.5. Track
   `TactileSwitch.kt` SEBELUMNYA `recessed = true` PERMANEN -- fix: ikut

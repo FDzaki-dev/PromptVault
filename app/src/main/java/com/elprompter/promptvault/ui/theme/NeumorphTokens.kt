@@ -151,8 +151,13 @@ object NeumorphTokens {
      * clip Surface memotongnya (clip cuma berlaku ke draw SETELAHNYA di
      * chain, bukan retroaktif ke draw SEBELUMNYA -- prinsip yang sama
      * persis knp `Modifier.shadow()` bisa "bleed" di luar shape).
+     *
+     * v8.30.7 — User: "1 lapis aja, tapi agak tebal" -- offset dinaikkan
+     * 9dp->15dp (bekas 2-lapis 9dp/18dp, sekarang 1-lapis 15dp) supaya
+     * sliver yang mengintip tetap terasa "chunky", bukan makin tipis krn
+     * cuma 1 lapis.
      */
-    val StackedCardOffset: Dp = 9.dp
+    val StackedCardOffset: Dp = 15.dp
 
     /** Radius sudut lapis stacked-card -- SAMA dgn shape kartu utama
      * (`shapes.medium`/[TactileTokens.ControlCornerRadius]) supaya
@@ -175,8 +180,15 @@ object NeumorphTokens {
      * `AppBackground`, jadi lapis mengintip benar-benar kebaca sbg
      * "tumpukan kartu", bukan menghilang ke gelap. TETAP reuse token
      * existing (0 hue baru), TETAP FLAT solid (0 shadow/gradient/alpha).
+     *
+     * v8.30.7 — User: "1 lapis aja, tapi agak tebal" -- daftar dipersempit
+     * dari 2 warna ke 1 (`SurfaceContainerHighest` saja, paling terang dari
+     * 2 opsi lama, biar sliver tunggal ini TETAP jelas kontras thd
+     * `AppBackground`, bukan makin pudar krn cuma 1 lapis). Fungsi
+     * `stackedCards()` di bawah TIDAK berubah sama sekali -- sudah generik
+     * thd panjang list (loop `.indices`), 1 elemen otomatis = 1 lapis.
      */
-    val StackedCardColors: List<Color> = listOf(SurfaceContainerHigh, SurfaceContainerHighest)
+    val StackedCardColors: List<Color> = listOf(SurfaceContainerHighest)
 
     /** Modifier stacked-cards -- ditempel LANGSUNG ke chain yang sama dgn
      * `Surface` (bukan `Box` baru), lihat javadoc lengkap di atas.
@@ -195,6 +207,10 @@ object NeumorphTokens {
      * "kembalikan efek kartu tumpuk jadi datar kesamping, gak miring
      * lagi". Balik ke murni offset diagonal lurus (v8.30.2, tanpa
      * `rotate()`) -- fill + outline tetap dipertahankan (v8.30.2).
+     *
+     * v8.30.7 — "1 lapis aja, tapi agak tebal": [StackedCardColors]
+     * dipersempit ke 1 warna, [StackedCardOffset] dinaikkan 9dp->15dp.
+     * Fungsi loop di bawah 0 diubah -- sudah generik thd panjang list.
      */
     val StackedOutline: Color = OutlineVariant
     val StackedOutlineWidth: Dp = 1.dp
