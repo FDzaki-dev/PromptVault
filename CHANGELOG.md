@@ -3,6 +3,12 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.29.0 (2026-08-23) — Sempurnakan UI/UX: WarningBanner ikut tema aktif
+`WarningBanner` (SAF custom destination & Mode Shizuku) dulu flat
+`Modifier.background()` polos, bypass total sistem tema. Diganti
+`TactileSurface(color=errorContainer)` -- sekarang ikut Glass/Neumorphism/
+Material3 sesuai tema aktif. Teks tetap `colors.error`, WCAG 4.75:1 AA.
+
 ## v8.28.4 (2026-08-23) — Border Neumorphism: Ice Cyan → Platinum (nyaru, bukan aksen)
 
 User minta tone yang "nyaru" (blend), bukan aksen kontras. Ganti

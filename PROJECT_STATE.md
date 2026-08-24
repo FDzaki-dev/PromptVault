@@ -13,6 +13,40 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.29.0 -- Sempurnakan UI/UX: WarningBanner ikut tema aktif (dulu bypass semua gaya) (2026-08-23)
+- **User**: "lanjutkan sempurnakan UI/UX" (tanpa target spesifik). Audit
+  cepat: grep semua komponen `ui/components/` yang TIDAK referensi
+  `TactileSurface`/`VaultTheme` -- ketemu `WarningBanner.kt` (dipakai di
+  kartu SAF custom destination & Mode Shizuku, `SettingsScreen.kt`) pakai
+  `Modifier.background()` polos, flat, SATU-SATUNYA permukaan berisi
+  konten yang bypass total sistem tema (Glass/Neumorphism/Material3
+  Murni) -- tetap flat kotak biasa walau user ganti tema, tidak konsisten
+  dgn kartu lain di sekitarnya.
+- **Fix**: `WarningBanner.kt` -- `Modifier.background(colors.error.copy(
+  alpha=0.12f), RoundedCornerShape)` diganti `TactileSurface(color =
+  colors.errorContainer)` -- sekarang ikut treatment tema aktif (shadow+
+  tint Neumorphism / sheen+border Glass / flat Material3 Murni). Teks/ikon
+  TETAP `colors.error` (bukan `onErrorContainer`) -- mempertahankan
+  urgensi visual merah asli yang SENGAJA dipilih sejak fitur ini dibuat
+  (2026-08-17, lihat KDoc lama di file yang sama).
+- **WCAG**: pasangan `error` vs `errorContainer` BARU (beda dari
+  `onErrorContainer` vs `errorContainer` yang sudah terverifikasi 8.28:1
+  di Color.kt) -- dihitung ulang skrip Python formula W3C: 4.75:1 (AA,
+  ambang 4.5:1, lulus tapi margin tipis -- didokumentasikan apa adanya,
+  bukan dibulatkan/dilebih-lebihkan).
+- File diubah (1): `ui/components/WarningBanner.kt`. `preflight_check.sh`
+  14/14 lolos (sempat kena check #14 -- tag `[v8.29.0]` di block comment,
+  langsung diperbaiki ke `(v8.29.0)` sebelum lanjut, bukti check itu
+  benar-benar dipakai bukan formalitas). Balance kurung 0.
+- **BELUM PERNAH lewat `./gradlew` asli**. User WAJIB verifikasi: (1)
+  banner peringatan (SAF custom destination & Mode Shizuku di Pengaturan)
+  sekarang kelihatan "timbul"/"kaca" sesuai tema aktif, bukan kotak flat
+  merah polos lagi; (2) teks tetap kebaca jelas (merah di atas
+  errorContainer gelap); (3) Glassmorphism & Material3 Murni juga
+  diperiksa (bukan cuma Neumorphism) krn `TactileSurface` mempengaruhi
+  KETIGA gaya sekaligus.
+- versionCode 169->170, versionName 8.28.4->8.29.0.
+
 ## v8.28.4 -- Border Neumorphism: Ice Cyan -> Platinum (nyaru, bukan aksen) (2026-08-23)
 - User: "keknya emang lebih cocok pakai tone warna yang nyaru deh" --
   ganti dari `IceCyan` (aksen kontras, v8.28.3) ke `Platinum`
