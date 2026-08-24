@@ -13,6 +13,31 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.30.5 -- REVERT rotasi kartu tumpuk ke flat + 4 item polish baru masuk pending queue (2026-08-24)
+- User diberi 4 opsi elemen lain yang bisa dipoles ala Neumorphism
+  (via `ask_user_input_v0`), user pilih SEMUA 4 + 1 instruksi tambahan:
+  "kembalikan efek kartu tumpuk jadi datar kesamping, gak miring lagi".
+  Batas 1 task/batch -- REVERT (paling kecil/kontained) dikerjakan
+  DULU sesi ini, 4 item polish baru DICATAT sbg pending queue.
+- **Fix (dikerjakan sesi ini)**: `NeumorphTokens.stackedCards()` --
+  `rotate()` (v8.30.3/v8.30.4) DIHAPUS TOTAL, balik ke murni offset
+  diagonal lurus (v8.30.2: fill + outline, TANPA rotasi). Import
+  `rotate` yg jadi unused ikut dihapus. `StackedFanAngle` token juga
+  dihapus (tidak dipakai lagi).
+- File diubah (1): `ui/theme/NeumorphTokens.kt`. `preflight_check.sh`
+  14/14 lolos.
+- **⏳ PENDING QUEUE (4 item, urutan bebas -- SEMUA diminta user,
+  belum ditentukan prioritas)**:
+  1. Saklar/Switch (`TactileSwitch.kt`) -- efek tenggelam-timbul saat
+     ON/OFF (mis. track cekung saat OFF, thumb timbul saat ON).
+  2. Tombol CTA (mis. "Scan Sekarang") -- efek "ketekan" visual saat
+     ditap (state pressed, kemungkinan lewat `interactionSource`).
+  3. Kotak ikon menu (`GroupedListRow.kt`/ikon di `ManifestRow`) --
+     concave/cekung, BEDA treatment dari kartu utama (yang timbul).
+  4. Tab Beranda/Tampilan (`SegmentedControl.kt`) -- tab aktif "timbul"
+     dari yang tidak aktif (bukan cuma beda warna spt sekarang).
+- versionCode 175->176, versionName 8.30.4->8.30.5.
+
 ## v8.30.4 -- FIX: rotasi kipas "kasar & truncated" di kartu tinggi (2026-08-24)
 - User lapor via screenshot: "agak kasar dan truncated yah" -- rotasi
   v8.30.3 kelihatan ekstrem & kepotong tepi layar, KHUSUSNYA di kartu

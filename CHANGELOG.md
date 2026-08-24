@@ -3,6 +3,17 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.30.5 (2026-08-24) — Revert rotasi kartu tumpuk ke flat + 4 item polish baru di pending queue
+
+User minta revert rotasi ("gak miring lagi") + 4 elemen lain dipoles
+(Switch, CTA button, kotak ikon, tab Beranda/Tampilan). Batas 1
+task/batch: revert dikerjakan sekarang, `rotate()` dihapus total dari
+`stackedCards()`, balik ke offset diagonal murni (v8.30.2). 4 item
+polish lain masuk pending queue.
+
+Preflight: 14/14 kategori PASS. versionCode 175→176, versionName
+8.30.4→8.30.5.
+
 ## v8.30.4 (2026-08-24) — FIX: rotasi kipas "kasar & truncated" di kartu tinggi
 
 Pivot rotasi di pojok (v8.30.3) bikin sapuan sebanding DIAGONAL PENUH

@@ -7,7 +7,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
@@ -189,52 +188,39 @@ object NeumorphTokens {
      * (reuse `OutlineVariant`, sudah ada -- 0 hue baru), dekoratif murni
      * (bukan teks) sama prinsipnya dgn border utama.
      *
-     * v8.30.3 — Poles lagi ("lebih wah"): tambah ROTASI kipas (`rotate()`
-     * DrawScope) sebelum digambar -- geometris murni, BUKAN
-     * shadow/gradient, tetap patuh "0 pencahayaan" dari v8.30.0.
+     * v8.30.3 — Poles ("lebih wah"): sempat ditambah ROTASI kipas
+     * (`rotate()`), lalu di-fix pivot/sudutnya di v8.30.4.
      *
-     * v8.30.4 — FIX: user lapor "agak kasar dan truncated" -- pivot di
-     * POJOK kiri-atas (v8.30.3) bikin sapuan rotasi SEBANDING DIAGONAL
-     * kartu (jarak dari pivot ke sudut jauh), jadi utk kartu TINGGI (mis.
-     * grouped-list menu 6 baris) sapuannya jadi puluhan-ratusan px --
-     * jauh melebihi layar, kepotong tepi (truncated), kesannya kasar.
-     * Fix: pivot pindah ke TENGAH kartu (`size.center`, bukan pojok) --
-     * jarak dari pivot ke sudut jauh jadi SETENGAH diagonal (bukan
-     * diagonal penuh), sapuan otomatis ~separuh utk sudut ekstrem. Sudut
-     * rotasi JUGA diperkecil 3.5° -> 1.2° per layer -- kombinasi
-     * keduanya bikin efek proporsional & terkendali di SEMUA ukuran
-     * kartu (kecil maupun tinggi), bukan cuma di kartu kecil.
+     * v8.30.5 — REVERT rotasi sepenuhnya, diminta eksplisit user:
+     * "kembalikan efek kartu tumpuk jadi datar kesamping, gak miring
+     * lagi". Balik ke murni offset diagonal lurus (v8.30.2, tanpa
+     * `rotate()`) -- fill + outline tetap dipertahankan (v8.30.2).
      */
-    val StackedFanAngle: Float = 1.2f
     val StackedOutline: Color = OutlineVariant
     val StackedOutlineWidth: Dp = 1.dp
 
     fun Modifier.stackedCards(): Modifier = this.drawBehind {
         val radius = CornerRadius(StackedCardCornerRadius.toPx())
         val outlinePx = StackedOutlineWidth.toPx()
-        val pivot = Offset(size.width / 2f, size.height / 2f)
         // Digambar dari PALING JAUH -> PALING DEKAT (offset besar dulu)
         // supaya lapis lebih dekat menimpa sebagian lapis lebih jauh --
         // efek "kartu terfan" yang benar, bukan tumpang tindih acak.
         for (i in StackedCardColors.indices.reversed()) {
-            val layerIndex = i + 1
-            val shift = StackedCardOffset.toPx() * layerIndex
+            val shift = StackedCardOffset.toPx() * (i + 1)
             val topLeft = Offset(shift, shift)
-            rotate(degrees = StackedFanAngle * layerIndex, pivot = pivot) {
-                drawRoundRect(
-                    color = StackedCardColors[i],
-                    topLeft = topLeft,
-                    size = size,
-                    cornerRadius = radius
-                )
-                drawRoundRect(
-                    color = StackedOutline,
-                    topLeft = topLeft,
-                    size = size,
-                    cornerRadius = radius,
-                    style = Stroke(width = outlinePx)
-                )
-            }
+            drawRoundRect(
+                color = StackedCardColors[i],
+                topLeft = topLeft,
+                size = size,
+                cornerRadius = radius
+            )
+            drawRoundRect(
+                color = StackedOutline,
+                topLeft = topLeft,
+                size = size,
+                cornerRadius = radius,
+                style = Stroke(width = outlinePx)
+            )
         }
     }
 }
