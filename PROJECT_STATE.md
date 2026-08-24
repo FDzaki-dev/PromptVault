@@ -13,6 +13,31 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.30.1 -- FIX: Stacked Cards Effect invisible, warna nyaris sama gelap (2026-08-24)
+- User lapor via 2 screenshot (Beranda, tab Tampilan): "mana Stacked
+  Cards Effect nya" -- efek v8.30.0 TIDAK terlihat sama sekali di HP.
+- **Root cause DITELUSURI, BUKAN bug teknik**: mekanisme `drawBehind` +
+  urutan modifier chain (sebelum `clip` internal `Surface`) diverifikasi
+  ulang & SUDAH benar. Masalah murni PILIHAN WARNA:
+  `SurfaceContainerLowest` (0x090A0C) ternyata LEBIH GELAP dari
+  `AppBackground` (0x0D0E12, latar app itu sendiri), dan
+  `SurfaceContainerLow` (0x111317) cuma beda ~4-5 unit/channel --
+  bagian "mengintip" di luar tepi kartu tenggelam total ke background
+  gelap, defacto invisible meski secara teknis tergambar benar.
+- **Fix**: `NeumorphTokens.StackedCardColors` ganti dari
+  `[SurfaceContainerLow, SurfaceContainerLowest]` (lebih gelap dari
+  kartu) ke `[SurfaceContainerHigh, SurfaceContainerHighest]` (LEBIH
+  TERANG dari `SurfaceContainer`/warna kartu, jelas kontras vs
+  `AppBackground`). Tetap reuse token existing (0 hue baru), tetap FLAT
+  solid (0 shadow/gradient/alpha) -- 0 prinsip lain dari v8.30.0
+  berubah, MURNI ganti 2 referensi warna.
+- File diubah (1): `ui/theme/NeumorphTokens.kt`. `preflight_check.sh`
+  14/14 lolos.
+- **User WAJIB verifikasi**: buka Beranda mode Neumorphism, cek tepi
+  kanan-bawah kartu "Rule aktif" -- harus kelihatan 2 lapis kartu
+  mengintip lebih terang di belakangnya.
+- versionCode 171->172, versionName 8.30.0->8.30.1.
+
 ## v8.30.0 -- Stacked Cards Effect di tema Neumorphism (permintaan eksplisit: tanpa utak-atik pencahayaan & icon menu) (2026-08-24)
 - **User**: "tambahkan Stacked Cards Effect pada theme Neumorphism tanpa
   utak-atik pencahayaan dan icon menu sama sekali ok!!".

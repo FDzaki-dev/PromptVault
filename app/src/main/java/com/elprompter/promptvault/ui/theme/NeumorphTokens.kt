@@ -158,12 +158,24 @@ object NeumorphTokens {
      * terlihat sbg tumpukan kartu SEBENTUK, bukan kotak acak. */
     val StackedCardCornerRadius: Dp = TactileTokens.ControlCornerRadius
 
-    /** Warna tiap lapis, index 0 = PALING DEKAT (mengintip paling sedikit)
-     * -> index terakhir = PALING JAUH. Reuse tier `SurfaceContainerLow`/
-     * `SurfaceContainerLowest` yang SUDAH ada (0 hue baru) -- makin jauh
-     * makin redup/gelap, konsisten konvensi depth app ("makin gelap =
-     * makin ke dalam"). FLAT, tanpa alpha/gradient (lihat poin 1 atas). */
-    val StackedCardColors: List<Color> = listOf(SurfaceContainerLow, SurfaceContainerLowest)
+    /**
+     * v8.30.0 — Warna reuse `SurfaceContainerLow`/`SurfaceContainerLowest`
+     * (LEBIH GELAP dari `SurfaceContainer`, warna kartu itu sendiri).
+     *
+     * v8.30.1 — FIX: user lapor "mana efeknya" -- efek TIDAK terlihat sama
+     * sekali di HP. Root cause: `SurfaceContainerLowest` (0x090A0C) MALAH
+     * LEBIH GELAP dari `AppBackground` (0x0D0E12, latar app), dan
+     * `SurfaceContainerLow` (0x111317) cuma beda ~4-5 unit per channel dari
+     * situ -- bagian "mengintip" tenggelam total ke background gelap,
+     * bukan bug teknik drawBehind/clip (itu SUDAH benar, diverifikasi
+     * ulang), murni pilihan warna nyaris tidak kontras. Ganti ke
+     * `SurfaceContainerHigh`/`SurfaceContainerHighest` -- keduanya LEBIH
+     * TERANG dari `SurfaceContainer` (kartu) & jelas kontras vs
+     * `AppBackground`, jadi lapis mengintip benar-benar kebaca sbg
+     * "tumpukan kartu", bukan menghilang ke gelap. TETAP reuse token
+     * existing (0 hue baru), TETAP FLAT solid (0 shadow/gradient/alpha).
+     */
+    val StackedCardColors: List<Color> = listOf(SurfaceContainerHigh, SurfaceContainerHighest)
 
     /** Modifier stacked-cards -- ditempel LANGSUNG ke chain yang sama dgn
      * `Surface` (bukan `Box` baru), lihat javadoc lengkap di atas. */

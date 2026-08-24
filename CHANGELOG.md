@@ -3,6 +3,20 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.30.1 (2026-08-24) — FIX: Stacked Cards Effect invisible, warna nyaris sama gelap
+
+Bukan bug teknik (drawBehind+chain-order sudah benar) -- murni pilihan
+warna. `SurfaceContainerLowest` (0x090A0C) LEBIH GELAP dari
+`AppBackground` (0x0D0E12), `SurfaceContainerLow` cuma beda ~4-5
+unit/channel -- lapis mengintip tenggelam invisible ke background.
+
+Fix: `StackedCardColors` → `[SurfaceContainerHigh, SurfaceContainerHighest]`
+(lebih terang dari warna kartu sendiri, kontras jelas vs background).
+Tetap reuse token existing, tetap flat solid.
+
+Preflight: 14/14 kategori PASS. versionCode 171→172, versionName
+8.30.0→8.30.1.
+
 ## v8.30.0 (2026-08-24) — Stacked Cards Effect di Neumorphism (tanpa utak-atik pencahayaan & icon menu)
 `NeumorphTokens.stackedCards()` -- `Modifier.drawBehind{}` ditempel langsung
 ke chain `Surface` (bukan `Box` baru, aman dari regresi weight/align
