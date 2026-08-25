@@ -10,17 +10,23 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.font.FontWeight
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
+import com.elprompter.promptvault.data.ThemeStyleOption
+import com.elprompter.promptvault.ui.theme.HybridTokens
+import com.elprompter.promptvault.ui.theme.VaultTheme
 
 /**
  * Pengganti AlertDialog kotak di tengah layar -- muncul dari bawah sebagai
@@ -33,6 +39,15 @@ import androidx.compose.ui.unit.dp
  * cekung di tengah-atas ([TactileSurface] `recessed = true`, isi
  * `colorScheme.surfaceContainerLowest`, peran M3 baku) -- pola drag-handle
  * standar, sekarang lewat primitif Surface M3 yang sama dengan seluruh app.
+ *
+ * (v8.31.3, "masih lanjut" -- perluasan gaya HYBRID) Tombol aksi sekarang
+ * BERCABANG per `VaultTheme.style`: gaya lain TETAP `Button`+`OutlinedButton`
+ * filled (0 berubah). Khusus HYBRID: pola actionsheet Cupertino asli --
+ * `TextButton` polos (BUKAN filled) dipisah `HorizontalDivider` hairline
+ * ([HybridTokens]), destructive merah TANPA background solid, cancel bold
+ * terpisah di baris paling bawah. iOS `UIAlertController` (style
+ * `.actionSheet`) historisnya SELALU begini -- tombol filled solid ala
+ * Material adalah bahasa visual Material, bukan Cupertino.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,6 +63,7 @@ fun VaultActionSheet(
     val sheetState = rememberModalBottomSheetState()
     val haptics = LocalHapticFeedback.current
     val colors = MaterialTheme.colorScheme
+    val isHybrid = VaultTheme.style == ThemeStyleOption.HYBRID
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
@@ -79,23 +95,48 @@ fun VaultActionSheet(
             Text(title, style = MaterialTheme.typography.titleMedium, color = colors.onSurface)
             Text(message, style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
 
-            Button(
-                onClick = {
-                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onConfirm()
-                },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isDestructive) colors.error else colors.primary,
-                    contentColor = if (isDestructive) colors.onError else colors.onPrimary
-                ),
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
-            ) { Text(confirmLabel) }
+            if (isHybrid) {
+                HorizontalDivider(
+                    modifier = Modifier.padding(top = 8.dp),
+                    thickness = HybridTokens.HairlineWidth,
+                    color = HybridTokens.hairlineColor()
+                )
+                TextButton(
+                    onClick = {
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onConfirm()
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        confirmLabel,
+                        color = if (isDestructive) colors.error else colors.primary,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+                HorizontalDivider(thickness = HybridTokens.HairlineWidth, color = HybridTokens.hairlineColor())
+                TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
+                    Text(dismissLabel, color = colors.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
+                }
+            } else {
+                Button(
+                    onClick = {
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onConfirm()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isDestructive) colors.error else colors.primary,
+                        contentColor = if (isDestructive) colors.onError else colors.onPrimary
+                    ),
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                ) { Text(confirmLabel) }
 
-            OutlinedButton(
-                onClick = onDismiss,
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primary),
-                modifier = Modifier.fillMaxWidth()
-            ) { Text(dismissLabel) }
+                OutlinedButton(
+                    onClick = onDismiss,
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primary),
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text(dismissLabel) }
+            }
         }
     }
 }

@@ -13,6 +13,16 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.31.3 -- Lanjut sempurnakan HYBRID: action sheet Cupertino asli (2026-08-25)
+- "masih lanjut". `VaultActionSheet.kt` bercabang per `VaultTheme.style`:
+  gaya lain tetap Button+OutlinedButton filled. HYBRID: TextButton polos
+  dipisah HorizontalDivider hairline, destructive merah, cancel bold --
+  pola `UIAlertController(.actionSheet)` iOS asli.
+- File diubah (1): `VaultActionSheet.kt`. `preflight_check.sh` 14/14 lolos.
+- Confidence Rating: **75%** -- belum verifikasi device, cek semua alur
+  hapus/undo yang pakai sheet ini masih berfungsi (cuma tampilan berubah).
+- versionCode 182->183, versionName 8.31.2->8.31.3.
+
 ## v8.31.2 -- Lanjut sempurnakan HYBRID: corner radius lebih besar (2026-08-25)
 - "lanjut sempurnakan" -- perluasan MVP v8.31.1. `PromptVaultTheme`
   (`Theme.kt`) pilih `shapes` KONDISIONAL per `themeStyle`: HYBRID pakai

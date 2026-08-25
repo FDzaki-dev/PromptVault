@@ -3,6 +3,23 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.31.3 (2026-08-25) — Lanjut sempurnakan HYBRID: action sheet gaya Cupertino asli
+
+"masih lanjut" -- perluasan HYBRID berikutnya. `VaultActionSheet.kt`
+(bottom sheet konfirmasi hapus/undo dst) sekarang BERCABANG per
+`VaultTheme.style`: gaya lain TETAP `Button`+`OutlinedButton` filled (0
+berubah). Khusus HYBRID: pola actionsheet Cupertino asli -- `TextButton`
+polos TANPA fill solid, dipisah `HorizontalDivider` hairline
+(`HybridTokens`), destructive merah, cancel bold di baris bawah. iOS
+`UIAlertController(.actionSheet)` historisnya begini -- tombol filled
+solid adalah bahasa visual Material, bukan Cupertino.
+
+File diubah (1): `VaultActionSheet.kt`. `preflight_check.sh` 14/14 lolos.
+Confidence Rating: **75%** (belum verifikasi device asli, sheet ini
+dipakai di beberapa titik konfirmasi -- perlu dicek semua alur hapus/undo
+masih berfungsi sama, cuma tampilan tombol yang beda). versionCode
+182->183, versionName 8.31.2->8.31.3.
+
 ## v8.31.2 (2026-08-25) — Lanjut sempurnakan HYBRID: corner radius lebih besar ala Cupertino
 
 "lanjut sempurnakan" -- perluasan MVP v8.31.1 (yang sengaja dibatasi ke
