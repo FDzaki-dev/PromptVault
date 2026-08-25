@@ -13,6 +13,20 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.31.2 -- Lanjut sempurnakan HYBRID: corner radius lebih besar (2026-08-25)
+- "lanjut sempurnakan" -- perluasan MVP v8.31.1. `PromptVaultTheme`
+  (`Theme.kt`) pilih `shapes` KONDISIONAL per `themeStyle`: HYBRID pakai
+  `HybridShapes` baru (8/12/18/24/32dp), gaya lain tetap `PromptVaultShapes`
+  (4/8/12/16/28dp M3 baku).
+- Efek menjalar OTOMATIS ke semua caller `MaterialTheme.shapes.*` --
+  termasuk default param `TactileSurface.shape` sendiri -- 0 file caller
+  lain disentuh.
+- **Caveat**: ~11 titik `RoundedCornerShape(Xdp)` literal TIDAK ikut
+  berubah, di luar cakupan batch ini.
+- File diubah (2): `Shapes.kt`, `Theme.kt`. `preflight_check.sh` 14/14
+  lolos. Confidence Rating: **75%**.
+- versionCode 181->182, versionName 8.31.1->8.31.2.
+
 ## v8.31.1 -- Gaya ke-4: HYBRID, Material 3 + aksen Cupertino (2026-08-24)
 - Instruksi: "terapkan hybrid style pada theme material 3" + klarifikasi
   "Cupertino style yang mau di hybrid". BUKAN gaya dari nol -- kerangka

@@ -3,6 +3,32 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.31.2 (2026-08-25) — Lanjut sempurnakan HYBRID: corner radius lebih besar ala Cupertino
+
+"lanjut sempurnakan" -- perluasan MVP v8.31.1 (yang sengaja dibatasi ke
+hairline border saja). Corner radius adalah trait Cupertino paling
+signifikan berikutnya yang belum digarap.
+
+**Teknik**: BUKAN override shape per-cabang di `TactileSurface.kt` (akan
+perlu diulang di 11 titik `RoundedCornerShape()` literal + berkonflik dgn
+default parameter yg sudah ada) -- `PromptVaultTheme` (`Theme.kt`) sekarang
+pilih `shapes` KONDISIONAL: HYBRID pakai `HybridShapes` (baru, radius lebih
+besar per tingkat: 8/12/18/24/32dp vs `PromptVaultShapes` 4/8/12/16/28dp),
+gaya lain TETAP `PromptVaultShapes`. Efek MENJALAR OTOMATIS ke semua caller
+`MaterialTheme.shapes.*` -- termasuk default parameter `TactileSurface.shape`
+sendiri, jadi mayoritas kartu/kontrol app ikut lebih membulat tanpa 1 pun
+file caller lain disentuh.
+
+**Caveat jujur (dicatat, bukan disembunyikan)**: ~11 titik `RoundedCornerShape
+(Xdp)` literal (bukan lewat `MaterialTheme.shapes.*`) TIDAK ikut berubah --
+di luar cakupan batch ini, follow-up terpisah kalau diminta lanjut lebih
+jauh.
+
+File diubah (2): `Shapes.kt` (+`HybridShapes`), `Theme.kt` (shapes
+kondisional). `preflight_check.sh` 14/14 lolos. Confidence Rating: **75%**
+(perubahan theme-level murni, dampak visual luas tapi belum diverifikasi
+device asli). versionCode 181->182, versionName 8.31.1->8.31.2.
+
 ## v8.31.1 (2026-08-24) — Gaya ke-4: HYBRID (Material 3 + aksen Cupertino)
 
 Instruksi user: "terapkan hybrid style pada theme material 3" + klarifikasi
