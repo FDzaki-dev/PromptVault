@@ -3,6 +3,37 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.31.1 (2026-08-24) — Gaya ke-4: HYBRID (Material 3 + aksen Cupertino)
+
+Instruksi user: "terapkan hybrid style pada theme material 3" + klarifikasi
+"Cupertino style yang mau di hybrid". BUKAN gaya dari nol -- kerangka
+warna/tonal/shadow elevation 100% jalur MATERIAL3 flat (cabang identik di
+`TactileSurface.kt`), + 1 aksen signature Cupertino: **hairline border
+SELALU tampil** (iOS mengandalkan garis tipis pemisah list/card, bukan
+shadow tebal), bahkan saat caller tidak kirim `border` eksplisit.
+
+**MVP SENGAJA dibatasi 1 primitif** (`TactileSurface`, dipakai semua
+kartu/kontrol) + togglenya -- corner radius lebih besar/"continuous" ala
+iOS, cupertino-style bottom sheet/dialog: PERLUASAN terpisah, di luar scope
+batch ini.
+
+File diubah (4): `ThemeStyleOption` enum (+`HYBRID`, `SettingsRepository.kt`
+-- `valueOf`/`.name` sudah backward-compatible, 0 migrasi perlu), BARU
+`HybridTokens.kt`, `TactileSurface.kt` (+cabang HYBRID), `ThemeStyleToggle.kt`
+(+baris ke-4), `strings.xml` (+1). Verifikasi: 0 `when`-exhaustive lain atas
+`ThemeStyleOption` di codebase (grep, aman dari compile-error enum baru).
+
+**Insiden minor + fix**: 1 iterasi preflight gagal kategori 14 (tag
+`[vX.Y.Z]` di block comment KDoc, bug KSP lama v8.23.5) -- javadoc
+`HybridTokens.kt` pakai kurung siku, diganti kurung biasa `(v8.31.1)`.
+Semua `[vX.Y.Z]` lain yang ditambah batch ini ada di line comment `//`
+(aman, di luar cakupan bug).
+
+`preflight_check.sh` 14/14 lolos. Confidence Rating: **75%** (fitur baru,
+gaya visual belum diverifikasi device asli -- MVP sengaja kecil,
+kemungkinan besar user minta perluasan lanjutan spt corner radius/dialog
+Cupertino). versionCode 180->181, versionName 8.30.9->8.31.1.
+
 ## v8.30.9 (2026-08-24) — Fix: sliver stacked card dibuat menyatu, bukan kelihatan kartu terpisah
 
 User: "dibuat seakan-akan tersambung, bisa??". Root cause "keliatan

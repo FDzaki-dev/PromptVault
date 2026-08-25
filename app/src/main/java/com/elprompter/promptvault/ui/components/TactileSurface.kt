@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.elprompter.promptvault.data.ThemeStyleOption
 import com.elprompter.promptvault.ui.theme.GlassTokens
+import com.elprompter.promptvault.ui.theme.HybridTokens
 import com.elprompter.promptvault.ui.theme.NeumorphTokens
 import com.elprompter.promptvault.ui.theme.TactileTokens
 import com.elprompter.promptvault.ui.theme.VaultTheme
@@ -189,6 +190,42 @@ fun TactileSurface(
                 shape = shape,
                 color = color,
                 border = border,
+                tonalElevation = effectiveElevation,
+                shadowElevation = effectiveElevation,
+                content = content
+            )
+        }
+        return
+    }
+
+    if (style == ThemeStyleOption.HYBRID) {
+        // [v8.31.1] Kerangka warna/elevasi PERSIS SAMA dgn cabang MATERIAL3
+        // di atas (flat, `color`/`border` caller apa adanya) -- SATU beda:
+        // `border` caller yang `null` diisi hairline Cupertino
+        // (`HybridTokens`), BUKAN dibiarkan tanpa border spt MATERIAL3
+        // murni. Kalau caller SUDAH kirim border sendiri (mis. state error
+        // fungsional), itu dihormati apa adanya -- tidak ditimpa, sama
+        // prinsipnya dgn cabang Glass di bawah.
+        val hybridBorder = border ?: BorderStroke(HybridTokens.HairlineWidth, HybridTokens.hairlineColor())
+        if (onClick != null) {
+            Surface(
+                onClick = onClick,
+                enabled = enabled,
+                modifier = modifier,
+                shape = shape,
+                color = color,
+                border = hybridBorder,
+                tonalElevation = effectiveElevation,
+                shadowElevation = effectiveElevation,
+                interactionSource = interactionSource,
+                content = content
+            )
+        } else {
+            Surface(
+                modifier = modifier,
+                shape = shape,
+                color = color,
+                border = hybridBorder,
                 tonalElevation = effectiveElevation,
                 shadowElevation = effectiveElevation,
                 content = content

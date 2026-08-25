@@ -26,8 +26,17 @@ enum class ConflictStrategy {
  * (v8.23.4) `MATERIAL3` ditambah -- gaya ke-3, flat/opaque (perilaku
  * `TactileSurface` v8.0.0 sebelum Glassmorphism dihidupkan lagi), diminta
  * eksplisit user ("biar 3 theme bisa digunakan").
+ *
+ * (v8.31.1) `HYBRID` ditambah -- gaya ke-4, permintaan eksplisit user:
+ * "terapkan hybrid style pada theme Material 3" + klarifikasi "Cupertino
+ * style yang mau di hybrid". Kerangka warna/elevasi tetap 100% jalur M3
+ * flat (SAMA PERSIS cabang MATERIAL3 di `TactileSurface`), + 1 aksen
+ * signature Cupertino: hairline border SELALU tampil (lihat
+ * `HybridTokens.kt`) -- gaya list/card iOS yang mengandalkan garis tipis
+ * utk pemisah, bukan shadow tebal. "Hybrid" = kerangka M3 + aksen
+ * Cupertino itu, BUKAN gaya ke-5 dari nol.
  */
-enum class ThemeStyleOption { GLASSMORPHISM, NEUMORPHISM, MATERIAL3 }
+enum class ThemeStyleOption { GLASSMORPHISM, NEUMORPHISM, MATERIAL3, HYBRID }
 
 /**
  * Menyimpan interval auto-scan dan strategi konflik nama file.

@@ -13,6 +13,24 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.31.1 -- Gaya ke-4: HYBRID, Material 3 + aksen Cupertino (2026-08-24)
+- Instruksi: "terapkan hybrid style pada theme material 3" + klarifikasi
+  "Cupertino style yang mau di hybrid". BUKAN gaya dari nol -- kerangka
+  100% jalur MATERIAL3 flat + 1 aksen: hairline border SELALU tampil
+  (signature Cupertino, iOS pakai garis tipis bukan shadow tebal).
+- MVP SENGAJA dibatasi 1 primitif (`TactileSurface`) + toggle -- corner
+  radius besar/"continuous" ala iOS & cupertino-style dialog/bottom sheet
+  BELUM dikerjakan, perluasan terpisah kalau diminta lanjut.
+- File diubah (4) + 1 baru (`HybridTokens.kt`). `ThemeStyleOption` pakai
+  `valueOf`/`.name` (backward-compatible, 0 migrasi). 0 `when`-exhaustive
+  lain di codebase yang perlu disentuh (diverifikasi grep).
+- **Insiden minor**: preflight kategori 14 (tag `[vX.Y.Z]` di block
+  comment, bug KSP v8.23.5) sempat gagal di `HybridTokens.kt` -- fixed ke
+  `(v8.31.1)` kurung biasa.
+- `preflight_check.sh` 14/14 lolos. Confidence Rating: **75%** (fitur
+  visual baru, belum verifikasi device asli).
+- versionCode 180->181, versionName 8.30.9->8.31.1.
+
 ## v8.30.9 -- Fix: sliver stacked card dibuat menyatu, bukan terpisah (2026-08-24)
 - User: "dibuat seakan-akan tersambung". Root cause: outline stroke
   (v8.30.2) membungkus sisi sliver yang mengintip -- kebaca sbg "tepi kartu
