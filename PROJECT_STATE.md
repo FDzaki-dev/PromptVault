@@ -13,6 +13,98 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.33.1 -- BATCH 2/2: UI toggle "tahan versi .zip terbaru" (2026-08-26)
+- Menutup Pending Queue batch 1 (v8.33.0 di bawah): wiring UI utk
+  `Rule.holdBackLatestZip` yang sebelumnya cuma ada di model+logika inti.
+- **Implementasi** (`ui/screens/AddEditRuleScreen.kt`):
+  - State baru `holdBackLatestZip` (`rememberSaveable`, seed dari
+    `existingRule?.holdBackLatestZip`) -- pola identik field lain di layar
+    ini (bertahan rotasi/process death).
+  - Row baru (`TactileSwitch`, pola SAMA PERSIS dgn
+    `settings_autosort_title`/`settings_shizuku_section_title` di
+    `SettingsScreen.kt`) ditaruh setelah blok "Filter Ukuran File", sebelum
+    live preview pattern.
+  - **Keputusan desain (Pending Queue batch 1 tandai ini "FLAG UTK
+    DIPUTUSKAN")**: toggle SELALU tampil, TIDAK dikondisikan cek substring
+    ".zip" di pattern -- alasan: pattern boleh CSV multi-ekstensi (mis.
+    "*.zip, *.rar"), dan kondisional UI berisiko toggle "hilang"/state
+    reset diam-diam kalau user edit pattern belakangan. Syarat aktual
+    (scope .zip+SAF saja) dijelaskan lewat hint text di bawah toggle,
+    bukan disembunyikan via UI kondisional.
+  - Diteruskan ke konstruksi `Rule(...)` di `onSave` (parameter baru
+    `holdBackLatestZip = holdBackLatestZip`, named arg -- `enabled` TETAP
+    tidak disentuh di sini spt sebelumnya, field itu memang dikelola
+    terpisah lewat `onToggleEnabled` di `MainActivity.kt`, TIDAK diubah).
+- `res/values/strings.xml`: 2 string baru, prefix
+  `rule_edit_hold_back_zip_*` (title + hint) -- hint eksplisit sebutkan
+  syarat scope (SAF only, mode lokal/Shizuku tidak terpengaruh) sesuai
+  precedent semua hint lain di layar ini.
+- File diubah (3): `ui/screens/AddEditRuleScreen.kt`, `res/values/
+  strings.xml`, `app/build.gradle.kts` (versi). `preflight_check.sh` 14/14
+  lolos. `FILE_MANIFEST.txt` TIDAK berubah (0 file baru/dihapus).
+- **Fitur SEKARANG LENGKAP end-to-end** (model batch 1 + UI batch 2) --
+  TIDAK ADA lagi Pending Queue tersisa utk fitur toggle ini.
+- **Belum diverifikasi CI hijau maupun device asli** (keterbatasan
+  lingkungan Claude, konsisten seluruh riwayat project). **User WAJIB
+  verifikasi di HP**: (1) build CI hijau, (2) buka Tambah/Edit Rule ->
+  toggle baru terlihat & bisa di-tap, state tersimpan setelah rotasi
+  layar, (3) simpan rule dgn toggle ON, pattern cocok .zip, tujuan scan
+  folder kustom SAF -> taruh 2+ .zip beda waktu modif di Downloads -> scan
+  -> HANYA yang paling baru tertahan (5 poin verifikasi fungsional
+  lengkap sudah dicatat di entri v8.32.0 di bawah, sekarang baru bisa
+  dites krn toggle-nya sudah ada), (4) rule LAIN dgn toggle OFF (default)
+  -> pastikan .zip yg cocok TETAP dipindah semua spt biasa, tidak ada yg
+  ketahan.
+- versionCode 187->188, versionName 8.33.0->8.33.1.
+
+## v8.33.0 -- BATCH 1/2: Toggle per rule "tahan versi .zip terbaru" (2026-08-26)
+- **Permintaan eksplisit user**: fitur v8.32.0/v8.32.1 ("tahan versi .zip
+  terbaru saat scan, scope .zip+SAF") SEBELUMNYA otomatis berlaku ke SEMUA
+  rule yang cocok scope tsb tanpa kontrol -- user minta saklar/toggle CUSTOM
+  KHUSUS per rule, supaya HANYA rule yang dipilih user secara eksplisit yang
+  boleh menyisakan file `lastModified()` terbaru di Downloads. Rule lain
+  (toggle OFF/default) tetap perilaku lama scope ini: SEMUA file .zip yang
+  cocok dipindahkan, tidak ada yang ditahan.
+- **Implementasi batch 1 (model + logika inti SAJA, UI menyusul batch 2)**:
+  - `data/Rule.kt`: field baru `holdBackLatestZip: Boolean = false`,
+    ditambahkan DI AKHIR parameter list (bukan di tengah) -- aman utk semua
+    call site named-args yang sudah ada (`AddEditRuleScreen.kt`, seluruh
+    test JVM) DAN aman utk decode JSON rule lama tanpa field ini (Kotlinx
+    serialization pakai default `false` utk field yang tidak ada di JSON
+    sumber, `RuleRepository` sudah `ignoreUnknownKeys = true` dua arah).
+  - `util/FileSorter.kt`, `computeLatestZipHeldBack()`: 1 baris guard baru
+    `if (!topRule.holdBackLatestZip) continue` SEBELUM file masuk grouping
+    -- rule dgn toggle OFF tidak pernah ikut dihitung "punya versi terbaru
+    yang ditahan" sama sekali, filenya lewat jalur `processCandidate()`
+    normal spt tidak ada fitur ini. KDoc fungsi diperbarui jelaskan syarat
+    opt-in baru ini.
+- **STATE SEMENTARA sampai batch 2 selesai**: semua rule (lama MAUPUN baru)
+  otomatis start dgn toggle OFF krn belum ada UI utk menyalakannya -- efek
+  praktis batch ini SENDIRIAN: fitur "tahan versi terbaru" jadi TIDAK AKTIF
+  utk siapa pun (default aman, BUKAN regresi berbahaya -- cuma balik ke
+  perilaku SEBELUM v8.32.0 ada: semua .zip dipindah spt biasa). Ini SENGAJA
+  (Micro-Batch cap 3 file/respons, `app/build.gradle.kts` versi WAJIB tiap
+  sesi ikut menghabiskan slot) -- BUKAN dianggap selesai, lihat Pending
+  Queue di bawah, ditutup batch berikutnya SEGERA.
+- File diubah (3): `data/Rule.kt`, `util/FileSorter.kt`, `app/build.gradle.kts`
+  (versi). `preflight_check.sh` 14/14 lolos. `FILE_MANIFEST.txt` TIDAK
+  berubah (0 file baru/dihapus).
+- **⏳ PENDING QUEUE (batch 2, WAJIB segera menyusul)**: (1) UI toggle di
+  `AddEditRuleScreen.kt` (pakai `TactileSwitch`, pola row sama persis dgn
+  `settings_autosort_title`/`settings_shizuku_section_title` di
+  `SettingsScreen.kt`) -- HANYA relevan tampil kalau `pattern` user mengarah
+  ke `.zip` (perlu keputusan: selalu tampil vs kondisional cek substring
+  ".zip" di pattern -- FLAG UTK DIPUTUSKAN BATCH 2, default aman kalau ragu:
+  selalu tampil + hint text jelaskan "hanya berlaku kalau tujuan scan folder
+  kustom & pattern cocok file .zip"), diteruskan ke konstruksi `Rule(...)`
+  di `onSave`; (2) `res/values/strings.xml` -- label toggle + hint/deskripsi
+  singkat (2 string baru, prefix `rule_edit_hold_back_zip_*` biar konsisten
+  penamaan dgn string rule_edit_* lain).
+- **Belum diverifikasi CI hijau** -- WAJIB dicek run Actions berikutnya
+  SEBELUM lanjut batch 2 (kalau merah, prioritas fix compile dulu drpd
+  lanjut UI).
+- versionCode 186->187, versionName 8.32.1->8.33.0.
+
 ## v8.32.1 -- COMPILE-FIX: computeLatestZipHeldBack() Array<File> vs List<File> (2026-08-26)
 - **Gejala**: user upload `build-failure-log-v8_32_0.zip`. `:app:compileDebugKotlin`
   DAN `:app:compileReleaseKotlin` FAILED -- `FileSorter.kt:849:67: Type

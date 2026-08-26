@@ -3,6 +3,43 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.33.1 (2026-08-26) — BATCH 2/2: UI toggle "tahan versi .zip terbaru"
+
+Menutup batch 1 (v8.33.0): UI `TactileSwitch` baru di `AddEditRuleScreen.kt`
+(pola sama dengan toggle Auto-Sort/Shizuku di `SettingsScreen.kt`), state
+`rememberSaveable`, diteruskan ke `Rule(holdBackLatestZip = ...)` saat
+simpan. Toggle SELALU tampil (tidak dikondisikan cek pattern ".zip") —
+pattern bisa multi-ekstensi CSV, hint text di bawah toggle yang jelaskan
+syarat scope aktualnya (.zip + tujuan SAF saja). 2 string baru
+`strings.xml` (prefix `rule_edit_hold_back_zip_*`).
+
+Fitur sekarang lengkap end-to-end (model batch 1 + UI batch 2), tidak ada
+pending queue tersisa untuk toggle ini — masih menunggu verifikasi CI +
+device asli dari user.
+
+File diubah (3): `ui/screens/AddEditRuleScreen.kt`, `res/values/strings.xml`,
+`app/build.gradle.kts` (versi). Preflight: 14/14 kategori PASS. versionCode
+187→188, versionName 8.33.0→8.33.1.
+
+## v8.33.0 (2026-08-26) — BATCH 1/2: Toggle per rule "tahan versi .zip terbaru"
+
+Permintaan eksplisit user: fitur v8.32.0 sebelumnya otomatis berlaku ke
+SEMUA rule yang cocok scope .zip+SAF tanpa kontrol — sekarang butuh opt-in
+eksplisit per rule. Batch 1 (model + logika inti): `Rule.holdBackLatestZip:
+Boolean = false` (field baru di akhir parameter list, aman untuk semua call
+site & decode JSON rule lama), `computeLatestZipHeldBack()` di-gate 1 baris
+`if (!topRule.holdBackLatestZip) continue`.
+
+**Sementara sampai batch 2**: belum ada UI untuk menyalakan toggle, jadi
+efek praktis batch ini sendirian = fitur "tahan versi terbaru" nonaktif
+untuk semua rule (aman, setara perilaku sebelum v8.32.0 — bukan regresi).
+Batch 2 (menyusul segera): UI `TactileSwitch` di `AddEditRuleScreen.kt` +
+2 string baru `strings.xml`.
+
+File diubah (3): `data/Rule.kt`, `util/FileSorter.kt`, `app/build.gradle.kts`
+(versi). Preflight: 14/14 kategori PASS. versionCode 186→187, versionName
+8.32.1→8.33.0.
+
 ## v8.32.1 (2026-08-26) — COMPILE-FIX: Array<File> vs List<File> di computeLatestZipHeldBack()
 
 `build-failure-log-v8_32_0.zip`: `compileDebugKotlin`/`compileReleaseKotlin`

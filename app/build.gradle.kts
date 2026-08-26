@@ -22,8 +22,8 @@ android {
         applicationId = "com.elprompter.promptvault"
         minSdk = 26
         targetSdk = 34
-        versionCode = 186
-        versionName = "8.32.1"
+        versionCode = 188
+        versionName = "8.33.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

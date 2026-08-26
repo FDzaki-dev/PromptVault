@@ -45,6 +45,8 @@
     <string name="rule_edit_min_kb_label">Min (KB)</string>
     <string name="rule_edit_max_kb_label">Maks (KB)</string>
     <string name="rule_edit_size_hint">Kosongkan kalau tidak perlu batasan ukuran. Contoh pakai: hindari file kosong (min 1 KB) atau hindari file raksasa yang bikin auto-scan lama (maks 50000 KB).</string>
+    <string name="rule_edit_hold_back_zip_title">Tahan versi .zip terbaru di Downloads</string>
+    <string name="rule_edit_hold_back_zip_hint">Kalau aktif: saat scan, 1 file .zip PALING BARU (berdasarkan waktu ubah file) yang cocok rule ini akan dibiarkan tetap di Downloads — versi lama tetap dipindah otomatis seperti biasa. Hanya berlaku saat tujuan scan folder kustom (SAF); mode Downloads/PromptVault default dan mode Shizuku tidak terpengaruh toggle ini.</string>
     <string name="rule_edit_preview_summary">%1$d dari %2$d file di Downloads cocok pattern ini</string>
     <string name="rule_edit_preview_empty">Tidak ada yang cocok. Cek lagi ejaan/format pattern-nya, atau buka Diagnostik untuk lihat nama file asli di Downloads.</string>
     <string name="rule_edit_preview_bullet">• %1$s</string>

@@ -911,6 +911,16 @@ class FileSorter(
      * berlaku 100% di luar scope ini, TIDAK ADA perubahan default untuk siapa
      * pun yang tidak pakai kombinasi .zip+SAF.
      *
+     * [Batch 2, 2026-08-26] **WAJIB opt-in per rule** lewat
+     * [Rule.holdBackLatestZip] -- SEBELUMNYA (v8.32.0 awal) berlaku otomatis
+     * ke SEMUA rule yang cocok scope .zip+SAF tanpa kontrol user sama
+     * sekali; permintaan eksplisit user batch ini: hanya rule yang
+     * togglenya AKTIF yang boleh menyisakan file. Rule dgn toggle OFF
+     * (termasuk SEMUA rule lama sebelum field ini ada, default `false`)
+     * TIDAK pernah masuk grouping di bawah -- filenya diperlakukan seperti
+     * sebelum fitur ini ada sama sekali (dipindahkan semua, tidak ada yang
+     * ditahan).
+     *
      * **Pengelompokan PER RULE** (bukan per "keluarga nama file" -- keputusan
      * eksplisit user via `ask_user_input_v0`, 2026-08-26): di antara file .zip
      * yang cocok RULE PRIORITAS TERTINGGI yang sama (logika matching IDENTIK
@@ -946,6 +956,7 @@ class FileSorter(
             if (!file.name.substringAfterLast('.', "").equals("zip", ignoreCase = true)) continue
             val matches = RuleOverlapChecker.matchingRules(file.name, file.sizeKb(), rules)
             val topRule = matches.firstOrNull() ?: continue
+            if (!topRule.holdBackLatestZip) continue // [Batch 2] opt-in per rule, lihat KDoc di atas
             zipGroupsByRule.getOrPut(topRule.folderName) { mutableListOf() }.add(file)
         }
         if (zipGroupsByRule.isEmpty()) return emptySet()

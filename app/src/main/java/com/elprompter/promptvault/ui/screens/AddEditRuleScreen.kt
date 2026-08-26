@@ -21,6 +21,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.foundation.layout.Row
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
@@ -37,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import com.elprompter.promptvault.R
 import com.elprompter.promptvault.data.Rule
 import com.elprompter.promptvault.data.SaveRuleCheck
+import com.elprompter.promptvault.ui.components.TactileSwitch
 import com.elprompter.promptvault.ui.components.VaultActionSheet
 import com.elprompter.promptvault.ui.components.VaultCard
 import com.elprompter.promptvault.ui.components.VaultTopBar
@@ -102,6 +104,11 @@ fun AddEditRuleScreen(
     var excludePattern by rememberSaveable { mutableStateOf(existingRule?.excludePattern ?: "") }
     var minSizeKbText by rememberSaveable { mutableStateOf(existingRule?.minSizeKb?.toString() ?: "") }
     var maxSizeKbText by rememberSaveable { mutableStateOf(existingRule?.maxSizeKb?.toString() ?: "") }
+    // [Batch 2, 2026-08-26] Toggle per-rule "tahan versi .zip terbaru" --
+    // lihat KDoc lengkap di Rule.holdBackLatestZip/FileSorter.
+    // computeLatestZipHeldBack(). rememberSaveable, pola SAMA PERSIS dgn
+    // field ketikan lain di atas (bertahan lewat rotasi/process death).
+    var holdBackLatestZip by rememberSaveable { mutableStateOf(existingRule?.holdBackLatestZip ?: false) }
     var pendingCheck by remember { mutableStateOf<SaveRuleCheck?>(null) }
     var pendingRule by remember { mutableStateOf<Rule?>(null) }
     var preview by remember { mutableStateOf<PatternPreviewResult?>(null) }
@@ -218,6 +225,25 @@ fun AddEditRuleScreen(
                 style = MaterialTheme.typography.bodySmall
             )
 
+            // [Batch 2, 2026-08-26] Selalu tampil (bukan kondisional cek
+            // substring ".zip" di pattern) -- keputusan sengaja: pattern
+            // bisa multi-ekstensi CSV (mis. "*.zip, *.rar") dan user bisa
+            // ubah pattern belakangan tanpa toggle ini hilang/reset diam-
+            // diam. Hint text di bawah sudah jelaskan syarat aktualnya
+            // (scope .zip+SAF saja) drpd disembunyikan/dikondisikan UI.
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(stringResource(R.string.rule_edit_hold_back_zip_title), style = MaterialTheme.typography.titleSmall)
+                TactileSwitch(checked = holdBackLatestZip, onCheckedChange = { holdBackLatestZip = it })
+            }
+            Text(
+                stringResource(R.string.rule_edit_hold_back_zip_hint),
+                style = MaterialTheme.typography.bodySmall
+            )
+
             // Live preview: bukti langsung pattern ini akan kena file yang mana di Downloads.
             preview?.let { p ->
                 VaultCard(modifier = Modifier.fillMaxWidth()) {
@@ -252,7 +278,8 @@ fun AddEditRuleScreen(
                         pattern = pattern.trim(),
                         excludePattern = excludePattern.trim(),
                         minSizeKb = minSizeKbText.toLongOrNull(),
-                        maxSizeKb = maxSizeKbText.toLongOrNull()
+                        maxSizeKb = maxSizeKbText.toLongOrNull(),
+                        holdBackLatestZip = holdBackLatestZip
                     )
                     isSaving = true
                     scope.launch {
