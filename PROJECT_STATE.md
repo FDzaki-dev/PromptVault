@@ -13,83 +13,74 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
-## v8.32.0 -- FITUR BARU: "Hanya Simpan Versi Terbaru" per-rule (Keep Latest Version Only) (2026-08-26)
-- **Permintaan eksplisit user**: "saat user melakukan scan otomatis/manual
-  file, aplikasi akan menyisikan 1 file latest version dari rule terkait
-  sampai ada file baru yang menggantikan posisinya" -- opsi BARU per-rule,
-  BUKAN perilaku global (0 regresi rule lama, default `false`).
-- **`Rule.kt`**: field baru `keepLatestVersionOnly: Boolean = false`. Kolom
-  `@Serializable` baru dgn default -- backward-compatible penuh saat decode
-  JSON lama (import/export/DataStore) yang belum punya field ini, 0
-  migrasi diperlukan. Diverifikasi grep semua `Rule(...)` call site --
-  SEMUA pakai named args, aman ditambah field baru di akhir.
-- **`FileSorter.kt`**: 2 fungsi baru `enforceKeepLatestVersionOnlyLocal`/
-  `enforceKeepLatestVersionOnlySaf`, dipanggil SETELAH file baru
-  terkonfirmasi sukses di posisi akhir (bukan sebelum -- kalau pemindahan
-  gagal, versi lama yang masih satu-satunya salinan valid TIDAK ikut
-  hilang). Kalau `rule.keepLatestVersionOnly == true`, SEMUA file lain di
-  folder tujuan rule itu (nama apa pun, bukan cuma file dgn nama sama --
-  beda cakupan dari `ConflictStrategy` yang sudah ada, yang cuma menangani
-  file dgn NAMA PERSIS sama) dihapus permanen. Destruktif TANPA histori
-  undo -- konsisten dgn `ConflictStrategy.OVERWRITE` yang sudah ada (juga
-  destruktif tanpa histori). Tiap sukses hapus dicatat 1 baris ringkasan
-  WARNING ke Activity Log ("N versi lama dihapus otomatis..."), supaya
-  user tetap tahu, bukan diam-diam tanpa jejak.
-- **Cakupan batch ini: jalur LOCAL (Downloads/PromptVault) & SAF (folder
-  tujuan kustom) SAJA** -- keduanya bisa `listFiles()` folder tujuan
-  langsung (`File`/`DocumentFile`, API yang sudah tersedia). Jalur
-  **Shizuku BELUM didukung** (lihat Pending Queue) -- `IFileOpsService.aidl`
-  belum punya method `listFiles`/`listDirectory`, nambahnya butuh ubah
-  AIDL + `FileOpsUserService.kt` (proses Shizuku terpisah) SEKALIGUS -- 2
-  file tambahan yang bakal melampaui Micro-Batch HARD CAP (3 file) sesi
-  ini. Rule dgn `keepLatestVersionOnly = true` yang scan-nya lewat mode
-  Shizuku aktif TETAP memindahkan file seperti biasa (0 regresi fungsi
-  inti), cuma cleanup versi lamanya belum jalan di jalur itu -- TIDAK
-  silent-fail berbahaya, cuma belum lengkap.
-- **`AddEditRuleScreen.kt`**: toggle baru "Hanya simpan versi terbaru"
-  (pola `Row(SpaceBetween)+TactileSwitch`, PERSIS sama dgn toggle
-  Auto-Sort di `SettingsScreen.kt`) di bawah filter ukuran, sebelum live
-  preview. State `keepLatestVersionOnly` (`rememberSaveable`, ikut aturan
-  state-restoration Fase Audit UX batch 6) diteruskan ke `Rule(...)` saat
-  Simpan.
-- **Label toggle MASIH literal Kotlin, BUKAN `stringResource`** -- Rule.kt
-  + FileSorter.kt + AddEditRuleScreen.kt sudah pas 3 file (Micro-Batch
-  HARD CAP), ekstraksi ke `strings.xml` masuk Pending Queue. Pola sama
-  persis preseden lama project ini sendiri (`SkippedFilesScreen.kt` sempat
-  hardcode sampai diaudit v8.16.1) -- bukan penyimpangan baru dari standar
-  100% stringResource, murni ditunda 1 batch krn batas file.
-- File diubah (3, PAS batas Micro-Batch): `data/Rule.kt`,
-  `util/FileSorter.kt`, `ui/screens/AddEditRuleScreen.kt`. +
-  `app/build.gradle.kts` (versi, bookkeeping wajib sesi -- di luar
-  hitungan cap file task). `scripts/preflight_check.sh` 14/14 lolos bersih
-  (langsung, 0 iterasi fix).
-- **BELUM PERNAH lewat `./gradlew`/device asli** (konsisten seluruh
-  riwayat project). **User WAJIB verifikasi**: (1) build CI hijau, (2)
-  buat/edit rule dgn toggle "Hanya simpan versi terbaru" ON, taruh 1 file
-  cocok pattern rule itu di Downloads -> scan -> lalu taruh 1 file LAIN
-  (nama beda) yang juga cocok -> scan lagi -- setelah scan kedua, folder
-  tujuan rule itu HANYA berisi file KEDUA (file pertama terhapus otomatis
-  + baris WARNING muncul di Log Aktivitas), (3) rule LAIN yang toggle-nya
-  OFF (default, termasuk SEMUA rule lama) TIDAK terpengaruh sama sekali --
-  perilaku persis seperti sebelum fitur ini ada.
-- Confidence Rating: **85%** (mekanisme cleanup straightforward -- reuse
-  penuh API `File`/`DocumentFile` yang sudah dipakai fungsi tetangga di
-  file yang sama, 0 API baru -- turun dari 90%+ krn (1) belum lewat
-  `./gradlew`/device asli seperti biasa, (2) jalur SAF: `destDir.listFiles()`
-  dipanggil di provider SAF yang historisnya (lihat Insiden crash v7.5.2)
-  pernah rewel soal `DocumentFile` -- SUDAH diverifikasi `destDir` di titik
-  ini SELALU turunan tree yang benar/listable [bukan `fromSingleUri()`],
-  tapi tetap belum diuji provider OEM nyata).
-- **⏳ PENDING QUEUE (4 item)**:
-  1. Dukungan jalur Shizuku (butuh method baru `listFiles`/`listDirectory`
-     di `IFileOpsService.aidl` + implementasi `FileOpsUserService.kt`).
-  2. Ekstraksi label toggle "Hanya simpan versi terbaru" + hint-nya ke
-     `strings.xml` (saat ini literal Kotlin di `AddEditRuleScreen.kt`).
-  3. Indikator visual di `RuleCard.kt` (mis. badge/ikon kecil) untuk rule
-     yang toggle-nya ON, biar kelihatan di layar "Kelola Rule" tanpa perlu
-     buka Edit Rule dulu.
-  4. Sebut fitur ini di `ROADMAP.md`/`CHANGELOG.md` (dokumentasi tambahan,
-     bukan bug -- opsional, urutan bebas).
+## v8.32.0 -- FITUR BARU: "Tahan versi terbaru" saat scan, scope .zip+SAF SAJA (2026-08-26)
+- **Permintaan eksplisit user**: saat scan (manual MAUPUN auto-sort, keduanya
+  lewat `scanAndSort()` yang sama, tidak ada percabangan caller baru), file
+  yang cocok rule dipindahkan seperti biasa KECUALI 1 file "versi paling
+  baru" per rule dibiarkan tetap di Downloads -- supaya user selalu punya
+  akses cepat ke build/rilis terbarunya tanpa gali folder vault. Scope
+  DIBATASI EKSPLISIT ke kombinasi **.zip + tujuan folder kustom SAF SAJA**
+  (disebut user sendiri di prompt) -- mode lokal (Downloads/PromptVault
+  default) dan mode Shizuku TIDAK disentuh sama sekali, perilaku lama
+  (pindahkan SEMUA yang cocok) tetap 100% berlaku di luar 2 syarat itu.
+- **2 keputusan desain diklarifikasi via `ask_user_input_v0` SEBELUM nulis
+  kode** (bukan ditebak -- area ini exact match dgn Insiden #7 lama:
+  "kalau ragu soal peran/scope SAF, tanya eksplisit dulu"):
+  1. "Versi terbaru" = `File.lastModified()` (BUKAN parsing angka versi
+     dari nama file) -- konsisten dgn `isLikelyStillWriting()` yang juga
+     baca waktu file dari sumber yang sama, tidak menambah cara baca
+     timestamp kedua yang independen.
+  2. Pengelompokan **PER RULE** (bukan per "keluarga nama file/basename") --
+     di antara file .zip yang cocok 1 rule prioritas-tertinggi yang sama,
+     1 file paling baru per rule itu yang ditahan. Kalau 1 rule cuma dapat
+     1 file .zip scan ini, file itu otomatis "yang terbaru" satu-satunya --
+     TETAP ditahan (tidak dipindah), baru dipindah scan berikutnya setelah
+     ada file .zip lain yang lebih baru muncul untuk rule yang sama.
+- **Implementasi** (`util/FileSorter.kt` SAJA, 1 file): fungsi baru
+  `computeLatestZipHeldBack(candidateFiles, rules)` -- PURE (tanpa I/O SAF),
+  dipanggil SEKALI SERIAL di `scanAndSortToDestination()` SEBELUM `async{}`
+  fan-out paralel (pola IDENTIK `resolveSafRuleDestinations()` -- hindari
+  race antar-coroutine kalau dihitung per-file, pelajaran lama yang sama
+  persis dgn insiden duplikat folder v2.19.2). Hasilnya (`Set<String>`
+  berisi `File.absolutePath`) diteruskan sbg parameter baru
+  `latestZipHeldBack` ke `processCandidate()` (default `emptySet()`, 1 call
+  site, aman) -- dicek PALING AWAL (sebelum stability-check 1 detik, biar
+  tidak nunggu delay percuma utk file yang memang tidak akan dipindah scan
+  ini), file yang match masuk `CandidateOutcome.Skipped` dgn alasan
+  eksplisit ("Ditahan di Downloads: ini versi .zip PALING BARU untuk rule
+  ... -- Versi lama dipindah otomatis, versi ini menunggu sampai ada yang
+  lebih baru lagi.") -- otomatis muncul di layar "Detail File Dilewati"
+  yang sudah ada, TIDAK perlu UI/kategori skip baru.
+- **Kenapa ini AMAN utk `AutoSortWorker` tanpa sentuh worker sama sekali**:
+  `scanAndSort()` (titik masuk tunggal, dipanggil MainViewModel MAUPUN
+  AutoSortWorker) TIDAK berubah signature -- percabangan baru sepenuhnya di
+  DALAM `scanAndSortToDestination()`, jadi otomatis berlaku di kedua mode
+  scan sesuai permintaan user ("baik otomatis/manual sekalipun") tanpa
+  butuh perubahan apa pun di caller manapun.
+- **Efek pada mode lokal/Shizuku**: NOL -- `computeLatestZipHeldBack()`
+  hanya dipanggil kalau `destinationRoot != null` (SAF aktif); `scanAndSortViaShizuku()`/`processCandidateShizuku()` adalah jalur kode
+  TERPISAH TOTAL yang sama sekali tidak memanggil fungsi baru ini.
+- File diubah (1) + versi: `util/FileSorter.kt`, `app/build.gradle.kts`
+  (versi). `FILE_MANIFEST.txt` TIDAK berubah (0 file baru/dihapus).
+  `preflight_check.sh` 14/14 lolos bersih.
+- **Belum lewat `./gradlew`/device asli** (keterbatasan permanen lingkungan
+  kerja Claude, konsisten seluruh riwayat project). **User WAJIB
+  verifikasi di HP**: (1) build CI hijau, (2) folder tujuan kustom SAF
+  aktif, taruh 2+ file .zip berbeda waktu modifikasi yang cocok 1 rule yang
+  sama di Downloads -> scan -> HANYA file paling baru yang TETAP di
+  Downloads, sisanya pindah ke folder tujuan, (3) rule lain yang cocok file
+  NON-.zip (mis. .txt) di folder kustom SAF yang sama -> pastikan SEMUA
+  tetap dipindah seperti biasa (tidak ada yang ditahan, scope tidak bocor
+  ke ekstensi lain), (4) mode LOKAL (tanpa folder kustom SAF) -> pastikan
+  file .zip tetap dipindah semua seperti perilaku lama (nol regresi di luar
+  scope), (5) cek "Detail File Dilewati" menampilkan alasan "Ditahan di
+  Downloads..." dgn jelas utk file yang sengaja tidak dipindah.
+- Confidence Rating: **85%** (scope sempit + 1 fungsi PURE baru tanpa
+  I/O SAF sendiri, reuse matching logic yang sudah teruji lama
+  `RuleOverlapChecker.matchingRules` -- tapi tetap turun dari 90%+ standar
+  krn ini titik keputusan BARU yang belum ada preseden lain di project ini
+  untuk "menahan file dgn sengaja" -- semua fitur skip sebelumnya adalah
+  hasil KEGAGALAN/konflik, bukan keputusan disengaja).
 - versionCode 184->185, versionName 8.31.4->8.32.0.
 
 ## v8.31.4 -- HOTFIX build gagal + RESTYLING HYBRID -> CUPERTINO (2026-08-25)

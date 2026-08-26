@@ -60,8 +60,8 @@ app/src/main/java/com/elprompter/promptvault/ui/screens/SettingsScreen.kt
 app/src/main/java/com/elprompter/promptvault/ui/screens/SkippedFilesScreen.kt
 app/src/main/java/com/elprompter/promptvault/ui/screens/StatisticsScreen.kt
 app/src/main/java/com/elprompter/promptvault/ui/theme/Color.kt
+app/src/main/java/com/elprompter/promptvault/ui/theme/CupertinoTokens.kt
 app/src/main/java/com/elprompter/promptvault/ui/theme/GlassTokens.kt
-app/src/main/java/com/elprompter/promptvault/ui/theme/HybridTokens.kt
 app/src/main/java/com/elprompter/promptvault/ui/theme/NeumorphTokens.kt
 app/src/main/java/com/elprompter/promptvault/ui/theme/Shapes.kt
 app/src/main/java/com/elprompter/promptvault/ui/theme/TactileTokens.kt

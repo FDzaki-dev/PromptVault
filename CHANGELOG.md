@@ -3,6 +3,35 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.32.0 (2026-08-26) — FITUR BARU: "Tahan versi terbaru" saat scan (.zip + SAF saja)
+
+Permintaan eksplisit user: saat scan (manual atau auto-sort, sama-sama lewat
+`scanAndSort()`), file yang cocok rule dipindah seperti biasa KECUALI 1 file
+"versi paling baru" per rule dibiarkan di Downloads. Scope dibatasi eksplisit
+ke **.zip + tujuan folder kustom SAF saja** — mode lokal & Shizuku tidak
+disentuh, perilaku lama tetap 100% di luar 2 syarat itu.
+
+2 keputusan desain diklarifikasi lewat `ask_user_input_v0` sebelum menulis
+kode: "terbaru" = `File.lastModified()` (bukan parsing angka versi nama
+file), dan pengelompokan **per rule** (bukan per keluarga nama file). Kalau
+1 rule cuma dapat 1 file .zip di satu scan, file itu otomatis "terbaru"
+satu-satunya dan tetap ditahan.
+
+**Implementasi** (`FileSorter.kt` saja): fungsi baru `computeLatestZipHeldBack()`
+— pure, tanpa I/O SAF — dipanggil sekali serial di `scanAndSortToDestination()`
+sebelum fan-out paralel (pola sama dengan `resolveSafRuleDestinations()`,
+menghindari race antar-coroutine). Hasilnya diteruskan sebagai parameter
+`latestZipHeldBack` ke `processCandidate()`, dicek sebelum stability-check;
+file yang ditahan masuk `CandidateOutcome.Skipped` dengan alasan eksplisit,
+otomatis tampil di layar "Detail File Dilewati" yang sudah ada — tidak perlu
+UI baru.
+
+`scanAndSort()` (titik masuk MainViewModel maupun AutoSortWorker) tidak
+berubah signature, jadi otomatis berlaku di kedua mode scan tanpa sentuh
+caller manapun.
+
+Preflight: 14/14 kategori PASS. versionCode 184→185, versionName 8.31.4→8.32.0.
+
 ## v8.31.4 (2026-08-25) — HOTFIX build gagal + RESTYLING HYBRID -> CUPERTINO
 
 **Root cause build gagal v8.31.3** (dari `build-failure-log-v8_31_3.zip`

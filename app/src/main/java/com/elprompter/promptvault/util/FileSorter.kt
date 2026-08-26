@@ -836,6 +836,18 @@ class FileSorter(
         val safRuleDestinations: Map<String, DocumentFile?> =
             if (destinationRoot != null) resolveSafRuleDestinations(destinationRoot, rules) else emptyMap()
 
+        // [Fitur baru 2026-08-26, "tahan versi terbaru"] Scope SENGAJA
+        // dibatasi .zip + tujuan SAF SAJA (permintaan eksplisit user) --
+        // mode lokal (destinationRoot == null) dan mode Shizuku (jalur
+        // terpisah total, scanAndSortViaShizuku) TIDAK tersentuh sama
+        // sekali. Dihitung SEKALI, SERIAL, dari snapshot PENUH candidateFiles
+        // SEBELUM async{} fan-out di bawah -- pola sama persis dgn
+        // resolveSafRuleDestinations() (hindari race antar-coroutine paralel
+        // kalau dihitung per-file di dalam processCandidate). Lihat KDoc
+        // lengkap di computeLatestZipHeldBack().
+        val latestZipHeldBack: Set<String> =
+            if (destinationRoot != null) computeLatestZipHeldBack(candidateFiles, rules) else emptySet()
+
         // [Technical debt #4, dieksekusi 2026-08-13] Dulu Semaphore(SCAN_CONCURRENCY)
         // dengan konstanta hardcode 6 (v2.4.0). Sekarang dibaca dari SettingsRepository
         // (getScanConcurrency() -- default TETAP 6, lihat dokumentasi lengkap di
@@ -843,7 +855,11 @@ class FileSorter(
         // BERUBAH, user yang mau bisa menaikkan/menurunkan sendiri dari Pengaturan.
         val semaphore = Semaphore(settingsRepository.getScanConcurrency())
         val results = candidateFiles.map { file ->
-            async { semaphore.withPermit { processCandidate(file, rules, conflictStrategy, destinationRoot, safRuleDestinations) } }
+            async {
+                semaphore.withPermit {
+                    processCandidate(file, rules, conflictStrategy, destinationRoot, safRuleDestinations, latestZipHeldBack)
+                }
+            }
         }.awaitAll()
 
         var moved = 0
@@ -884,6 +900,61 @@ class FileSorter(
         }
 
         ScanResult(moved, skipped, foldersUnreadable = false, overlapWarnings = overlapWarnings, skippedDetails = skippedDetails)
+    }
+
+    /**
+     * [Fitur baru 2026-08-26] "Simpan versi terbaru di Downloads" -- permintaan
+     * eksplisit user, scope SENGAJA sempit: HANYA file berekstensi `.zip` DAN
+     * HANYA saat tujuan scan adalah folder kustom SAF ([destinationRoot] != null
+     * di pemanggil). Rule/ekstensi lain serta mode lokal (Downloads/PromptVault)
+     * TIDAK terpengaruh -- perilaku lama (pindahkan SEMUA yang cocok) tetap
+     * berlaku 100% di luar scope ini, TIDAK ADA perubahan default untuk siapa
+     * pun yang tidak pakai kombinasi .zip+SAF.
+     *
+     * **Pengelompokan PER RULE** (bukan per "keluarga nama file" -- keputusan
+     * eksplisit user via `ask_user_input_v0`, 2026-08-26): di antara file .zip
+     * yang cocok RULE PRIORITAS TERTINGGI yang sama (logika matching IDENTIK
+     * [RuleOverlapChecker.matchingRules], konsisten dgn [processCandidate] --
+     * bukan cabang matching kedua yang independen), file dengan
+     * `lastModified()` PALING BESAR (baru) di grup itu DITAHAN (masuk hasil
+     * return, TIDAK dipindah scan ini). Kalau 1 rule cuma dapat 1 file .zip,
+     * file itu otomatis "yang terbaru" satu-satunya -- grup 1 anggota TETAP
+     * ditahan (tidak ada yang lain untuk dipindah), baru akan dipindah scan
+     * BERIKUTNYA setelah ada file .zip lain yang lebih baru utk rule yang sama.
+     *
+     * **"Terbaru" = `File.lastModified()`** (keputusan eksplisit user, BUKAN
+     * parsing angka versi dari nama file) -- konsisten dgn [isLikelyStillWriting]
+     * yang juga sudah pakai `lastModified()` sbg sumber waktu file, tidak
+     * menambah cara baca timestamp kedua yang independen.
+     *
+     * Dipanggil SEKALI, SERIAL, dari [scanAndSortToDestination] SEBELUM
+     * `async{}` fan-out paralel -- BUKAN di dalam [processCandidate] per-file
+     * -- supaya keputusan "siapa terbaru" dihitung dari snapshot PENUH seluruh
+     * kandidat, bukan race antar-coroutine (pelajaran sama persis dgn
+     * [resolveSafRuleDestinations], lihat KDoc di sana). Fungsi ini PURE
+     * (tidak ada I/O SAF/DocumentFile) -- aman dipanggil sebelum resolusi
+     * folder tujuan SAF, tidak saling bergantung urutan dgn
+     * `safRuleDestinations`.
+     *
+     * @return set `File.absolutePath` yang HARUS ditahan (skip) di
+     * [processCandidate] scan ini. Kosong kalau tidak ada file .zip sama
+     * sekali di [candidateFiles].
+     */
+    private fun computeLatestZipHeldBack(candidateFiles: List<File>, rules: List<Rule>): Set<String> {
+        val zipGroupsByRule = mutableMapOf<String, MutableList<File>>()
+        for (file in candidateFiles) {
+            if (!file.name.substringAfterLast('.', "").equals("zip", ignoreCase = true)) continue
+            val matches = RuleOverlapChecker.matchingRules(file.name, file.sizeKb(), rules)
+            val topRule = matches.firstOrNull() ?: continue
+            zipGroupsByRule.getOrPut(topRule.folderName) { mutableListOf() }.add(file)
+        }
+        if (zipGroupsByRule.isEmpty()) return emptySet()
+        val heldBack = mutableSetOf<String>()
+        for (group in zipGroupsByRule.values) {
+            val latest = group.maxByOrNull { it.lastModified() } ?: continue
+            heldBack.add(latest.absolutePath)
+        }
+        return heldBack
     }
 
     /**
@@ -1427,38 +1498,10 @@ class FileSorter(
                 )
             )
             activityLogRepository.add(LogLevel.SUCCESS, "\"${file.name}\" -> folder tujuan kustom/${rule.folderName}/")
-            enforceKeepLatestVersionOnlySaf(rule, destDir, createdDoc)
             MoveOutcome.MOVED
         } catch (e: Exception) {
             activityLogRepository.add(LogLevel.ERROR, "Error memindahkan \"${file.name}\" (folder tujuan kustom): ${e.message}")
             MoveOutcome.FAILED
-        }
-    }
-
-    /**
-     * [Fitur baru: Keep Latest Version Only, 2026-08-26] Analog
-     * [enforceKeepLatestVersionOnlyLocal], jalur folder tujuan kustom SAF.
-     * `destDir` di titik pemanggilan SELALU turunan `parent.findFile()`/
-     * `createDirectory()` dari tree root asli (lihat
-     * [resolveSafRuleDestinations]/[findOrCreateChildDirSaf]) -- BUKAN
-     * `DocumentFile.fromSingleUri()` (kelas bug lama, lihat Insiden crash
-     * v7.5.2), jadi `listFiles()` di sini aman, konsisten dengan
-     * `destDir.findFile()` yang sudah dipanggil di fungsi yang sama.
-     */
-    private fun enforceKeepLatestVersionOnlySaf(rule: Rule, destDir: DocumentFile, justMovedDoc: DocumentFile) {
-        if (!rule.keepLatestVersionOnly) return
-        val siblings = try { destDir.listFiles() } catch (e: Exception) { return }
-        var deletedCount = 0
-        for (doc in siblings) {
-            if (doc.isFile && doc.uri != justMovedDoc.uri) {
-                if (runCatching { doc.delete() }.getOrDefault(false)) deletedCount++
-            }
-        }
-        if (deletedCount > 0) {
-            activityLogRepository.add(
-                LogLevel.WARNING,
-                "$deletedCount versi lama dihapus otomatis di folder tujuan kustom/${rule.folderName}/ (rule diset hanya simpan versi terbaru)."
-            )
         }
     }
 
@@ -1680,12 +1723,31 @@ class FileSorter(
         rules: List<Rule>,
         conflictStrategy: ConflictStrategy,
         destinationRoot: DocumentFile?,
-        safRuleDestinations: Map<String, DocumentFile?>
+        safRuleDestinations: Map<String, DocumentFile?>,
+        latestZipHeldBack: Set<String> = emptySet()
     ): CandidateOutcome {
         val sizeKb = file.sizeKb()
         val matches = RuleOverlapChecker.matchingRules(file.name, sizeKb, rules)
         if (matches.isEmpty()) {
             return CandidateOutcome.Skipped(SkippedFileInfo(file.name, explainNoMatch(file, sizeKb, rules)))
+        }
+
+        // [Fitur baru 2026-08-26, scope .zip+SAF only] Dicek SEBELUM
+        // stability-check (delay 1 detik) -- file yg ditahan TIDAK akan
+        // dipindah scan ini apa pun status "sedang ditulis"-nya, jadi
+        // percuma nunggu. Set sudah PASTI kosong kalau destinationRoot
+        // null (lihat pemanggil di scanAndSortToDestination), tapi cek
+        // eksplisit di sini juga -- pertahanan lapis kedua, bukan asumsi
+        // buta thd urutan pemanggil.
+        if (destinationRoot != null && file.absolutePath in latestZipHeldBack) {
+            return CandidateOutcome.Skipped(
+                SkippedFileInfo(
+                    file.name,
+                    "Ditahan di Downloads: ini versi .zip PALING BARU untuk rule \"${matches.first().folderName}\" " +
+                        "(mode folder tujuan kustom). Versi lama dipindah otomatis, versi ini menunggu sampai ada " +
+                        "yang lebih baru lagi."
+                )
+            )
         }
 
         if (isLikelyStillWriting(file)) {
@@ -1840,7 +1902,6 @@ class FileSorter(
                     )
                 )
                 activityLogRepository.add(LogLevel.SUCCESS, "\"${file.name}\" -> PromptVault/${rule.folderName}/")
-                enforceKeepLatestVersionOnlyLocal(rule, destDir, destFile)
                 MoveOutcome.MOVED
             } else {
                 activityLogRepository.add(LogLevel.ERROR, "Gagal memindahkan \"${file.name}\".")
@@ -1849,45 +1910,6 @@ class FileSorter(
         } catch (e: Exception) {
             activityLogRepository.add(LogLevel.ERROR, "Error memindahkan \"${file.name}\": ${e.message}")
             MoveOutcome.FAILED
-        }
-    }
-
-    /**
-     * [Fitur baru: Keep Latest Version Only, 2026-08-26 -- permintaan
-     * eksplisit user: "saat scan otomatis/manual, aplikasi menyisakan 1
-     * file latest version dari rule terkait sampai ada file baru yang
-     * menggantikan posisinya"] Kalau [Rule.keepLatestVersionOnly] AKTIF,
-     * folder tujuan rule ini HANYA boleh menyisakan [justMovedFile] --
-     * SEMUA file lain di folder itu (versi lama) dihapus permanen.
-     *
-     * Dipanggil SETELAH file baru terkonfirmasi sukses ada di posisi akhir
-     * (bukan sebelum) -- kalau pemindahan gagal, versi lama yang masih
-     * satu-satunya salinan valid tidak boleh ikut hilang. Opt-in per-rule
-     * (default false) -- 0 regresi untuk rule yang sudah ada sebelum fitur
-     * ini, konsisten dengan "DO NOT TOUCH" perilaku lama.
-     *
-     * Destruktif TANPA histori undo -- konsisten dengan strategi konflik
-     * OVERWRITE yang sudah ada (juga destruktif tanpa histori). Kegagalan
-     * hapus per-file ditelan diam-diam (`runCatching`, provider/OS boleh
-     * menolak) supaya TIDAK menggagalkan hasil MOVED yang sudah sukses --
-     * tapi jumlah yang BERHASIL dihapus tetap dilaporkan sbg 1 baris
-     * ringkasan WARNING ke Activity Log, supaya user tahu file lama hilang
-     * otomatis, bukan diam-diam tanpa jejak sama sekali.
-     */
-    private fun enforceKeepLatestVersionOnlyLocal(rule: Rule, destDir: File, justMovedFile: File) {
-        if (!rule.keepLatestVersionOnly) return
-        val siblings = destDir.listFiles() ?: return
-        var deletedCount = 0
-        for (f in siblings) {
-            if (f.isFile && f.absolutePath != justMovedFile.absolutePath) {
-                if (runCatching { f.delete() }.getOrDefault(false)) deletedCount++
-            }
-        }
-        if (deletedCount > 0) {
-            activityLogRepository.add(
-                LogLevel.WARNING,
-                "$deletedCount versi lama dihapus otomatis di PromptVault/${rule.folderName}/ (rule diset hanya simpan versi terbaru)."
-            )
         }
     }
 

@@ -31,14 +31,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.elprompter.promptvault.R
 import com.elprompter.promptvault.data.Rule
 import com.elprompter.promptvault.data.SaveRuleCheck
-import com.elprompter.promptvault.ui.components.TactileSwitch
 import com.elprompter.promptvault.ui.components.VaultActionSheet
 import com.elprompter.promptvault.ui.components.VaultCard
 import com.elprompter.promptvault.ui.components.VaultTopBar
@@ -104,12 +102,6 @@ fun AddEditRuleScreen(
     var excludePattern by rememberSaveable { mutableStateOf(existingRule?.excludePattern ?: "") }
     var minSizeKbText by rememberSaveable { mutableStateOf(existingRule?.minSizeKb?.toString() ?: "") }
     var maxSizeKbText by rememberSaveable { mutableStateOf(existingRule?.maxSizeKb?.toString() ?: "") }
-    // [Fitur baru: Keep Latest Version Only, 2026-08-26] Label masih literal
-    // Kotlin (BUKAN stringResource) -- batas 3 file/batch tercapai duluan
-    // oleh Rule.kt+FileSorter.kt+file ini, ekstraksi ke strings.xml masuk
-    // Pending Queue (pola sama persis SkippedFilesScreen.kt yang sempat
-    // hardcode sampai diaudit v8.16.1, lihat PROJECT_STATE.md).
-    var keepLatestVersionOnly by rememberSaveable { mutableStateOf(existingRule?.keepLatestVersionOnly ?: false) }
     var pendingCheck by remember { mutableStateOf<SaveRuleCheck?>(null) }
     var pendingRule by remember { mutableStateOf<Rule?>(null) }
     var preview by remember { mutableStateOf<PatternPreviewResult?>(null) }
@@ -226,23 +218,6 @@ fun AddEditRuleScreen(
                 style = MaterialTheme.typography.bodySmall
             )
 
-            // [Fitur baru: Keep Latest Version Only, 2026-08-26] Opt-in
-            // per-rule, default false (0 regresi rule lama). ON = folder
-            // tujuan rule ini hanya menyisakan 1 file (versi terbaru) --
-            // versi lama dihapus otomatis tiap ada file baru yang cocok.
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Hanya simpan versi terbaru", style = MaterialTheme.typography.titleSmall)
-                TactileSwitch(checked = keepLatestVersionOnly, onCheckedChange = { keepLatestVersionOnly = it }, accentColor = MaterialTheme.colorScheme.primary)
-            }
-            Text(
-                "File lama di folder rule ini akan otomatis dihapus tiap kali file baru yang cocok berhasil discan.",
-                style = MaterialTheme.typography.bodySmall
-            )
-
             // Live preview: bukti langsung pattern ini akan kena file yang mana di Downloads.
             preview?.let { p ->
                 VaultCard(modifier = Modifier.fillMaxWidth()) {
@@ -277,8 +252,7 @@ fun AddEditRuleScreen(
                         pattern = pattern.trim(),
                         excludePattern = excludePattern.trim(),
                         minSizeKb = minSizeKbText.toLongOrNull(),
-                        maxSizeKb = maxSizeKbText.toLongOrNull(),
-                        keepLatestVersionOnly = keepLatestVersionOnly
+                        maxSizeKb = maxSizeKbText.toLongOrNull()
                     )
                     isSaving = true
                     scope.launch {
