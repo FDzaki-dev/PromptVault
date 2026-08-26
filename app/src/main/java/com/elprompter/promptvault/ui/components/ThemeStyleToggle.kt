@@ -90,7 +90,8 @@ private fun ThemeStyleSwitchRow(label: String, checked: Boolean, onCheckedChange
             Text(
                 label,
                 style = MaterialTheme.typography.bodyLarge,
-                color = if (checked) colors.onPrimaryContainer else colors.onSurface
+                color = if (checked) colors.onPrimaryContainer else colors.onSurface,
+                modifier = Modifier.weight(1f).padding(end = 12.dp)
             )
             TactileSwitch(checked = checked, onCheckedChange = onCheckedChange)
         }

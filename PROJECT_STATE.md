@@ -13,6 +13,57 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.35.1 -- FIX row overlap: judul teks nabrak/nutupin TactileSwitch (2026-08-27)
+- **Laporan user**: screenshot toggle "Tahan versi .zip terbaru di Downloads"
+  (`AddEditRuleScreen`) -- teks judul mentok lalu NABRAK switch, lingkaran
+  switch kepotong/setengah kelihatan di tepi layar. Diminta juga: "pastikan
+  logic yang identik dapat semua" -- jadi diaudit SELURUH pemakaian
+  `TactileSwitch` di project (grep menyeluruh, bukan cuma file yang di-screenshot).
+- **Root cause**: pola `Row(Arrangement.SpaceBetween) { Text(...) ;
+  TactileSwitch(...) }` -- `Text` TIDAK dikasih `Modifier.weight(1f)`/batas
+  lebar, jadi diukur di lebar alaminya sendiri dulu (bisa melebihi sisa
+  ruang row) SEBELUM `TactileSwitch` diukur. Judul panjang ("Tahan versi
+  .zip terbaru di Downloads") dorong switch sampai kepotong tepi layar --
+  persis gejala di screenshot.
+- **Audit lengkap 5 titik pakai `TactileSwitch` (grep, bukan tebak)**: (1)
+  `AddEditRuleScreen.kt` baris toggle hold-back-zip -- POLA SAMA, teks
+  terpanjang di antara semua, ini yang kena di screenshot. (2)
+  `SettingsScreen.kt` toggle "Auto-Sort" -- POLA SAMA (teks pendek, belum
+  kejadian tapi rentan di font besar/aksesibilitas). (3) `SettingsScreen.kt`
+  toggle "Mode Shizuku (Lanjutan)" -- POLA SAMA. (4) `ThemeStyleToggle.kt`
+  (`ThemeStyleSwitchRow`, dipakai 4x: Glassmorphism/Neumorphism/Material 3
+  Murni/Cupertino) -- POLA SAMA persis di komponen bersama. (5)
+  `RuleCard.kt` -- BEDA pola (`Arrangement.SpaceEvenly`, isinya cuma
+  ikon+switch, TIDAK ada `Text` di row itu) -- TIDAK mungkin kena bug ini,
+  sengaja TIDAK disentuh (DO NOT TOUCH, di luar scope).
+- **Fix, identik di ke-4 titik (bukan 1 titik lalu nebak sisanya sama)**:
+  `Text` judul dikasih `modifier = Modifier.weight(1f).padding(end = 12.dp)`
+  -- teks jadi wrap ke baris berikutnya kalau kepanjangan (bukan overflow
+  nabrak switch), `TactileSwitch` selalu utuh kelihatan di tepi kanan, +
+  jarak aman 12dp antara teks & switch.
+- **TIDAK disentuh** (Zero-Unnecessary-Refactor): `RuleCard.kt` (pola beda,
+  lihat poin audit #5), `TactileSwitch.kt` sendiri (komponennya benar,
+  masalah cuma di row pemanggilnya), semua styling/warna/ukuran switch.
+- File diubah (3, pas batas Micro-Batch): `AddEditRuleScreen.kt` (parsial,
+  1 Text), `SettingsScreen.kt` (parsial, 2 Text di 2 row beda), `ThemeStyleToggle.kt`
+  (parsial, 1 Text di `ThemeStyleSwitchRow` -- otomatis kebenerin 4 pemanggilnya
+  sekaligus krn 1 komponen dipakai ulang). `app/build.gradle.kts` (versi).
+  `FILE_MANIFEST.txt` TIDAK berubah (0 file baru/dihapus).
+- **Batas jujur**: fix ini berbasis analisis constraint-layout Compose
+  standar (weight+SpaceBetween) yang SUDAH dipakai benar di tempat lain di
+  project ini (mis. 2 `OutlinedTextField` size filter, tombol GitHub PAT) --
+  tapi seperti seluruh riwayat project, **BELUM PERNAH lewat
+  `./gradlew`/device asli** di sandbox ini.
+- **User WAJIB verifikasi di HP**: (1) build CI hijau, (2) buka "Tambah
+  Rule" -> toggle "Tahan versi .zip terbaru di Downloads" HARUS utuh
+  kelihatan (tidak kepotong tepi layar) baik teks 1 baris maupun 2 baris
+  (coba font besar di Aksesibilitas HP), (3) Pengaturan -> toggle
+  Auto-Sort & Mode Shizuku sama, (4) Pengaturan -> Gaya Tema (4 switch
+  Glassmorphism/Neumorphism/Material 3/Cupertino) sama, (5) kartu kontrol
+  rule (naik/turun/switch/edit/hapus) TETAP seperti sebelumnya (0 regresi,
+  area ini sengaja tidak disentuh).
+- versionCode 191->192, versionName 8.35.0->8.35.1.
+
 ## v8.35.0 -- FIX layout/inset: keyboard (IME) menimpa field input di semua tab (2026-08-27)
 - **Instruksi user**: "tambahkan pembatas layout/inset keseluruh tab. Agar
   semua terlihat normal dan gak truncated!!" -- tanpa screenshot/gejala

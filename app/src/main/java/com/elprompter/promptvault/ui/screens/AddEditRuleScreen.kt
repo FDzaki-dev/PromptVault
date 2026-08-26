@@ -236,7 +236,11 @@ fun AddEditRuleScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(stringResource(R.string.rule_edit_hold_back_zip_title), style = MaterialTheme.typography.titleSmall)
+                Text(
+                    stringResource(R.string.rule_edit_hold_back_zip_title),
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.weight(1f).padding(end = 12.dp)
+                )
                 TactileSwitch(checked = holdBackLatestZip, onCheckedChange = { holdBackLatestZip = it })
             }
             Text(

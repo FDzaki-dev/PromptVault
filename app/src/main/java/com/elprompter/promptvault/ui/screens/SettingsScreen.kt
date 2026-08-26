@@ -210,7 +210,11 @@ fun SettingsScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(stringResource(R.string.settings_autosort_title), style = MaterialTheme.typography.titleMedium)
+                Text(
+                    stringResource(R.string.settings_autosort_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.weight(1f).padding(end = 12.dp)
+                )
                 TactileSwitch(checked = autoSortEnabled, onCheckedChange = onAutoSortEnabledChanged, accentColor = colors.primary)
             }
             Text(
@@ -373,7 +377,11 @@ fun SettingsScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(stringResource(R.string.settings_shizuku_section_title), style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            stringResource(R.string.settings_shizuku_section_title),
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.weight(1f).padding(end = 12.dp)
+                        )
                         TactileSwitch(checked = useShizuku, onCheckedChange = onUseShizukuChanged, accentColor = colors.primary)
                     }
                     Text(
