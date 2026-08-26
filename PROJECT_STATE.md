@@ -13,6 +13,85 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.32.0 -- FITUR BARU: "Hanya Simpan Versi Terbaru" per-rule (Keep Latest Version Only) (2026-08-26)
+- **Permintaan eksplisit user**: "saat user melakukan scan otomatis/manual
+  file, aplikasi akan menyisikan 1 file latest version dari rule terkait
+  sampai ada file baru yang menggantikan posisinya" -- opsi BARU per-rule,
+  BUKAN perilaku global (0 regresi rule lama, default `false`).
+- **`Rule.kt`**: field baru `keepLatestVersionOnly: Boolean = false`. Kolom
+  `@Serializable` baru dgn default -- backward-compatible penuh saat decode
+  JSON lama (import/export/DataStore) yang belum punya field ini, 0
+  migrasi diperlukan. Diverifikasi grep semua `Rule(...)` call site --
+  SEMUA pakai named args, aman ditambah field baru di akhir.
+- **`FileSorter.kt`**: 2 fungsi baru `enforceKeepLatestVersionOnlyLocal`/
+  `enforceKeepLatestVersionOnlySaf`, dipanggil SETELAH file baru
+  terkonfirmasi sukses di posisi akhir (bukan sebelum -- kalau pemindahan
+  gagal, versi lama yang masih satu-satunya salinan valid TIDAK ikut
+  hilang). Kalau `rule.keepLatestVersionOnly == true`, SEMUA file lain di
+  folder tujuan rule itu (nama apa pun, bukan cuma file dgn nama sama --
+  beda cakupan dari `ConflictStrategy` yang sudah ada, yang cuma menangani
+  file dgn NAMA PERSIS sama) dihapus permanen. Destruktif TANPA histori
+  undo -- konsisten dgn `ConflictStrategy.OVERWRITE` yang sudah ada (juga
+  destruktif tanpa histori). Tiap sukses hapus dicatat 1 baris ringkasan
+  WARNING ke Activity Log ("N versi lama dihapus otomatis..."), supaya
+  user tetap tahu, bukan diam-diam tanpa jejak.
+- **Cakupan batch ini: jalur LOCAL (Downloads/PromptVault) & SAF (folder
+  tujuan kustom) SAJA** -- keduanya bisa `listFiles()` folder tujuan
+  langsung (`File`/`DocumentFile`, API yang sudah tersedia). Jalur
+  **Shizuku BELUM didukung** (lihat Pending Queue) -- `IFileOpsService.aidl`
+  belum punya method `listFiles`/`listDirectory`, nambahnya butuh ubah
+  AIDL + `FileOpsUserService.kt` (proses Shizuku terpisah) SEKALIGUS -- 2
+  file tambahan yang bakal melampaui Micro-Batch HARD CAP (3 file) sesi
+  ini. Rule dgn `keepLatestVersionOnly = true` yang scan-nya lewat mode
+  Shizuku aktif TETAP memindahkan file seperti biasa (0 regresi fungsi
+  inti), cuma cleanup versi lamanya belum jalan di jalur itu -- TIDAK
+  silent-fail berbahaya, cuma belum lengkap.
+- **`AddEditRuleScreen.kt`**: toggle baru "Hanya simpan versi terbaru"
+  (pola `Row(SpaceBetween)+TactileSwitch`, PERSIS sama dgn toggle
+  Auto-Sort di `SettingsScreen.kt`) di bawah filter ukuran, sebelum live
+  preview. State `keepLatestVersionOnly` (`rememberSaveable`, ikut aturan
+  state-restoration Fase Audit UX batch 6) diteruskan ke `Rule(...)` saat
+  Simpan.
+- **Label toggle MASIH literal Kotlin, BUKAN `stringResource`** -- Rule.kt
+  + FileSorter.kt + AddEditRuleScreen.kt sudah pas 3 file (Micro-Batch
+  HARD CAP), ekstraksi ke `strings.xml` masuk Pending Queue. Pola sama
+  persis preseden lama project ini sendiri (`SkippedFilesScreen.kt` sempat
+  hardcode sampai diaudit v8.16.1) -- bukan penyimpangan baru dari standar
+  100% stringResource, murni ditunda 1 batch krn batas file.
+- File diubah (3, PAS batas Micro-Batch): `data/Rule.kt`,
+  `util/FileSorter.kt`, `ui/screens/AddEditRuleScreen.kt`. +
+  `app/build.gradle.kts` (versi, bookkeeping wajib sesi -- di luar
+  hitungan cap file task). `scripts/preflight_check.sh` 14/14 lolos bersih
+  (langsung, 0 iterasi fix).
+- **BELUM PERNAH lewat `./gradlew`/device asli** (konsisten seluruh
+  riwayat project). **User WAJIB verifikasi**: (1) build CI hijau, (2)
+  buat/edit rule dgn toggle "Hanya simpan versi terbaru" ON, taruh 1 file
+  cocok pattern rule itu di Downloads -> scan -> lalu taruh 1 file LAIN
+  (nama beda) yang juga cocok -> scan lagi -- setelah scan kedua, folder
+  tujuan rule itu HANYA berisi file KEDUA (file pertama terhapus otomatis
+  + baris WARNING muncul di Log Aktivitas), (3) rule LAIN yang toggle-nya
+  OFF (default, termasuk SEMUA rule lama) TIDAK terpengaruh sama sekali --
+  perilaku persis seperti sebelum fitur ini ada.
+- Confidence Rating: **85%** (mekanisme cleanup straightforward -- reuse
+  penuh API `File`/`DocumentFile` yang sudah dipakai fungsi tetangga di
+  file yang sama, 0 API baru -- turun dari 90%+ krn (1) belum lewat
+  `./gradlew`/device asli seperti biasa, (2) jalur SAF: `destDir.listFiles()`
+  dipanggil di provider SAF yang historisnya (lihat Insiden crash v7.5.2)
+  pernah rewel soal `DocumentFile` -- SUDAH diverifikasi `destDir` di titik
+  ini SELALU turunan tree yang benar/listable [bukan `fromSingleUri()`],
+  tapi tetap belum diuji provider OEM nyata).
+- **⏳ PENDING QUEUE (4 item)**:
+  1. Dukungan jalur Shizuku (butuh method baru `listFiles`/`listDirectory`
+     di `IFileOpsService.aidl` + implementasi `FileOpsUserService.kt`).
+  2. Ekstraksi label toggle "Hanya simpan versi terbaru" + hint-nya ke
+     `strings.xml` (saat ini literal Kotlin di `AddEditRuleScreen.kt`).
+  3. Indikator visual di `RuleCard.kt` (mis. badge/ikon kecil) untuk rule
+     yang toggle-nya ON, biar kelihatan di layar "Kelola Rule" tanpa perlu
+     buka Edit Rule dulu.
+  4. Sebut fitur ini di `ROADMAP.md`/`CHANGELOG.md` (dokumentasi tambahan,
+     bukan bug -- opsional, urutan bebas).
+- versionCode 184->185, versionName 8.31.4->8.32.0.
+
 ## v8.31.4 -- HOTFIX build gagal + RESTYLING HYBRID -> CUPERTINO (2026-08-25)
 - **Root cause build gagal v8.31.3** (user upload `build-failure-log-
   v8_31_3.zip`): `VaultActionSheet.kt` import `androidx.compose.ui.font.

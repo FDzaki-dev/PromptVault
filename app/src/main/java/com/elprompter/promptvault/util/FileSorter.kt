@@ -1427,10 +1427,38 @@ class FileSorter(
                 )
             )
             activityLogRepository.add(LogLevel.SUCCESS, "\"${file.name}\" -> folder tujuan kustom/${rule.folderName}/")
+            enforceKeepLatestVersionOnlySaf(rule, destDir, createdDoc)
             MoveOutcome.MOVED
         } catch (e: Exception) {
             activityLogRepository.add(LogLevel.ERROR, "Error memindahkan \"${file.name}\" (folder tujuan kustom): ${e.message}")
             MoveOutcome.FAILED
+        }
+    }
+
+    /**
+     * [Fitur baru: Keep Latest Version Only, 2026-08-26] Analog
+     * [enforceKeepLatestVersionOnlyLocal], jalur folder tujuan kustom SAF.
+     * `destDir` di titik pemanggilan SELALU turunan `parent.findFile()`/
+     * `createDirectory()` dari tree root asli (lihat
+     * [resolveSafRuleDestinations]/[findOrCreateChildDirSaf]) -- BUKAN
+     * `DocumentFile.fromSingleUri()` (kelas bug lama, lihat Insiden crash
+     * v7.5.2), jadi `listFiles()` di sini aman, konsisten dengan
+     * `destDir.findFile()` yang sudah dipanggil di fungsi yang sama.
+     */
+    private fun enforceKeepLatestVersionOnlySaf(rule: Rule, destDir: DocumentFile, justMovedDoc: DocumentFile) {
+        if (!rule.keepLatestVersionOnly) return
+        val siblings = try { destDir.listFiles() } catch (e: Exception) { return }
+        var deletedCount = 0
+        for (doc in siblings) {
+            if (doc.isFile && doc.uri != justMovedDoc.uri) {
+                if (runCatching { doc.delete() }.getOrDefault(false)) deletedCount++
+            }
+        }
+        if (deletedCount > 0) {
+            activityLogRepository.add(
+                LogLevel.WARNING,
+                "$deletedCount versi lama dihapus otomatis di folder tujuan kustom/${rule.folderName}/ (rule diset hanya simpan versi terbaru)."
+            )
         }
     }
 
@@ -1812,6 +1840,7 @@ class FileSorter(
                     )
                 )
                 activityLogRepository.add(LogLevel.SUCCESS, "\"${file.name}\" -> PromptVault/${rule.folderName}/")
+                enforceKeepLatestVersionOnlyLocal(rule, destDir, destFile)
                 MoveOutcome.MOVED
             } else {
                 activityLogRepository.add(LogLevel.ERROR, "Gagal memindahkan \"${file.name}\".")
@@ -1820,6 +1849,45 @@ class FileSorter(
         } catch (e: Exception) {
             activityLogRepository.add(LogLevel.ERROR, "Error memindahkan \"${file.name}\": ${e.message}")
             MoveOutcome.FAILED
+        }
+    }
+
+    /**
+     * [Fitur baru: Keep Latest Version Only, 2026-08-26 -- permintaan
+     * eksplisit user: "saat scan otomatis/manual, aplikasi menyisakan 1
+     * file latest version dari rule terkait sampai ada file baru yang
+     * menggantikan posisinya"] Kalau [Rule.keepLatestVersionOnly] AKTIF,
+     * folder tujuan rule ini HANYA boleh menyisakan [justMovedFile] --
+     * SEMUA file lain di folder itu (versi lama) dihapus permanen.
+     *
+     * Dipanggil SETELAH file baru terkonfirmasi sukses ada di posisi akhir
+     * (bukan sebelum) -- kalau pemindahan gagal, versi lama yang masih
+     * satu-satunya salinan valid tidak boleh ikut hilang. Opt-in per-rule
+     * (default false) -- 0 regresi untuk rule yang sudah ada sebelum fitur
+     * ini, konsisten dengan "DO NOT TOUCH" perilaku lama.
+     *
+     * Destruktif TANPA histori undo -- konsisten dengan strategi konflik
+     * OVERWRITE yang sudah ada (juga destruktif tanpa histori). Kegagalan
+     * hapus per-file ditelan diam-diam (`runCatching`, provider/OS boleh
+     * menolak) supaya TIDAK menggagalkan hasil MOVED yang sudah sukses --
+     * tapi jumlah yang BERHASIL dihapus tetap dilaporkan sbg 1 baris
+     * ringkasan WARNING ke Activity Log, supaya user tahu file lama hilang
+     * otomatis, bukan diam-diam tanpa jejak sama sekali.
+     */
+    private fun enforceKeepLatestVersionOnlyLocal(rule: Rule, destDir: File, justMovedFile: File) {
+        if (!rule.keepLatestVersionOnly) return
+        val siblings = destDir.listFiles() ?: return
+        var deletedCount = 0
+        for (f in siblings) {
+            if (f.isFile && f.absolutePath != justMovedFile.absolutePath) {
+                if (runCatching { f.delete() }.getOrDefault(false)) deletedCount++
+            }
+        }
+        if (deletedCount > 0) {
+            activityLogRepository.add(
+                LogLevel.WARNING,
+                "$deletedCount versi lama dihapus otomatis di PromptVault/${rule.folderName}/ (rule diset hanya simpan versi terbaru)."
+            )
         }
     }
 
