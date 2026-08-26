@@ -13,6 +13,75 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.34.1 -- ROLLBACK: R8 minify+shrinkResources dimatikan lagi, regresi besar dilaporkan user (2026-08-27)
+- **User laporan**: "Terjadi great regression sehabis R8 minify+shrinkResources
+  aktif" -- TIDAK disertai crash log/stack trace terlampir, TIDAK disebut
+  gejala spesifik selain "SAF logic" & fitur "keeping latest modified files"
+  (= `computeLatestZipHeldBack()`/`holdBackLatestZip`, v8.32.0-v8.33.1) yang
+  diminta jadi prioritas dilindungi dari regresi.
+- **Audit dilakukan SEBELUM putuskan pendekatan** (bukan langsung tebak fix):
+  grep menyeluruh project utk pola reflection/by-name yang R8-sensitive
+  (`Class.forName`, `getIdentifier(`, `::class.java`, `getDeclaredField/Method`,
+  `newInstance(`) -- SATU-SATUNYA titik yang genuinely by-name/reflection
+  adalah `ShizukuManager.kt` (`FileOpsUserService::class.java.name` utk
+  `ComponentName`), dan itu SUDAH tercakup rule `-keep class
+  com.elprompter.promptvault.shizuku.** { *; }` yang ditambahkan v8.34.0.
+  `computeLatestZipHeldBack()` (`util/FileSorter.kt`) & seluruh jalur SAF
+  (`DocumentFile`/`ContentResolver`, tidak ada reflection) murni pure Kotlin
+  logic/direct method call/API Android publik -- TIDAK ADA pola R8-unsafe
+  baru yang ketemu di luar 3 blok keep rule yang SUDAH ada di
+  `proguard-rules.pro` sejak v8.34.0.
+- **Keputusan: ROLLBACK, bukan tambah keep rule tebakan**. Alasan: (1)
+  audit di atas TIDAK menemukan celah konkret baru utk ditambal -- menambah
+  rule tanpa target jelas cuma menebak, (2) sandbox kerja Claude TIDAK punya
+  akses `./gradlew`/device asli sama sekali (keterbatasan permanen,
+  dicatat konsisten sepanjang riwayat project) -- TIDAK ADA cara
+  memverifikasi tebakan apa pun di sini, (3) v8.34.0 SENDIRI sudah menulis
+  eksplisit "RISIKO LEBIH TINGGI dari compile-fix biasa" & 8 poin verifikasi
+  wajib device asli -- laporan "great regression" ini KEMUNGKINAN BESAR
+  persis skenario yang sudah diperingatkan di situ, (4) **STABILITY WINS**
+  (Rule Hierarchy #2, prioritas di atas kecepatan/ukuran APK) & pola
+  established project ini sendiri (v8.22.15, v8.22.21, v8.26.0 -- semua
+  rollback ke state TERBUKTI stabil saat regresi tidak bisa didiagnosis
+  presisi tanpa device/log asli) -- ROLLBACK adalah SATU-SATUNYA jalan yang
+  bisa dijamin 100% menutup regresi SAF & "latest modified files" (2 area
+  prioritas eksplisit user), bukan cuma "mungkin membaik".
+- **Implementasi** (1 file): `app/build.gradle.kts` buildType `release` --
+  `isMinifyEnabled`/`isShrinkResources` true->false (kembali ke state SEBELUM
+  v8.34.0, TERBUKTI stabil sepanjang riwayat project sampai sesi itu).
+  `proguardFiles(...)` TETAP dipanggil (harmless saat minify off, minim diff
+  -- Zero-Unnecessary-Refactor). Komentar lama v8.34.0 di buildType `release`
+  DIGANTI komentar rollback (Zero-Unnecessary-Refactor tetap dipegang --
+  bukan hapus riwayat, komentar lama TETAP terarsip permanen di CHANGELOG.md
+  v8.34.0 & entri PROJECT_STATE.md v8.34.0 di bawah).
+- **TIDAK disentuh** (Zero-Unnecessary-Refactor + DO NOT TOUCH):
+  `app/proguard-rules.pro` -- 3 blok keep rule (kotlinx.serialization/
+  WorkManager/Shizuku) dari v8.34.0 SENGAJA DIBIARKAN UTUH, dorman tapi siap
+  dipakai lagi. `FILE_MANIFEST.txt` TIDAK berubah (0 file baru/dihapus).
+- **Kalau user MASIH ingin fitur pangkas-ukuran-APK ini ke depan**: WAJIB
+  sertakan crash log APK release asli (Crash Logger sudah ada,
+  `Documents/PromptVault/logs/`) atau deskripsi gejala konkret (layar mana,
+  aksi apa, error apa) saat minta diaktifkan ulang -- supaya keep rule bisa
+  ditambah BERTARGET sesuai bukti nyata, bukan diulang blind seperti v8.34.0
+  yang berujung regresi ini. Tanpa itu, mengaktifkan ulang cuma mengulang
+  risiko yang sama persis.
+- File diubah (1): `app/build.gradle.kts`. `FILE_MANIFEST.txt` TIDAK
+  berubah. Preflight: N/A di sandbox ini (tidak ada `./gradlew`), diverifikasi
+  manual keseimbangan kurung `{}` file (18/18) setelah edit -- sempat ada
+  insiden minor SENDIRI saat proses edit (baris `buildTypes {` sempat
+  terhapus tidak sengaja oleh 1 `str_replace`, KETANGKAP & diperbaiki
+  SEBELUM packaging lewat verifikasi kurung, bukan lolos ke user).
+- Confidence Rating: **95%** (revert 2 boolean ke state yang SUDAH terbukti
+  stabil sepanjang seluruh riwayat project sebelum v8.34.0 -- risiko rendah
+  by design, bukan fitur baru; tidak 100% semata krn tetap belum lewat
+  `./gradlew`/CI asli di sandbox ini).
+- **User WAJIB verifikasi**: (1) build CI hijau, (2) APK release install
+  normal tanpa crash langsung, (3) fitur SAF (folder tujuan kustom, scan,
+  undo) & "tahan versi .zip terbaru" (v8.32.0-v8.33.1) berfungsi normal
+  seperti sebelum v8.34.0 -- ini adalah baseline yang SUDAH pernah
+  terverifikasi user di versi-versi sebelumnya, bukan area baru.
+- versionCode 189->190, versionName 8.34.0->8.34.1.
+
 ## v8.34.0 -- FITUR BARU: R8 minify+shrinkResources aktif ("pangkas ukuran aplikasi") (2026-08-26)
 - **Permintaan eksplisit user**: "pangkas ukuran aplikasi sampai menyisakan
   logic+struktur yang benar-benar kepakai".

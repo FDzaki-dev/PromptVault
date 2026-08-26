@@ -3,6 +3,26 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.34.1 (2026-08-27) — ROLLBACK: R8 minify+shrinkResources dimatikan lagi
+
+User laporkan regresi besar di APK release setelah v8.34.0 mengaktifkan
+`isMinifyEnabled`/`isShrinkResources`. Tanpa crash log/stack trace
+terlampir dan tanpa akses `./gradlew`/device asli di sandbox ini, tidak
+ada cara aman untuk mendiagnosis area spesifik yang gagal — sesuai
+STABILITY WINS, jalan paling terverifikasi adalah kembali ke state
+sebelum v8.34.0 (nonaktif permanen, terbukti stabil sepanjang riwayat
+project), bukan menambah keep rule tebakan tanpa bukti.
+
+`app/build.gradle.kts` buildType `release`: `isMinifyEnabled`/
+`isShrinkResources` true → false. `app/proguard-rules.pro` SENGAJA
+tidak disentuh — 3 blok keep rule (kotlinx.serialization/WorkManager/
+Shizuku) dari v8.34.0 tetap tersimpan dorman untuk dipakai lagi kalau
+fitur ini diaktifkan ulang nanti dengan crash log asli untuk diagnosis
+bertarget.
+
+File diubah (1): `app/build.gradle.kts`. versionCode 189→190, versionName
+8.34.0→8.34.1.
+
 ## v8.34.0 (2026-08-26) — FITUR BARU: R8 minify+shrinkResources aktif
 
 Permintaan eksplisit user: "pangkas ukuran aplikasi sampai menyisakan

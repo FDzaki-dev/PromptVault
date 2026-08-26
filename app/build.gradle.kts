@@ -22,8 +22,8 @@ android {
         applicationId = "com.elprompter.promptvault"
         minSdk = 26
         targetSdk = 34
-        versionCode = 189
-        versionName = "8.34.0"
+        versionCode = 190
+        versionName = "8.34.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -42,22 +42,26 @@ android {
 
     buildTypes {
         release {
-            // [Fitur baru 2026-08-26, "pangkas ukuran aplikasi"] SEBELUMNYA
-            // false permanen sejak awal project -- APK release selama ini
-            // membawa SELURUH kode+resource App+dependency AndroidX/Compose/
-            // Room/OkHttp/Shizuku APA ADANYA, termasuk yang tidak pernah
-            // dipanggil sama sekali. R8 (minify) + resource shrinker
-            // memangkas berdasar ANALISIS REACHABILITY STATIS dari titik
-            // masuk nyata (Activity/Provider/Worker di Manifest, lihat
-            // proguard-rules.pro) -- BUKAN audit manual per-file yang
-            // berisiko tinggi salah tebak "kepakai/tidak" di codebase
-            // sebesar ini. Rules keep WAJIB (kotlinx.serialization field
-            // JSON by-name, WorkManager Class.forName() by-name, Shizuku
-            // binder eksternal) sudah ditambahkan di proguard-rules.pro --
-            // TANPA itu risiko silent runtime failure (bukan compile
-            // error) di 3 area itu spesifik.
-            isMinifyEnabled = true
-            isShrinkResources = true
+            // [ROLLBACK 2026-08-27] v8.34.0 mengaktifkan isMinifyEnabled/
+            // isShrinkResources -- user laporkan REGRESI BESAR di APK
+            // release setelahnya. Sandbox kerja Claude TIDAK punya akses
+            // ./gradlew/device asli utk mendiagnosis root cause spesifik
+            // dari laporan tanpa crash log/stack trace terlampir -- sesuai
+            // STABILITY WINS (prioritas #1 di atas kecepatan/fitur), jalan
+            // paling aman & terverifikasi 100% adalah balik ke state SEBELUM
+            // v8.34.0 (false permanen sejak awal project, TERBUKTI stabil
+            // sepanjang riwayat) -- BUKAN menebak tambahan keep rule lain
+            // tanpa bukti konkret area mana yang gagal. Ini pola yang SAMA
+            // dgn rollback-rollback lain di riwayat project ini (v8.22.15,
+            // v8.22.21, v8.26.0) saat sebuah fitur terverifikasi regresi
+            // nyata & tidak bisa diverifikasi ulang blind di sandbox ini.
+            // `proguard-rules.pro` SENGAJA TIDAK dihapus/disentuh -- 3 blok
+            // keep rule di dalamnya tetap tersimpan dorman, siap dipakai
+            // lagi kalau fitur ini diaktifkan ulang nanti dgn crash log
+            // asli utk diagnosis bertarget (bukan diulang blind spt sesi
+            // v8.34.0).
+            isMinifyEnabled = false
+            isShrinkResources = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = signingConfigs.getByName("release")
         }
