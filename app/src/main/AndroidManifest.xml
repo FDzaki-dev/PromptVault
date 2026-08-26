@@ -34,12 +34,18 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.PromptVault">
 
+        <!-- [Fix layout/inset 2026-08-27] windowSoftInputMode dipasangkan dgn
+        Modifier.imePadding() baru di NavHost (MainActivity.kt) supaya
+        keyboard mendorong konten (bukan menimpa) secara konsisten API 26-34;
+        adjustResize adalah kombinasi resmi yg direkomendasikan bareng
+        imePadding() utk migrasi edge-to-edge. -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTask"
             android:label="@string/app_name"
             android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.App.Starting">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

@@ -13,6 +13,67 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.35.0 -- FIX layout/inset: keyboard (IME) menimpa field input di semua tab (2026-08-27)
+- **Instruksi user**: "tambahkan pembatas layout/inset keseluruh tab. Agar
+  semua terlihat normal dan gak truncated!!" -- tanpa screenshot/gejala
+  spesifik, jadi diaudit dulu SELURUH 9 layar sebelum menebak fix (bukan
+  Fast-Track -- task ini eksplisit lintas-tab, bukan tweak mikro 1 file).
+- **Audit dilakukan (grep menyeluruh, bukan asumsi)**: (1) `VaultTopBar`
+  (dipakai 8/9 layar) pakai `TopAppBar` M3 asli -- insets status bar SUDAH
+  otomatis benar. (2) Semua 9 `Scaffold(...) { padding -> ... }` DIVERIFIKASI
+  satu-satu, SEMUA konsumsi `padding` (termasuk `HomeScreen` yg sempat
+  dicurigai -- ternyata diterapkan di `Column` bertingkat dalam `Box`, BUKAN
+  bug). (3) FAB `RuleListScreen` sudah py `contentPadding(bottom=88dp)` sejak
+  v2.24.0, tidak regresi. (4) `imePadding`/`WindowInsets.ime` -- **grep 0
+  HASIL di SELURUH project** & `AndroidManifest.xml` **TIDAK PERNAH** set
+  `android:windowSoftInputMode` -- SATU-SATUNYA gap nyata ditemukan.
+- **Root cause**: `enableEdgeToEdge()` (`MainActivity.onCreate`, aktif sejak
+  v3.0.0) bikin window digambar edge-to-edge, TAPI tanpa `imePadding()` di
+  mana pun & tanpa `windowSoftInputMode` eksplisit di manifest, keyboard
+  MENIMPA konten alih-alih mendorongnya ke atas -- di layar dgn banyak field
+  (`AddEditRuleScreen`, 5 field: folderName/pattern/exclude/minSize/maxSize),
+  field bagian bawah jadi ketutup keyboard saat diketik = persis "truncated"
+  yang dilaporkan user. `ActivityLogScreen`/`RuleListScreen` (search box) &
+  `SettingsScreen` (GitHub PAT token field) kena gap yang sama, walau
+  dampaknya lebih ringan (cuma 1 field per layar, bukan form panjang).
+- **Fix, 1 titik fondasi (bukan disebar ke 9 file layar)**: `Modifier.
+  imePadding()` ditambah ke `NavHost(...)` di `MainActivity.kt`
+  (`PromptVaultRoot`) -- efek menjalar OTOMATIS ke SEMUA tab/layar tanpa
+  perlu disentuh satu-satu, pola SAMA PERSIS `GlassPanel`/`TactileSurface`
+  (1 primitif diubah, seluruh app ikut). `AndroidManifest.xml` (protected,
+  edit parsial): `android:windowSoftInputMode="adjustResize"` di `<activity>`
+  -- kombinasi RESMI direkomendasikan Android bareng `imePadding()` utk
+  migrasi edge-to-edge, konsisten API 26-34 (minSdk project ini).
+- **TIDAK disentuh** (Zero-Unnecessary-Refactor -- gap lain TIDAK ditemukan,
+  jadi TIDAK ada alasan sentuh): 9 file `ui/screens/*.kt` (Scaffold/padding
+  masing2 sudah benar, cukup diverifikasi bukan diubah), `VaultTopBar.kt`,
+  FAB `RuleListScreen.kt`, semua styling/tema.
+- File diubah (2): `MainActivity.kt` (parsial: 1 import + 1 modifier param
+  NavHost), `AndroidManifest.xml` (parsial: 1 atribut + komentar). `app/
+  build.gradle.kts` (versi). Preflight: 14/14 kategori PASS (termasuk #10
+  well-formedness XML -- sempat ada insiden minor SENDIRI saat menulis
+  komentar penjelasan `windowSoftInputMode`: draft awal taruh `<!-- -->` DI
+  DALAM daftar atribut tag `<activity ...>`, XML TIDAK mengizinkan komentar
+  di tengah attribute list start-tag -- KETANGKAP & diperbaiki (komentar
+  dipindah ke atas SEBELUM tag `<activity`) SEBELUM packaging, bukan lolos
+  ke user).
+- **Batas jujur**: fix ini menutup gap KONKRET yang TERVERIFIKASI (0
+  `imePadding` di seluruh project, bukan tebakan) -- tapi seperti seluruh
+  riwayat project ini, **BELUM PERNAH lewat `./gradlew`/device asli**.
+  Kalau "truncated" yang dimaksud user TERNYATA bukan soal keyboard (mis.
+  teks nama file terpotong ellipsis -- itu BY DESIGN sejak v8.15.0, bukan
+  bug) atau area lain yang belum ketahuan dari audit statis ini, kirim
+  screenshot/gejala konkret (layar mana, kondisi apa) supaya sesi
+  berikutnya bisa bertarget, bukan audit ulang dari nol.
+- **User WAJIB verifikasi di HP**: (1) build CI hijau, (2) buka "Tambah
+  Rule" (5 field) -> tap field PALING BAWAH (Ukuran Maks KB) -> keyboard
+  muncul -> field tsb HARUS tetap terlihat/bisa diketik (TIDAK ketutup
+  keyboard, konten terdorong ke atas), (3) search box di "Kelola Rule" &
+  "Riwayat Aktivitas" & field token PAT GitHub di Pengaturan -- sama, tidak
+  ketutup keyboard, (4) semua tab lain (Home, Statistik, Panduan, dst) tetap
+  normal seperti sebelumnya (0 regresi visual di layar TANPA input teks).
+- versionCode 190->191, versionName 8.34.1->8.35.0.
+
 ## v8.34.1 -- ROLLBACK: R8 minify+shrinkResources dimatikan lagi, regresi besar dilaporkan user (2026-08-27)
 - **User laporan**: "Terjadi great regression sehabis R8 minify+shrinkResources
   aktif" -- TIDAK disertai crash log/stack trace terlampir, TIDAK disebut

@@ -3,6 +3,23 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.35.0 (2026-08-27) — FIX: layout/inset keyboard (IME) ketutup di semua tab
+
+Audit menyeluruh `contentWindowInsets` (Scaffold), `VaultTopBar` (status
+bar), FAB (`RuleListScreen`) — semua SUDAH benar di 9/9 layar. Gap nyata
+satu-satunya: `imePadding()` tidak pernah dipakai di mana pun & `AndroidManifest.xml`
+tidak set `windowSoftInputMode` — keyboard menimpa (bukan mendorong) konten,
+field input di bagian bawah form (Tambah/Edit Rule, 5 field) jadi tertutup
+saat diketik.
+
+Fix di 1 titik fondasi (`NavHost` di `MainActivity.kt`, `Modifier.imePadding()`)
+— efek menjalar otomatis ke semua tab, bukan disebar ke 9 file layar.
+`AndroidManifest.xml`: `android:windowSoftInputMode="adjustResize"`
+dipasangkan (kombinasi resmi Android utk migrasi edge-to-edge).
+
+File diubah (2): `MainActivity.kt` (parsial), `AndroidManifest.xml` (parsial).
+Preflight 14/14 PASS. versionCode 190→191, versionName 8.34.1→8.35.0.
+
 ## v8.34.1 (2026-08-27) — ROLLBACK: R8 minify+shrinkResources dimatikan lagi
 
 User laporkan regresi besar di APK release setelah v8.34.0 mengaktifkan

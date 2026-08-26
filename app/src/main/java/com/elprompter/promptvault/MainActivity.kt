@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -285,6 +286,20 @@ private fun PromptVaultRoot(
     NavHost(
         navController = navController,
         startDestination = Routes.HOME,
+        // [Fix layout/inset 2026-08-27] `imePadding()` di 1 titik fondasi ini
+        // (bukan disebar ke 9 file layar) -- efek menjalar OTOMATIS ke SEMUA
+        // tab/layar tanpa perlu disentuh satu-satu, pola sama persis
+        // `GlassPanel`/`TactileSurface` (1 primitif diubah, seluruh app ikut).
+        // Root cause sebelumnya: `enableEdgeToEdge()` (MainActivity.onCreate)
+        // aktif TANPA `imePadding()` di mana pun & TANPA `windowSoftInputMode`
+        // di AndroidManifest.xml -- keyboard menimpa konten alih-alih
+        // mendorongnya, field input di bagian bawah form (mis. Tambah/Edit
+        // Rule, 5 field) jadi ketutup/tidak kebaca ("truncated") saat diketik.
+        // Scaffold+VaultTopBar (status bar) & contentWindowInsets (system
+        // bars di body) SUDAH benar di semua 9 layar (diverifikasi grep --
+        // semua konsumsi `padding` dari Scaffold), gap SATU-SATUNYA yang
+        // ditemukan murni di sisi IME/keyboard.
+        modifier = Modifier.imePadding(),
         // Transisi halus antar layar (geser + fade tipis, 220ms) -- sebelumnya
         // navigasi antar layar langsung potong instan tanpa transisi sama
         // sekali, terasa kaku dibanding sisa app yang sudah banyak animasi
