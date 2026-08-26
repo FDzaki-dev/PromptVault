@@ -13,6 +13,71 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.34.0 -- FITUR BARU: R8 minify+shrinkResources aktif ("pangkas ukuran aplikasi") (2026-08-26)
+- **Permintaan eksplisit user**: "pangkas ukuran aplikasi sampai menyisakan
+  logic+struktur yang benar-benar kepakai".
+- **Keputusan pendekatan (bukan audit manual)**: codebase ini 100+ file --
+  audit manual "file mana yang tidak kepakai" berisiko tinggi salah tebak
+  (reflection/DI implisit gampang lolos mata manusia, kontradiksi langsung
+  dgn STABILITY WINS + Zero-Unnecessary-Refactor). R8 (code shrinker resmi
+  AGP) + resource shrinker memangkas berdasar ANALISIS REACHABILITY STATIS
+  dari titik masuk nyata (Activity/Provider/Worker terdaftar di Manifest,
+  named references lain) -- lebih aman & lebih menyeluruh drpd manual,
+  DAN otomatis ikut kelas/resource baru sesi-sesi mendatang tanpa perlu
+  diingat-ingat manual lagi.
+- **Implementasi** (2 file): `app/build.gradle.kts` buildType `release`:
+  `isMinifyEnabled` false->true, `isShrinkResources` BARU true.
+  `app/proguard-rules.pro`: +3 blok keep rule WAJIB, masing2 utk area yg
+  kegagalannya SILENT saat runtime (bukan compile error) kalau tidak
+  dikecualikan:
+  1. kotlinx.serialization (`$$serializer` pattern generik project-wide,
+     BUKAN daftar manual -- otomatis ikut `@Serializable` baru nanti;
+     `util/VaultConfigBackup.kt` & `update/UpdateModels.kt` sebelumnya
+     TIDAK tercakup rule `data.**` yang sudah ada duluan).
+  2. WorkManager (`AutoSortWorker`/`ManualScanWorker` -- diinstansiasi
+     `Class.forName()` by-string oleh WorkManager internal, BUKAN
+     reference langsung).
+  3. Shizuku (`rikka.shizuku.**` + `shizuku/**` -- binder ke proses
+     Shizuku EKSTERNAL, nama kelas harus identik kedua sisi).
+- **TIDAK disentuh**: `debug` buildType TETAP `isMinifyEnabled = false`
+  (dev build harus gampang di-debug/stack trace jelas, tidak ada alasan
+  minify di debug). Rule `-keep class com.elprompter.promptvault.data.**`
+  yang SUDAH ADA sebelumnya TIDAK dihapus/dipersempit (Zero-Unnecessary-
+  Refactor -- optimisasi lebih jauh di package itu di luar scope
+  permintaan user sesi ini, cukup TAMBAH yang kurang).
+- File diubah (2): `app/build.gradle.kts` (buildType release + versi),
+  `app/proguard-rules.pro`. `preflight_check.sh` 14/14 lolos.
+  `FILE_MANIFEST.txt` TIDAK berubah (0 file baru/dihapus).
+- **Belum diverifikasi CI hijau** (keterbatasan permanen lingkungan Claude
+  -- tidak ada akses `./gradlew`/network di sini utk jalankan R8 asli).
+  **RISIKO LEBIH TINGGI dari compile-fix biasa** krn R8 BISA compile
+  sukses tapi APK release CRASH/rusak saat runtime kalau ada area lain yg
+  terlewat dari 3 keep rule di atas (kelas bug BERBEDA dari seluruh
+  riwayat project ini -- biasanya compile-time, ini genuinely runtime-only,
+  R8 tidak pernah gagal di tahap `:app:minifyReleaseWithR8` walau hasil
+  APK-nya rusak).
+- **User WAJIB verifikasi MENYELURUH di HP pakai APK RELEASE (bukan
+  debug)**: (1) build CI hijau (`:app:minifyReleaseWithR8` sukses), (2)
+  app buka normal tanpa crash langsung (tanda paling umum keep rule
+  kurang), (3) scan manual + auto-sort jalan normal (Room/DataStore), (4)
+  export/import rule JSON (kotlinx.serialization -- PALING RENTAN kalau
+  keep rule kurang, hasil field bisa null diam2 tanpa crash), (5)
+  "Selamatkan uninstall"/restore config JSON dari SAF (VaultConfigBackup,
+  serializable package util/), (6) in-app updater cek+download rilis
+  (UpdateModels, serializable package update/), (7) toggle Shizuku
+  ON+jalankan scan via Shizuku (binder), (8) auto-sort terjadwal BENAR2
+  jalan sendiri di background tanpa buka app dulu (WorkManager
+  Class.forName() -- tidak bisa dites cuma dgn buka app manual). **Kalau
+  ADA satu saja dari 8 poin ini gagal di APK release (padahal debug/APK
+  lama normal): kirim crash log (Crash Logger MediaStore sudah ada,
+  Documents/PromptVault/logs/) -- itu tanda ada area lain yang perlu
+  ditambah ke proguard-rules.pro, BUKAN R8 dimatikan lagi balik ke false.**
+- **Ukuran APK actual TIDAK bisa diukur di sini** (tidak ada akses
+  `./gradlew assembleRelease` + `ls -la` hasil APK) -- user WAJIB
+  bandingkan sendiri ukuran APK v8.34.0 vs v8.33.1 di GitHub Release
+  setelah CI hijau, sbg bukti nyata fitur ini benar2 memangkas ukuran.
+- versionCode 188->189, versionName 8.33.1->8.34.0.
+
 ## v8.33.1 -- BATCH 2/2: UI toggle "tahan versi .zip terbaru" (2026-08-26)
 - Menutup Pending Queue batch 1 (v8.33.0 di bawah): wiring UI utk
   `Rule.holdBackLatestZip` yang sebelumnya cuma ada di model+logika inti.

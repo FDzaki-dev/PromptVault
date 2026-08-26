@@ -3,6 +3,29 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.34.0 (2026-08-26) — FITUR BARU: R8 minify+shrinkResources aktif
+
+Permintaan eksplisit user: "pangkas ukuran aplikasi sampai menyisakan
+logic+struktur yang benar-benar kepakai". Pendekatan: R8 (code shrinker
+resmi AGP) + resource shrinker, BUKAN audit manual per-file — memangkas
+berdasar analisis reachability statis dari titik masuk nyata, jauh lebih
+aman & menyeluruh untuk codebase 100+ file ini.
+
+`app/build.gradle.kts` buildType `release`: `isMinifyEnabled` true,
+`isShrinkResources` baru true (`debug` tetap false, sengaja). 3 blok keep
+rule wajib ditambahkan ke `proguard-rules.pro` — masing-masing untuk area
+yang gagalnya SILENT saat runtime (bukan compile error): kotlinx.serialization
+(field JSON by-name), WorkManager (`AutoSortWorker`/`ManualScanWorker`,
+diinstansiasi `Class.forName()` by-string), Shizuku (binder ke proses
+eksternal).
+
+File diubah (2): `app/build.gradle.kts`, `app/proguard-rules.pro`.
+Preflight: 14/14 kategori PASS. **Risiko lebih tinggi dari compile-fix
+biasa** — R8 bisa sukses compile tapi APK release rusak di runtime kalau
+ada area lain yang terlewat. User wajib verifikasi menyeluruh APK RELEASE
+(8 poin checklist di PROJECT_STATE.md v8.34.0), bukan cuma debug build.
+versionCode 188→189, versionName 8.33.1→8.34.0.
+
 ## v8.33.1 (2026-08-26) — BATCH 2/2: UI toggle "tahan versi .zip terbaru"
 
 Menutup batch 1 (v8.33.0): UI `TactileSwitch` baru di `AddEditRuleScreen.kt`

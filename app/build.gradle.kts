@@ -22,8 +22,8 @@ android {
         applicationId = "com.elprompter.promptvault"
         minSdk = 26
         targetSdk = 34
-        versionCode = 188
-        versionName = "8.33.1"
+        versionCode = 189
+        versionName = "8.34.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -42,7 +42,22 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // [Fitur baru 2026-08-26, "pangkas ukuran aplikasi"] SEBELUMNYA
+            // false permanen sejak awal project -- APK release selama ini
+            // membawa SELURUH kode+resource App+dependency AndroidX/Compose/
+            // Room/OkHttp/Shizuku APA ADANYA, termasuk yang tidak pernah
+            // dipanggil sama sekali. R8 (minify) + resource shrinker
+            // memangkas berdasar ANALISIS REACHABILITY STATIS dari titik
+            // masuk nyata (Activity/Provider/Worker di Manifest, lihat
+            // proguard-rules.pro) -- BUKAN audit manual per-file yang
+            // berisiko tinggi salah tebak "kepakai/tidak" di codebase
+            // sebesar ini. Rules keep WAJIB (kotlinx.serialization field
+            // JSON by-name, WorkManager Class.forName() by-name, Shizuku
+            // binder eksternal) sudah ditambahkan di proguard-rules.pro --
+            // TANPA itu risiko silent runtime failure (bukan compile
+            // error) di 3 area itu spesifik.
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = signingConfigs.getByName("release")
         }
