@@ -35,8 +35,20 @@ enum class ConflictStrategy {
  * `HybridTokens.kt`) -- gaya list/card iOS yang mengandalkan garis tipis
  * utk pemisah, bukan shadow tebal. "Hybrid" = kerangka M3 + aksen
  * Cupertino itu, BUKAN gaya ke-5 dari nol.
+ *
+ * (v8.31.4) RESTYLING -- keputusan eksplisit user: "mending restyling dari
+ * hybrid -> Cupertino style murni total". `HYBRID` -> `CUPERTINO`
+ * (rename konstanta, BUKAN gaya ke-5 baru -- tetap gaya ke-4 yang sama,
+ * cuma arah pengembangan lanjutannya sekarang penuh identitas Cupertino,
+ * bukan cuma "M3 + aksen"). CATATAN MIGRASI JUJUR: `valueOf()` di bawah
+ * SUDAH `runCatching{}.getOrDefault(DEFAULT_THEME_STYLE)` sejak awal --
+ * siapa pun yang sempat memilih "HYBRID" sebelum rename ini (persis kasus
+ * user sesi ini sendiri, baru saja tes gaya itu) akan otomatis fallback ke
+ * [DEFAULT_THEME_STYLE] tanpa crash, TAPI pilihannya akan ke-reset diam-diam
+ * -- WAJIB pilih ulang "Cupertino" manual di Pengaturan -> Tampilan setelah
+ * update ini.
  */
-enum class ThemeStyleOption { GLASSMORPHISM, NEUMORPHISM, MATERIAL3, HYBRID }
+enum class ThemeStyleOption { GLASSMORPHISM, NEUMORPHISM, MATERIAL3, CUPERTINO }
 
 /**
  * Menyimpan interval auto-scan dan strategi konflik nama file.

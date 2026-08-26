@@ -27,9 +27,10 @@ import androidx.compose.ui.unit.dp
  * (`onCheckedChange` cuma diteruskan saat `checked=true` -- mencegah
  * "0 gaya aktif" yang tidak valid).
  *
- * 4 opsi (v8.31.1, sebelumnya 3): Glassmorphism, Neumorphism, Material 3
- * Murni, Hybrid (kerangka M3 + aksen hairline Cupertino, lihat
- * `HybridTokens.kt`).
+ * 4 opsi (v8.31.1, sebelumnya 3; nama gaya ke-4 di-rename HYBRID->CUPERTINO
+ * di v8.31.4): Glassmorphism, Neumorphism, Material 3 Murni, Cupertino
+ * (menuju identitas Cupertino penuh, dikerjakan bertahap, lihat
+ * `CupertinoTokens.kt`).
  */
 @Composable
 fun ThemeStyleToggle(
@@ -65,9 +66,9 @@ fun ThemeStyleToggle(
             onCheckedChange = { if (it) onSelect(ThemeStyleOption.MATERIAL3) }
         )
         ThemeStyleSwitchRow(
-            label = stringResource(R.string.theme_toggle_hybrid),
-            checked = selected == ThemeStyleOption.HYBRID,
-            onCheckedChange = { if (it) onSelect(ThemeStyleOption.HYBRID) }
+            label = stringResource(R.string.theme_toggle_cupertino),
+            checked = selected == ThemeStyleOption.CUPERTINO,
+            onCheckedChange = { if (it) onSelect(ThemeStyleOption.CUPERTINO) }
         )
     }
 }

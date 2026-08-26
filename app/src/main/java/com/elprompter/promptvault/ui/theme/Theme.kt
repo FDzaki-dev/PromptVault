@@ -93,11 +93,11 @@ object VaultTheme {
  * ubah signature secara breaking. Pemanggil sekarang (`MainActivity.kt`)
  * mengirim nilai nyata dari `MainViewModel.themeStyle` (DataStore).
  *
- * (v8.31.2) `shapes` sekarang KONDISIONAL thd `themeStyle` -- HYBRID pakai
- * [HybridShapes] (radius lebih besar, kesan Cupertino), gaya lain TETAP
- * [PromptVaultShapes] (skala M3 baku, TIDAK berubah). Lihat javadoc
- * lengkap alasan teknik ini (bukan override per-cabang di `TactileSurface`)
- * di [HybridShapes].
+ * (v8.31.2) `shapes` sekarang KONDISIONAL thd `themeStyle` -- gaya
+ * Cupertino (rename dari HYBRID di v8.31.4) pakai [CupertinoShapes] (radius
+ * lebih besar, kesan Cupertino), gaya lain TETAP [PromptVaultShapes] (skala
+ * M3 baku, TIDAK berubah). Lihat javadoc lengkap alasan teknik ini (bukan
+ * override per-cabang di `TactileSurface`) di [CupertinoShapes].
  */
 @Composable
 fun PromptVaultTheme(themeStyle: ThemeStyleOption = ThemeStyleOption.GLASSMORPHISM, content: @Composable () -> Unit) {
@@ -108,7 +108,7 @@ fun PromptVaultTheme(themeStyle: ThemeStyleOption = ThemeStyleOption.GLASSMORPHI
         MaterialTheme(
             colorScheme = PromptVaultColors,
             typography = PromptVaultTypography,
-            shapes = if (themeStyle == ThemeStyleOption.HYBRID) HybridShapes else PromptVaultShapes,
+            shapes = if (themeStyle == ThemeStyleOption.CUPERTINO) CupertinoShapes else PromptVaultShapes,
             content = content
         )
     }

@@ -20,14 +20,14 @@ val PromptVaultShapes = Shapes(
 )
 
 /**
- * (v8.31.2, "lanjut sempurnakan" gaya HYBRID) Skala sudut KHUSUS gaya
- * [com.elprompter.promptvault.data.ThemeStyleOption.HYBRID] -- radius
- * SENGAJA lebih besar dari [PromptVaultShapes] di semua tingkat (bukan
- * proporsi acak, tetap urutan naik extraSmall->extraLarge yang sama),
- * meniru kesan sudut "continuous corner"/lebih membulat khas Cupertino
- * TANPA custom `Shape` class rumit (Compose stok tidak native dukung
- * squircle iOS asli -- radius lebih besar via `RoundedCornerShape` biasa
- * sudah cukup memberi "rasa"-nya, sesuai skala usaha 1 batch).
+ * (v8.31.2, "lanjut sempurnakan" gaya Cupertino) Skala sudut KHUSUS gaya
+ * [com.elprompter.promptvault.data.ThemeStyleOption.CUPERTINO] (rename dari
+ * HYBRID di v8.31.4) -- radius SENGAJA lebih besar dari [PromptVaultShapes]
+ * di semua tingkat (bukan proporsi acak, tetap urutan naik
+ * extraSmall->extraLarge yang sama), meniru kesan sudut "continuous
+ * corner"/lebih membulat khas Cupertino TANPA custom `Shape` class rumit
+ * (Compose stok tidak native dukung squircle iOS asli -- radius lebih
+ * besar via `RoundedCornerShape` biasa sudah cukup memberi "rasa"-nya).
  *
  * Dipasang di `PromptVaultTheme` (`Theme.kt`) -- GANTI `shapes` M3 secara
  * KONDISIONAL per `themeStyle`, BUKAN nilai statis baru di `TactileSurface`
@@ -35,15 +35,15 @@ val PromptVaultShapes = Shapes(
  * menjalar ke SEMUA caller yang pakai `MaterialTheme.shapes.*` -- termasuk
  * default parameter `TactileSurface.shape` sendiri (`= MaterialTheme.shapes.medium`),
  * jadi mayoritas kartu/kontrol di app (yang tidak eksplisit override shape)
- * otomatis ikut lebih membulat saat gaya HYBRID aktif, 0 file caller lain
- * perlu disentuh satu per satu.
+ * otomatis ikut lebih membulat saat gaya Cupertino aktif, 0 file caller
+ * lain perlu disentuh satu per satu.
  *
  * Caveat jujur: ~11 titik pakai `RoundedCornerShape(Xdp)` literal LANGSUNG
  * (bukan lewat `MaterialTheme.shapes.*`) di seluruh app TIDAK ikut berubah
  * batch ini -- di luar cakupan 1 perubahan tunggal di sini, perlu disentuh
  * manual kalau diminta lanjut lebih jauh.
  */
-val HybridShapes = Shapes(
+val CupertinoShapes = Shapes(
     extraSmall = RoundedCornerShape(8.dp),
     small = RoundedCornerShape(12.dp),
     medium = RoundedCornerShape(18.dp),

@@ -3,6 +3,52 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.31.4 (2026-08-25) — HOTFIX build gagal + RESTYLING HYBRID -> CUPERTINO
+
+**Root cause build gagal v8.31.3** (dari `build-failure-log-v8_31_3.zip`
+yang di-upload user, `:app:compileDebugKotlin FAILED` & `compileReleaseKotlin
+FAILED`): `VaultActionSheet.kt` import `androidx.compose.ui.font.FontWeight`
+-- package SALAH, yang benar `androidx.compose.ui.text.font.FontWeight`.
+`preflight_check.sh` TIDAK bisa menangkap ini krn cuma cek statis
+(brace/import-duplikat/dst), BUKAN compiler sungguhan -- keterbatasan yang
+sudah dicatat berkali-kali di PROJECT_STATE.md, sekarang benar-benar
+kejadian. Fixed: import dibetulkan.
+
+**Restyling** -- keputusan eksplisit user: "mending restyling dari hybrid
+-> Cupertino style murni total". `ThemeStyleOption.HYBRID` di-RENAME jadi
+`CUPERTINO` (bukan gaya ke-5, tetap gaya ke-4 yang sama) -- arah
+pengembangan ke depan sekarang PENUH identitas Cupertino, bukan cuma "M3 +
+aksen". `HybridTokens.kt` -> `CupertinoTokens.kt`, `HybridShapes` ->
+`CupertinoShapes`, `theme_toggle_hybrid` -> `theme_toggle_cupertino`
+(string "Hybrid (Material 3 + Cupertino)" -> "Cupertino").
+
+**Progres tambahan**: elevasi cabang Cupertino di `TactileSurface.kt`
+sekarang DIPAKSA 0dp SELALU (sebelumnya `effectiveElevation`, masih kasih
+shadow saat `recessed=false`) -- grouped list iOS asli FLAT TOTAL, tidak
+pernah shadow, warna latar yang jadi penanda kartu vs background.
+
+**⚠️ CATATAN MIGRASI JUJUR**: `ThemeStyleOption.valueOf()` sudah
+`runCatching{}.getOrDefault(DEFAULT_THEME_STYLE)` sejak awal -- siapa pun
+yang sempat pilih "Hybrid" sebelum rename ini (TERMASUK user sesi ini
+sendiri, baru saja tes gaya itu) akan fallback ke default TANPA crash,
+TAPI pilihannya ke-reset diam-diam. **User WAJIB pilih ulang "Cupertino"
+manual di Pengaturan -> Tampilan** setelah update ini.
+
+File diubah (8): rename `HybridTokens.kt`->`CupertinoTokens.kt`,
+`TactileSurface.kt`, `VaultActionSheet.kt` (fix bug + rename),
+`ThemeStyleToggle.kt`, `Shapes.kt`, `Theme.kt`, `SettingsRepository.kt`,
+`strings.xml`. Atomic Change (rename enum TIDAK bisa dipecah batch tanpa
+compile error di tengah). Verifikasi manual (BUKAN cuma preflight, krn
+insiden barusan): grep 0 sisa `HybridTokens`/`HYBRID` aktif di kode (cuma
+komentar historis), semua import `CupertinoTokens`/`FontWeight` dicek satu
+per satu di titik pakai.
+
+`preflight_check.sh` 14/14 lolos. Confidence Rating: **85%** (bug spesifik
+sudah diperbaiki & diverifikasi manual, tapi TETAP belum lewat `./gradlew`
+sungguhan -- **WAJIB tunggu CI hijau sebelum lanjut batch berikutnya**,
+jangan ulangi insiden yang sama). versionCode 183->184, versionName
+8.31.3->8.31.4.
+
 ## v8.31.3 (2026-08-25) — Lanjut sempurnakan HYBRID: action sheet gaya Cupertino asli
 
 "masih lanjut" -- perluasan HYBRID berikutnya. `VaultActionSheet.kt`

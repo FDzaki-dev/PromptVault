@@ -13,6 +13,31 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.31.4 -- HOTFIX build gagal + RESTYLING HYBRID -> CUPERTINO (2026-08-25)
+- **Root cause build gagal v8.31.3** (user upload `build-failure-log-
+  v8_31_3.zip`): `VaultActionSheet.kt` import `androidx.compose.ui.font.
+  FontWeight` -- package SALAH (`Unresolved reference: font`), benar:
+  `androidx.compose.ui.text.font.FontWeight`. `preflight_check.sh` TIDAK
+  bisa tangkap ini (cuma statis, bukan compiler) -- keterbatasan yang
+  sudah berkali-kali dicatat, sekarang BENAR-BENAR kejadian pertama kali.
+- **Restyling**: user "mending restyling dari hybrid -> Cupertino style
+  murni total". `ThemeStyleOption.HYBRID` -> `CUPERTINO` (rename, tetap
+  gaya ke-4 yang sama, bukan ke-5) -- arah ke depan: identitas Cupertino
+  PENUH, bukan cuma aksen di atas M3.
+- Elevasi cabang Cupertino di `TactileSurface.kt` sekarang 0dp SELALU
+  (sebelumnya masih ikut `effectiveElevation`) -- grouped list iOS flat
+  total, tidak pernah shadow.
+- **⚠️ Migrasi**: siapa pun yang sempat pilih "Hybrid" (termasuk user sesi
+  ini) fallback ke default tanpa crash (valueOf+getOrDefault sudah ada),
+  TAPI pilihan ke-reset diam-diam -- **WAJIB pilih ulang "Cupertino" manual**
+  di Pengaturan.
+- File diubah (8, Atomic Change -- rename enum tidak bisa dipecah batch).
+  Verifikasi MANUAL ekstra (bukan cuma preflight) krn insiden barusan: grep
+  0 sisa HybridTokens/HYBRID aktif, semua import dicek 1-1 di titik pakai.
+- `preflight_check.sh` 14/14 lolos. Confidence Rating: **85%** -- **WAJIB
+  tunggu CI hijau** sebelum lanjut batch berikutnya, jangan ulangi insiden.
+- versionCode 183->184, versionName 8.31.3->8.31.4.
+
 ## v8.31.3 -- Lanjut sempurnakan HYBRID: action sheet Cupertino asli (2026-08-25)
 - "masih lanjut". `VaultActionSheet.kt` bercabang per `VaultTheme.style`:
   gaya lain tetap Button+OutlinedButton filled. HYBRID: TextButton polos

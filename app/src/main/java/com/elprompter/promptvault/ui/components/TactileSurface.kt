@@ -14,8 +14,8 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.elprompter.promptvault.data.ThemeStyleOption
+import com.elprompter.promptvault.ui.theme.CupertinoTokens
 import com.elprompter.promptvault.ui.theme.GlassTokens
-import com.elprompter.promptvault.ui.theme.HybridTokens
 import com.elprompter.promptvault.ui.theme.NeumorphTokens
 import com.elprompter.promptvault.ui.theme.TactileTokens
 import com.elprompter.promptvault.ui.theme.VaultTheme
@@ -198,15 +198,19 @@ fun TactileSurface(
         return
     }
 
-    if (style == ThemeStyleOption.HYBRID) {
-        // [v8.31.1] Kerangka warna/elevasi PERSIS SAMA dgn cabang MATERIAL3
-        // di atas (flat, `color`/`border` caller apa adanya) -- SATU beda:
-        // `border` caller yang `null` diisi hairline Cupertino
-        // (`HybridTokens`), BUKAN dibiarkan tanpa border spt MATERIAL3
-        // murni. Kalau caller SUDAH kirim border sendiri (mis. state error
-        // fungsional), itu dihormati apa adanya -- tidak ditimpa, sama
-        // prinsipnya dgn cabang Glass di bawah.
-        val hybridBorder = border ?: BorderStroke(HybridTokens.HairlineWidth, HybridTokens.hairlineColor())
+    if (style == ThemeStyleOption.CUPERTINO) {
+        // [v8.31.1, rename v8.31.4] Kerangka warna PERSIS SAMA dgn cabang
+        // MATERIAL3 di atas (`color`/`border` caller apa adanya) -- 2 beda
+        // dari MATERIAL3: (1) `border` caller yang `null` diisi hairline
+        // Cupertino (`CupertinoTokens`), signature list/card iOS yang
+        // mengandalkan garis tipis, bukan shadow; (2) [v8.31.4, "restyling
+        // ke Cupertino murni"] elevasi DIPAKSA 0dp SELALU (bukan
+        // `effectiveElevation` spt MATERIAL3) -- grouped list iOS asli FLAT
+        // TOTAL, tidak pernah pakai shadow apa pun, warna latar yang jadi
+        // penanda "kartu" vs "background", bukan bayangan. Kalau caller
+        // SUDAH kirim border sendiri (mis. state error fungsional), itu
+        // dihormati apa adanya -- tidak ditimpa.
+        val cupertinoBorder = border ?: BorderStroke(CupertinoTokens.HairlineWidth, CupertinoTokens.hairlineColor())
         if (onClick != null) {
             Surface(
                 onClick = onClick,
@@ -214,9 +218,9 @@ fun TactileSurface(
                 modifier = modifier,
                 shape = shape,
                 color = color,
-                border = hybridBorder,
-                tonalElevation = effectiveElevation,
-                shadowElevation = effectiveElevation,
+                border = cupertinoBorder,
+                tonalElevation = 0.dp,
+                shadowElevation = 0.dp,
                 interactionSource = interactionSource,
                 content = content
             )
@@ -225,9 +229,9 @@ fun TactileSurface(
                 modifier = modifier,
                 shape = shape,
                 color = color,
-                border = hybridBorder,
-                tonalElevation = effectiveElevation,
-                shadowElevation = effectiveElevation,
+                border = cupertinoBorder,
+                tonalElevation = 0.dp,
+                shadowElevation = 0.dp,
                 content = content
             )
         }

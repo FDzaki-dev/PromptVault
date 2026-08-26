@@ -20,12 +20,12 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.font.FontWeight
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import com.elprompter.promptvault.data.ThemeStyleOption
-import com.elprompter.promptvault.ui.theme.HybridTokens
+import com.elprompter.promptvault.ui.theme.CupertinoTokens
 import com.elprompter.promptvault.ui.theme.VaultTheme
 
 /**
@@ -40,14 +40,15 @@ import com.elprompter.promptvault.ui.theme.VaultTheme
  * `colorScheme.surfaceContainerLowest`, peran M3 baku) -- pola drag-handle
  * standar, sekarang lewat primitif Surface M3 yang sama dengan seluruh app.
  *
- * (v8.31.3, "masih lanjut" -- perluasan gaya HYBRID) Tombol aksi sekarang
+ * (v8.31.3, "masih lanjut" -- perluasan gaya Cupertino) Tombol aksi sekarang
  * BERCABANG per `VaultTheme.style`: gaya lain TETAP `Button`+`OutlinedButton`
- * filled (0 berubah). Khusus HYBRID: pola actionsheet Cupertino asli --
- * `TextButton` polos (BUKAN filled) dipisah `HorizontalDivider` hairline
- * ([HybridTokens]), destructive merah TANPA background solid, cancel bold
- * terpisah di baris paling bawah. iOS `UIAlertController` (style
- * `.actionSheet`) historisnya SELALU begini -- tombol filled solid ala
- * Material adalah bahasa visual Material, bukan Cupertino.
+ * filled (0 berubah). Khusus CUPERTINO (rename dari HYBRID di v8.31.4):
+ * pola actionsheet Cupertino asli -- `TextButton` polos (BUKAN filled)
+ * dipisah `HorizontalDivider` hairline ([CupertinoTokens]), destructive
+ * merah TANPA background solid, cancel bold terpisah di baris paling
+ * bawah. iOS `UIAlertController` (style `.actionSheet`) historisnya SELALU
+ * begini -- tombol filled solid ala Material adalah bahasa visual
+ * Material, bukan Cupertino.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -63,7 +64,7 @@ fun VaultActionSheet(
     val sheetState = rememberModalBottomSheetState()
     val haptics = LocalHapticFeedback.current
     val colors = MaterialTheme.colorScheme
-    val isHybrid = VaultTheme.style == ThemeStyleOption.HYBRID
+    val isCupertino = VaultTheme.style == ThemeStyleOption.CUPERTINO
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
@@ -95,11 +96,11 @@ fun VaultActionSheet(
             Text(title, style = MaterialTheme.typography.titleMedium, color = colors.onSurface)
             Text(message, style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
 
-            if (isHybrid) {
+            if (isCupertino) {
                 HorizontalDivider(
                     modifier = Modifier.padding(top = 8.dp),
-                    thickness = HybridTokens.HairlineWidth,
-                    color = HybridTokens.hairlineColor()
+                    thickness = CupertinoTokens.HairlineWidth,
+                    color = CupertinoTokens.hairlineColor()
                 )
                 TextButton(
                     onClick = {
@@ -114,7 +115,7 @@ fun VaultActionSheet(
                         fontWeight = FontWeight.SemiBold
                     )
                 }
-                HorizontalDivider(thickness = HybridTokens.HairlineWidth, color = HybridTokens.hairlineColor())
+                HorizontalDivider(thickness = CupertinoTokens.HairlineWidth, color = CupertinoTokens.hairlineColor())
                 TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
                     Text(dismissLabel, color = colors.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
                 }
