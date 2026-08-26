@@ -7,11 +7,29 @@
 1. **Bump versi manual wajib setiap sesi** -- `versionCode` & `versionName`
    di `app/build.gradle.kts` WAJIB di-bump tiap sesi kerja, termasuk kalau
    perubahan cuma dokumentasi/governance (tanpa ubah kode).
-2. **Box skrip commit WAJIB tampil DI ATAS** heading "Update Harian:" pada
-   tiap respons akhir sesi -- bukan di bawahnya.
-> Instruksi user 2026-08-21. Section ini PERMANEN di baris teratas file ini,
-> tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
-> di bawah section ini, BUKAN di atasnya.
+> Instruksi user 2026-08-21 (rule #2 lama soal posisi box skrip commit
+> DICABUT 2026-08-27 atas instruksi eksplisit user -- dinilai sudah bisa
+> dinalar sendiri oleh sesi lain tanpa perlu dipin di sini). Section ini
+> PERMANEN di baris teratas file ini, tidak ikut aturan descending log
+> biasa -- entri log baru tetap disisipkan di bawah section ini, BUKAN di
+> atasnya.
+
+## v8.35.3 -- Cabut PINNED rule #2 (posisi box skrip commit) (2026-08-27)
+- **Instruksi user, eksplisit & literal**: cabut rule #2 di section PINNED
+  ("Box skrip commit WAJIB tampil DI ATAS heading 'Update Harian:'") --
+  alasan user: sesi lain sudah bisa menalar hal ini sendiri, tidak perlu
+  dipin sebagai aturan wajib terpisah.
+- **Fix (dokumentasi murni, task mikro -- Fast-Track, tanpa audit
+  menyeluruh)**: rule #2 dihapus dari section PINNED `PROJECT_STATE.md`.
+  Rule #1 (bump versi wajib tiap sesi) TETAP, tidak disentuh -- user cuma
+  minta cabut #2. Catatan footer PINNED diperbarui menyebut pencabutan ini
+  (bukan dihapus diam-diam tanpa jejak -- tetap traceable kapan & kenapa),
+  tanggal instruksi asli (2026-08-21) tetap dipertahankan sebagai konteks
+  historis.
+- File diubah (2): `PROJECT_STATE.md` (parsial, section PINNED), `app/
+  build.gradle.kts` (versi, sesuai rule #1 yang justru TETAP berlaku).
+  `FILE_MANIFEST.txt` TIDAK berubah.
+- versionCode 193->194, versionName 8.35.2->8.35.3.
 
 ## v8.35.2 -- Reposisi Stale Run Guard + pangkas MAINTENANCE.md (2026-08-27)
 - **Instruksi user (2 item Pending Queue)**: (1) "Pangkas rules yang kurang
