@@ -13,6 +13,80 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.35.2 -- Reposisi Stale Run Guard + pangkas MAINTENANCE.md (2026-08-27)
+- **Instruksi user (2 item Pending Queue)**: (1) "Pangkas rules yang kurang
+  penting/bisa dinalar sendiri oleh sesi lain pada file project.md, dan
+  sejenisnya", (2) "Cabut run stale guard, lalu tempatkan pada tempat yang
+  seharusnya!!".
+- **Interpretasi eksplisit item (1)** (nama file di prompt user tidak persis
+  cocok file manapun -- "project.md" TIDAK ada di repo): diaudit ke-5 file
+  `.md` governance (`PROJECT_STATE.md`, `MAINTENANCE.md`, `README.md`,
+  `ROADMAP.md`, `TROUBLESHOOTING.md`). `PROJECT_STATE.md` bagian PINNED
+  ("ATURAN WAJIB SESI") cuma 2 aturan, KEDUANYA instruksi eksplisit user
+  2026-08-21 (bukan generik/bisa-ditebak) -- TIDAK dipangkas. `README.md`/
+  `ROADMAP.md`/`TROUBLESHOOTING.md` isinya spesifik & tidak redundan (riwayat
+  bug nyata, keputusan fitur, panduan user) -- TIDAK dipangkas.
+  `MAINTENANCE.md` (judulnya sendiri "Catatan Perawatan... sesi berikutnya")
+  yang PALING cocok sbg target "rules" -- diaudit isinya, 4 dari ~9 section
+  ternyata KURANG PENTING/bisa dinalar sendiri: (a) "Struktur proyek" --
+  cuma daftar folder standar Android/Kotlin, kelihatan sendiri lewat
+  eksplorasi direktori, (b) "Soal versi Gradle di CI" -- DUPLIKAT PERSIS
+  (malah kurang detail) dari komentar inline step "Setup Gradle" di
+  `build.yml`, (c) "PENTING: | tee WAJIB set -o pipefail" -- DUPLIKAT PERSIS
+  dari komentar inline step "Decode keystore" di `build.yml`, (d) "Alur
+  kerja standar tiap sesi" -- cuma rangkum ulang section lain di dokumen
+  yang sama + sudah dicakup instruksi standar user sendiri (Packaging & Chat
+  Format). (b)/(c) TIDAK dihapus total tanpa jejak -- diganti 1 catatan
+  pointer ke lokasi kanonik di `build.yml` (info tetap ketemu, cuma tidak
+  disalin ulang di 2 tempat yang bisa desync). File turun 116->82 baris.
+- **TIDAK dipangkas dari `MAINTENANCE.md`** (genuinely non-obvious/wajib):
+  "Cara tercepat onboarding" (URL repo + urutan fetch persis), "WAJIB
+  sebelum kirim ZIP" (command preflight), "Versi & commit" (invariant
+  sumber kebenaran versi), "Item kategori 7 preflight yang sudah
+  diverifikasi aman" (whitelist operasional, hemat token/waktu sesi
+  berikutnya -- justru SEJALAN dgn semangat "pangkas yang tidak perlu").
+- **Item (2) -- Stale Run Guard**: SEBELUMNYA step ke-2 di `build.yml`
+  (setelah `Checkout`). Root masalah: guard cuma butuh SHA remote (`git
+  ls-remote`, murni jaringan, TIDAK butuh isi repo), tapi nempel di remote
+  alias `origin` yang baru ada SETELAH `Checkout` jalan -- akibatnya
+  checkout (network+disk I/O) tetap kebuang percuma tiap kali terjadi stale
+  re-run, PADAHAL tujuan guard ini dari awal (komentar v8.18.0) persis
+  "batalkan SEBELUM buang waktu". **Fix**: dipindah jadi step PALING
+  PERTAMA (sebelum `Checkout`) -- `origin` (butuh checkout) diganti URL
+  remote eksplisit terautentikasi `GITHUB_TOKEN` bawaan (pola
+  `x-access-token:<token>@github.com/<repo>.git`, token & repo diambil dari
+  context `secrets.GITHUB_TOKEN`/`github.repository` bawaan Actions) supaya
+  `git ls-remote` bisa jalan TANPA checkout sama sekali. Logika perbandingan SHA & pesan
+  error 100% tidak berubah (cuma sumber `REMOTE_SHA` yang diganti cara
+  ambilnya). Divalidasi lewat `python3 -c "import yaml; yaml.safe_load(...)"`
+  di sandbox -- YAML well-formed & urutan step terkonfirmasi (guard = step
+  0, Checkout = step 1).
+- **TIDAK disentuh** (Zero-Unnecessary-Refactor + Protected File, Edit
+  Parsial Only sesuai izin eksplisit user item (2)): 14 step lain di
+  `build.yml` (JDK/Gradle setup, compile/test/build, rename APK, upload
+  artifact, publish release, force-latest, upload log gagal, cleanup
+  keystore) -- 0 diubah selain reposisi+URL 1 step guard. `FILE_MANIFEST.txt`
+  TIDAK berubah (0 file baru/dihapus, cuma isi 2 file existing berubah).
+- File diubah (3, dalam batas Micro-Batch): `.github/workflows/build.yml`
+  (parsial, protected file -- izin eksplisit dari instruksi user item 2),
+  `MAINTENANCE.md` (parsial, 4 section dipangkas/diringkas), `app/
+  build.gradle.kts` (versi).
+- **Batas jujur**: seperti seluruh riwayat project, **BELUM PERNAH lewat
+  `./gradlew`/CI asli** -- reposisi step divalidasi cuma lewat parser YAML
+  statis (struktur/urutan benar), BUKAN run job asli. `git ls-remote` via
+  URL eksplisit + token adalah pola standar (dipakai juga oleh
+  `actions/checkout` sendiri secara internal), risiko rendah, tapi tetap
+  butuh 1x run CI hijau buat konfirmasi guard benar2 mencegat SEBELUM
+  checkout di skenario stale re-run nyata (belum ada kejadian re-run buat
+  ditest sejak fix ini).
+- **User WAJIB verifikasi**: (1) build CI hijau seperti biasa di push
+  normal (guard harus LOLOS di commit terbaru, bukan cuma di skenario
+  gagal), (2) kalau nanti ada re-run manual dari commit lama (skenario yang
+  memicu guard), step "Stale run guard (anti-desync)" HARUS muncul gagal
+  merah SEBAGAI STEP PERTAMA (sebelum "Checkout" sama sekali sempat
+  jalan) -- beda dari sebelumnya yang gagal di step KEDUA.
+- versionCode 192->193, versionName 8.35.1->8.35.2.
+
 ## v8.35.1 -- FIX row overlap: judul teks nabrak/nutupin TactileSwitch (2026-08-27)
 - **Laporan user**: screenshot toggle "Tahan versi .zip terbaru di Downloads"
   (`AddEditRuleScreen`) -- teks judul mentok lalu NABRAK switch, lingkaran

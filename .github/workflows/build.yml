@@ -15,9 +15,6 @@ jobs:
       run:
         shell: bash
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
       # [fix 2026-08-18] Stale Run Guard (Anti-Desync): kejadian nyata --
       # re-run job LAMA (commit v8.2.0) sempat jalan SETELAH v8.3.0/v8.4.0
       # sudah dipublish. softprops/action-gh-release default nge-tandain
@@ -52,11 +49,22 @@ jobs:
       # pipeline dianggap kelar -- PERSIS pola yang sudah TERBUKTI reliable
       # di step "Compile, test, and build" sejak awal (build-all.log SELALU
       # lengkap tiap kali step itu yang gagal, termasuk di v8.22.14).
+      #
+      # [reposisi v8.35.2, 2026-08-27] SEBELUMNYA guard ini step KE-2 (setelah
+      # `Checkout`) -- padahal `git ls-remote` mengecek SHA remote lewat
+      # jaringan, TIDAK butuh isi repo/checkout sama sekali. Guard cuma
+      # numpang di remote `origin` yang baru ada SETELAH checkout, jadi
+      # checkout (network+disk I/O) tetap kebuang percuma tiap stale re-run
+      # SEBELUM guard sempat membatalkan. Dipindah jadi step PALING PERTAMA
+      # (sebelum Checkout) -- URL remote publik ditulis eksplisit (autentikasi
+      # `GITHUB_TOKEN` bawaan) menggantikan alias `origin` yang sebelumnya
+      # bergantung pada checkout, logika perbandingan SHA-nya sendiri 100%
+      # sama persis (tidak diubah).
       - name: Stale run guard (anti-desync)
         run: |
           set -euo pipefail
           {
-            REMOTE_SHA=$(git ls-remote origin refs/heads/main | cut -f1)
+            REMOTE_SHA=$(git ls-remote "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" refs/heads/main | cut -f1)
             echo "Commit yang di-build : $GITHUB_SHA"
             echo "Tip main saat ini    : $REMOTE_SHA"
             if [ "$REMOTE_SHA" != "$GITHUB_SHA" ]; then
@@ -64,6 +72,9 @@ jobs:
               exit 1
             fi
           } 2>&1 | tee stale-run-guard.log
+
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4

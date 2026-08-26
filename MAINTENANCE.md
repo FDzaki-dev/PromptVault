@@ -50,18 +50,6 @@ tambahkan kategori baru di `scripts/preflight_check.sh` -- jangan cuma catat
 di dokumen ini saja, supaya sesi Claude berikutnya otomatis ikut kecek tanpa
 perlu baca histori penambahan satu-satu.
 
-## Struktur proyek
-
-- `app/src/main/java/.../data/` -- model + repository (DataStore-backed)
-- `app/src/main/java/.../util/` -- logika murni (glob matcher, file sorter, dll),
-  ini bagian yang PALING gampang di-unit-test (lihat `app/src/test/`)
-- `app/src/main/java/.../worker/` -- WorkManager auto-scan + boot receiver
-- `app/src/main/java/.../ui/` -- Compose screens, komponen, tema
-- `scripts/preflight_check.sh` -- audit statis wajib sebelum ship (lihat atas)
-- `.github/workflows/build.yml` -- CI: Gradle Wrapper dikunci ke 8.9, compile-check
-  dulu (cepat), baru test, baru assembleRelease (lambat). Kalau gagal, log
-  konsol asli (bukan cuma laporan report) otomatis jadi artifact.
-
 ## Versi & commit
 
 `versionName`/`versionCode` di `app/build.gradle.kts` adalah SATU-SATUNYA
@@ -72,24 +60,10 @@ tidak pernah diketik manual, tidak pernah ditempeli commit hash acak.
 Lihat `CHANGELOG.md` untuk riwayat lengkap tiap versi -- entri paling atas
 selalu versi terkini.
 
-## Soal versi Gradle di CI (penting, pernah bikin build gagal tanpa pesan jelas)
-
-Runner GitHub Actions kadang sudah menyediakan Gradle versi sangat baru
-(pernah ketemu 9.6.1) yang TIDAK KOMPATIBEL dengan AGP 8.5.2 yang dipakai
-project ini. Sejak v2.1.1, workflow CI generate Gradle Wrapper terkunci ke
-versi 8.9 di awal job, semua langkah pakai `./gradlew` (bukan `gradle` polos
-dari runner). Kalau ke depan mau upgrade AGP/Gradle, cek tabel kompatibilitas
-resmi dulu: https://developer.android.com/build/releases/gradle-plugin#compatibility
-
-## PENTING: `| tee` di CI WAJIB didahului `set -o pipefail`
-
-Kalau step `run:` di workflow pakai pola `perintah 2>&1 | tee file.log`, TANPA
-`set -euo pipefail` di awal, bash akan melaporkan exit code dari `tee` (yang
-nyaris selalu 0/sukses), BUKAN dari perintah sebelumnya. Ini bikin step yang
-sebenarnya GAGAL dianggap SUKSES oleh GitHub Actions, dan workflow lanjut ke
-step berikutnya seolah tidak terjadi apa-apa. Setiap kali menambah step baru
-yang pakai `| tee`, SELALU pastikan `set -euo pipefail` ada di baris pertama
-block `run: |` itu.
+> Gotcha Gradle-version-pin & `| tee`+`pipefail` di CI dipindah jadi komentar
+> inline langsung di step terkait `.github/workflows/build.yml` ("Setup
+> Gradle" & "Decode keystore") -- sesi yang menyentuh file itu otomatis lihat
+> aturannya persis di tempat yang relevan, tidak perlu disalin lagi di sini.
 
 ## Item kategori 7 preflight yang sudah diverifikasi aman (jangan re-cek manual tiap sesi)
 
@@ -105,12 +79,3 @@ Kalau daftar fungsi yang muncul di kategori 7 PERSIS sama seperti di atas
 (nama & lokasi baris identik atau bergeser wajar karena edit lain), tidak
 perlu re-review manual satu-satu -- cukup pastikan tidak ada ENTRI BARU yang
 belum ada di daftar ini.
-
-## Alur kerja standar tiap sesi (ringkasan)
-
-1. Kalau sesi baru: orientasi dulu (lihat bagian "onboarding" di atas).
-2. Kerjakan perubahan kode sesuai permintaan user.
-3. **`bash scripts/preflight_check.sh`** -- wajib, sebelum lanjut ke langkah 4.
-4. Update `CHANGELOG.md` (entri baru di paling atas) + bump `versionCode`/`versionName`.
-5. Package ZIP, nama file diekstrak otomatis dari `versionName` (bukan diketik manual).
-6. Kirim ZIP + command Termux (format baku sudah ada di instruksi standar user).
