@@ -13,6 +13,35 @@
 > tidak ikut aturan descending log biasa -- entri log baru tetap disisipkan
 > di bawah section ini, BUKAN di atasnya.
 
+## v8.32.1 -- COMPILE-FIX: computeLatestZipHeldBack() Array<File> vs List<File> (2026-08-26)
+- **Gejala**: user upload `build-failure-log-v8_32_0.zip`. `:app:compileDebugKotlin`
+  DAN `:app:compileReleaseKotlin` FAILED -- `FileSorter.kt:849:67: Type
+  mismatch: inferred type is Array<File> but List<File> was expected`.
+- **Root cause**: `computeLatestZipHeldBack()` (fitur baru v8.32.0, lihat
+  entri di bawah) dideklarasikan menerima `candidateFiles: List<File>`,
+  padahal `listCandidateFiles()` (fungsi lama, TIDAK diubah sesi v8.32.0)
+  mengembalikan `Array<File>` -- Kotlin TIDAK auto-convert `Array<T>` ke
+  `List<T>` di titik pemanggilan (beda dari Java yang lebih longgar),
+  meskipun keduanya sama-sama bisa di-`for`/`.map`/`.maxByOrNull` sehingga
+  isi fungsinya sendiri terlihat benar saat ditulis -- gap-nya murni di
+  DEKLARASI TIPE parameter, bukan logika. `preflight_check.sh` (statis,
+  tanpa compiler Kotlin asli) tidak mendeteksi ini -- konsisten dgn
+  keterbatasan yang sudah berkali-kali dicatat di project ini (kelas bug
+  yang HANYA ketahuan lewat compiler asli, sama seperti insiden
+  `coroutineScope` v2.8.0 & `decodeFromString` v2.20.3 dulu).
+- **Fix**: ganti tipe parameter `computeLatestZipHeldBack(candidateFiles:
+  List<File>, ...)` -> `Array<File>`, cocok dgn tipe asli yang dioper dari
+  `scanAndSortToDestination()`. 1 baris, isi fungsi & logika grouping/
+  pemilihan versi terbaru TIDAK berubah sama sekali (for-loop & extension
+  `maxByOrNull` bekerja identik di Array maupun List).
+- File diubah (2): `util/FileSorter.kt` (1 baris tipe parameter),
+  `app/build.gradle.kts` (versi). `FILE_MANIFEST.txt` tidak berubah.
+  `preflight_check.sh` 14/14 lolos.
+- **Belum diverifikasi CI hijau** -- WAJIB dicek run Actions berikutnya
+  sebelum lanjut verifikasi fungsional (5 poin checklist di entri v8.32.0
+  di bawah, yang SEMUA masih menunggu build hijau lebih dulu).
+- versionCode 185->186, versionName 8.32.0->8.32.1.
+
 ## v8.32.0 -- FITUR BARU: "Tahan versi terbaru" saat scan, scope .zip+SAF SAJA (2026-08-26)
 - **Permintaan eksplisit user**: saat scan (manual MAUPUN auto-sort, keduanya
   lewat `scanAndSort()` yang sama, tidak ada percabangan caller baru), file

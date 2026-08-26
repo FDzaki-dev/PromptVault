@@ -3,6 +3,18 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.32.1 (2026-08-26) — COMPILE-FIX: Array<File> vs List<File> di computeLatestZipHeldBack()
+
+`build-failure-log-v8_32_0.zip`: `compileDebugKotlin`/`compileReleaseKotlin`
+FAILED — `FileSorter.kt:849: Type mismatch: inferred type is Array<File> but
+List<File> was expected`. `computeLatestZipHeldBack()` (v8.32.0) salah
+dideklarasikan menerima `List<File>`, padahal `listCandidateFiles()`
+mengembalikan `Array<File>` — Kotlin tidak auto-convert antara keduanya di
+titik panggil. Fix: ganti tipe parameter ke `Array<File>`, isi fungsi tidak
+berubah (for-loop & `maxByOrNull` identik untuk Array maupun List).
+
+Preflight: 14/14 kategori PASS. versionCode 185→186, versionName 8.32.0→8.32.1.
+
 ## v8.32.0 (2026-08-26) — FITUR BARU: "Tahan versi terbaru" saat scan (.zip + SAF saja)
 
 Permintaan eksplisit user: saat scan (manual atau auto-sort, sama-sama lewat

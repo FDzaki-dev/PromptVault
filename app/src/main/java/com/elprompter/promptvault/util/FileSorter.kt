@@ -940,7 +940,7 @@ class FileSorter(
      * [processCandidate] scan ini. Kosong kalau tidak ada file .zip sama
      * sekali di [candidateFiles].
      */
-    private fun computeLatestZipHeldBack(candidateFiles: List<File>, rules: List<Rule>): Set<String> {
+    private fun computeLatestZipHeldBack(candidateFiles: Array<File>, rules: List<Rule>): Set<String> {
         val zipGroupsByRule = mutableMapOf<String, MutableList<File>>()
         for (file in candidateFiles) {
             if (!file.name.substringAfterLast('.', "").equals("zip", ignoreCase = true)) continue
