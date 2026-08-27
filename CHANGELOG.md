@@ -3,6 +3,24 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## [CUPERTINO] Dialog crash log ikut sistem tema -- ganti `AlertDialog` M3 mentah di `DiagnosticsScreen` (2026-08-27)
+
+Instruksi user: "lanjut sempurnakan theme Cupertino style murni!!". Audit
+`CupertinoTokens.kt` menemukan 1 titik yang masih bypass total sistem tema:
+dialog isi crash log di `DiagnosticsScreen.kt`, pakai `AlertDialog` M3 mentah
+(0 treatment Glass/Neumorphism/Cupertino) -- kelas bug sama persis dgn
+`WarningBanner` sebelum v8.29.0.
+
+Fix: komponen baru `VaultAlertDialog` -- wadah `TactileSurface` (bukan
+implementasi baru dari nol), shape `MaterialTheme.shapes.extraLarge`
+(identik radius default M3 lama, 0 perubahan visual di 3 gaya non-Cupertino).
+Cupertino dapat `HorizontalDivider` hairline sebelum tombol, pola sama
+`VaultActionSheet`. `DiagnosticsScreen.kt` diganti pakai komponen ini, isi
+(log scrollable) dipindah apa adanya ke slot `content`.
+
+File diubah (3): BARU `ui/components/VaultAlertDialog.kt`, `ui/screens/
+DiagnosticsScreen.kt` (parsial), `FILE_MANIFEST.txt` (1 baris baru).
+
 ## [FITUR] Aksi ke-3 "Simpan Perubahan" di sheet "Buang Perubahan?", gaya iOS (2026-08-27)
 
 Instruksi user (dgn screenshot): tambah aksi ke-3 "Simpan Perubahan" di sheet

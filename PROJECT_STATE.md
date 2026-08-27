@@ -26,6 +26,36 @@
 > -- berlaku PERMANEN mulai sesi ini utk SEMUA sesi berikutnya, sesi mana
 > pun DILARANG mencabut/melonggarkan tanpa instruksi eksplisit baru user.
 
+## [FIX] Release notes GitHub nyangkut di entri lama walau versionName sudah naik (2026-08-27)
+- **Laporan user**: tab GitHub Release stale, "display angka sudah up-to-date,
+  namun informasi yang ditampilkan malah dari run yang sudah lewat/stale".
+- **Root cause (dikonfirmasi via kode, bukan tebakan)**: CI (`.github/
+  workflows/build.yml` step "Extract release notes from CHANGELOG.md")
+  selalu ambil SECTION `## ` TERATAS `CHANGELOG.md` via `awk` -- logic ini
+  sendiri benar & tidak disentuh. Masalahnya: sesi SEBELUM ini (entri
+  `[CUPERTINO] Dialog crash log...` di bawah, lihat posisinya PALING ATAS
+  di log file ini -> kerjaan PALING BARU) sudah menulis kode `VaultAlertDialog.kt`
+  penuh (dipakai `DiagnosticsScreen.kt`, terdaftar `FILE_MANIFEST.txt`) TAPI
+  lupa menambah entri baru di `CHANGELOG.md` -- top section-nya masih
+  "Aksi ke-3 Simpan Perubahan" (kerjaan 1 sesi LEBIH LAMA). Akibatnya:
+  `versionName` (dari `GITHUB_RUN_NUMBER`, otomatis) tetap naik tiap push
+  ("angka sudah up-to-date"), tapi body Release yg di-extract awk selalu
+  itu-itu saja / basi ("informasi ... dari run yang sudah lewat") sampai
+  ada entri baru ditambah manual -- BUKAN bug caching/CDN GitHub, BUKAN
+  bug di `UpdateRepository.kt` (network client sudah dikonfirmasi 0 cache).
+- **Fix**: `CHANGELOG.md` ditambah 1 entri baru PALING ATAS (`[CUPERTINO]
+  Dialog crash log ikut sistem tema...`) merangkum kerjaan `VaultAlertDialog`
+  yg kodenya sudah ada tapi belum tercatat -- murni dokumentasi retroaktif,
+  0 baris kode aplikasi disentuh.
+- **TIDAK disentuh** (Zero-Unnecessary-Refactor): `build.yml` (logic awk
+  sudah benar), `UpdateRepository.kt`/`VaultAlertDialog.kt`/`VaultActionSheet.kt`
+  (sudah benar sejak ditulis, dikonfirmasi via pembacaan kode langsung).
+- **Pengingat proses ke depan**: SETIAP sesi yg mengubah kode WAJIB tambah
+  entri baru di `CHANGELOG.md` (bukan cuma `PROJECT_STATE.md`) di batch yang
+  SAMA -- kalau lupa, gejala persis ini (release notes basi) akan berulang
+  lagi di push berikutnya.
+- File diubah (1): `CHANGELOG.md` (1 entri baru).
+
 ## [CUPERTINO] Dialog crash log ikut sistem tema -- tutup pending item "custom dialog non-actionsheet" (2026-08-27)
 - **Instruksi user**: "lanjut sempurnakan theme Cupertino style murni!!" --
   tanpa target spesifik, jadi diaudit dulu (bukan Fast-Track, scope
