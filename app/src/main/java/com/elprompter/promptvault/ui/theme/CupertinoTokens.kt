@@ -27,9 +27,15 @@ import androidx.compose.ui.unit.dp
  *   shadow sama sekali (beda dari cabang MATERIAL3 lama yang masih kasih
  *   elevasi saat `recessed=false`). Warna latar (bukan bayangan) yang jadi
  *   penanda "kartu" vs "background" di iOS asli.
+ * - Custom dialog non-actionsheet: `VaultAlertDialog.kt` (lihat
+ *   `DiagnosticsScreen.kt`) -- ganti `AlertDialog` M3 mentah yg dulu bypass
+ *   total sistem tema.
+ * - Typography scale iOS-ish: [CupertinoTypography] (`Type.kt`) -- kondisional
+ *   di `Theme.kt` (pola identik shapes), skala HIG (tracking negatif di
+ *   size 15-17sp, Semibold di Headline/nav title).
  *
- * Belum dikerjakan (bukan diabaikan, di luar 1 batch ini): typography scale
- * iOS-ish, warna sistem (`systemBlue` dst), custom dialog non-actionsheet.
+ * Belum dikerjakan (bukan diabaikan, di luar 1 batch ini): warna sistem
+ * (`systemBlue` dst).
  */
 object CupertinoTokens {
     /** Lebar hairline -- 1px fisik, konvensi iOS (`UIView` separator

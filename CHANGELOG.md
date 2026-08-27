@@ -3,6 +3,29 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## [CUPERTINO] Typography scale iOS-ish (HIG) -- kondisional per gaya, pola identik shapes (2026-08-27)
+
+Instruksi user: "sempurnakan Cupertino style murni!!" -- lanjutan 2 item
+pending di javadoc `CupertinoTokens.kt` (typography scale, warna sistem).
+Dipilih typography (bukan warna sistem) krn mekanismenya sudah ada preseden
+persis: `shapes` di `Theme.kt` sudah kondisional per `themeStyle`
+(`CupertinoShapes` vs `PromptVaultShapes`) -- tinggal replikasi pola yang
+sama utk `typography`, scope 1 batch jelas. Warna sistem (`systemBlue` dst)
+lebih luas (butuh audit tiap pemakaian warna lintas app dulu) -- tetap pending.
+
+`CupertinoTypography` (BARU, `Type.kt`) memetakan 15 role M3 ke skala HIG
+Apple (Large Title 34sp Bold .. Caption 2 11sp) -- tracking POSITIF tipis
+di size besar (20-34sp), NEGATIF di size "workhorse" 15-17sp (ciri rapat
+khas SF Pro), balik ke ~0/positif di size kecil (13sp ke bawah). `Theme.kt`:
+`typography = if (CUPERTINO) CupertinoTypography else PromptVaultTypography`
+(baris baru, persis pola `shapes` di sebelahnya). `PromptVaultTypography`
+& `CupertinoShapes`/`PromptVaultShapes` 0 disentuh -- 3 gaya lain (Glass/
+Neu/M3) render identik seperti sebelumnya.
+
+File diubah (3): `ui/theme/Type.kt` (parsial, tambah `CupertinoTypography`),
+`ui/theme/Theme.kt` (parsial, 1 baris cabang), `ui/theme/CupertinoTokens.kt`
+(parsial, update daftar javadoc "belum dikerjakan").
+
 ## [CUPERTINO] Dialog crash log ikut sistem tema -- ganti `AlertDialog` M3 mentah di `DiagnosticsScreen` (2026-08-27)
 
 Instruksi user: "lanjut sempurnakan theme Cupertino style murni!!". Audit

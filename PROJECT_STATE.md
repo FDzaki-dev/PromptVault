@@ -26,6 +26,61 @@
 > -- berlaku PERMANEN mulai sesi ini utk SEMUA sesi berikutnya, sesi mana
 > pun DILARANG mencabut/melonggarkan tanpa instruksi eksplisit baru user.
 
+## [CUPERTINO] Typography scale iOS-ish -- tutup pending item ke-2 dari 3, tinggal "warna sistem" (2026-08-27)
+- **Instruksi user**: "sempurnakan Cupertino style murni!!" -- generik lagi,
+  diaudit dulu (bukan Fast-Track). 2 item pending tersisa di javadoc
+  `CupertinoTokens.kt` sblm batch ini: typography scale iOS-ish, warna
+  sistem (`systemBlue` dst). Dipilih **typography** krn ada preseden teknik
+  identik yg tinggal direplikasi: `shapes` di `Theme.kt` SUDAH kondisional
+  per `themeStyle` sejak v8.31.2 (`CupertinoShapes` vs `PromptVaultShapes`)
+  -- typography tinggal pola yang SAMA PERSIS, scope 1 batch jelas & aman.
+  Warna sistem TIDAK dipilih krn butuh audit tiap titik pemakaian warna
+  lintas app dulu (brand-new kerja, bukan replikasi pola) -- di luar 1 batch.
+- **`Type.kt`**: `CupertinoTypography` (BARU, val ke-2 di file yg sama --
+  BUKAN file baru, jadi `FILE_MANIFEST.txt` TIDAK perlu diubah) memetakan
+  15 role `Typography(...)` M3 ke skala HIG Apple (size class Large --
+  angka publik dari dokumentasi resmi Apple, bukan reverse-engineer aset
+  berlisensi apa pun): Large Title 34sp Bold s/d Caption 2 11sp Medium.
+  Tracking HIG SENGAJA dipertahankan NON-linear (beda dari M3 yg linear
+  makin positif ke size kecil): POSITIF tipis (+0.35..+0.38sp) di size
+  besar 20-34sp, NEGATIF (-0.24..-0.41sp) di size "workhorse" 15-17sp
+  (Headline/Body/Callout -- inilah kesan rapat khas SF Pro), balik ke
+  ~0/+0.07sp di size kecil (Footnote/Caption). Hirarki ukuran PER ROLE M3
+  (mis. `headlineLarge >= headlineMedium >= headlineSmall`) tetap dijaga
+  non-menurun walau beberapa role SENGAJA reuse size HIG yang sama (HIG
+  cuma py 11 role, M3 py 15 slot) -- 0 asumsi call site lain yang jebol.
+  `FontWeight.SemiBold` dipakai di Headline/nav-title-tier (3 role: `title
+  Large`, `headlineMedium`, `headlineSmall`), `Bold` di `displayLarge`
+  (match gaya "besar-tebal" javadoc lama `Type.kt` sblm v8.0.0), sisanya
+  `Normal`/`Medium` (label tier, konvensi M3 role label = Medium).
+- **`Theme.kt`**: `typography = if (themeStyle == CUPERTINO) CupertinoTypography
+  else PromptVaultTypography` -- 1 baris baru persis di sebelah baris
+  `shapes` yang sudah ada (pola identik, 0 refactor lain di fungsi ini).
+- **`CupertinoTokens.kt`**: javadoc "Belum dikerjakan" diperbarui -- 2 item
+  ditutup dipindah ke daftar "Progres murni" (typography batch ini, custom
+  dialog dari batch SEBELUMNYA yang sempat kelewat update di javadoc ini),
+  tinggal 1 item tersisa ("warna sistem").
+- **TIDAK disentuh** (Zero-Unnecessary-Refactor): `PromptVaultTypography`
+  (0 baris berubah -- 3 gaya lain 100% identik visualnya spt sebelum batch
+  ini), `CupertinoShapes`/`PromptVaultShapes` (dipakai ulang apa adanya,
+  cuma dibaca sbg referensi pola), semua composable yg MEMAKAI
+  `MaterialTheme.typography.*` (Text, dst di seluruh app) -- otomatis ikut
+  berubah lewat `MaterialTheme` global, 0 titik pemanggilan manual yang
+  perlu disentuh satu-satu.
+- **Verifikasi statis**: keseimbangan `{}`/`()` ketiga file kode SEIMBANG
+  (`Type.kt` 0/0 & 62/62 -- file ini emang 0 kurung kurawal, semua fungsi
+  top-level val; `Theme.kt` 6/6 & 35/35; `CupertinoTokens.kt` 1/1 & 20/20).
+- File diubah (3, pas batas Micro-Batch): `ui/theme/Type.kt` (parsial,
+  tambah val baru), `ui/theme/Theme.kt` (parsial, 1 baris), `ui/theme/
+  CupertinoTokens.kt` (parsial, javadoc only, 0 logic).
+- **CHANGELOG.md**: entri baru ditambah paling atas batch ini juga (lihat
+  file terpisah) -- pelajaran dari insiden sesi sebelumnya (lihat entri
+  `[FIX] Release notes GitHub nyangkut...` di bawah) LANGSUNG diterapkan,
+  bukan cuma dicatat.
+- **Pending Queue (tidak berubah)**: warna sistem iOS (`systemBlue` dst) --
+  1 item tersisa dari 3 item awal restyling Cupertino murni; `FileSorter.kt`
+  refactor (item lama, tidak terkait Cupertino, lihat log lebih bawah).
+
 ## [FIX] Release notes GitHub nyangkut di entri lama walau versionName sudah naik (2026-08-27)
 - **Laporan user**: tab GitHub Release stale, "display angka sudah up-to-date,
   namun informasi yang ditampilkan malah dari run yang sudah lewat/stale".

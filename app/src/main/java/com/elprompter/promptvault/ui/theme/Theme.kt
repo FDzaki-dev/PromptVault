@@ -98,6 +98,12 @@ object VaultTheme {
  * lebih besar, kesan Cupertino), gaya lain TETAP [PromptVaultShapes] (skala
  * M3 baku, TIDAK berubah). Lihat javadoc lengkap alasan teknik ini (bukan
  * override per-cabang di `TactileSurface`) di [CupertinoShapes].
+ *
+ * (lanjutan restyling Cupertino murni, 2026-08-27) `typography` KINI juga
+ * KONDISIONAL, pola identik persis baris `shapes` di atas -- Cupertino
+ * pakai [CupertinoTypography] (skala HIG iOS-ish), 3 gaya lain TETAP
+ * [PromptVaultTypography] (M3 baku, 0 berubah). Lihat javadoc lengkap di
+ * [CupertinoTypography] (`Type.kt`).
  */
 @Composable
 fun PromptVaultTheme(themeStyle: ThemeStyleOption = ThemeStyleOption.GLASSMORPHISM, content: @Composable () -> Unit) {
@@ -107,7 +113,7 @@ fun PromptVaultTheme(themeStyle: ThemeStyleOption = ThemeStyleOption.GLASSMORPHI
     ) {
         MaterialTheme(
             colorScheme = PromptVaultColors,
-            typography = PromptVaultTypography,
+            typography = if (themeStyle == ThemeStyleOption.CUPERTINO) CupertinoTypography else PromptVaultTypography,
             shapes = if (themeStyle == ThemeStyleOption.CUPERTINO) CupertinoShapes else PromptVaultShapes,
             content = content
         )
