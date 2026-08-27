@@ -63,6 +63,7 @@ import com.elprompter.promptvault.ui.MainViewModel
 import com.elprompter.promptvault.update.DownloadState
 import com.elprompter.promptvault.update.GithubAssetDto
 import com.elprompter.promptvault.update.UpdateCheckResult
+import com.elprompter.promptvault.ui.components.SectionHeader
 import com.elprompter.promptvault.ui.components.ToggleRow
 import com.elprompter.promptvault.ui.components.VaultActionSheet
 import com.elprompter.promptvault.ui.components.VaultCard
@@ -221,10 +222,10 @@ fun SettingsScreen(
                 style = MaterialTheme.typography.bodySmall
             )
 
-            Text(stringResource(R.string.settings_interval_section_title), style = MaterialTheme.typography.titleMedium)
-            Text(
-                stringResource(R.string.settings_interval_section_desc),
-                style = MaterialTheme.typography.bodySmall
+            SectionHeader(
+                title = stringResource(R.string.settings_interval_section_title),
+                description = stringResource(R.string.settings_interval_section_desc),
+                spacing = 16.dp
             )
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 SettingsRepository.ALLOWED_INTERVALS.forEach { minutes ->
@@ -247,10 +248,10 @@ fun SettingsScreen(
             // ColorScheme Material 3 murni, tidak ada lagi yang dipilih user
             // di sini (lihat Theme.kt/Color.kt).
 
-            Text(stringResource(R.string.settings_conflict_section_title), style = MaterialTheme.typography.titleMedium)
-            Text(
-                stringResource(R.string.settings_conflict_section_desc),
-                style = MaterialTheme.typography.bodySmall
+            SectionHeader(
+                title = stringResource(R.string.settings_conflict_section_title),
+                description = stringResource(R.string.settings_conflict_section_desc),
+                spacing = 16.dp
             )
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 val conflictLabels = mapOf(
@@ -280,10 +281,10 @@ fun SettingsScreen(
             // configurable di sini -- default tetap 6 (SettingsRepository.
             // DEFAULT_SCAN_CONCURRENCY), jadi user yang tidak pernah membuka
             // kartu ini tidak terdampak sama sekali.
-            Text(stringResource(R.string.settings_concurrency_section_title), style = MaterialTheme.typography.titleMedium)
-            Text(
-                stringResource(R.string.settings_concurrency_section_desc),
-                style = MaterialTheme.typography.bodySmall
+            SectionHeader(
+                title = stringResource(R.string.settings_concurrency_section_title),
+                description = stringResource(R.string.settings_concurrency_section_desc),
+                spacing = 16.dp
             )
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 SettingsRepository.ALLOWED_SCAN_CONCURRENCY.forEach { value ->
@@ -303,10 +304,9 @@ fun SettingsScreen(
 
             VaultCard(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(stringResource(R.string.settings_saf_section_title), style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        stringResource(R.string.settings_saf_section_desc),
-                        style = MaterialTheme.typography.bodySmall
+                    SectionHeader(
+                        title = stringResource(R.string.settings_saf_section_title),
+                        description = stringResource(R.string.settings_saf_section_desc)
                     )
                     if (safTreeUri != null) {
                         Text(
@@ -437,10 +437,9 @@ fun SettingsScreen(
 
             VaultCard(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(stringResource(R.string.settings_backup_section_title), style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        stringResource(R.string.settings_backup_section_desc),
-                        style = MaterialTheme.typography.bodySmall
+                    SectionHeader(
+                        title = stringResource(R.string.settings_backup_section_title),
+                        description = stringResource(R.string.settings_backup_section_desc)
                     )
                     OutlinedButton(
                         onClick = { scope.launch { exportedText = onExportRequested() } },
@@ -478,10 +477,9 @@ fun SettingsScreen(
 
             VaultCard(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(stringResource(R.string.settings_import_section_title), style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        stringResource(R.string.settings_import_section_desc),
-                        style = MaterialTheme.typography.bodySmall
+                    SectionHeader(
+                        title = stringResource(R.string.settings_import_section_title),
+                        description = stringResource(R.string.settings_import_section_desc)
                     )
                     OutlinedTextField(
                         value = importText,

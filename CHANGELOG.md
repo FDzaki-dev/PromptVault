@@ -3,6 +3,25 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## [REFACTOR] Ekstrak `SectionHeader` -- konsolidasi 8 pasangan Text title+desc duplikat, tanpa ubah behavior (2026-08-27)
+
+Instruksi user: "lanjutkan progress refactor, kosmetik only" -- lanjutan
+batch `ToggleRow` di bawah, scope dipersempit ke kosmetik murni (jadi
+`FileSorter.kt` di Pending Queue TETAP tidak disentuh, itu bukan kosmetik).
+
+Target: pola `Text(title, titleMedium)` + `Text(desc, bodySmall)` yang
+diketik ulang identik di 8 tempat (`SettingsScreen.kt` x6, `DiagnosticsScreen.kt`
+x2). Diekstrak jadi `ui/components/SectionHeader.kt`. Jarak title-desc asli
+BEDA-BEDA per pemanggil (16.dp/8.dp/0.dp tergantung `verticalArrangement`
+Column pemanggil) -- param `spacing` dipass eksplisit sesuai nilai asli tiap
+titik (dicek satu-satu, lihat tabel di PROJECT_STATE.md), bukan diseragamkan,
+supaya 0 perubahan visual. Section dgn pola beda (title+`Icon`, title+`ToggleRow`,
+title+konten non-desc) SENGAJA tidak disentuh.
+
+File diubah (3): `ui/components/SectionHeader.kt` (baru), `ui/screens/
+SettingsScreen.kt` (parsial, 6 lokasi), `ui/screens/DiagnosticsScreen.kt`
+(parsial, 2 lokasi). `FILE_MANIFEST.txt` diperbarui (1 file baru).
+
 ## [REFACTOR] Ekstrak `ToggleRow` -- konsolidasi 3 Row switch duplikat, tanpa ubah behavior (2026-08-27)
 
 Instruksi user: "refactor rapi-rapi tanpa mengubah behavior". Target dipilih

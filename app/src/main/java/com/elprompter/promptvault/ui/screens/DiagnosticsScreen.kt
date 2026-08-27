@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import com.elprompter.promptvault.ui.components.SectionHeader
 import com.elprompter.promptvault.ui.components.VaultCard
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
@@ -128,10 +129,10 @@ fun DiagnosticsScreen(
 
         VaultCard(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text(stringResource(id = R.string.diag_downloads_title), style = MaterialTheme.typography.titleMedium)
-                Text(
-                    stringResource(id = R.string.diag_downloads_desc),
-                    style = MaterialTheme.typography.bodySmall
+                SectionHeader(
+                    title = stringResource(id = R.string.diag_downloads_title),
+                    description = stringResource(id = R.string.diag_downloads_desc),
+                    spacing = 0.dp
                 )
                 if (downloadsFileNames.isEmpty()) {
                     Text(stringResource(id = R.string.diag_downloads_empty), style = MaterialTheme.typography.bodySmall)
@@ -162,10 +163,9 @@ fun DiagnosticsScreen(
 
         VaultCard(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(stringResource(id = R.string.diag_crashlog_title_fmt, crashLogs.size), style = MaterialTheme.typography.titleMedium)
-                Text(
-                    stringResource(id = R.string.diag_crashlog_desc),
-                    style = MaterialTheme.typography.bodySmall
+                SectionHeader(
+                    title = stringResource(id = R.string.diag_crashlog_title_fmt, crashLogs.size),
+                    description = stringResource(id = R.string.diag_crashlog_desc)
                 )
                 if (crashLogs.isEmpty()) {
                     Text(stringResource(id = R.string.diag_crashlog_empty), style = MaterialTheme.typography.bodySmall)

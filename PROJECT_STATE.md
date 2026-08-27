@@ -26,6 +26,88 @@
 > -- berlaku PERMANEN mulai sesi ini utk SEMUA sesi berikutnya, sesi mana
 > pun DILARANG mencabut/melonggarkan tanpa instruksi eksplisit baru user.
 
+## [REFACTOR] Ekstrak `SectionHeader` -- konsolidasi 8 pasangan Text title+desc duplikat, tanpa ubah behavior (2026-08-27)
+- **Instruksi user, eksplisit**: "lanjutkan progress refactor *kosmetik only!!" --
+  melanjutkan batch `ToggleRow` sesi sebelumnya, scope dibatasi user sendiri ke
+  "kosmetik" (murni UI, 0 logic) -- jadi **item #1 Pending Queue (`FileSorter.kt`,
+  2086 baris) TETAP TIDAK disentuh** sesi ini: itu pemecahan file/struktur kode
+  backend (SAF/Shizuku), bukan kosmetik, dan sudah ditandai "TUNGGU instruksi
+  eksplisit" -- instruksi user kali ini justru mempersempit ke kosmetik, BUKAN
+  mengizinkan item berisiko itu.
+- **Audit dilakukan** (grep `style = MaterialTheme.typography` di semua
+  `ui/screens/*.kt`): ditemukan pola identik `Text(title, titleMedium)`
+  langsung diikuti `Text(desc, bodySmall)` di **8 titik** across 2 file --
+  `SettingsScreen.kt` (interval, konflik, konkurensi, SAF, backup, import) &
+  `DiagnosticsScreen.kt` (downloads, crashlog) -- kandidat ekstraksi paling
+  aman yang tersisa: 0 state/logic/coroutine/I-O disentuh, murni struktur UI,
+  sama persis semangatnya dgn `ToggleRow` batch sebelumnya.
+- **Kompleksitas tersembunyi yang WAJIB ditangani (beda dgn `ToggleRow`)**:
+  title & desc di kode asli bukan dibungkus Column sendiri -- keduanya
+  langsung jadi child Column PEMANGGIL, jadi jarak title-desc ikut
+  `verticalArrangement` Column pemanggil yang **beda-beda per titik** (16.dp
+  di 3 section teratas Settings yg langsung anak Column terluar
+  `spacedBy(16.dp)`, 8.dp di section dalam `VaultCard` yg Column-nya
+  `spacedBy(8.dp)`, 0.dp -- default Column TANPA `verticalArrangement` --
+  khusus kartu Downloads Diagnostics). Kalau diseragamkan begitu saja, jarak
+  visual title-desc di beberapa tempat akan BERUBAH (regresi kosmetik,
+  ironis krn task-nya sendiri kosmetik-only) -- jadi `SectionHeader` dibuat
+  dgn param `spacing: Dp = 8.dp` (default = nilai paling sering muncul, 4/8
+  pemanggil) & 4 pemanggil sisanya pass `spacing` eksplisit sesuai jarak
+  ASLI masing-masing, diverifikasi satu-satu (bukan diseragamkan/ditebak):
+
+  | Pemanggil | Section | Jarak title-desc asli | Setelah refactor |
+  |---|---|---|---|
+  | `SettingsScreen.kt` | Interval | 16.dp (anak Column terluar) | `spacing = 16.dp` eksplisit |
+  | `SettingsScreen.kt` | Konflik | 16.dp (anak Column terluar) | `spacing = 16.dp` eksplisit |
+  | `SettingsScreen.kt` | Konkurensi | 16.dp (anak Column terluar) | `spacing = 16.dp` eksplisit |
+  | `SettingsScreen.kt` | SAF (dlm `VaultCard`) | 8.dp | pakai default, 0 param tambahan |
+  | `SettingsScreen.kt` | Backup (dlm `VaultCard`) | 8.dp | pakai default, 0 param tambahan |
+  | `SettingsScreen.kt` | Import (dlm `VaultCard`) | 8.dp | pakai default, 0 param tambahan |
+  | `DiagnosticsScreen.kt` | Downloads (dlm `VaultCard`, Column TANPA `verticalArrangement`) | 0.dp | `spacing = 0.dp` eksplisit |
+  | `DiagnosticsScreen.kt` | Crashlog (dlm `VaultCard`, `spacedBy(8.dp)`) | 8.dp | pakai default, 0 param tambahan |
+
+- **TIDAK disentuh** (Zero-Unnecessary-Refactor + di luar scope aman): section
+  "Cek Pembaruan" (`SettingsScreen.kt`, baris title punya `Icon` di dalam
+  `Row` bareng `Text` -- pola beda, bukan `Text` title polos); "Auto-Sort" &
+  "Mode Shizuku" (title-nya `ToggleRow`, bukan `Text` -- sudah komponen hasil
+  batch sebelumnya, tidak relevan di sini); `diag_worker_status_title` (baris
+  ke-2 bukan desc, isinya `statusText` dinamis style `bodyMedium` bukan
+  `bodySmall` -- pola beda); `diag_manual_verify_title` (baris ke-2 dst bukan
+  1 desc melainkan 5 baris langkah terpisah -- pola beda). `FileSorter.kt` --
+  tetap di Pending Queue, lihat catatan instruksi user di atas.
+- File diubah (3, pas batas Micro-Batch): `ui/components/SectionHeader.kt`
+  (baru), `ui/screens/SettingsScreen.kt` (parsial: 1 import baru, 6 blok
+  `Text`+`Text`->`SectionHeader`), `ui/screens/DiagnosticsScreen.kt` (parsial:
+  1 import baru, 2 blok `Text`+`Text`->`SectionHeader`). `FILE_MANIFEST.txt`
+  diperbarui (1 file baru, posisi alfabetis antara `RuleCard.kt` &
+  `SegmentedControl.kt`).
+- **Verifikasi statis** (pengganti `./gradlew` yang tidak tersedia): (1)
+  keseimbangan `{}`/`()` dicek per file (semua balance), (2) `scripts/
+  preflight_check.sh` 14/14 kategori PASS, (3) grep ulang pasca-edit
+  memastikan 8 pola lama sudah tergantikan & 4 pola yang SENGAJA tidak
+  disentuh (update/shizuku/autosort/worker-status/manual-verify) masih utuh
+  seperti semula.
+- **Batas jujur**: seperti seluruh riwayat project, **BELUM PERNAH lewat
+  `./gradlew`/device asli** -- ekstraksi ini risiko serendah mungkin by
+  design (0 logic/state disentuh, constraint Compose murni + tabel verifikasi
+  `spacing` per-titik di atas), tapi tetap belum ada konfirmasi compile/render
+  asli.
+- **Pending Queue (tidak berubah dari sesi sebelumnya, belum dikerjakan)**:
+  1. **`FileSorter.kt` (2086 baris)** -- TETAP tunggu instruksi eksplisit user
+     (bukan kosmetik, file inti SAF/Shizuku berisiko tinggi).
+  2. **Audit unused import project-wide** -- baru dicek 4 file total
+     (`AddEditRuleScreen.kt`, `SettingsScreen.kt` batch lalu; `SettingsScreen.kt`,
+     `DiagnosticsScreen.kt` batch ini -- tidak ada import yg jadi unused krn
+     `Text`/`MaterialTheme` masih dipakai luas di kedua file), 65 file `.kt`
+     lain BELUM diaudit.
+  3. **Desync label versi `CHANGELOG.md` vs `PROJECT_STATE.md`** -- lihat
+     detail lengkap di entri batch `ToggleRow` di bawah, masih belum
+     diperbaiki (di luar scope, TIDAK ditulis ulang tanpa instruksi eksplisit).
+- **User WAJIB verifikasi di HP**: (1) build CI hijau, (2) layar Pengaturan
+  (section Interval/Konflik/Konkurensi/SAF/Backup/Import) & Diagnostik
+  (section Downloads/Riwayat Crash) -- tampilan & jarak title-desc HARUS
+  identik 1:1 dgn sebelumnya (0 perubahan visual).
+
 ## [REFACTOR] Ekstrak `ToggleRow` -- konsolidasi 3 Row switch duplikat, tanpa ubah behavior (2026-08-27)
 - **Instruksi user, eksplisit**: "refactor rapi-rapi tanpa mengubah
   behavior!!" -- tanpa scope spesifik, jadi diaudit dulu (bukan Fast-Track --
