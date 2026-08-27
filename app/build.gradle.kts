@@ -18,12 +18,21 @@ android {
     namespace = "com.elprompter.promptvault"
     compileSdk = 34
 
+    // [GOVERNANCE 2026-08-27] Versi WAJIB 100% otomatis dari GitHub, TIDAK
+    // BOLEH ada bump manual lagi -- lihat rule pinned di PROJECT_STATE.md.
+    // GITHUB_RUN_NUMBER = env var bawaan default tiap job GitHub Actions
+    // (auto-tersedia ke semua step `run:` termasuk `./gradlew`, 0 setup
+    // workflow tambahan diperlukan). Fallback hanya kepakai utk build DI
+    // LUAR CI (mis. lint/test lokal Termux) -- APK release nyata SELALU
+    // lewat workflow, jadi selalu dapat run number asli.
+    val githubRunNumber = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull()
+
     defaultConfig {
         applicationId = "com.elprompter.promptvault"
         minSdk = 26
         targetSdk = 34
-        versionCode = 197
-        versionName = "8.35.6"
+        versionCode = githubRunNumber ?: 1
+        versionName = githubRunNumber?.let { "1.0.$it" } ?: "1.0.0-dev"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

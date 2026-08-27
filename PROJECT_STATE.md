@@ -4,15 +4,51 @@
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
 ## 📌 ATURAN WAJIB SESI (PINNED -- jangan pernah turun/terkubur log baru)
-1. **Bump versi manual wajib setiap sesi** -- `versionCode` & `versionName`
-   di `app/build.gradle.kts` WAJIB di-bump tiap sesi kerja, termasuk kalau
-   perubahan cuma dokumentasi/governance (tanpa ubah kode).
-> Instruksi user 2026-08-21 (rule #2 lama soal posisi box skrip commit
-> DICABUT 2026-08-27 atas instruksi eksplisit user -- dinilai sudah bisa
-> dinalar sendiri oleh sesi lain tanpa perlu dipin di sini). Section ini
-> PERMANEN di baris teratas file ini, tidak ikut aturan descending log
-> biasa -- entri log baru tetap disisipkan di bawah section ini, BUKAN di
-> atasnya.
+1. **DILARANG bump versi manual dalam bentuk apa pun.** `versionCode` &
+   `versionName` di `app/build.gradle.kts` WAJIB 100% otomatis, diturunkan
+   langsung dari `GITHUB_RUN_NUMBER` (env var bawaan tiap job GitHub
+   Actions) -- BUKAN git tag, BUKAN dihitung manual, BUKAN diketik sesi
+   mana pun. Detail implementasi: lihat log governance di bawah (2026-08-27).
+> Rule ini LOCKED atas instruksi eksplisit user 2026-08-27: "Gak ada
+> perubahan oleh sesi lain lagi, berlaku sekarang!!" -- sesi mana pun
+> (termasuk sesi ini) DILARANG mengubah/mencabut/melonggarkan rule #1 di
+> atas tanpa instruksi eksplisit baru dari user. Rule pinned lama (wajib
+> bump manual tiap sesi) SUDAH DICABUT TOTAL & digantikan kebalikannya
+> persis -- lihat log di bawah. Section ini PERMANEN di baris teratas file
+> ini, tidak ikut aturan descending log biasa -- entri log baru tetap
+> disisipkan di bawah section ini, BUKAN di atasnya.
+
+## [GOVERNANCE] Versioning 100% otomatis dari GitHub -- manual bump DIHAPUS PERMANEN (2026-08-27)
+- **Instruksi eksplisit user**: singkirkan semua rule lama soal versioning,
+  gantikan dgn: tidak boleh ada lagi bump versi manual, `versionCode` &
+  `versionName` wajib otomatis langsung dari GitHub, rule ini tidak boleh
+  diubah sesi lain, berlaku seketika.
+- **`app/build.gradle.kts`** (protected asset, edit PARSIAL, izin eksplisit
+  user utk task ini): hardcode `versionCode = 197` / `versionName =
+  "8.35.6"` diganti baca `System.getenv("GITHUB_RUN_NUMBER")` saat fase
+  konfigurasi -- pola IDENTIK dgn `signingConfigs` yg sudah lama baca
+  `System.getenv(...)` langsung di file yang sama (0 pola baru).
+  - `versionCode = githubRunNumber ?: 1` -- integer run number Actions,
+    terjamin naik terus tiap job baru (syarat wajib Android utk
+    versionCode), 0 kemungkinan lupa/duplikat krn tak lagi disentuh manusia.
+  - `versionName = githubRunNumber?.let { "1.0.$it" } ?: "1.0.0-dev"` --
+    fallback HANYA kepakai kalau build jalan DI LUAR GitHub Actions (mis.
+    lint/test lokal Termux tanpa env var ini); APK release nyata SELALU
+    lewat workflow CI shg selalu dapat run number asli.
+  - **Asumsi eksplisit** (boleh dikoreksi user kalau format tak sesuai
+    selera): skema lama `major.minor.patch` manual (mis. `8.35.6`) tidak
+    bisa dipertahankan krn user minta nol campur tangan manusia --
+    `1.0.<run_number>` dipilih supaya tetap berbentuk "versi" familiar
+    tanpa ada komponen yg perlu diketik manusia kapan pun.
+  - **`.github/workflows/build.yml` TIDAK disentuh sama sekali** --
+    `GITHUB_RUN_NUMBER` adalah env var bawaan default tiap job Actions
+    (auto-tersedia ke semua step `run:` termasuk `./gradlew`), 0 perubahan
+    workflow diperlukan.
+- **Efek samping yang perlu diketahui user**: mulai sekarang versionName
+  APK TIDAK LAGI berbentuk `8.x.y` semantic seperti histori sebelumnya --
+  jadi `1.0.<nomor_run_actions>` (mis. `1.0.412`), dan HANYA terisi run
+  number asli saat build lolos lewat GitHub Actions (build lokal/Termux
+  tanpa CI tetap tampil fallback `1.0.0-dev`, sesuai desain baru ini).
 
 ## v8.35.6 -- FITUR BARU: guard "Buang Perubahan?" saat keluar Edit rule (2026-08-27)
 - **Instruksi eksplisit user** (lanjutan 2 laporan bug v8.35.4/v8.35.5):
