@@ -55,6 +55,9 @@
     <string name="rule_edit_confirm_duplicate">Pattern \"%1$s\" sudah dipakai rule \"%2$s\". Timpa rule tersebut?</string>
     <string name="rule_edit_confirm_overlap">Pattern ini bisa tumpang tindih dengan: %1$s. File yang cocok di keduanya akan memakai rule yang lebih dulu terdaftar. Tetap simpan?</string>
     <string name="rule_edit_confirm_button">Tetap Simpan</string>
+    <string name="rule_edit_discard_title">Buang Perubahan?</string>
+    <string name="rule_edit_discard_message">Ada perubahan yang belum disimpan. Yakin ingin keluar tanpa menyimpan?</string>
+    <string name="rule_edit_discard_confirm">Buang</string>
 
     <!-- RuleListScreen.kt -->
     <string name="rule_list_title">Kelola Rule</string>

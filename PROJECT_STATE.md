@@ -14,6 +14,85 @@
 > biasa -- entri log baru tetap disisipkan di bawah section ini, BUKAN di
 > atasnya.
 
+## v8.35.6 -- FITUR BARU: guard "Buang Perubahan?" saat keluar Edit rule (2026-08-27)
+- **Instruksi eksplisit user** (lanjutan 2 laporan bug v8.35.4/v8.35.5):
+  "kalau ada perubahan yang diterapkan user tetapi belum disimpan, wajib
+  trigger tab konfirmasi jika user hendak meninggalkan setting rule!! (entah
+  itu pakai button/gesture back)". Konteks: user paham 2 fix sebelumnya
+  sudah benar & dialog overlap yang WAJIB "Tetap Simpan" itu memang
+  by-design (`ModalBottomSheet.onDismissRequest` = Batal, standar di semua
+  konfirmasi app) -- tapi kasus SPESIFIK ini beda: user BELUM SEMPAT tap
+  Simpan sama sekali, keburu keluar layar (tombol panah kembali ATAU
+  gesture/tombol back sistem Android) -- 0 peringatan sebelumnya, form
+  hilang total tanpa disadari.
+- **Implementasi** (`ui/screens/AddEditRuleScreen.kt`):
+  - `hasUnsavedChanges: Boolean` -- dihitung ulang tiap recomposition (bukan
+    `remember`, perbandingan String/Boolean murah) dari field form SEKARANG
+    vs baseline: `existingRule` kalau EDIT rule lama, blank/default kalau
+    TAMBAH rule baru (`existingRule == null`). Mencakup SEMUA field yang bisa
+    diketik/ditoggle user di layar ini: `folderName`, `pattern`,
+    `excludePattern`, `minSizeKbText`, `maxSizeKbText`, `holdBackLatestZip`.
+  - `BackHandler(enabled = hasUnsavedChanges) { showDiscardConfirm = true }`
+    (`androidx.activity.compose.BackHandler`, dependency `activity-compose`
+    SUDAH ada di `app/build.gradle.kts` sejak lama, 0 dependency baru) --
+    intersep gesture/tombol back SISTEM. `enabled` diikat ke
+    `hasUnsavedChanges` -- kalau TIDAK ada perubahan, handler nonaktif &
+    perilaku back baku (pop back stack, sama efeknya dgn `onCancel()`) tetap
+    jalan seperti biasa, 0 perubahan perilaku utk kasus "tidak ada
+    perubahan" (mayoritas kasus: buka Edit lalu langsung keluar tanpa
+    ngetik apa pun).
+  - `VaultTopBar` `onBack`: SEBELUMNYA `onCancel` langsung -- sekarang
+    `{ if (hasUnsavedChanges) showDiscardConfirm = true else onCancel() }`,
+    pola identik BackHandler di atas (tombol panah & gesture sistem sekarang
+    treated SAMA, sesuai instruksi eksplisit user "entah itu pakai
+    button/gesture back").
+  - Sheet baru `VaultActionSheet` ("Buang Perubahan?", `isDestructive = true`
+    -- pola sama dgn konfirmasi hapus rule, krn aksi ini merusak/tidak bisa
+    dibatalkan): `onConfirm` -> tutup sheet + `onCancel()` (lanjut keluar,
+    perubahan dibuang), `onDismiss` (Batal/back/tap-luar sheet ini sendiri)
+    -> cuma tutup sheet, TETAP di layar Edit, semua field form UTUH tidak
+    hilang (state `rememberSaveable` tidak disentuh sama sekali oleh sheet
+    ini).
+  - 3 string baru (`res/values/strings.xml`, prefix `rule_edit_discard_*`,
+    konsisten dgn `rule_edit_confirm_*` yang sudah ada): title, message,
+    confirmLabel (dismissLabel pakai default `VaultActionSheet` = "Batal",
+    tidak perlu string baru).
+- **TIDAK disentuh** (Zero-Unnecessary-Refactor): sheet konfirmasi overlap/
+  duplikat yang SUDAH ADA (`pendingCheck`/`pendingRule`, fix v8.35.5) --
+  guard baru ini 100% independen, jalur BERBEDA (guard ini soal "keluar
+  layar", bukan soal "tap Simpan"); `VaultActionSheet.kt` sendiri (dipakai
+  ulang apa adanya, 0 parameter baru ditambah ke komponennya); layar lain
+  (`RuleListScreen`, `SettingsScreen`, dst) -- guard ini SENGAJA scope
+  sempit HANYA `AddEditRuleScreen` sesuai konteks laporan bug, bukan pola
+  umum lintas-layar yang belum diminta.
+- File diubah (3, dalam batas Micro-Batch): `ui/screens/AddEditRuleScreen.kt`
+  (parsial: 1 import, blok state baru, `VaultTopBar` `onBack`, 1 sheet baru
+  di akhir composable), `res/values/strings.xml` (3 string baru), `app/
+  build.gradle.kts` (versi). `FILE_MANIFEST.txt` TIDAK berubah.
+- **Batas jujur**: seperti seluruh riwayat project, **BELUM PERNAH lewat
+  `./gradlew`/device asli** -- `BackHandler` dependency (`activity-compose`)
+  SUDAH lama ada di project (dipakai transitif oleh Navigation Compose),
+  tapi pemakaian eksplisit `BackHandler` composable ini BARU PERTAMA KALI
+  di seluruh riwayat project (grep sebelum implementasi: 0 hasil) --
+  RISIKO LEBIH TINGGI dari fix biasa (API belum pernah divalidasi compile
+  di sandbox `./gradlew`, cuma dicek `preflight_check.sh` statis).
+- **User WAJIB verifikasi di HP**: (1) build CI hijau (PALING PENTING utk
+  fitur ini -- `BackHandler` API baru, kalau ada typo import/signature baru
+  ketahuan di sini), (2) buka Edit rule lama -> ubah 1 field APA SAJA (mis.
+  nyalakan toggle) -> TANPA tap Simpan, tekan tombol panah kembali
+  VaultTopBar -> sheet "Buang Perubahan?" HARUS muncul, (3) ulangi #2 tapi
+  pakai gesture/tombol back sistem Android (bukan tombol di app) -> sheet
+  HARUS TETAP muncul (bukan cuma tombol panah yang ke-cover), (4) di sheet
+  itu tap "Batal" -> HARUS balik ke form Edit, field yang barusan diubah
+  HARUS MASIH ADA (tidak hilang), (5) tap "Buang" -> HARUS keluar ke daftar
+  rule, perubahan TIDAK tersimpan (sesuai namanya), (6) buka Edit rule ->
+  TANPA ubah apa pun -> tombol panah kembali / gesture back -> HARUS
+  LANGSUNG keluar TANPA sheet apa pun (0 regresi kasus "tidak ada
+  perubahan"), (7) alur Simpan normal (v8.35.4/v8.35.5, toggle+Simpan
+  tanpa dialog overlap kalau pattern tak berubah) tetap jalan seperti
+  sebelumnya -- 0 regresi.
+- versionCode 196->197, versionName 8.35.5->8.35.6.
+
 ## v8.35.5 -- FIX lanjutan: skip dialog konfirmasi overlap kalau pattern tak berubah (2026-08-27)
 - **Lanjutan laporan v8.35.4** -- fix v8.35.4 (await Job sebelum popBackStack)
   BENAR tapi TIDAK CUKUP: user kirim screenshot bukti dialog "Perlu konfirmasi"

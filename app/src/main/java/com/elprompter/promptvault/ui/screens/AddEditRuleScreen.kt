@@ -1,5 +1,6 @@
 package com.elprompter.promptvault.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -118,6 +119,35 @@ fun AddEditRuleScreen(
     // bertumpuk.
     var isSaving by remember { mutableStateOf(false) }
 
+    // [Fix bug lanjutan, permintaan eksplisit user 2026-08-27] Guard "buang
+    // perubahan?" -- kalau user sudah ubah field APA PUN (termasuk toggle
+    // holdBackLatestZip) tapi belum tap "Simpan", dan mencoba MENINGGALKAN
+    // layar ini (baik lewat tombol panah kembali di VaultTopBar MAUPUN
+    // gesture/tombol back sistem), WAJIB tampil konfirmasi dulu -- supaya
+    // perubahan tidak hilang diam-diam tanpa disadari (akar masalah yang
+    // sama dgn 2 laporan bug sebelumnya, kali ini utk jalur "user sendiri
+    // yang belum sempat tap Simpan", bukan jalur dialog overlap). Dihitung
+    // ulang tiap recomposition (bukan `remember` -- perbandingan String/
+    // Boolean murah, tidak perlu memoisasi) dari field form SEKARANG vs
+    // baseline: `existingRule` kalau EDIT, blank/default kalau TAMBAH rule
+    // baru (`existingRule == null`).
+    val hasUnsavedChanges = if (existingRule == null) {
+        folderName.isNotBlank() || pattern.isNotBlank() || excludePattern.isNotBlank() ||
+            minSizeKbText.isNotBlank() || maxSizeKbText.isNotBlank() || holdBackLatestZip
+    } else {
+        folderName != existingRule.folderName ||
+            pattern != existingRule.pattern ||
+            excludePattern != existingRule.excludePattern ||
+            minSizeKbText != (existingRule.minSizeKb?.toString() ?: "") ||
+            maxSizeKbText != (existingRule.maxSizeKb?.toString() ?: "") ||
+            holdBackLatestZip != existingRule.holdBackLatestZip
+    }
+    var showDiscardConfirm by remember { mutableStateOf(false) }
+    // `enabled = hasUnsavedChanges` -- kalau TIDAK ada perubahan, BackHandler
+    // ini nonaktif & perilaku back SISTEM baku (pop back stack biasa, sama
+    // persis efeknya dgn onCancel()) tetap berlaku tanpa perlu dipanggil manual.
+    BackHandler(enabled = hasUnsavedChanges) { showDiscardConfirm = true }
+
     val scope = rememberCoroutineScope()
 
     // [Fix P0-1 + P2-2, audit gap 2026-08-16 -- PromptVault_real_functional_polish_gap_audit.md]
@@ -143,7 +173,10 @@ fun AddEditRuleScreen(
 
     Scaffold(
         topBar = {
-            VaultTopBar(title = if (existingRule == null) stringResource(R.string.rule_edit_title_add) else stringResource(R.string.rule_edit_title_edit), onBack = onCancel)
+            VaultTopBar(
+                title = if (existingRule == null) stringResource(R.string.rule_edit_title_add) else stringResource(R.string.rule_edit_title_edit),
+                onBack = { if (hasUnsavedChanges) showDiscardConfirm = true else onCancel() }
+            )
         }
     ) { padding ->
         Column(
@@ -352,6 +385,25 @@ fun AddEditRuleScreen(
                 pendingCheck = null
                 pendingRule = null
             }
+        )
+    }
+
+    // [Fix bug lanjutan, permintaan eksplisit user 2026-08-27] Sheet konfirmasi
+    // "buang perubahan?" -- dipicu BackHandler (gesture/tombol back sistem) DAN
+    // tombol panah kembali VaultTopBar (lihat 2 titik pemanggil showDiscardConfirm
+    // di atas). isDestructive=true (pola sama dgn konfirmasi hapus rule) krn
+    // "Buang" di sini bersifat merusak/tidak bisa dibatalkan -- perubahan hilang.
+    if (showDiscardConfirm) {
+        VaultActionSheet(
+            title = stringResource(R.string.rule_edit_discard_title),
+            message = stringResource(R.string.rule_edit_discard_message),
+            confirmLabel = stringResource(R.string.rule_edit_discard_confirm),
+            isDestructive = true,
+            onConfirm = {
+                showDiscardConfirm = false
+                onCancel()
+            },
+            onDismiss = { showDiscardConfirm = false }
         )
     }
 }
