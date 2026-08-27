@@ -103,12 +103,30 @@ jobs:
         with:
           gradle-version: '8.9'
 
+      # [fix 2026-08-27, insiden CI merah pasca-governance versioning
+      # otomatis] SEBELUMNYA baris ini `grep -oP 'versionName = "\K[^"]+'
+      # app/build.gradle.kts` -- regex itu expect literal
+      # `versionName = "x.y.z"` di source. Begitu app/build.gradle.kts
+      # diubah baca versionName dari `System.getenv("GITHUB_RUN_NUMBER")`
+      # (rule pinned baru PROJECT_STATE.md: DILARANG bump manual), baris itu
+      # tidak lagi match apa pun -> grep exit 1 -> `set -euo pipefail`
+      # abort step ini SEBELUM baris `echo` sempat jalan (makanya
+      # read-version.log yang ke-upload waktu itu 0 byte kosong total) --
+      # SELURUH job berhenti di sini, compile/test/assemble tidak pernah
+      # jalan. Fix: hitung VERSION LANGSUNG dari `$GITHUB_RUN_NUMBER` (env
+      # var bawaan default tiap job Actions, tidak perlu grep source file
+      # sama sekali) dengan formula IDENTIK persis dgn fallback di
+      # `app/build.gradle.kts` (`"1.0.$githubRunNumber"`) -- keduanya jalan
+      # di run yang SAMA jadi nilainya PASTI sama, menjaga versionName yang
+      # ke-embed di APK vs tag/nama GitHub Release tetap 1:1 konsisten
+      # (penting utk in-app update-checker yg membandingkan versionName
+      # terpasang vs tag Release terbaru).
       - name: Read app version
         id: version
         run: |
           set -euo pipefail
           {
-            VERSION=$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts)
+            VERSION="1.0.$GITHUB_RUN_NUMBER"
             echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           } 2>&1 | tee read-version.log
 

@@ -50,6 +50,38 @@
   number asli saat build lolos lewat GitHub Actions (build lokal/Termux
   tanpa CI tetap tampil fallback `1.0.0-dev`, sesuai desain baru ini).
 
+## [INSIDEN+FIX] CI merah total pasca-governance versioning otomatis (2026-08-27)
+- **Gejala nyata dari user** (2 log Actions asli diberikan): job `build`
+  gagal di step **"Read app version"**, exit code 1, `read-version.log`
+  yang ke-upload 0 byte kosong total. Compile/test/`assembleRelease`
+  **TIDAK PERNAH JALAN** (diagnostik `List release output` konfirmasi
+  folder `app/build/outputs/apk/release/` tidak ada sama sekali).
+- **Root cause** (dari log asli, bukan tebakan): step itu berisi
+  `VERSION=$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts)` --
+  regex ini expect literal `versionName = "x.y.z"` di source text. Batch
+  governance sebelumnya (entry di atas) mengubah baris itu jadi ekspresi
+  Kotlin (`githubRunNumber?.let {...}`), jadi 0 match -> grep exit 1 ->
+  `set -euo pipefail` abort step ini SEBELUM baris `echo` sempat jalan --
+  konsisten & menjelaskan kenapa `read-version.log` yang lebih dulu
+  diupload user juga kosong total.
+- **`.github/workflows/build.yml`** (protected asset, edit PARSIAL, izin
+  eksplisit user + **isi lengkap file diberikan user sendiri** utk task
+  ini -- BUKAN direkonstruksi/ditebak): HANYA step "Read app version" yang
+  diubah, 16 step lain disalin 100% identik byte-per-byte (diverifikasi
+  `diff` sebelum commit). `VERSION=$(grep ...)` diganti
+  `VERSION="1.0.$GITHUB_RUN_NUMBER"` -- formula IDENTIK persis dgn
+  fallback di `app/build.gradle.kts` (`"1.0.$githubRunNumber"`), keduanya
+  jalan di run GitHub Actions yang SAMA jadi nilainya PASTI sama. 0 step
+  lain perlu disentuh -- semua step downstream (`Rename APK`,
+  `Upload APK artifact`, `Publish GitHub Release`, `Force-flag Latest`,
+  `Upload build log on failure`) cuma pakai `steps.version.outputs.version`
+  sbg string opaque, tidak peduli cara hitungnya.
+- **Kenapa harus 1:1 sama persis dgn `app/build.gradle.kts`** (bukan
+  format bebas): `UpdateRepository.kt`/`UpdateModels.kt` (fitur in-app
+  update-checker yg sudah ada) membandingkan versionName APK terpasang vs
+  tag GitHub Release terbaru -- kalau formatnya beda dikit saja, fitur cek
+  update bisa salah baca/gagal match.
+
 ## v8.35.6 -- FITUR BARU: guard "Buang Perubahan?" saat keluar Edit rule (2026-08-27)
 - **Instruksi eksplisit user** (lanjutan 2 laporan bug v8.35.4/v8.35.5):
   "kalau ada perubahan yang diterapkan user tetapi belum disimpan, wajib
