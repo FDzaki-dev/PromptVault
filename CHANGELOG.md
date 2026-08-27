@@ -3,6 +3,22 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## [FITUR] Aksi ke-3 "Simpan Perubahan" di sheet "Buang Perubahan?", gaya iOS (2026-08-27)
+
+Instruksi user (dgn screenshot): tambah aksi ke-3 "Simpan Perubahan" di sheet
+konfirmasi keluar tanpa simpan, gaya iOS.
+
+`VaultActionSheet` (komponen bersama, 6 pemanggil) dapat 2 param opsional
+baru (`neutralLabel`/`onNeutral`, default `null`) -- 5 pemanggil lain 100%
+tidak berubah. Urutan 3 aksi ikut konvensi Apple: destructive ("Buang") ->
+netral ("Simpan Perubahan", BARU) -> cancel ("Batal"). Logic simpan
+diekstrak dari tombol "Simpan" utama (`performSave`, 0 logic diubah) supaya
+dipakai ulang di aksi baru ini -- disembunyikan otomatis kalau form sedang
+tidak valid utk disimpan (sama persis kondisi tombol Simpan utama).
+
+File diubah (3): `ui/components/VaultActionSheet.kt` (parsial), `ui/screens/
+AddEditRuleScreen.kt` (parsial), `res/values/strings.xml` (1 string baru).
+
 ## [REFACTOR] Ekstrak `SectionHeader` -- konsolidasi 8 pasangan Text title+desc duplikat, tanpa ubah behavior (2026-08-27)
 
 Instruksi user: "lanjutkan progress refactor, kosmetik only" -- lanjutan

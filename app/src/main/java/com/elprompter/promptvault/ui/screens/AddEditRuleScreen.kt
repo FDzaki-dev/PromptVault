@@ -171,6 +171,59 @@ fun AddEditRuleScreen(
         }
     }
 
+    // [Fitur baru, permintaan eksplisit user 2026-08-27] `isFormValidToSave`
+    // sama persis dgn kondisi `enabled` tombol "Simpan" sebelumnya (cuma
+    // ditarik jadi val bernama, dipakai ulang di 2 tempat: tombol Simpan &
+    // gating aksi ke-3 "Simpan Perubahan" di sheet "Buang Perubahan?" di
+    // bawah -- kalau form TIDAK valid, aksi itu disembunyikan total dari
+    // sheet, bukan ditampilkan tapi no-op, supaya user tidak nge-tap sesuatu
+    // yang kelihatan bisa jalan tapi diam-diam gagal).
+    val isFormValidToSave = folderName.isNotBlank() && folderNameError == null && pattern.isNotBlank()
+
+    // [Fitur baru, permintaan eksplisit user 2026-08-27] Diekstrak murni dari
+    // body onClick tombol "Simpan" (0 logic diubah) supaya bisa dipanggil
+    // ulang dari aksi ke-3 "Simpan Perubahan" di sheet "Buang Perubahan?" --
+    // lihat pemanggil kedua di showDiscardConfirm di bawah.
+    val performSave: () -> Unit = {
+        val rule = Rule(
+            id = existingRule?.id ?: UUID.randomUUID().toString(),
+            folderName = folderName.trim(),
+            pattern = pattern.trim(),
+            excludePattern = excludePattern.trim(),
+            minSizeKb = minSizeKbText.toLongOrNull(),
+            maxSizeKb = maxSizeKbText.toLongOrNull(),
+            holdBackLatestZip = holdBackLatestZip
+        )
+        isSaving = true
+        scope.launch {
+            // [Fix bug lanjutan, laporan user 2026-08-27] checkBeforeSave
+            // (duplicate pattern + overlap) HANYA bergantung pada field
+            // `pattern` -- lihat RuleOverlapChecker.findOverlaps() &
+            // RuleRepository.checkBeforeSave(), keduanya TIDAK PERNAH baca
+            // holdBackLatestZip/excludePattern/minSizeKb/maxSizeKb/
+            // folderName/enabled. Kalau user edit rule LAMA tanpa ubah
+            // pattern sama sekali (mis. cuma nyalakan toggle "Tahan versi
+            // .zip terbaru"), kondisi tumpang tindih/duplikat SUDAH PERSIS
+            // sama dgn saat rule ini terakhir disimpan -- minta konfirmasi
+            // ULANG di sini cuma friksi, dan kalau user tidak sadar HARUS
+            // tap "Tetap Simpan" (bukan cuma baca lalu keluar/back), SELURUH
+            // perubahan form (termasuk toggle) hilang diam-diam tanpa
+            // pernah tersimpan -- persis root cause laporan bug user.
+            // Overlap yang SUDAH ada TETAP kelihatan lewat badge peringatan
+            // di RuleListScreen (hasOverlapWarning), jadi user tidak
+            // kehilangan info apa pun dgn skip ini.
+            val patternUnchanged = existingRule != null && existingRule.pattern == rule.pattern
+            val check = if (patternUnchanged) SaveRuleCheck.Ok else onCheckBeforeSave(rule)
+            isSaving = false
+            if (check is SaveRuleCheck.Ok) {
+                onSave(rule, null)
+            } else {
+                pendingCheck = check
+                pendingRule = rule
+            }
+        }
+    }
+
     Scaffold(
         topBar = {
             VaultTopBar(
@@ -305,46 +358,8 @@ fun AddEditRuleScreen(
             }
 
             Button(
-                onClick = {
-                    val rule = Rule(
-                        id = existingRule?.id ?: UUID.randomUUID().toString(),
-                        folderName = folderName.trim(),
-                        pattern = pattern.trim(),
-                        excludePattern = excludePattern.trim(),
-                        minSizeKb = minSizeKbText.toLongOrNull(),
-                        maxSizeKb = maxSizeKbText.toLongOrNull(),
-                        holdBackLatestZip = holdBackLatestZip
-                    )
-                    isSaving = true
-                    scope.launch {
-                        // [Fix bug lanjutan, laporan user 2026-08-27] checkBeforeSave
-                        // (duplicate pattern + overlap) HANYA bergantung pada field
-                        // `pattern` -- lihat RuleOverlapChecker.findOverlaps() &
-                        // RuleRepository.checkBeforeSave(), keduanya TIDAK PERNAH baca
-                        // holdBackLatestZip/excludePattern/minSizeKb/maxSizeKb/
-                        // folderName/enabled. Kalau user edit rule LAMA tanpa ubah
-                        // pattern sama sekali (mis. cuma nyalakan toggle "Tahan versi
-                        // .zip terbaru"), kondisi tumpang tindih/duplikat SUDAH PERSIS
-                        // sama dgn saat rule ini terakhir disimpan -- minta konfirmasi
-                        // ULANG di sini cuma friksi, dan kalau user tidak sadar HARUS
-                        // tap "Tetap Simpan" (bukan cuma baca lalu keluar/back), SELURUH
-                        // perubahan form (termasuk toggle) hilang diam-diam tanpa
-                        // pernah tersimpan -- persis root cause laporan bug user.
-                        // Overlap yang SUDAH ada TETAP kelihatan lewat badge peringatan
-                        // di RuleListScreen (hasOverlapWarning), jadi user tidak
-                        // kehilangan info apa pun dgn skip ini.
-                        val patternUnchanged = existingRule != null && existingRule.pattern == rule.pattern
-                        val check = if (patternUnchanged) SaveRuleCheck.Ok else onCheckBeforeSave(rule)
-                        isSaving = false
-                        if (check is SaveRuleCheck.Ok) {
-                            onSave(rule, null)
-                        } else {
-                            pendingCheck = check
-                            pendingRule = rule
-                        }
-                    }
-                },
-                enabled = folderName.isNotBlank() && folderNameError == null && pattern.isNotBlank() && !isSaving,
+                onClick = performSave,
+                enabled = isFormValidToSave && !isSaving,
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary, contentColor = MaterialTheme.colorScheme.onSecondary),
                 modifier = Modifier.fillMaxWidth()
             ) { Text(stringResource(R.string.action_save)) }
@@ -391,11 +406,25 @@ fun AddEditRuleScreen(
     // di atas). isDestructive=true (pola sama dgn konfirmasi hapus rule) krn
     // "Buang" di sini bersifat merusak/tidak bisa dibatalkan -- perubahan hilang.
     if (showDiscardConfirm) {
+        val discardSaveLabel = stringResource(R.string.rule_edit_discard_save)
         VaultActionSheet(
             title = stringResource(R.string.rule_edit_discard_title),
             message = stringResource(R.string.rule_edit_discard_message),
             confirmLabel = stringResource(R.string.rule_edit_discard_confirm),
             isDestructive = true,
+            // [Fitur baru, permintaan eksplisit user 2026-08-27] Aksi ke-3
+            // "Simpan Perubahan" -- SENGAJA disembunyikan total (null, bukan
+            // ditampilkan tapi disabled) kalau form saat ini tidak valid utk
+            // disimpan (`isFormValidToSave`), krn tombol "Simpan" utama di
+            // layar ini pun disabled pada kondisi yang sama -- konsisten,
+            // tidak menawarkan aksi yang diam-diam akan gagal.
+            neutralLabel = if (isFormValidToSave) discardSaveLabel else null,
+            onNeutral = if (isFormValidToSave) {
+                {
+                    showDiscardConfirm = false
+                    performSave()
+                }
+            } else null,
             onConfirm = {
                 showDiscardConfirm = false
                 onCancel()

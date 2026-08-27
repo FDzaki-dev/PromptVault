@@ -49,6 +49,18 @@ import com.elprompter.promptvault.ui.theme.VaultTheme
  * bawah. iOS `UIAlertController` (style `.actionSheet`) historisnya SELALU
  * begini -- tombol filled solid ala Material adalah bahasa visual
  * Material, bukan Cupertino.
+ *
+ * [Fitur baru, permintaan eksplisit user 2026-08-27] Aksi ke-3 opsional
+ * (`neutralLabel`/`onNeutral`, default `null`) -- pola Apple standar utk
+ * sheet "ada perubahan belum disimpan" (mis. Notes/Mail: Delete Draft/
+ * Save Draft/Cancel). Urutan baku iOS diikuti persis: [destructive] ->
+ * [netral/regular] -> [cancel paling bawah]. Kalau `neutralLabel`/
+ * `onNeutral` TIDAK dipass (default `null`, kondisi 5 dari 6 pemanggil
+ * project ini saat ditulis), sheet render 100% IDENTIK dgn sebelumnya --
+ * 0 divider/tombol tambahan, 0 pemanggil lama yang perlu diubah.
+ * Warna netral pakai `colors.primary` (beda dari destructive `colors.error`
+ * & cancel `colors.onSurfaceVariant`) supaya 3 aksi tetap kebeda jelas
+ * tanpa nambah token warna baru.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,6 +70,8 @@ fun VaultActionSheet(
     confirmLabel: String = "Lanjutkan",
     dismissLabel: String = "Batal",
     isDestructive: Boolean = false,
+    neutralLabel: String? = null,
+    onNeutral: (() -> Unit)? = null,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -116,6 +130,18 @@ fun VaultActionSheet(
                     )
                 }
                 HorizontalDivider(thickness = CupertinoTokens.HairlineWidth, color = CupertinoTokens.hairlineColor())
+                if (neutralLabel != null && onNeutral != null) {
+                    TextButton(
+                        onClick = {
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onNeutral()
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(neutralLabel, color = colors.primary, fontWeight = FontWeight.SemiBold)
+                    }
+                    HorizontalDivider(thickness = CupertinoTokens.HairlineWidth, color = CupertinoTokens.hairlineColor())
+                }
                 TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
                     Text(dismissLabel, color = colors.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
                 }
@@ -131,6 +157,17 @@ fun VaultActionSheet(
                     ),
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
                 ) { Text(confirmLabel) }
+
+                if (neutralLabel != null && onNeutral != null) {
+                    OutlinedButton(
+                        onClick = {
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onNeutral()
+                        },
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primary),
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text(neutralLabel) }
+                }
 
                 OutlinedButton(
                     onClick = onDismiss,

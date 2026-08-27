@@ -26,6 +26,82 @@
 > -- berlaku PERMANEN mulai sesi ini utk SEMUA sesi berikutnya, sesi mana
 > pun DILARANG mencabut/melonggarkan tanpa instruksi eksplisit baru user.
 
+## [FITUR] Aksi ke-3 "Simpan Perubahan" di sheet "Buang Perubahan?", gaya iOS (2026-08-27)
+- **Instruksi user, eksplisit** (dgn screenshot sheet "Buang Perubahan?"
+  existing): "tambahkan action ke-3 'simpan perubahan'. like iOS style!!" --
+  BUKAN task kosmetik (beda dari 2 batch refactor sebelumnya di hari yang
+  sama) -- ini nambah SATU jalur aksi baru (bisa trigger simpan rule dari
+  dalam sheet discard), jadi diaudit spt fitur baru biasa (bukan Fast-Track).
+- **Kenapa lewat `VaultActionSheet` (komponen bersama, dipakai 6 titik)
+  bukan cuma di `AddEditRuleScreen.kt` saja**: param aksi ke-3 dibuat
+  OPSIONAL (`neutralLabel`/`onNeutral`, default `null`) tepat supaya 5
+  pemanggil lain (`ActivityLogScreen.kt` x2, `RuleListScreen.kt`,
+  `SettingsScreen.kt`, + 1 sheet lain di `AddEditRuleScreen.kt` sendiri utk
+  konfirmasi duplikat/overlap) **TIDAK PERLU diubah SAMA SEKALI** & render
+  100% IDENTIK spt sebelumnya (grep diverifikasi: default `null` -> branch
+  `if (neutralLabel != null && onNeutral != null)` tidak pernah masuk ->
+  0 divider/tombol tambahan). Cuma sheet "Buang Perubahan?" yang pass
+  keduanya non-null.
+- **Urutan 3 aksi ikut konvensi Apple HIG persis** (bukan ditaruh
+  sembarang): [destructive paling atas] -> [aksi netral/regular] -> [cancel
+  paling bawah] -- pola yang sama dipakai iOS native sendiri di alert
+  "ada perubahan belum disimpan" (mis. Notes: Delete Draft/Save Draft/
+  Cancel; Mail: Delete Draft/Save Draft/Cancel). Di sini: "Buang" (merah,
+  `colors.error`, TETAP di posisi sama spt sebelumnya) -> "Simpan Perubahan"
+  (BARU, `colors.primary`, biar kebeda jelas dari 2 aksi lain tanpa nambah
+  token warna baru) -> "Batal" (`colors.onSurfaceVariant`, TETAP di baris
+  paling bawah spt sebelumnya, gaya Cupertino: `TextButton` + hairline
+  divider; gaya Material lain: `OutlinedButton`, keduanya konsisten dgn 2
+  tombol lama yang sudah ada).
+- **Wiring logic "Simpan Perubahan" (bukan cuma tombol kosong)**: body
+  `onClick` tombol "Simpan" utama (build `Rule` dari field form + `isSaving`
+  guard + `onCheckBeforeSave` + cabang Ok/duplicate-overlap) diekstrak MURNI
+  (0 logic diubah, cuma dipindah) jadi `val performSave: () -> Unit` di atas
+  `Scaffold` -- dipanggil ulang dari `onNeutral` sheet discard
+  (`showDiscardConfirm = false` dulu baru `performSave()`, urutan ini
+  PENTING supaya sheet discard tertutup SEBELUM sheet duplikat/overlap
+  berpotensi muncul menggantikannya lewat `pendingCheck`/`pendingRule` --
+  mencegah 2 sheet numpuk bareng, kelas bug yang sama persis dgn insiden
+  "dialog overlap" yang sudah pernah ditambal sebelumnya di file ini).
+  `onSave(rule, null)` pada jalur Ok TETAP motor navigasi pop-back-stack yang
+  sama (lihat `MainActivity.kt` composable `ADD_EDIT_RULE`) -- 0 perubahan
+  di titik itu.
+- **Guard form-tidak-valid**: `isFormValidToSave` (val baru, sama persis
+  kondisi `enabled` tombol Simpan sebelumnya: folder tidak blank + tidak ada
+  error validasi + pattern tidak blank) dipakai gating -- kalau form
+  SEDANG tidak valid saat sheet discard muncul, `neutralLabel`/`onNeutral`
+  dipass `null` (aksi disembunyikan TOTAL dari sheet, bukan ditampilkan tapi
+  diam-diam gagal kalau ditap) -- konsisten dgn tombol Simpan utama yang
+  disabled pada kondisi sama.
+- **TIDAK disentuh**: sheet konfirmasi duplikat/overlap ("Tetap Simpan?", di
+  `AddEditRuleScreen.kt` juga) -- SENGAJA tetap 2 aksi, aksi ke-3 di situ
+  tidak masuk akal (sudah dalam proses simpan, bukan discard). 5 pemanggil
+  `VaultActionSheet` lain -- lihat penjelasan param opsional di atas.
+- File diubah (3, pas batas Micro-Batch): `ui/components/VaultActionSheet.kt`
+  (parsial: 2 param baru + 2 blok render bersyarat, Cupertino & Material),
+  `ui/screens/AddEditRuleScreen.kt` (parsial: extract `performSave`+
+  `isFormValidToSave`, wiring sheet discard), `res/values/strings.xml`
+  (1 string baru: `rule_edit_discard_save`).
+- **Verifikasi statis**: (1) keseimbangan `{}`/`()` per file (semua balance),
+  (2) grep ulang 5 pemanggil `VaultActionSheet` lain -- 0 yang pass
+  `neutralLabel`/`onNeutral`, aman default `null`, (3) `scripts/
+  preflight_check.sh` 14/14 kategori PASS.
+- **Batas jujur**: seperti seluruh riwayat project, **BELUM PERNAH lewat
+  `./gradlew`/device asli** -- terutama flow "tap Simpan Perubahan saat
+  pattern ternyata duplikat/overlap dgn rule lain" (2 sheet berurutan,
+  bukan cuma path Ok) BELUM pernah dicoba nyata di device, cuma diverifikasi
+  lewat baca-ulang urutan state (`showDiscardConfirm`/`pendingCheck`/
+  `pendingRule`) di atas.
+- **User WAJIB verifikasi di HP**: (1) build CI hijau, (2) buka Edit/Tambah
+  Rule, ubah field APA PUN, coba kembali (tombol panah ATAU gesture back) --
+  sheet "Buang Perubahan?" HARUS tampil 3 aksi (Buang/Simpan Perubahan/
+  Batal) saat form valid, HANYA 2 aksi (Buang/Batal, TANPA "Simpan
+  Perubahan") saat form TIDAK valid (mis. nama folder/pattern dikosongkan
+  lagi), (3) tap "Simpan Perubahan" HARUS benar-benar menyimpan & kembali ke
+  daftar rule (bukan cuma nutup sheet), (4) 5 sheet lain di app (hapus rule,
+  undo, restore vault, konfirmasi duplikat/overlap) HARUS tetap 2 aksi spt
+  sebelumnya, 0 perubahan visual.
+
 ## [REFACTOR] Ekstrak `SectionHeader` -- konsolidasi 8 pasangan Text title+desc duplikat, tanpa ubah behavior (2026-08-27)
 - **Instruksi user, eksplisit**: "lanjutkan progress refactor *kosmetik only!!" --
   melanjutkan batch `ToggleRow` sesi sebelumnya, scope dibatasi user sendiri ke

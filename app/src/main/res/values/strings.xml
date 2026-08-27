@@ -58,6 +58,7 @@
     <string name="rule_edit_discard_title">Buang Perubahan?</string>
     <string name="rule_edit_discard_message">Ada perubahan yang belum disimpan. Yakin ingin keluar tanpa menyimpan?</string>
     <string name="rule_edit_discard_confirm">Buang</string>
+    <string name="rule_edit_discard_save">Simpan Perubahan</string>
 
     <!-- RuleListScreen.kt -->
     <string name="rule_list_title">Kelola Rule</string>
