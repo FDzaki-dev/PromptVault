@@ -26,6 +26,71 @@
 > -- berlaku PERMANEN mulai sesi ini utk SEMUA sesi berikutnya, sesi mana
 > pun DILARANG mencabut/melonggarkan tanpa instruksi eksplisit baru user.
 
+## [CUPERTINO] Warna sistem iOS -- tutup pending item TERAKHIR (ke-3 dari 3), restyling Cupertino murni SELESAI (2026-08-28)
+- **Instruksi user**: "lanjut fase terakhir penyempurnaan theme Cupertino
+  style murni!!" -- cocok PERSIS dgn 1 item tersisa di log batch di bawah
+  ("warna sistem iOS, `systemBlue` dst"), jadi TIDAK perlu audit generik
+  ulang dari nol, langsung ke item itu. Tapi item ini sendiri (per catatan
+  batch sebelumnya) butuh 1 langkah audit dulu sebelum eksekusi: cek
+  apakah ada kode yg hardcode `Color(0x...)` di luar package `ui/theme`
+  yang bisa BYPASS swap kondisional (beda dari shapes/typography yg
+  amannya sudah pasti krn cuma 1 titik pakai `MaterialTheme.shapes`/
+  `.typography`). Hasil grep: **0 hasil** -- seluruh app 100% konsumsi
+  warna lewat `MaterialTheme.colorScheme.*`/`VaultTheme.extraColors`, jadi
+  full-swap kondisional aman, pola identik shapes/typography.
+- **Sumber hue**: nilai publik resmi Apple HIG (dark appearance) --
+  systemBlue #0A84FF, systemTeal #64D2FF, systemOrange #FF9F0A, systemRed
+  #FF453A, systemIndigo #5E5CE6. **Tone (S/L) TIDAK dipakai mentah**:
+  dihitung ulang, systemBlue mentah cuma 3.58:1 vs
+  `SurfaceContainerHighest` (app ini), GAGAL syarat WCAG >=4.5:1 yang
+  sudah di-lock sejak v8.0.0 (nilai Apple dikalibrasi utk `systemBackground`
+  iOS asli yg jauh lebih gelap dari surface app ini). Tone di-re-derive
+  per hue Apple dgn pola IDENTIK cara `Primary`/`Tertiary`/dst diturunkan
+  dulu (S/L pastel dark-scheme M3) -- kontras final semua lulus AA
+  (5.24-7.33:1 foreground, 6.75-8.37:1 on-fill/on-container). Detail
+  perhitungan lengkap tiap warna: javadoc di `Color.kt`.
+- **`Color.kt`**: 18 val baru (`CupertinoBlue`/`OnBlue`/`BlueContainer`/
+  `OnBlueContainer` dst utk Blue/Teal/Orange/Red, + `CupertinoIndigo`/
+  `IndigoContainer` utk aksen ke-4) -- `PromptVaultColors` (skema M3 calm
+  lama, dipakai 3 gaya lain) 0 baris berubah.
+- **`Theme.kt`**: `CupertinoColors` (`ColorScheme` baru, `darkColorScheme`)
+  -- primary/secondary/tertiary/error diisi 4 warna sistem Apple di atas,
+  SEMUA slot neutral/surface/background 100% REUSE token
+  `PromptVaultColors` (0 token baru di sisi neutral -- "warna sistem" cuma
+  soal aksen, bukan rombak background). `CupertinoExtra` (varian kedua
+  `VaultExtraColors`, `slate` = `CupertinoIndigo`). `colorScheme` &
+  `LocalVaultExtraColors` di `PromptVaultTheme` KINI kondisional per
+  `themeStyle` -- pola identik PERSIS baris `shapes`/`typography` yg sudah
+  ada (var lokal `isCupertino` ditambah biar 3 baris kondisional tidak
+  duplikasi pemanggilan `==` yang sama 3x).
+- **`CupertinoTokens.kt`**: javadoc "Belum dikerjakan" diperbarui -- 0 item
+  wajib tersisa dari checklist restyling awal (typography, custom dialog,
+  warna sistem -- SEMUA 3 sudah tertutup). Dicatat eksplisit: penghalusan
+  lanjutan ke depan sifatnya iteratif/opsional (pola sama Neumorphism/
+  Glassmorphism), BUKAN checklist wajib baru.
+- **TIDAK disentuh** (Zero-Unnecessary-Refactor): `PromptVaultColors`
+  (0 baris berubah -- 3 gaya lain 100% identik visualnya spt sebelum batch
+  ini), semua composable yg MEMAKAI `MaterialTheme.colorScheme.*`/
+  `VaultTheme.extraColors.slate` (`VaultActionSheet`, `WarningBanner`,
+  `RuleCard`, `SegmentedControl`, `VaultTopBar`, `GroupedListRow`, dst) --
+  otomatis ikut berubah lewat `MaterialTheme`/`CompositionLocalProvider`
+  global, 0 titik pemanggilan manual yang perlu disentuh satu-satu.
+  `NeumorphTokens.kt` (referensi `Primary`/`Tertiary` mentah di situ
+  SENGAJA tetap brand-blue lama, khusus gaya Neumorphism, di luar scope
+  Cupertino -- dicek, tidak collide).
+- **Verifikasi statis**: keseimbangan `{}`/`()` ketiga file kode SEIMBANG
+  (`Color.kt` 0/0 & 115/115; `Theme.kt` 6/6 & 52/52; `CupertinoTokens.kt`
+  1/1 & 24/24).
+- File diubah (3, pas batas Micro-Batch): `ui/theme/Color.kt` (parsial,
+  tambah 18 val baru), `ui/theme/Theme.kt` (parsial, tambah `CupertinoColors`/
+  `CupertinoExtra` + 2 baris kondisional), `ui/theme/CupertinoTokens.kt`
+  (parsial, javadoc only, 0 logic).
+- **CHANGELOG.md**: entri baru ditambah paling atas batch ini juga.
+- **Pending Queue (tidak berubah)**: `FileSorter.kt` refactor (item lama,
+  tidak terkait Cupertino, lihat log lebih bawah) -- SATU-SATUNYA item
+  pending tersisa di project ini sekarang; restyling Cupertino murni tahap
+  awal (3/3 item) TUNTAS.
+
 ## [CUPERTINO] Typography scale iOS-ish -- tutup pending item ke-2 dari 3, tinggal "warna sistem" (2026-08-27)
 - **Instruksi user**: "sempurnakan Cupertino style murni!!" -- generik lagi,
   diaudit dulu (bukan Fast-Track). 2 item pending tersisa di javadoc

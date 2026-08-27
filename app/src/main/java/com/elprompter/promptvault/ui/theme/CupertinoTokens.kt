@@ -33,9 +33,17 @@ import androidx.compose.ui.unit.dp
  * - Typography scale iOS-ish: [CupertinoTypography] (`Type.kt`) -- kondisional
  *   di `Theme.kt` (pola identik shapes), skala HIG (tracking negatif di
  *   size 15-17sp, Semibold di Headline/nav title).
+ * - (2026-08-28, FASE TERAKHIR) Warna sistem iOS: `CupertinoColors`/
+ *   `CupertinoExtra` (`Theme.kt`) -- kondisional (pola identik shapes/
+ *   typography), hue systemBlue/Teal/Orange/Red/Indigo (Apple HIG publik,
+ *   tone di-re-derive supaya lulus WCAG app ini, lihat javadoc lengkap di
+ *   `Color.kt`). Menutup SEMUA 3 item restyling Cupertino murni tahap awal
+ *   (typography, custom dialog, warna sistem) -- 0 item wajib tersisa.
  *
- * Belum dikerjakan (bukan diabaikan, di luar 1 batch ini): warna sistem
- * (`systemBlue` dst).
+ * Belum dikerjakan: tidak ada item wajib tersisa dari checklist restyling
+ * awal. Penghalusan lanjutan (kalau ada) sifatnya iteratif ke depan --
+ * sama seperti Neumorphism/Glassmorphism yg juga puluhan iterasi setelah
+ * checklist awal selesai, bukan "sekali jalan lalu berhenti total".
  */
 object CupertinoTokens {
     /** Lebar hairline -- 1px fisik, konvensi iOS (`UIView` separator

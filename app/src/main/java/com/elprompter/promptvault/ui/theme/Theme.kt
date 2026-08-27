@@ -60,12 +60,63 @@ private val PromptVaultColors: ColorScheme = darkColorScheme(
 )
 
 /**
+ * (2026-08-28) Skema warna khusus gaya CUPERTINO -- tutup item TERAKHIR
+ * dari 3 pending restyling Cupertino murni (lihat javadoc lengkap hue di
+ * `Color.kt` & progres di `CupertinoTokens.kt`). Neutral/background/surface
+ * SENGAJA 100% REUSE dari [PromptVaultColors] (0 token baru) -- "warna
+ * sistem" cuma soal 4 slot AKSEN (primary/secondary/tertiary/error),
+ * bukan rombak background; shape ([CupertinoShapes]) & typography
+ * ([CupertinoTypography]) yang sudah ada di batch sebelumnya SUDAH cukup
+ * membedakan identitas visual Cupertino tanpa perlu background terpisah.
+ */
+private val CupertinoColors: ColorScheme = darkColorScheme(
+    primary = CupertinoBlue,
+    onPrimary = CupertinoOnBlue,
+    primaryContainer = CupertinoBlueContainer,
+    onPrimaryContainer = CupertinoOnBlueContainer,
+    secondary = CupertinoTeal,
+    onSecondary = CupertinoOnTeal,
+    secondaryContainer = CupertinoTealContainer,
+    onSecondaryContainer = CupertinoOnTealContainer,
+    tertiary = CupertinoOrange,
+    onTertiary = CupertinoOnOrange,
+    tertiaryContainer = CupertinoOrangeContainer,
+    onTertiaryContainer = CupertinoOnOrangeContainer,
+    background = AppBackground,
+    onBackground = TextPrimary,
+    surface = SurfaceDefault,
+    onSurface = TextPrimary,
+    surfaceVariant = SurfaceContainerHigh,
+    onSurfaceVariant = TextSecondary,
+    surfaceContainer = SurfaceContainer,
+    surfaceContainerHigh = SurfaceContainerHigh,
+    surfaceContainerHighest = SurfaceContainerHighest,
+    surfaceContainerLow = SurfaceContainerLow,
+    surfaceContainerLowest = SurfaceContainerLowest,
+    inverseSurface = TextPrimary,
+    inverseOnSurface = AppBackground,
+    inversePrimary = CupertinoBlue,
+    error = CupertinoRed,
+    onError = CupertinoOnRed,
+    errorContainer = CupertinoRedContainer,
+    onErrorContainer = CupertinoOnRedContainer,
+    outline = Outline,
+    outlineVariant = OutlineVariant,
+    scrim = Color.Black
+)
+
+/**
  * Aksen ke-4 di luar peran M3 baku, khusus menu "Pengaturan" (pola
  * "sistem 4-aksen" dipertahankan, lihat Color.kt). Nama field `slate`/
  * `slateContainer` SENGAJA TIDAK di-rename (walau sumber warnanya sekarang
  * SettingsAccent, bukan lagi SlateGlow) -- satu-satunya call site
  * (`HomeScreen.kt`) tetap valid tanpa perlu disentuh, satu titik saja yang
  * berubah (di sini).
+ *
+ * (2026-08-28) `CupertinoExtra` -- varian kedua, `slate` diganti
+ * [CupertinoIndigo] (systemIndigo) khusus gaya Cupertino, pola identik
+ * `CupertinoColors` di atas. 3 gaya lain (Glass/Neumorphism/M3) tetap
+ * pakai `VaultExtra` lama, 0 berubah.
  */
 data class VaultExtraColors(
     val slate: Color,
@@ -73,6 +124,7 @@ data class VaultExtraColors(
 )
 
 private val VaultExtra = VaultExtraColors(slate = SettingsAccent, slateContainer = SettingsAccentContainer)
+private val CupertinoExtra = VaultExtraColors(slate = CupertinoIndigo, slateContainer = CupertinoIndigoContainer)
 
 val LocalVaultExtraColors = staticCompositionLocalOf { VaultExtra }
 
@@ -104,17 +156,27 @@ object VaultTheme {
  * pakai [CupertinoTypography] (skala HIG iOS-ish), 3 gaya lain TETAP
  * [PromptVaultTypography] (M3 baku, 0 berubah). Lihat javadoc lengkap di
  * [CupertinoTypography] (`Type.kt`).
+ *
+ * (fase terakhir restyling Cupertino murni, 2026-08-28) `colorScheme` &
+ * `LocalVaultExtraColors` KINI juga KONDISIONAL, pola identik persis 2
+ * baris di atas -- Cupertino pakai [CupertinoColors]/`CupertinoExtra`
+ * (warna sistem iOS: systemBlue/Teal/Orange/Red/Indigo), 3 gaya lain TETAP
+ * [PromptVaultColors]/`VaultExtra` (M3 calm biru lama, 0 berubah). Ini
+ * MENUTUP SEMUA 3 item pending restyling Cupertino murni (typography,
+ * custom dialog, warna sistem) -- lihat [CupertinoTokens] utk daftar
+ * lengkap progres.
  */
 @Composable
 fun PromptVaultTheme(themeStyle: ThemeStyleOption = ThemeStyleOption.GLASSMORPHISM, content: @Composable () -> Unit) {
+    val isCupertino = themeStyle == ThemeStyleOption.CUPERTINO
     CompositionLocalProvider(
-        LocalVaultExtraColors provides VaultExtra,
+        LocalVaultExtraColors provides if (isCupertino) CupertinoExtra else VaultExtra,
         LocalThemeStyle provides themeStyle
     ) {
         MaterialTheme(
-            colorScheme = PromptVaultColors,
-            typography = if (themeStyle == ThemeStyleOption.CUPERTINO) CupertinoTypography else PromptVaultTypography,
-            shapes = if (themeStyle == ThemeStyleOption.CUPERTINO) CupertinoShapes else PromptVaultShapes,
+            colorScheme = if (isCupertino) CupertinoColors else PromptVaultColors,
+            typography = if (isCupertino) CupertinoTypography else PromptVaultTypography,
+            shapes = if (isCupertino) CupertinoShapes else PromptVaultShapes,
             content = content
         )
     }

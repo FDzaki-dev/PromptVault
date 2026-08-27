@@ -3,6 +3,36 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## [CUPERTINO] Warna sistem iOS -- tutup item TERAKHIR, restyling Cupertino murni tahap awal TUNTAS 3/3 (2026-08-28)
+
+Instruksi user: "lanjut fase terakhir penyempurnaan theme Cupertino style
+murni!!" -- 1 item tersisa dari 3 ("warna sistem", lihat entri di bawah).
+Audit dulu: grep `Color(0x...)` di luar package `ui/theme` = 0 hasil,
+seluruh app 100% konsumsi warna lewat `MaterialTheme.colorScheme`/
+`VaultTheme.extraColors` -- aman full-swap kondisional tanpa sentuh call
+site satu-satu, pola identik shapes/typography.
+
+Hue diambil dari nilai publik Apple HIG (dark appearance): systemBlue
+#0A84FF, systemTeal #64D2FF, systemOrange #FF9F0A, systemRed #FF453A,
+systemIndigo #5E5CE6. Tone (S/L) DIHITUNG ULANG (bukan dipakai mentah) --
+nilai Apple mentah gagal WCAG >=4.5:1 di surface app ini (dikalibrasi utk
+`systemBackground` iOS asli yang lebih gelap); tone final lulus AA
+(5.24-7.33:1 foreground, 6.75-8.37:1 on-fill/on-container).
+
+`Color.kt`: 18 val baru (Blue/Teal/Orange/Red + on/container tiap satu,
+Indigo + container utk aksen ke-4). `Theme.kt`: `CupertinoColors`
+(`ColorScheme` baru, primary/secondary/tertiary/error = 4 warna sistem,
+neutral 100% reuse `PromptVaultColors`) + `CupertinoExtra` (`slate` =
+`CupertinoIndigo`); `colorScheme` & `LocalVaultExtraColors` di
+`PromptVaultTheme` kondisional per `themeStyle`, pola identik
+`shapes`/`typography`. `PromptVaultColors`/`VaultExtra` (3 gaya lain) 0
+disentuh. `CupertinoTokens.kt`: javadoc diperbarui, 0 item wajib tersisa
+dari checklist restyling Cupertino awal.
+
+File diubah (3): `ui/theme/Color.kt` (parsial, 18 val baru), `ui/theme/
+Theme.kt` (parsial, `CupertinoColors`/`CupertinoExtra` + kondisional),
+`ui/theme/CupertinoTokens.kt` (parsial, javadoc only).
+
 ## [CUPERTINO] Typography scale iOS-ish (HIG) -- kondisional per gaya, pola identik shapes (2026-08-27)
 
 Instruksi user: "sempurnakan Cupertino style murni!!" -- lanjutan 2 item

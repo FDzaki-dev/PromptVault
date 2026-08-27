@@ -15,6 +15,9 @@ jobs:
       run:
         shell: bash
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       # [fix 2026-08-18] Stale Run Guard (Anti-Desync): kejadian nyata --
       # re-run job LAMA (commit v8.2.0) sempat jalan SETELAH v8.3.0/v8.4.0
       # sudah dipublish. softprops/action-gh-release default nge-tandain
@@ -49,22 +52,11 @@ jobs:
       # pipeline dianggap kelar -- PERSIS pola yang sudah TERBUKTI reliable
       # di step "Compile, test, and build" sejak awal (build-all.log SELALU
       # lengkap tiap kali step itu yang gagal, termasuk di v8.22.14).
-      #
-      # [reposisi v8.35.2, 2026-08-27] SEBELUMNYA guard ini step KE-2 (setelah
-      # `Checkout`) -- padahal `git ls-remote` mengecek SHA remote lewat
-      # jaringan, TIDAK butuh isi repo/checkout sama sekali. Guard cuma
-      # numpang di remote `origin` yang baru ada SETELAH checkout, jadi
-      # checkout (network+disk I/O) tetap kebuang percuma tiap stale re-run
-      # SEBELUM guard sempat membatalkan. Dipindah jadi step PALING PERTAMA
-      # (sebelum Checkout) -- URL remote publik ditulis eksplisit (autentikasi
-      # `GITHUB_TOKEN` bawaan) menggantikan alias `origin` yang sebelumnya
-      # bergantung pada checkout, logika perbandingan SHA-nya sendiri 100%
-      # sama persis (tidak diubah).
       - name: Stale run guard (anti-desync)
         run: |
           set -euo pipefail
           {
-            REMOTE_SHA=$(git ls-remote "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" refs/heads/main | cut -f1)
+            REMOTE_SHA=$(git ls-remote origin refs/heads/main | cut -f1)
             echo "Commit yang di-build : $GITHUB_SHA"
             echo "Tip main saat ini    : $REMOTE_SHA"
             if [ "$REMOTE_SHA" != "$GITHUB_SHA" ]; then
@@ -72,9 +64,6 @@ jobs:
               exit 1
             fi
           } 2>&1 | tee stale-run-guard.log
-
-      - name: Checkout
-        uses: actions/checkout@v4
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -102,32 +91,13 @@ jobs:
         uses: gradle/actions/setup-gradle@v3
         with:
           gradle-version: '8.9'
-          add-job-summary: 'on-failure'
 
-      # [fix 2026-08-27, insiden CI merah pasca-governance versioning
-      # otomatis] SEBELUMNYA baris ini `grep -oP 'versionName = "\K[^"]+'
-      # app/build.gradle.kts` -- regex itu expect literal
-      # `versionName = "x.y.z"` di source. Begitu app/build.gradle.kts
-      # diubah baca versionName dari `System.getenv("GITHUB_RUN_NUMBER")`
-      # (rule pinned baru PROJECT_STATE.md: DILARANG bump manual), baris itu
-      # tidak lagi match apa pun -> grep exit 1 -> `set -euo pipefail`
-      # abort step ini SEBELUM baris `echo` sempat jalan (makanya
-      # read-version.log yang ke-upload waktu itu 0 byte kosong total) --
-      # SELURUH job berhenti di sini, compile/test/assemble tidak pernah
-      # jalan. Fix: hitung VERSION LANGSUNG dari `$GITHUB_RUN_NUMBER` (env
-      # var bawaan default tiap job Actions, tidak perlu grep source file
-      # sama sekali) dengan formula IDENTIK persis dgn fallback di
-      # `app/build.gradle.kts` (`"1.0.$githubRunNumber"`) -- keduanya jalan
-      # di run yang SAMA jadi nilainya PASTI sama, menjaga versionName yang
-      # ke-embed di APK vs tag/nama GitHub Release tetap 1:1 konsisten
-      # (penting utk in-app update-checker yg membandingkan versionName
-      # terpasang vs tag Release terbaru).
       - name: Read app version
         id: version
         run: |
           set -euo pipefail
           {
-            VERSION="1.0.$GITHUB_RUN_NUMBER"
+            VERSION=$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts)
             echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           } 2>&1 | tee read-version.log
 
@@ -307,26 +277,3 @@ jobs:
       - name: Clean up keystore
         if: always()
         run: rm -f "$GITHUB_WORKSPACE/release.keystore"
-
-      # [fix 2026-08-27] Ganti Job Summary bawaan gradle/actions/setup-gradle
-      # (tabel Gradle Root Project/Requested Tasks yang panjang & gak
-      # informatif buat kebutuhan sehari-hari) dengan ringkasan custom
-      # minimal. Summary bawaan tetap ada tapi cuma muncul pas gagal
-      # (add-job-summary: on-failure di step "Setup Gradle") buat debug.
-      - name: Write build summary
-        if: always()
-        run: |
-          {
-            APK_FILE=$(ls out/*.apk 2>/dev/null | head -1)
-            echo "## 📦 PromptVault v${{ steps.version.outputs.version || 'N/A' }}"
-            echo ""
-            echo "| | |"
-            echo "|---|---|"
-            echo "| Commit | \`${GITHUB_SHA:0:7}\` |"
-            if [ -n "$APK_FILE" ]; then
-              echo "| APK | $(basename "$APK_FILE") ($(du -h "$APK_FILE" | cut -f1)) |"
-              echo "| Status | ✅ Sukses |"
-            else
-              echo "| Status | ❌ Gagal (APK tidak dihasilkan) |"
-            fi
-          } >> "$GITHUB_STEP_SUMMARY"

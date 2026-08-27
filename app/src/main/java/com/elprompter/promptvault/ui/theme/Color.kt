@@ -111,3 +111,63 @@ val SettingsAccentContainer = Color(0xFF332B46)
  * GlassHighlight (dekoratif, bukan pembatas fungsional) di audit
  * sebelumnya.
  */
+
+/**
+ * (2026-08-28) Warna sistem iOS -- tutup item TERAKHIR dari 3 pending
+ * restyling Cupertino murni (lihat [CupertinoTokens]). DIPAKAI KHUSUS oleh
+ * `CupertinoColors` (`Theme.kt`, kondisional per `themeStyle`, pola identik
+ * `CupertinoTypography`/`CupertinoShapes`) -- [PromptVaultColors] di atas
+ * (dipakai 3 gaya lain: Glass/Neumorphism/M3) 0 disentuh/0 berubah.
+ *
+ * Hue diambil PERSIS dari nilai publik resmi Apple HIG (dark appearance,
+ * bukan reverse-engineer aset berlisensi): systemBlue #0A84FF (H210),
+ * systemTeal #64D2FF (H197), systemOrange #FF9F0A (H37), systemRed
+ * #FF453A (H3), systemIndigo #5E5CE6 (H241). TAPI tone (S/L) TIDAK dipakai
+ * mentah -- nilai dark-appearance Apple dikalibrasi utk `systemBackground`
+ * iOS asli yang jauh lebih gelap dari [SurfaceContainerHighest] app ini;
+ * dipakai apa adanya sbg teks/ikon langsung, systemBlue mentah cuma
+ * 3.58:1 (gagal AA 4.5:1), systemIndigo mentah cuma 2.58:1. Tone (S/L)
+ * di-re-derive per hue Apple di atas supaya lulus standar WCAG project ini
+ * (syarat #3 javadoc atas) -- pola IDENTIK cara [Primary]/[Tertiary]/dst
+ * diturunkan (tone dark-scheme M3 pastel, bukan warna solid vivid), cuma
+ * hue-nya sekarang genuinely dari Apple, bukan hue custom lama.
+ *
+ * Kontras (worst-case vs [SurfaceContainerHighest], sama metodologi audit
+ * di atas): Blue 6.17:1, Teal 7.24:1, Orange 7.33:1, Red 5.42:1, Indigo
+ * 5.24:1 -- semua lulus AA teks (>=4.5:1). On* vs base fill masing-masing
+ * (dipakai saat base jadi containerColor tombol/snackbar, mis.
+ * `VaultActionSheet.kt`): Blue 7.64:1, Teal 7.80:1, Orange 8.03:1, Red
+ * 6.75:1. OnXContainer vs XContainer (kotak ikon/chip): 7.53-8.37:1.
+ * XContainer vs [AppBackground] (info saja, konteks sama spt catatan audit
+ * 1.4.11 di atas -- container SELALU dipakai berbentuk jelas dgn elevasi
+ * sendiri): 1.36-2.14:1, sejalan dgn precedent container lain.
+ *
+ * Audit titik pemakaian (alasan item ini dulu ditunda, lihat
+ * `PROJECT_STATE.md`): grep `Color(0x...)` menyeluruh di luar package
+ * `ui/theme` = 0 hasil -- SELURUH app 100% konsumsi warna lewat
+ * `MaterialTheme.colorScheme.*`/`VaultTheme.extraColors`, 0 hardcode
+ * lepas yang bisa bypass swap kondisional ini. Aman full-swap tanpa
+ * sentuh satu-satu call site (sama spt precedent shapes/typography).
+ */
+val CupertinoBlue = Color(0xFF80B7EF)                  // primary -- systemBlue
+val CupertinoOnBlue = Color(0xFF0F2235)
+val CupertinoBlueContainer = Color(0xFF264564)
+val CupertinoOnBlueContainer = Color(0xFFDEEBF7)
+
+val CupertinoTeal = Color(0xFF77CCEE)                  // secondary -- systemTeal
+val CupertinoOnTeal = Color(0xFF112F3B)
+val CupertinoTealContainer = Color(0xFF264A59)
+val CupertinoOnTealContainer = Color(0xFFD9EBF2)
+
+val CupertinoOrange = Color(0xFFF2B85F)                // tertiary/warning -- systemOrange
+val CupertinoOnOrange = Color(0xFF39270C)
+val CupertinoOrangeContainer = Color(0xFF5F441C)
+val CupertinoOnOrangeContainer = Color(0xFFF6E9D5)
+
+val CupertinoRed = Color(0xFFF08B84)                   // error -- systemRed
+val CupertinoOnRed = Color(0xFF3B1411)
+val CupertinoRedContainer = Color(0xFF622925)
+val CupertinoOnRedContainer = Color(0xFFF6D7D5)
+
+val CupertinoIndigo = Color(0xFF9E9DE7)                // aksen ke-4 "slate" -- systemIndigo
+val CupertinoIndigoContainer = Color(0xFF27264F)
