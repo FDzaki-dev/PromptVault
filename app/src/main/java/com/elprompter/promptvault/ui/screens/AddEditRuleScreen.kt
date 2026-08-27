@@ -39,7 +39,7 @@ import androidx.compose.ui.unit.dp
 import com.elprompter.promptvault.R
 import com.elprompter.promptvault.data.Rule
 import com.elprompter.promptvault.data.SaveRuleCheck
-import com.elprompter.promptvault.ui.components.TactileSwitch
+import com.elprompter.promptvault.ui.components.ToggleRow
 import com.elprompter.promptvault.ui.components.VaultActionSheet
 import com.elprompter.promptvault.ui.components.VaultCard
 import com.elprompter.promptvault.ui.components.VaultTopBar
@@ -264,18 +264,15 @@ fun AddEditRuleScreen(
             // ubah pattern belakangan tanpa toggle ini hilang/reset diam-
             // diam. Hint text di bawah sudah jelaskan syarat aktualnya
             // (scope .zip+SAF saja) drpd disembunyikan/dikondisikan UI.
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    stringResource(R.string.rule_edit_hold_back_zip_title),
-                    style = MaterialTheme.typography.titleSmall,
-                    modifier = Modifier.weight(1f).padding(end = 12.dp)
-                )
-                TactileSwitch(checked = holdBackLatestZip, onCheckedChange = { holdBackLatestZip = it })
-            }
+            // [Refactor rapi-rapi 2026-08-27, tanpa ubah behavior] Row ini
+            // diekstrak jadi `ToggleRow` bersama (`ui/components/ToggleRow.kt`)
+            // -- lihat KDoc-nya utk kenapa aman (default sama persis dgn
+            // kode inline sebelumnya, 0 perubahan visual/perilaku).
+            ToggleRow(
+                label = stringResource(R.string.rule_edit_hold_back_zip_title),
+                checked = holdBackLatestZip,
+                onCheckedChange = { holdBackLatestZip = it }
+            )
             Text(
                 stringResource(R.string.rule_edit_hold_back_zip_hint),
                 style = MaterialTheme.typography.bodySmall

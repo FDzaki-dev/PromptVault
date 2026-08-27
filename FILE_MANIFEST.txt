@@ -45,6 +45,7 @@ app/src/main/java/com/elprompter/promptvault/ui/components/SortedStamp.kt
 app/src/main/java/com/elprompter/promptvault/ui/components/TactileSurface.kt
 app/src/main/java/com/elprompter/promptvault/ui/components/TactileSwitch.kt
 app/src/main/java/com/elprompter/promptvault/ui/components/ThemeStyleToggle.kt
+app/src/main/java/com/elprompter/promptvault/ui/components/ToggleRow.kt
 app/src/main/java/com/elprompter/promptvault/ui/components/VaultActionSheet.kt
 app/src/main/java/com/elprompter/promptvault/ui/components/VaultCard.kt
 app/src/main/java/com/elprompter/promptvault/ui/components/VaultTopBar.kt

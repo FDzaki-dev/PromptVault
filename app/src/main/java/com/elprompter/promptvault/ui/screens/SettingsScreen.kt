@@ -63,7 +63,7 @@ import com.elprompter.promptvault.ui.MainViewModel
 import com.elprompter.promptvault.update.DownloadState
 import com.elprompter.promptvault.update.GithubAssetDto
 import com.elprompter.promptvault.update.UpdateCheckResult
-import com.elprompter.promptvault.ui.components.TactileSwitch
+import com.elprompter.promptvault.ui.components.ToggleRow
 import com.elprompter.promptvault.ui.components.VaultActionSheet
 import com.elprompter.promptvault.ui.components.VaultCard
 import com.elprompter.promptvault.ui.components.VaultTopBar
@@ -205,18 +205,17 @@ fun SettingsScreen(
             // [Fix Auto-Sort ON/OFF, 2026-08-21] Master switch, ditaruh
             // SEBELUM interval (interval tetap bisa diubah saat OFF, tapi
             // tidak akan menjadwalkan apa-apa sampai toggle ini ON lagi).
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    stringResource(R.string.settings_autosort_title),
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.weight(1f).padding(end = 12.dp)
-                )
-                TactileSwitch(checked = autoSortEnabled, onCheckedChange = onAutoSortEnabledChanged, accentColor = colors.primary)
-            }
+            // [Refactor rapi-rapi 2026-08-27, tanpa ubah behavior] Row ini
+            // diekstrak jadi `ToggleRow` bersama (`ui/components/ToggleRow.kt`)
+            // -- style titleMedium & accentColor dipass eksplisit spy IDENTIK
+            // persis dgn sebelumnya (lihat KDoc `ToggleRow`).
+            ToggleRow(
+                label = stringResource(R.string.settings_autosort_title),
+                checked = autoSortEnabled,
+                onCheckedChange = onAutoSortEnabledChanged,
+                style = MaterialTheme.typography.titleMedium,
+                accentColor = colors.primary
+            )
             Text(
                 if (autoSortEnabled) stringResource(R.string.settings_autosort_desc_on) else stringResource(R.string.settings_autosort_desc_off),
                 style = MaterialTheme.typography.bodySmall
@@ -372,18 +371,15 @@ fun SettingsScreen(
             // aktif, FileSorter TIDAK menyentuh cabang SAF sama sekali.
             VaultCard(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            stringResource(R.string.settings_shizuku_section_title),
-                            style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.weight(1f).padding(end = 12.dp)
-                        )
-                        TactileSwitch(checked = useShizuku, onCheckedChange = onUseShizukuChanged, accentColor = colors.primary)
-                    }
+                    // [Refactor rapi-rapi 2026-08-27, tanpa ubah behavior]
+                    // diekstrak jadi `ToggleRow` bersama, lihat KDoc-nya.
+                    ToggleRow(
+                        label = stringResource(R.string.settings_shizuku_section_title),
+                        checked = useShizuku,
+                        onCheckedChange = onUseShizukuChanged,
+                        style = MaterialTheme.typography.titleMedium,
+                        accentColor = colors.primary
+                    )
                     Text(
                         stringResource(R.string.settings_shizuku_section_desc),
                         style = MaterialTheme.typography.bodySmall

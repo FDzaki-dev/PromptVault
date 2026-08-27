@@ -3,6 +3,26 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## [REFACTOR] Ekstrak `ToggleRow` -- konsolidasi 3 Row switch duplikat, tanpa ubah behavior (2026-08-27)
+
+Instruksi user: "refactor rapi-rapi tanpa mengubah behavior". Target dipilih
+dari yang paling rendah risiko & paling nyata duplikatnya: pola
+`Row(SpaceBetween) { Text(weight=1f) ; TactileSwitch }` yang sebelumnya
+diketik ulang identik di 3 tempat (`AddEditRuleScreen.kt` toggle hold-back-zip,
+`SettingsScreen.kt` toggle Auto-Sort & Mode Shizuku -- ke-3nya ditambal
+satu-satu di fix row-overlap v8.35.1).
+
+Diekstrak jadi 1 composable baru `ui/components/ToggleRow.kt`. Parameter
+default (`style`, `accentColor`) disamakan persis dengan nilai asli tiap
+pemanggil (dicek satu-satu, bukan diseragamkan) -- 0 perubahan visual/
+perilaku. `TactileSwitch` yang jadi tidak terpakai lagi di 2 file pemanggil
+juga dibersihkan importnya. `ThemeStyleSwitchRow` (`ThemeStyleToggle.kt`)
+SENGAJA tidak disentuh -- pola visualnya beda (kartu berwarna/elevasi).
+
+File diubah (3): `ui/components/ToggleRow.kt` (baru), `ui/screens/
+AddEditRuleScreen.kt` (parsial), `ui/screens/SettingsScreen.kt` (parsial, 2
+lokasi). `FILE_MANIFEST.txt` diperbarui (1 file baru).
+
 ## v8.35.1 (2026-08-27) — FIX: in-app updater kira app usang = sudah versi terbaru
 
 Root cause: efek samping governance versioning otomatis (versionName reset

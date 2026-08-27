@@ -26,6 +26,99 @@
 > -- berlaku PERMANEN mulai sesi ini utk SEMUA sesi berikutnya, sesi mana
 > pun DILARANG mencabut/melonggarkan tanpa instruksi eksplisit baru user.
 
+## [REFACTOR] Ekstrak `ToggleRow` -- konsolidasi 3 Row switch duplikat, tanpa ubah behavior (2026-08-27)
+- **Instruksi user, eksplisit**: "refactor rapi-rapi tanpa mengubah
+  behavior!!" -- tanpa scope spesifik, jadi diaudit dulu (bukan Fast-Track --
+  scope lintas-file, meski hasil akhirnya sengaja dipilih yang kecil/aman).
+- **Audit dilakukan** (bukan langsung eksekusi tebakan): (1) survei baris per
+  file `.kt` (69 file) -- `FileSorter.kt` (2086 baris) jauh terbesar,
+  kandidat pemecahan file paling jelas, TAPI ini persis file inti SAF/
+  Shizuku/"latest zip held back" yang user sendiri pernah tandai prioritas
+  dilindungi dari regresi (lihat sesi rollback R8) -- restrukturisasi file
+  sebesar itu TANPA `./gradlew` utk verifikasi ulang adalah risiko yang TIDAK
+  sepadan dgn instruksi "tanpa ubah behavior", DITUNDA (bukan dikerjakan
+  blind), dicatat di Pending Queue di bawah, BUKAN dieksekusi sesi ini. (2)
+  Duplikasi pola `Row(SpaceBetween){Text(weight=1f);TactileSwitch}` --
+  SUDAH diidentifikasi lengkap sejak fix row-overlap v8.35.1 (3 titik: 1x
+  `AddEditRuleScreen.kt`, 2x `SettingsScreen.kt`, ditambal SATU-SATU saat
+  itu krn task waktu itu adalah bugfix darurat, bukan refactor) -- kandidat
+  PALING AMAN utk batch refactor ini: ekstraksi murni, bukan re-desain,
+  hasil render 100% identik secara matematis (constraint Compose sama
+  persis), dan SUDAH terverifikasi benar isinya sejak v8.35.1.
+- **Kenapa dipilih ini, bukan yang lain**: ekstraksi composable adalah
+  refactor PALING RENDAH RISIKO yang ada (0 perubahan logic/state/coroutine/
+  I/O, murni struktur UI) -- cocok dgn STABILITY WINS & keterbatasan sandbox
+  ini (0 akses `./gradlew`/device, jadi "tanpa ubah behavior" HARUS
+  dibuktikan lewat kesamaan kode statis, bukan run test).
+- **Implementasi** (`ui/components/ToggleRow.kt`, baru): `@Composable fun
+  ToggleRow(label, checked, onCheckedChange, modifier, style, accentColor)`
+  -- badan fungsi = SALINAN PERSIS `Row{Text;TactileSwitch}` dari 3 pemanggil
+  asli, cuma parameter yang beda (`label`/`checked`/`onCheckedChange`)
+  dijadikan argumen. Default `style = titleSmall` (pemanggil pertama,
+  hold-back-zip) & `accentColor = MaterialTheme.colorScheme.primary` (default
+  `TactileSwitch` sendiri, IDENTIK dgn `colors.primary` yang sebelumnya
+  dipass eksplisit di `SettingsScreen.kt`) -- diverifikasi SATU-SATU per
+  pemanggil sebelum edit (lihat tabel kesesuaian di bawah), BUKAN
+  diseragamkan/ditebak.
+
+  | Pemanggil | style asli | accentColor asli | Setelah refactor |
+  |---|---|---|---|
+  | `AddEditRuleScreen.kt` (hold-back-zip) | `titleSmall` | (default `TactileSwitch`) | pakai default `ToggleRow`, 0 param tambahan -- IDENTIK |
+  | `SettingsScreen.kt` (Auto-Sort) | `titleMedium` | `colors.primary` (eksplisit) | `style`+`accentColor` dipass eksplisit -- IDENTIK |
+  | `SettingsScreen.kt` (Shizuku) | `titleMedium` | `colors.primary` (eksplisit) | `style`+`accentColor` dipass eksplisit -- IDENTIK |
+
+- **TIDAK disentuh** (Zero-Unnecessary-Refactor + di luar scope aman):
+  `ThemeStyleSwitchRow` (`ThemeStyleToggle.kt`) -- pola visual BEDA (kartu
+  `TactileSurface` berwarna/elevasi sesuai state, dipakai utk pilihan
+  mutually-exclusive) -- reuse `ToggleRow` di situ akan MENGUBAH tampilan,
+  bukan cuma refactor struktur. `RuleCard.kt` -- pola beda (`SpaceEvenly`,
+  ikon+switch tanpa `Text`, sudah dikonfirmasi TIDAK relevan sejak audit
+  v8.35.1). `TactileSwitch.kt` sendiri -- komponennya benar, tidak disentuh.
+  `FileSorter.kt` -- lihat Pending Queue.
+- File diubah (3, pas batas Micro-Batch): `ui/components/ToggleRow.kt`
+  (baru), `ui/screens/AddEditRuleScreen.kt` (parsial: 1 import ganti,
+  1 blok Row->ToggleRow, import `TactileSwitch` dihapus krn sudah tak
+  terpakai), `ui/screens/SettingsScreen.kt` (parsial: 1 import ganti, 2
+  blok Row->ToggleRow, import `TactileSwitch` dihapus). `FILE_MANIFEST.txt`
+  diperbarui (1 file baru, posisi alfabetis antara `ThemeStyleToggle.kt` &
+  `VaultActionSheet.kt`).
+- **Verifikasi statis** (pengganti `./gradlew` yang tidak tersedia): (1)
+  keseimbangan `{}`/`()` dicek per file (semua balance, lihat log sesi),
+  (2) `TactileSwitch` dikonfirmasi 0 pemakaian tersisa di 2 file pemanggil
+  SEBELUM importnya dihapus (grep, bukan asumsi), (3) `scripts/
+  preflight_check.sh` 14/14 kategori PASS.
+- **Batas jujur**: seperti seluruh riwayat project, **BELUM PERNAH lewat
+  `./gradlew`/device asli** -- ekstraksi ini risiko serendah mungkin by
+  design (constraint Compose murni, 0 logic/state disentuh), tapi tetap
+  belum ada konfirmasi compile/render asli.
+- **Pending Queue (refactor lanjutan, TIDAK dikerjakan sesi ini)**:
+  1. **`FileSorter.kt` (2086 baris)** -- kandidat pemecahan file paling
+     jelas (mis. pisah loop legacy/SAF/Shizuku ke file terpisah), TAPI
+     risiko lebih tinggi (file inti SAF, ditandai prioritas proteksi user
+     sendiri) -- TUNGGU instruksi eksplisit user sebelum dikerjakan, jangan
+     default.
+  2. **Audit unused import project-wide** -- baru dicek 2 file (`AddEditRuleScreen.kt`,
+     `SettingsScreen.kt`) sbg efek samping batch ini, 67 file `.kt` lain
+     BELUM diaudit.
+  3. **[DITEMUKAN, BUKAN DIPERBAIKI] Desync label versi `CHANGELOG.md` vs
+     `PROJECT_STATE.md`**: `CHANGELOG.md` punya entri "v8.35.1 -- FIX:
+     in-app updater..." SEDANGKAN `PROJECT_STATE.md` sudah pakai label
+     "v8.35.1" lebih dulu utk topik BEDA ("FIX row overlap: judul teks
+     nabrak/nutupin TactileSwitch") -- 2 topik beda nomor sama, kemungkinan
+     `CHANGELOG.md` sempat tidak disinkron per-batch di beberapa sesi lalu.
+     TIDAK diperbaiki sesi ini (di luar scope batch, & riwayat log historis
+     sebaiknya tidak ditulis ulang tanpa instruksi eksplisit) -- entri BARU
+     mulai sesi ini di kedua file memakai format `[KATEGORI] Judul (tanggal)`
+     (bukan nomor versi manual) persis mengikuti 3 entri terbaru
+     `PROJECT_STATE.md` (governance/incident/updater-fix) -- otomatis
+     menghindari tabrakan nomor lagi ke depan krn tidak ada lagi nomor yang
+     diketik manusia.
+- **User WAJIB verifikasi di HP**: (1) build CI hijau, (2) toggle "Tahan
+  versi .zip terbaru" (Tambah/Edit Rule), Auto-Sort & Mode Shizuku
+  (Pengaturan) -- tampilan & interaksi HARUS identik 1:1 dgn sebelumnya (0
+  perubahan visual: ukuran teks, warna switch, jarak, wrap behavior saat
+  teks panjang -- SEMUA harus sama persis spt v8.35.1).
+
 ## [INSIDEN+FIX] In-app updater kira app usang = sudah versi terbaru (2026-08-27)
 - **Gejala nyata dari user**: fitur cek update dalam app melaporkan "sudah
   versi terbaru" padahal APK yang terpasang usang.
