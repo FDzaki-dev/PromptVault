@@ -287,7 +287,24 @@ fun AddEditRuleScreen(
                     )
                     isSaving = true
                     scope.launch {
-                        val check = onCheckBeforeSave(rule)
+                        // [Fix bug lanjutan, laporan user 2026-08-27] checkBeforeSave
+                        // (duplicate pattern + overlap) HANYA bergantung pada field
+                        // `pattern` -- lihat RuleOverlapChecker.findOverlaps() &
+                        // RuleRepository.checkBeforeSave(), keduanya TIDAK PERNAH baca
+                        // holdBackLatestZip/excludePattern/minSizeKb/maxSizeKb/
+                        // folderName/enabled. Kalau user edit rule LAMA tanpa ubah
+                        // pattern sama sekali (mis. cuma nyalakan toggle "Tahan versi
+                        // .zip terbaru"), kondisi tumpang tindih/duplikat SUDAH PERSIS
+                        // sama dgn saat rule ini terakhir disimpan -- minta konfirmasi
+                        // ULANG di sini cuma friksi, dan kalau user tidak sadar HARUS
+                        // tap "Tetap Simpan" (bukan cuma baca lalu keluar/back), SELURUH
+                        // perubahan form (termasuk toggle) hilang diam-diam tanpa
+                        // pernah tersimpan -- persis root cause laporan bug user.
+                        // Overlap yang SUDAH ada TETAP kelihatan lewat badge peringatan
+                        // di RuleListScreen (hasOverlapWarning), jadi user tidak
+                        // kehilangan info apa pun dgn skip ini.
+                        val patternUnchanged = existingRule != null && existingRule.pattern == rule.pattern
+                        val check = if (patternUnchanged) SaveRuleCheck.Ok else onCheckBeforeSave(rule)
                         isSaving = false
                         if (check is SaveRuleCheck.Ok) {
                             onSave(rule, null)

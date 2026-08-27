@@ -14,6 +14,64 @@
 > biasa -- entri log baru tetap disisipkan di bawah section ini, BUKAN di
 > atasnya.
 
+## v8.35.5 -- FIX lanjutan: skip dialog konfirmasi overlap kalau pattern tak berubah (2026-08-27)
+- **Lanjutan laporan v8.35.4** -- fix v8.35.4 (await Job sebelum popBackStack)
+  BENAR tapi TIDAK CUKUP: user kirim screenshot bukti dialog "Perlu konfirmasi"
+  (tumpang tindih dgn "All-Zip vault") MUNCUL persis saat cuma menyalakan
+  toggle "Tahan versi .zip terbaru di Downloads" -- root cause SEBENARNYA:
+  `checkBeforeSave` (duplicate+overlap) jalan pada SETIAP tap Simpan, TIDAK
+  peduli field apa yang benar2 diubah user.
+- **Root cause presisi**: `RuleOverlapChecker.findOverlaps()` &
+  `RuleRepository.checkBeforeSave()` (duplicate check) SAMA-SAMA cuma baca
+  `rule.pattern` (vs pattern rule lain) -- 0 dependency ke `holdBackLatestZip`/
+  `excludePattern`/`minSizeKb`/`maxSizeKb`/`folderName`/`enabled`. Rule di
+  screenshot user SUDAH tumpang tindih pattern dgn "All-Zip vault" SEJAK
+  SEBELUM edit ini (kondisi lama, tidak berubah) -- tapi `AddEditRuleScreen`
+  tetap re-tampilkan dialog konfirmasi di SETIAP Simpan, termasuk saat
+  satu-satunya perubahan adalah toggle yang sama sekali tidak mempengaruhi
+  matching pattern. Kalau user menutup dialog itu (Batal/back/tap luar,
+  BUKAN "Tetap Simpan") mengira itu cuma info -- `pendingRule` dibuang,
+  SELURUH form (termasuk toggle yang baru dinyalakan) TIDAK PERNAH tersimpan
+  sama sekali. Ini match PERSIS 3 jawaban user di sesi sebelumnya ("muncul
+  setelah balik ke daftar & buka Edit lagi", TANPA sadar ada pop-up).
+- **Fix (1 file, titik paling presisi)**: `AddEditRuleScreen.kt`, tombol
+  Simpan -- tambah `patternUnchanged = existingRule != null &&
+  existingRule.pattern == rule.pattern`; kalau `true`, `checkBeforeSave`
+  DI-SKIP (anggap `SaveRuleCheck.Ok` langsung, tanpa panggil
+  `onCheckBeforeSave` sama sekali) -- rule LANGSUNG tersimpan tanpa dialog.
+  Kalau pattern BERUBAH (termasuk rule baru, `existingRule == null`), perilaku
+  TIDAK BERUBAH SAMA SEKALI -- `onCheckBeforeSave` tetap jalan & dialog tetap
+  muncul kalau memang overlap/duplikat baru terdeteksi (fitur ini TETAP utuh
+  utk kasus yang benar2 relevan).
+- **Kenapa aman (0 kehilangan info)**: overlap yang sudah ada TETAP kelihatan
+  user lewat badge peringatan di `RuleListScreen` (`hasOverlapWarning`,
+  dihitung `viewModel.findAllOverlaps()` independen dari layar Edit) -- skip
+  dialog ini di jalur "pattern tak berubah" tidak menyembunyikan tumpang
+  tindih yang sudah ada, cuma hilangkan re-konfirmasi berulang utk kondisi
+  yang sudah diketahui/diterima user sebelumnya.
+- **TIDAK disentuh**: `RuleOverlapChecker.kt`, `RuleRepository.checkBeforeSave()`
+  (logika deteksi 100% sama, cuma TIDAK dipanggil kalau pattern tak berubah),
+  `RuleListScreen.kt` (badge overlap tetap jalan spt biasa), fix v8.35.4
+  (Job/`saveRuleJob.join()` di `MainActivity.kt` TETAP ada & masih relevan --
+  dialog utk kasus pattern BERUBAH masih butuh itu).
+- File diubah (2, dalam batas Micro-Batch): `ui/screens/AddEditRuleScreen.kt`
+  (parsial, 1 blok tombol Simpan), `app/build.gradle.kts` (versi).
+  `FILE_MANIFEST.txt` TIDAK berubah.
+- **Batas jujur**: seperti seluruh riwayat project, **BELUM PERNAH lewat
+  `./gradlew`/device asli** -- root cause kali ini dikonfirmasi LANGSUNG dari
+  screenshot user (bukan tebakan/trace kode semata spt v8.35.4), tapi fix-nya
+  sendiri tetap belum diverifikasi jalan di HP.
+- **User WAJIB verifikasi di HP**: (1) build CI hijau, (2) buka Edit rule yang
+  SUDAH tumpang tindih dgn rule lain (persis kasus screenshot) -> nyalakan/
+  matikan toggle "Tahan versi .zip terbaru" TANPA ubah pattern -> Simpan ->
+  dialog "Perlu konfirmasi" TIDAK BOLEH muncul lagi, langsung balik ke daftar
+  -> buka Edit lagi -> toggle HARUS sesuai yang barusan diset, (3) rule yang
+  SAMA, kali ini ubah pattern-nya -> Simpan -> dialog overlap HARUS TETAP
+  muncul seperti biasa (0 regresi di jalur yang memang butuh konfirmasi), (4)
+  bikin rule baru dgn pattern yang sengaja tumpang tindih -> Simpan -> dialog
+  HARUS TETAP muncul (jalur rule baru 100% tidak berubah).
+- versionCode 195->196, versionName 8.35.4->8.35.5.
+
 ## v8.35.4 -- FIX: saklar per-rule "balik OFF sendiri" saat Edit rule dibuka lagi (2026-08-27)
 - **Laporan user**: saklar "Tahan versi .zip terbaru di Downloads" (`holdBackLatestZip`,
   `AddEditRuleScreen`) kelihatan mati sendiri -- tepatnya: dinyalakan + Simpan
