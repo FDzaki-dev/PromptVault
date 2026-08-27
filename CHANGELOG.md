@@ -3,6 +3,22 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## v8.35.1 (2026-08-27) — FIX: in-app updater kira app usang = sudah versi terbaru
+
+Root cause: efek samping governance versioning otomatis (versionName reset
+dari skema semantic lama `8.x.y` ke `1.0.<run_number>`). `isNewerVersion()`
+bandingin versi via tuple posisional (major dulu) — app lama yg masih
+pegang versionName `8.x.y` kalah bandingin di posisi pertama (`1 < 8`)
+lawan rilis baru `1.0.209`, jadi dianggap "sudah terbaru" SELAMANYA padahal
+paling usang.
+
+Fix: bandingkan segmen TERAKHIR version string saja (run number, satu-
+satunya angka yg pernah berubah di skema baru), bukan tuple posisional
+penuh. Kebal thd app skema lama yg masih beredar & thd perubahan skema
+versi apa pun ke depan.
+
+File diubah (1): `UpdateRepository.kt` (parsial, fungsi `isNewerVersion`).
+
 ## v8.35.0 (2026-08-27) — FIX: layout/inset keyboard (IME) ketutup di semua tab
 
 Audit menyeluruh `contentWindowInsets` (Scaffold), `VaultTopBar` (status

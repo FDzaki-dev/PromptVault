@@ -180,21 +180,24 @@ class UpdateRepository(private val context: Context) {
     }
 
     /**
-     * Bandingkan versi per-segmen numerik (mis. "8.10.0" > "8.9.0"), BUKAN
-     * string compare polos (yang salah menilai "8.10.0" < "8.9.0" krn '1'
-     * < '9' secara leksikal). Format non-semver (tag rilis tidak standar,
-     * jarang terjadi) fallback ke string compare apa adanya.
+     * [fix 2026-08-27] Root cause "app usang kira dirinya sudah versi
+     * terbaru": versi lama pakai perbandingan TUPLE POSISIONAL penuh
+     * (major dulu, baru minor, baru patch -- cocok utk skema semantic lama
+     * "8.x.y"). Skema versionName sekarang PERMANEN "1.0.<run_number>"
+     * (rule pinned PROJECT_STATE.md, major di-reset ke 1) -- app lama yang
+     * masih pegang versionName skema lama (mis. "8.35.0") dibandingkan
+     * lawan rilis baru (mis. "1.0.209") kalah di posisi PERTAMA (1 < 8) ->
+     * selamanya dianggap "sudah terbaru", update TIDAK PERNAH ditawarkan,
+     * padahal app itu justru paling usang.
+     * Fix: bandingkan SEGMEN TERAKHIR saja (run number -- satu-satunya
+     * angka yang pernah berubah di skema baru, dan dijamin PINNED naik
+     * terus), bukan seluruh tuple posisional. Kebal thd skema versi lama
+     * MAUPUN perubahan skema apa pun di masa depan.
      */
     private fun isNewerVersion(remote: String, local: String): Boolean {
-        val remoteParts = remote.split(".", "-").mapNotNull { it.toIntOrNull() }
-        val localParts = local.split(".", "-").mapNotNull { it.toIntOrNull() }
-        if (remoteParts.isEmpty() || localParts.isEmpty()) return remote != local && remote > local
-        val maxLen = maxOf(remoteParts.size, localParts.size)
-        for (i in 0 until maxLen) {
-            val r = remoteParts.getOrElse(i) { 0 }
-            val l = localParts.getOrElse(i) { 0 }
-            if (r != l) return r > l
-        }
-        return false
+        val remoteBuild = remote.split(".", "-").mapNotNull { it.toIntOrNull() }.lastOrNull()
+        val localBuild = local.split(".", "-").mapNotNull { it.toIntOrNull() }.lastOrNull()
+        if (remoteBuild == null || localBuild == null) return remote != local && remote > local
+        return remoteBuild > localBuild
     }
 }

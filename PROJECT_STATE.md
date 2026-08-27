@@ -26,6 +26,25 @@
 > -- berlaku PERMANEN mulai sesi ini utk SEMUA sesi berikutnya, sesi mana
 > pun DILARANG mencabut/melonggarkan tanpa instruksi eksplisit baru user.
 
+## [INSIDEN+FIX] In-app updater kira app usang = sudah versi terbaru (2026-08-27)
+- **Gejala nyata dari user**: fitur cek update dalam app melaporkan "sudah
+  versi terbaru" padahal APK yang terpasang usang.
+- **Root cause** (ditemukan dari source, bukan tebakan -- lihat
+  `UpdateRepository.kt` fungsi `isNewerVersion`): efek samping LANGSUNG
+  dari governance versioning di atas. Fungsi lama bandingkan versi via
+  TUPLE POSISIONAL penuh (major dulu, baru minor, baru patch -- didesain
+  utk skema semantic lama `8.x.y`). Skema versionName sekarang PERMANEN
+  `1.0.<run_number>` (major di-reset ke 1) -- app lama yang masih terpasang
+  dgn versionName skema lama (mis. `8.35.0`) dibandingkan lawan rilis baru
+  (mis. `1.0.209`) KALAH di posisi PERTAMA (`1 < 8`) -> `isNewerVersion`
+  return `false` SELAMANYA, app kira dirinya paling baru padahal paling usang.
+- **Fix** (`UpdateRepository.kt`, parsial, 1 fungsi): bandingkan SEGMEN
+  TERAKHIR version string saja (run number -- satu-satunya angka yg pernah
+  berubah di skema baru, PINNED naik terus tiap job Actions), bukan seluruh
+  tuple posisional. Kebal thd app skema lama yang masih beredar DAN thd
+  perubahan skema apa pun di masa depan.
+- File diubah (1): `UpdateRepository.kt` (parsial, fungsi `isNewerVersion`).
+
 ## [GOVERNANCE] Versioning 100% otomatis dari GitHub -- manual bump DIHAPUS PERMANEN (2026-08-27)
 - **Instruksi eksplisit user**: singkirkan semua rule lama soal versioning,
   gantikan dgn: tidak boleh ada lagi bump versi manual, `versionCode` &
