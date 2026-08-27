@@ -26,6 +26,86 @@
 > -- berlaku PERMANEN mulai sesi ini utk SEMUA sesi berikutnya, sesi mana
 > pun DILARANG mencabut/melonggarkan tanpa instruksi eksplisit baru user.
 
+## [CUPERTINO] Dialog crash log ikut sistem tema -- tutup pending item "custom dialog non-actionsheet" (2026-08-27)
+- **Instruksi user**: "lanjut sempurnakan theme Cupertino style murni!!" --
+  tanpa target spesifik, jadi diaudit dulu (bukan Fast-Track, scope
+  "sempurnakan theme" bukan tweak 1 variabel). `CupertinoTokens.kt`
+  (javadoc-nya sendiri) mencatat 3 item belum dikerjakan: typography
+  scale iOS-ish, warna sistem (`systemBlue` dst), **custom dialog
+  non-actionsheet**. Grep `AlertDialog\|ModalBottomSheet\|Dialog` menyeluruh
+  ke seluruh `ui/screens/*.kt`/`ui/components/*.kt` -- SATU-SATUNYA titik
+  ketemu: `DiagnosticsScreen.kt` (penampil isi crash log), pakai
+  `androidx.compose.material3.AlertDialog` MENTAH, 0 sentuhan sistem tema
+  sama sekali -- kelas bug SAMA PERSIS dgn `WarningBanner` sebelum v8.29.0
+  ("SATU-SATUNYA permukaan berisi konten yang bypass total sistem tema").
+  Item ini dipilih (bukan 2 item lain) krn paling konkret/scoped & sudah
+  ditandai eksplisit sbg pending -- 2 item lain (typography scale, warna
+  sistem) jauh lebih luas cakupannya (lintas app, bukan 1 titik bypass),
+  di luar 1 batch aman.
+- **Fix**: BARU `ui/components/VaultAlertDialog.kt` -- pengganti `AlertDialog`
+  M3 polos, wadah utamanya [TactileSurface] (BUKAN implementasi baru dari
+  nol) -- otomatis dapat treatment gaya aktif (translucent+sheen Glass /
+  shadow+border Neumorphism / flat elevasi M3 murni / flat+hairline+radius
+  besar Cupertino) TANPA logic tambahan, persis kartu lain di app. Shape
+  `MaterialTheme.shapes.extraLarge` (SAMA dgn default `AlertDialogDefaults`
+  M3 yang digantikan -- 3 gaya non-Cupertino 0 berubah visual dari radius,
+  Cupertino otomatis dapat radius besar lewat `CupertinoShapes` yang SUDAH
+  dipasang kondisional di `Theme.kt`, 0 override manual perlu di komponen
+  baru ini). Tombol tunggal tetap `TextButton` (konvensi M3 baku aksi
+  non-destruktif, sama seperti sebelumnya) -- 0 percabangan gaya diperlukan
+  di situ, beda dgn `VaultActionSheet` yang py aksi destruktif/multi-tombol.
+  Khusus Cupertino: `HorizontalDivider` hairline dipisah SEBELUM tombol
+  (pola sama `VaultActionSheet`) -- signature `UIAlertController` asli.
+- **`DiagnosticsScreen.kt`**: `AlertDialog(...)` diganti `VaultAlertDialog(...)`
+  -- title/dismissLabel/onDismissRequest sama persis nilainya, isi (Column
+  scrollable `heightIn(max=400.dp)` + `Text` log content) dipindah APA
+  ADANYA ke slot `content`. Import `AlertDialog`/`TextButton` yang jadi
+  unused ikut dihapus (grep dikonfirmasi 0 pemakaian tersisa SEBELUM
+  dihapus), import `VaultAlertDialog` ditambah (pola sama
+  `SectionHeader`/`VaultCard` yang sudah eksplisit di file yang sama,
+  BUKAN fully-qualified inline spt `VaultTopBar`/`Scaffold` -- konsisten
+  komponen yang di-reuse lintas file).
+- **TIDAK disentuh** (Zero-Unnecessary-Refactor + di luar scope aman):
+  `VaultActionSheet.kt` (pola actionsheet Cupertino sudah benar sejak
+  v8.31.3, tidak relevan di sini), `CupertinoTokens.kt`/`CupertinoShapes`
+  (dipakai ulang apa adanya, 0 token baru), 2 item pending lain (typography
+  iOS-ish, warna sistem) -- TETAP di pending, scope lebih besar dari 1 batch.
+- File diubah (3, pas batas Micro-Batch): BARU `ui/components/
+  VaultAlertDialog.kt`, `ui/screens/DiagnosticsScreen.kt` (parsial: 2 baris
+  import dihapus + 1 baris import baru + 1 blok dialog diganti),
+  `FILE_MANIFEST.txt` (1 baris baru, posisi alfabetis antara
+  `VaultActionSheet.kt` & `VaultCard.kt`).
+- **Verifikasi statis**: (1) keseimbangan `{}`/`()` kedua file kode
+  (VaultAlertDialog.kt 6/6 & 24/24, DiagnosticsScreen.kt 44/44 & 148/148),
+  (2) grep ulang 0 sisa `AlertDialog`/`TextButton` di `DiagnosticsScreen.kt`
+  setelah import dihapus, (3) `scripts/preflight_check.sh` 14/14 kategori
+  PASS (kategori #7 review manual: `VaultAlertDialog.kt` 0 muncul di daftar
+  -- tidak ada pola fungsi lokal mencurigakan).
+- **⏳ PENDING QUEUE (2 item, dari `CupertinoTokens.kt`, TETAP belum
+  dikerjakan -- scope lebih besar dari 1 batch aman)**:
+  1. Typography scale iOS-ish (font Cupertino-style, lintas app -- saat
+     ini semua gaya SAMA PERSIS `PromptVaultTypography` M3 baku, belum ada
+     percabangan per `themeStyle` spt `shapes` sudah py).
+  2. Warna sistem ala iOS (`systemBlue` dst) -- saat ini Cupertino reuse
+     100% palet M3 `colorScheme` yang sama dgn 3 gaya lain, 0 hue khusus
+     Cupertino.
+- **Batas jujur**: seperti seluruh riwayat project, **BELUM PERNAH lewat
+  `./gradlew`/device asli** -- `Dialog` composable primitif (`androidx.
+  compose.ui.window.Dialog`) BARU PERTAMA KALI dipakai LANGSUNG di seluruh
+  riwayat project ini (grep sebelum implementasi: 0 hasil, sebelumnya
+  semua dialog lewat `AlertDialog`/`ModalBottomSheet` M3) -- API standar
+  Compose foundation, risiko rendah, tapi genuinely belum ada preseden
+  internal utk dibandingkan.
+- **User WAJIB verifikasi di HP**: (1) build CI hijau, (2) Diagnostik ->
+  buka salah satu crash log (kalau ada) -> dialog HARUS tetap muncul &
+  bisa ditutup ("Tutup"), isi log tetap scrollable & terbaca, (3) ganti
+  gaya tema ke Cupertino (Pengaturan -> Tampilan) -> buka dialog log LAGI
+  -> HARUS terlihat flat (0 shadow), hairline tipis sebelum tombol
+  "Tutup", sudut lebih membulat dari 3 gaya lain, (4) ganti ke 3 gaya lain
+  (Glass/Neumorphism/Material3 Murni) -> dialog HARUS terlihat 100% sama
+  seperti sebelum batch ini (0 regresi visual -- radius/warna/tombol
+  identik, cuma sekarang lewat `TactileSurface` bukan `AlertDialog` M3).
+
 ## [FITUR] Aksi ke-3 "Simpan Perubahan" di sheet "Buang Perubahan?", gaya iOS (2026-08-27)
 - **Instruksi user, eksplisit** (dgn screenshot sheet "Buang Perubahan?"
   existing): "tambahkan action ke-3 'simpan perubahan'. like iOS style!!" --

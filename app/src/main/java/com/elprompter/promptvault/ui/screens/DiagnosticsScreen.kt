@@ -15,14 +15,13 @@ import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import com.elprompter.promptvault.ui.components.SectionHeader
+import com.elprompter.promptvault.ui.components.VaultAlertDialog
 import com.elprompter.promptvault.ui.components.VaultCard
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -99,16 +98,15 @@ fun DiagnosticsScreen(
     }
 
     if (selectedLog != null) {
-        AlertDialog(
-            onDismissRequest = { selectedLog = null; openedLogContent = null },
-            confirmButton = { TextButton(onClick = { selectedLog = null; openedLogContent = null }) { Text(stringResource(id = R.string.diag_dialog_close)) } },
-            title = { Text(selectedLog?.displayName ?: "", style = MaterialTheme.typography.titleSmall) },
-            text = {
-                Column(modifier = Modifier.heightIn(max = 400.dp).verticalScroll(rememberScrollState())) {
-                    Text(openedLogContent ?: "", style = MaterialTheme.typography.bodySmall)
-                }
+        VaultAlertDialog(
+            title = selectedLog?.displayName ?: "",
+            dismissLabel = stringResource(id = R.string.diag_dialog_close),
+            onDismissRequest = { selectedLog = null; openedLogContent = null }
+        ) {
+            Column(modifier = Modifier.heightIn(max = 400.dp).verticalScroll(rememberScrollState())) {
+                Text(openedLogContent ?: "", style = MaterialTheme.typography.bodySmall)
             }
-        )
+        }
     }
 
     androidx.compose.material3.Scaffold(
