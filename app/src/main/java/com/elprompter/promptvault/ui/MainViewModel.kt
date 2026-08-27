@@ -27,6 +27,7 @@ import com.elprompter.promptvault.util.SkippedFileInfo
 import com.elprompter.promptvault.util.VaultConfigBackup
 import com.elprompter.promptvault.worker.WorkScheduler
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -330,14 +331,26 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      * TIDAK memicu Snackbar "disimpan" berulang tiap kali digeser, yang
      * justru jadi noise bukan feedback berguna.
      */
-    fun saveRule(rule: Rule, removeDuplicateRuleId: String? = null, announce: Boolean = false) {
+    // [Fix bug laporan user 2026-08-27] Saklar per-rule (mis. holdBackLatestZip
+    // "Tahan versi .zip terbaru") kelihatan "balik OFF sendiri" saat Edit rule
+    // dibuka lagi dari daftar. Root cause: fungsi ini SEBELUMNYA fire-and-forget
+    // (Job dari viewModelScope.launch dibuang, fungsi return Unit) -- pemanggil
+    // di MainActivity.kt langsung navController.popBackStack() TANPA menunggu
+    // tulisan DataStore selesai. Kalau user cepat buka lagi Edit rule yang sama
+    // sebelum tulisan itu rampung, `rules` StateFlow yang dibaca AddEditRuleScreen
+    // masih versi LAMA (toggle belum ON) -- persis gejala yang dilaporkan.
+    // Fix: kembalikan Job dari launch ini supaya pemanggil yang PERLU menunggu
+    // (jalur Simpan eksplisit di AddEditRuleScreen, lihat MainActivity.kt) bisa
+    // `.join()` sebelum pindah layar. Pemanggil yang tidak butuh menunggu (mis.
+    // toggle enable/disable per-rule di RuleCard) TETAP boleh abaikan Job hasil
+    // kembalian ini -- 0 perubahan perilaku di titik itu.
+    fun saveRule(rule: Rule, removeDuplicateRuleId: String? = null, announce: Boolean = false): Job =
         viewModelScope.launch {
             ruleRepository.upsertRule(rule, removeDuplicateRuleId)
             if (announce) {
                 _ruleSaveFeedback.value = RuleSaveFeedback(rule.folderName, System.currentTimeMillis())
             }
         }
-    }
 
     fun deleteRule(ruleId: String) {
         viewModelScope.launch { ruleRepository.deleteRule(ruleId) }

@@ -390,8 +390,18 @@ private fun PromptVaultRoot(
                     // announce=true: technical debt closure v2.16.0, lihat
                     // MainViewModel.RuleSaveFeedback -- Snackbar konfirmasi
                     // muncul di RuleListScreen setelah pop kembali ke sana.
-                    viewModel.saveRule(rule, removeDuplicateRuleId, announce = true)
-                    navController.popBackStack()
+                    // [Fix bug laporan user 2026-08-27] SEBELUMNYA popBackStack()
+                    // dipanggil LANGSUNG tanpa menunggu tulis DataStore selesai --
+                    // kalau user buka lagi Edit rule yang sama sebelum tulisan
+                    // rampung, toggle (mis. "Tahan versi .zip terbaru") kelihatan
+                    // balik OFF krn baca data lama. Sekarang tunggu Job simpan
+                    // (saveRuleJob.join()) SEBELUM pindah layar -- lihat KDoc
+                    // lengkap di MainViewModel.saveRule().
+                    val saveRuleJob = viewModel.saveRule(rule, removeDuplicateRuleId, announce = true)
+                    scope.launch {
+                        saveRuleJob.join()
+                        navController.popBackStack()
+                    }
                 },
                 onCancel = { navController.popBackStack() }
             )

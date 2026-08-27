@@ -14,6 +14,65 @@
 > biasa -- entri log baru tetap disisipkan di bawah section ini, BUKAN di
 > atasnya.
 
+## v8.35.4 -- FIX: saklar per-rule "balik OFF sendiri" saat Edit rule dibuka lagi (2026-08-27)
+- **Laporan user**: saklar "Tahan versi .zip terbaru di Downloads" (`holdBackLatestZip`,
+  `AddEditRuleScreen`) kelihatan mati sendiri -- tepatnya: dinyalakan + Simpan
+  (TANPA pop-up konfirmasi duplikat/tumpang tindih), balik ke daftar rule, lalu
+  buka Edit rule LAMA itu lagi -> saklar sudah OFF lagi. Dikonfirmasi via
+  `ask_user_input_v0` (3 pertanyaan) sebelum eksekusi -- bukan tebakan.
+- **Audit ditelusuri** (bukan Fast-Track -- state persistence bug, butuh trace
+  penuh): `Rule.holdBackLatestZip` -> `AddEditRuleScreen.kt` (state+konstruksi
+  `Rule(...)`) -> `MainActivity.kt` (`onSave`) -> `MainViewModel.saveRule()` ->
+  `RuleRepository.upsertRule()` (DataStore). Ketiga lapis PALING BAWAH (Rule
+  model, RuleRepository, JSON serialize) sudah benar & konsisten dgn KDoc batch
+  1/2 fitur ini (v8.33.0/v8.33.1) -- root cause ADA di titik penyambung UI<->ViewModel.
+- **Root cause**: `MainViewModel.saveRule()` SEBELUMNYA fire-and-forget
+  (`viewModelScope.launch{...}`, Job dibuang, fungsi return `Unit`) -- pemanggil
+  di `MainActivity.kt` (`onSave` tombol Simpan) langsung panggil
+  `navController.popBackStack()` TANPA menunggu tulisan `DataStore` selesai.
+  `viewModel.rules` (StateFlow yang dibaca ulang `AddEditRuleScreen` via
+  `rules.firstOrNull{it.id==ruleId}` tiap kali layar Edit dibuka) baru terisi
+  nilai baru SETELAH tulisan itu benar2 rampung (proses async terpisah,
+  `flow.collect{state.value=it}`). Kalau user buka lagi Edit rule yang SAMA
+  sebelum proses async itu selesai, `existingRule` yang diterima
+  `AddEditRuleScreen` MASIH versi lama (toggle OFF) -- `rememberSaveable`
+  men-seed state awal dari situ = persis gejala yang dilaporkan.
+- **Fix (2 file, titik penyambung SAJA -- tidak sentuh 3 lapis bawah yang
+  sudah benar)**: `MainViewModel.saveRule()` sekarang **return `Job`** hasil
+  `viewModelScope.launch{}` (sebelumnya dibuang/`Unit`) -- pemanggil yang PERLU
+  menunggu bisa `.join()`, pemanggil yang tidak perlu (toggle enable/disable
+  per-rule di `RuleCard`, `MainActivity.kt` baris `onToggleEnabled`) TETAP
+  boleh abaikan nilai kembalian ini, 0 perubahan perilaku di titik itu (Kotlin
+  mengizinkan lambda `-> Unit` membuang nilai balik non-Unit). `MainActivity.kt`
+  (`onSave` tombol Simpan `AddEditRuleScreen`): tangkap `Job` dari `saveRule()`,
+  `scope.launch { saveRuleJob.join(); navController.popBackStack() }` --
+  `popBackStack()` sekarang PASTI terjadi SETELAH tulisan `DataStore` (+ set
+  `RuleSaveFeedback` kalau `announce=true`) rampung, bukan cuma "biasanya
+  keburu" seperti sebelumnya. `scope` yang dipakai SUDAH ada
+  (`rememberCoroutineScope()` di `PromptVaultRoot`, baris atas `NavHost` --
+  tidak buat scope baru).
+- **TIDAK disentuh** (Zero-Unnecessary-Refactor, root cause SUDAH presisi di 1
+  titik): `data/Rule.kt`, `data/RuleRepository.kt`, `util/FileSorter.kt`
+  (`computeLatestZipHeldBack()`), `ui/screens/AddEditRuleScreen.kt`,
+  `ui/components/TactileSwitch.kt`/`RuleCard.kt` -- SEMUA sudah diverifikasi
+  benar lewat trace manual, 0 perubahan.
+- File diubah (3, dalam batas Micro-Batch): `ui/MainViewModel.kt` (parsial: 1
+  import `Job` + signature+body `saveRule()`), `MainActivity.kt` (parsial: 1
+  blok `onSave`), `app/build.gradle.kts` (versi).
+  `FILE_MANIFEST.txt` TIDAK berubah (0 file baru/dihapus).
+- **Batas jujur**: seperti seluruh riwayat project, **BELUM PERNAH lewat
+  `./gradlew`/device asli** -- fix berbasis trace kode + Kotlin coroutine
+  ordering guarantee (`Job.join()` menjamin urutan, bukan tebakan timing),
+  BUKAN dites langsung di HP.
+- **User WAJIB verifikasi di HP**: (1) build CI hijau, (2) buka Edit rule lama
+  -> nyalakan toggle "Tahan versi .zip terbaru di Downloads" -> Simpan (tanpa
+  pop-up muncul) -> balik ke daftar -> buka Edit rule itu LAGI -> toggle HARUS
+  tetap ON, (3) ulangi utk mematikan toggle (ON->OFF->Simpan->cek lagi) -- 2
+  arah harus konsisten, (4) toggle enable/disable per-rule di kartu daftar
+  (`RuleCard`) tetap normal seperti sebelumnya (0 regresi, jalur itu sengaja
+  tidak diubah perilakunya).
+- versionCode 194->195, versionName 8.35.3->8.35.4.
+
 ## v8.35.3 -- Cabut PINNED rule #2 (posisi box skrip commit) (2026-08-27)
 - **Instruksi user, eksplisit & literal**: cabut rule #2 di section PINNED
   ("Box skrip commit WAJIB tampil DI ATAS heading 'Update Harian:'") --
