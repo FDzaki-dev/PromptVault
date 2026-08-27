@@ -3,6 +3,25 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## [FIX] CI merah lagi di "Read app version" -- fix sesi lalu ternyata tidak pernah sampai ke repo (2026-08-28)
+
+User upload log Actions asli: job `build` gagal di step "Read app version",
+exit code 1, `assembleRelease` tidak pernah jalan. Root cause SAMA PERSIS
+dgn insiden yg "sudah difix" sesi sebelumnya (regex `grep -oP` cuma cocok
+literal string, sementara `versionName` sekarang ekspresi Kotlin) -- bedanya
+fix itu ternyata tidak pernah benar2 nyampe ke repo (root cause proses:
+`.github/workflows/*` dotfile, sengaja dikecualikan dari cleanup skrip
+Termux, tapi sandbox Claude sesi lalu mewarisi versi BASI file ini dari
+sesi sebelumnya lalu ikut ter-zip & menimpa balik fix yg sudah benar di
+repo user).
+
+Fix (ulang): `.github/workflows/build.yml` -- `VERSION=$(grep -oP
+'versionName = "\K[^"]+' app/build.gradle.kts)` diganti
+`VERSION="1.0.$GITHUB_RUN_NUMBER"` (identik formula fix sebelumnya, 1:1
+sama dgn fallback di `app/build.gradle.kts`).
+
+File diubah (1): `.github/workflows/build.yml` (parsial, 1 baris).
+
 ## [CUPERTINO] Warna sistem iOS -- tutup item TERAKHIR, restyling Cupertino murni tahap awal TUNTAS 3/3 (2026-08-28)
 
 Instruksi user: "lanjut fase terakhir penyempurnaan theme Cupertino style

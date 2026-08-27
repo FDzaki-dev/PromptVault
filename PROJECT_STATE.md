@@ -26,6 +26,54 @@
 > -- berlaku PERMANEN mulai sesi ini utk SEMUA sesi berikutnya, sesi mana
 > pun DILARANG mencabut/melonggarkan tanpa instruksi eksplisit baru user.
 
+## [INSIDEN+FIX] CI merah lagi -- fix "Read app version" (sesi lalu) ternyata TIDAK PERNAH sampai ke repo asli (2026-08-28)
+- **Laporan user**: upload ZIP log Actions asli (`logs_89757911596.zip`),
+  pesan "?!!". Isi: job `build` gagal PERSIS di step **"Read app version"**,
+  exit code 1 -- `assembleRelease` TIDAK PERNAH jalan (`app/build/outputs/
+  apk/release/` tidak ada, dikonfirmasi step diagnostik).
+- **Root cause (dari log asli)**: baris `VERSION=$(grep -oP 'versionName =
+  "\K[^"]+' app/build.gradle.kts)` di `.github/workflows/build.yml` -- SAMA
+  PERSIS root cause yg SUDAH didiagnosis & "difix" sesi sebelumnya (lihat
+  entri `[INSIDEN+FIX] CI merah total pasca-governance versioning otomatis`
+  di bawah). Bedanya: fix itu **TIDAK PERNAH benar2 sampai ke repo**.
+- **Kenapa fix lama hilang (ditemukan lewat audit sandbox sesi ini, bukan
+  tebakan)**: `.github/workflows/*` & `.gitignore` adalah dotfile -- SEMUA
+  skrip Termux [DAILY UPDATE] SENGAJA mengecualikannya dari langkah
+  bersih-bersih (`! -name '.*'`), justru supaya file ini AMAN kalau ZIP sesi
+  mana pun tidak menyertakannya (tetap utuh, tidak ikut kehapus). Konsekuensi
+  sisi lain: kalau sebuah ZIP KEBETULAN menyertakan `.github/...` versi LAMA
+  (mis. sandbox Claude sesi tsb "mewarisi" file basi dari sesi sebelumnya,
+  BUKAN dari ZIP sumber user yg diupload sesi itu), `unzip -o` bakal
+  MENIMPA file yg sudah benar di repo asli dengan versi basi itu -- silent
+  regression, 0 error yg kelihatan saat push krn `git commit`/`push` tetap
+  sukses (isinya cuma "berubah balik" ke versi lama, bukan gagal).
+- **Diverifikasi di sandbox sesi ini**: ekstraksi ULANG bersih ZIP sumber
+  sesi SEBELUMNYA (`PromptVault_v1_0_218.zip`) ke folder kosong baru
+  konfirmasi ZIP itu **TIDAK PERNAH berisi** `.github/` atau `.gitignore`
+  sama sekali -- tapi folder kerja sandbox sesi tsb PUNYA keduanya (basi,
+  regex lama). ZIP hasil sesi lalu (`PromptVault_v1_0_219.zip`, batch
+  Cupertino warna sistem) dizip dari folder kerja yg sudah tercemar itu --
+  artinya kemungkinan besar ZIP tsb ikut membawa `.github/workflows/
+  build.yml` basi & menimpa balik fix yg sudah ada di repo user saat
+  di-push via [DAILY UPDATE]. **Insiden murni proses/tooling sandbox, bukan
+  kesalahan di kode aplikasi Cupertino batch itu sendiri** (`Color.kt`/
+  `Theme.kt`/`CupertinoTokens.kt` batch itu tidak tersentuh isu ini).
+- **Fix (ulang, sesi ini)**: `.github/workflows/build.yml` -- baris sama
+  diganti `VERSION="1.0.$GITHUB_RUN_NUMBER"` (identik formula fix sesi
+  lalu, lihat entri di bawah utk alasan lengkap kenapa formula ini yg
+  dipilih). 16 step lain 0 disentuh.
+- **Pencegahan ke depan (WAJIB dipatuhi sesi manapun)**: sebelum
+  packaging ZIP akhir, sesi WAJIB verifikasi working folder BUKAN hasil
+  `unzip -o` ke folder yang sudah terisi dari sesi lain sebelumnya (cek
+  `.github`/dotfile lain TIDAK muncul kalau ZIP sumber sesi ini memang
+  tidak menyertakannya) -- kalau ada dotfile "misterius" yg tidak berasal
+  dari ZIP sumber sesi ini, JANGAN ikut di-zip ke output kecuali memang
+  sengaja mau menimpa (spt insiden fix `.github` di batch ini).
+- File diubah (1): `.github/workflows/build.yml` (parsial, 1 baris, protected
+  file -- restorasi fix yg sudah pernah dapat izin eksplisit user, bukan
+  perubahan baru).
+- **CHANGELOG.md**: entri baru ditambah paling atas batch ini juga.
+
 ## [CUPERTINO] Warna sistem iOS -- tutup pending item TERAKHIR (ke-3 dari 3), restyling Cupertino murni SELESAI (2026-08-28)
 - **Instruksi user**: "lanjut fase terakhir penyempurnaan theme Cupertino
   style murni!!" -- cocok PERSIS dgn 1 item tersisa di log batch di bawah
