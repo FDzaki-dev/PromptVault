@@ -17,6 +17,14 @@
 > persis -- lihat log di bawah. Section ini PERMANEN di baris teratas file
 > ini, tidak ikut aturan descending log biasa -- entri log baru tetap
 > disisipkan di bawah section ini, BUKAN di atasnya.
+2. **Setiap balasan sesi WAJIB tampilkan versionName/batch file + ringkasan
+   singkat kerjaan, tepat SEBELUM `[SCRIPT: DAILY UPDATE]` / `[SCRIPT:
+   INITIAL SETUP]`.**
+> Rule ini LOCKED atas instruksi eksplisit user 2026-08-27: "setiap sesi
+> wajib menampilkan versionName/batch file mereka beserta 'summary' tentang
+> apa yang dikerjakannya. Tepat berada sebelum: '[SCRIPT: DAILY UPDATE]'!!"
+> -- berlaku PERMANEN mulai sesi ini utk SEMUA sesi berikutnya, sesi mana
+> pun DILARANG mencabut/melonggarkan tanpa instruksi eksplisit baru user.
 
 ## [GOVERNANCE] Versioning 100% otomatis dari GitHub -- manual bump DIHAPUS PERMANEN (2026-08-27)
 - **Instruksi eksplisit user**: singkirkan semua rule lama soal versioning,
