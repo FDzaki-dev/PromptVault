@@ -102,6 +102,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v3
         with:
           gradle-version: '8.9'
+          add-job-summary: 'on-failure'
 
       # [fix 2026-08-27, insiden CI merah pasca-governance versioning
       # otomatis] SEBELUMNYA baris ini `grep -oP 'versionName = "\K[^"]+'
@@ -306,3 +307,26 @@ jobs:
       - name: Clean up keystore
         if: always()
         run: rm -f "$GITHUB_WORKSPACE/release.keystore"
+
+      # [fix 2026-08-27] Ganti Job Summary bawaan gradle/actions/setup-gradle
+      # (tabel Gradle Root Project/Requested Tasks yang panjang & gak
+      # informatif buat kebutuhan sehari-hari) dengan ringkasan custom
+      # minimal. Summary bawaan tetap ada tapi cuma muncul pas gagal
+      # (add-job-summary: on-failure di step "Setup Gradle") buat debug.
+      - name: Write build summary
+        if: always()
+        run: |
+          {
+            APK_FILE=$(ls out/*.apk 2>/dev/null | head -1)
+            echo "## 📦 PromptVault v${{ steps.version.outputs.version || 'N/A' }}"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Commit | \`${GITHUB_SHA:0:7}\` |"
+            if [ -n "$APK_FILE" ]; then
+              echo "| APK | $(basename "$APK_FILE") ($(du -h "$APK_FILE" | cut -f1)) |"
+              echo "| Status | ✅ Sukses |"
+            else
+              echo "| Status | ❌ Gagal (APK tidak dihasilkan) |"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
