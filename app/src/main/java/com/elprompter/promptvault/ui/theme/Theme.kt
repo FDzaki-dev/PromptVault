@@ -160,6 +160,13 @@ private val NeumorphismColors: ColorScheme = darkColorScheme(
  * [CupertinoIndigo] (systemIndigo) khusus gaya Cupertino, pola identik
  * `CupertinoColors` di atas. 3 gaya lain (Glass/Neumorphism/M3) tetap
  * pakai `VaultExtra` lama, 0 berubah.
+ *
+ * (2026-08-29, lanjutan sesi Blade Runner) `NeumorphismExtra` -- varian
+ * ketiga, `slate` diganti [NeoMagenta] (neon magenta/pink BR2049, dipilih
+ * user dari 4 opsi) khusus gaya Neumorphism, pola identik 2 varian di
+ * atas. Javadoc lama [PromptVaultTheme] yg bilang aksen ke-4 "TETAP TIDAK
+ * berubah utk NEUMORPHISM" SEKARANG usang -- diperbarui di sana, bukan
+ * dihapus.
  */
 data class VaultExtraColors(
     val slate: Color,
@@ -168,6 +175,7 @@ data class VaultExtraColors(
 
 private val VaultExtra = VaultExtraColors(slate = SettingsAccent, slateContainer = SettingsAccentContainer)
 private val CupertinoExtra = VaultExtraColors(slate = CupertinoIndigo, slateContainer = CupertinoIndigoContainer)
+private val NeumorphismExtra = VaultExtraColors(slate = NeoMagenta, slateContainer = NeoMagentaContainer)
 
 val LocalVaultExtraColors = staticCompositionLocalOf { VaultExtra }
 
@@ -234,10 +242,21 @@ object VaultTheme {
  * `LocalVaultExtraColors` (aksen ke-4 "Pengaturan") TETAP TIDAK berubah --
  * di luar cakupan permintaan sesi ini (cuma shape+tipografi), tetap reuse
  * `VaultExtra` sama seperti GLASSMORPHISM/MATERIAL3.
+ *
+ * (2026-08-29, sesi lanjutan lagi) SUSUL LAGI, MENUTUP 4/4: aksen ke-4
+ * (`LocalVaultExtraColors`) SEKARANG *juga* 3-cabang, pola PERSIS 3 baris
+ * di atas -- NEUMORPHISM dapat `NeumorphismExtra` (slot "Pengaturan" ->
+ * [NeoMagenta], neon magenta/pink BR2049, lihat javadoc lengkap di
+ * `Color.kt`). Paragraf tepat di atas ("LocalVaultExtraColors TETAP TIDAK
+ * berubah") SEKARANG jg usang -- diperbarui di sini. Dengan ini SEMUA 4
+ * sumbu identitas visual Neumorphism (warna, shape, tipografi, aksen ke-4)
+ * sudah lengkap kondisional per `themeStyle`, menutup permintaan
+ * bertahap sepanjang sesi hari ini. Var lokal `isCupertino` (dipakai
+ * ternary boolean lama) DIHAPUS -- sudah 0 pemakai lagi stlh baris
+ * terakhir ini ikut pindah ke `when`.
  */
 @Composable
 fun PromptVaultTheme(themeStyle: ThemeStyleOption = ThemeStyleOption.GLASSMORPHISM, content: @Composable () -> Unit) {
-    val isCupertino = themeStyle == ThemeStyleOption.CUPERTINO
     val colorScheme = when (themeStyle) {
         ThemeStyleOption.CUPERTINO -> CupertinoColors
         ThemeStyleOption.NEUMORPHISM -> NeumorphismColors
@@ -253,8 +272,13 @@ fun PromptVaultTheme(themeStyle: ThemeStyleOption = ThemeStyleOption.GLASSMORPHI
         ThemeStyleOption.NEUMORPHISM -> NeumorphismShapes
         else -> PromptVaultShapes
     }
+    val extraColors = when (themeStyle) {
+        ThemeStyleOption.CUPERTINO -> CupertinoExtra
+        ThemeStyleOption.NEUMORPHISM -> NeumorphismExtra
+        else -> VaultExtra
+    }
     CompositionLocalProvider(
-        LocalVaultExtraColors provides if (isCupertino) CupertinoExtra else VaultExtra,
+        LocalVaultExtraColors provides extraColors,
         LocalThemeStyle provides themeStyle
     ) {
         MaterialTheme(

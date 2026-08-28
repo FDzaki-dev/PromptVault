@@ -228,3 +228,41 @@ val NeoAmber = Color(0xFFEAB980)                       // tertiary -- amber/oran
 val NeoOnAmber = Color(0xFF372715)
 val NeoAmberContainer = Color(0xFF533D25)
 val NeoOnAmberContainer = Color(0xFFF2DFC9)
+
+/**
+ * (2026-08-29, lanjutan sesi Blade Runner) Aksen ke-4 "Pengaturan" KHUSUS
+ * gaya NEUMORPHISM -- MENUTUP catatan lama di javadoc [NeoAmber] dkk di
+ * atas ("aksen ke-4 SENGAJA 100% reuse token lama, tidak diminta") yg
+ * SEKARANG sudah usang: user eksplisit minta warna sendiri utk slot ini,
+ * dipilih dari 4 opsi yg diajukan (Neon Magenta / Neon Violet / reuse
+ * Amber / reuse Teal) -- user pilih **Neon Magenta**.
+ *
+ * Pola IDENTIK [CupertinoIndigo] di atas (aksen ke-4 khusus 1 gaya, HANYA
+ * 2 val base+container, TANPA on-variant -- beda dari trio
+ * primary/secondary/tertiary di atas krn [VaultExtraColors] cuma 2 field
+ * `slate`/`slateContainer`, 0 field "onSlate" yg butuh dikonsumsi, jadi
+ * on-variant di sini bakal 100% dead code kalau dibuat).
+ *
+ * Hue H330 (magenta-pink) -- neon pink/magenta ikonik dari palet poster &
+ * kabut kota Blade Runner 2049 (Joi's billboard, dsb), SENGAJA hue baru
+ * ke-4 yg beda dari trio primary/secondary/tertiary di atas (teal/
+ * teal-deep/amber) supaya slot "Pengaturan" tetap kebaca sbg aksen
+ * TERPISAH scr visual (bukan reuse salah satu dari 3 warna utama), sama
+ * alasan [CupertinoIndigo] pakai systemIndigo yg juga beda dari
+ * biru/teal/oranye Cupertino di atasnya.
+ *
+ * Kontras (metodologi identik trio di atas): NeoMagenta vs
+ * [SurfaceContainerHighest] = 6.84:1 (lulus AA teks dgn margin nyaman,
+ * sejajar NeoTeal 6.20/NeoTealDeep 6.60/NeoAmber 7.30). NeoMagentaContainer
+ * vs [AppBackground] (info saja, sama catatan audit 1.4.11 -- container
+ * dipakai berbentuk box ikon 30dp dgn elevasi sendiri) = 1.90:1, disamakan
+ * presisi ke tingkat NeoTealContainer/NeoAmberContainer (jg 1.90:1).
+ *
+ * Audit titik pemakaian: satu2nya call site `extraColors.slate` ada di
+ * `HomeScreen.kt` (tint ikon "Pengaturan" via `GroupedListRow`) --
+ * `slateContainer` sendiri masih 0 konsumen (sama kondisi
+ * [CupertinoIndigoContainer], reserved utk masa depan), tetap didefinisikan
+ * demi [VaultExtraColors] butuh 2 field non-null saat konstruksi.
+ */
+val NeoMagenta = Color(0xFFEAA9C9)                     // aksen ke-4 "slate" -- neon magenta/pink BR2049
+val NeoMagentaContainer = Color(0xFF64304A)

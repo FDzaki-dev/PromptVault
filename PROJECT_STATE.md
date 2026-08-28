@@ -26,6 +26,84 @@
 > -- berlaku PERMANEN mulai sesi ini utk SEMUA sesi berikutnya, sesi mana
 > pun DILARANG mencabut/melonggarkan tanpa instruksi eksplisit baru user.
 
+## [UI][NEUMORPHISM] Aksen ke-4 "Pengaturan" -> Neon Magenta (BR2049), menutup 4/4 sumbu Blade Runner (2026-08-29, lanjutan Blade Runner)
+- **Trigger**: lanjutan langsung dari entri "Root cause GitHub Release
+  notes stale" di bawah -- user diajukan 4 opsi warna via tombol
+  (`ask_user_input_v0`): Neon Magenta / Neon Violet / reuse Amber / reuse
+  Teal. User pilih **Neon Magenta** ("khas neon BR2049").
+- **Color.kt** (+1 blok, 2 val): `NeoMagenta` (0xFFEAA9C9, hue H330) +
+  `NeoMagentaContainer` (0xFF64304A) -- pola PERSIS `CupertinoIndigo`
+  (aksen ke-4, HANYA base+container, TANPA on-variant krn
+  `VaultExtraColors` cuma 2 field). Kontras: NeoMagenta vs
+  SurfaceContainerHighest = 6.84:1 (sejajar Teal 6.20/TealDeep 6.60/Amber
+  7.30 punya `NeoAmber` dkk); NeoMagentaContainer vs AppBackground = 1.90:1
+  (disamakan presisi ke NeoTealContainer/NeoAmberContainer).
+- **Theme.kt** (parsial): `NeumorphismExtra = VaultExtraColors(slate =
+  NeoMagenta, slateContainer = NeoMagentaContainer)` -- val baru, pola
+  PERSIS `CupertinoExtra`. `LocalVaultExtraColors provides` di
+  `PromptVaultTheme` diubah dari ternary `isCupertino` jadi `when`
+  3-cabang, pola PERSIS `colorScheme`/`typography`/`shapes`. Var lokal
+  `isCupertino` (sudah 0 pemakai lagi) DIHAPUS. Javadoc lama ("aksen ke-4
+  TETAP TIDAK berubah utk NEUMORPHISM") diperbarui in-place, bukan
+  dihapus.
+- **MENUTUP 4/4**: dengan batch ini, SEMUA 4 sumbu identitas visual
+  Neumorphism (warna, shape, tipografi, aksen ke-4) sudah lengkap
+  kondisional per `themeStyle` -- rangkaian permintaan bertahap sepanjang
+  sesi hari ini ("kombinasi warna" -> "shape/typography" -> "aksen ke-4")
+  selesai penuh.
+- File diubah (2, di bawah batas Micro-Batch 3): `ui/theme/Color.kt`
+  (+1 blok), `ui/theme/Theme.kt` (parsial). Preflight `scripts/
+  preflight_check.sh` ✅ (14/14, termasuk cek #6 "0 hex leak" -- 2 literal
+  baru tetap di dalam `ui/theme`).
+- **Docs (VIP, gabung 1 zip)**: `CHANGELOG.md` dapat 1 entri baru
+  (di atas segalanya) sesuai fix proses di entri "Root cause..." di bawah
+  -- supaya Release CI berikutnya (v1.0.226) langsung akurat, TIDAK
+  mengulang insiden stale spt v1.0.225.
+- **Batas jujur**: sama seperti batch sebelumnya, BELUM lewat
+  `./gradlew`/device asli -- kalibrasi kontras HANYA dihitung via skrip
+  Python (rumus luminance relatif WCAG persis), bukan alat aksesibilitas
+  Android sungguhan. Hasil visual final tetap perlu diverifikasi user di
+  HP.
+- **Pending Queue**: kosong.
+
+## [FIX][CI] Root cause GitHub Release notes stale (nampilin batch lama) -- `CHANGELOG.md` tidak ikut ter-update (2026-08-29)
+- **Gejala dilaporkan user** (screenshot halaman GitHub Releases): tag
+  `v1.0.225` (baru, dibuild 2 menit lalu, commit `8af3d32`) tapi body
+  release yang tampil masih judul "[UI] Stacked Cards Effect ...
+  (2026-08-28)" -- deskripsi batch LAMA, bukan batch yang barusan di-push.
+- **Root cause ditemukan** (baca `.github/workflows/build.yml`, step
+  "Extract release notes from CHANGELOG.md", baris ~231): `body_path`
+  release DIISI dari `awk '/^## /{n++} n==1' CHANGELOG.md` -- ekstrak
+  section `## ` PALING ATAS di **`CHANGELOG.md`**, BUKAN dari
+  `PROJECT_STATE.md`. Ini 2 file BEDA dengan tujuan beda (`README.md`
+  sudah bilang: `CHANGELOG.md` = "riwayat lengkap tiap versi" (dikonsumsi
+  CI), `PROJECT_STATE.md` = log kronologis dev-session mentah). **3 batch
+  Neumorphism/Blade Runner berturut-turut** (skema warna 2026-08-29,
+  rebalance Amber 2026-08-29, shape+typography 2026-08-29 sesi lalu) SEMUA
+  cuma nulis ke `PROJECT_STATE.md` (sesuai rule CHAT FORMAT "Log wajib ke
+  PROJECT_STATE.md") -- **0 satupun ikut nambah entri di `CHANGELOG.md`**,
+  jadi section teratas file itu tetap section lama tgl 2026-08-28, dan CI
+  terus-menerus publish body itu yang STALE ke tiap release baru walau
+  build-nya sendiri sukses & APK-nya benar berisi kode terbaru (APK-nya
+  TIDAK stale, cuma teks deskripsi release-nya yang salah/usang).
+- **Bukan bug di workflow YAML** -- logic `awk` di CI 100% jalan sesuai
+  desain aslinya (fix 2026-08-22, lihat komentar di file itu sendiri).
+  Gap-nya murni proses: rule "Log wajib ke PROJECT_STATE.md" (CHAT FORMAT)
+  ternyata TIDAK otomatis mencakup `CHANGELOG.md`, padahal CI diam-diam
+  bergantung penuh ke file itu utk isi Release.
+- **Fix** (diterapkan batch berikutnya, digabung 1 zip dgn kerjaan aksen
+  ke-4): backfill 3 entri `CHANGELOG.md` yang kelewat (skema warna, rebalance
+  Amber, shape+typography) + entri baru batch aksen ke-4, SEMUA disisipkan
+  di ATAS section "Stacked Cards Effect ... (2026-08-28)" yang lama (format
+  singkat ala `CHANGELOG.md`, BUKAN disalin mentah dari narasi panjang
+  `PROJECT_STATE.md`).
+- **Praktik ke depan** (dicatat di sini, BUKAN rule PINNED baru -- itu
+  wewenang eksplisit user, lihat rule #1/#2 di atas): tiap batch yang
+  benar-benar di-`git push` ke `main` (bakal ke-trigger CI) sebaiknya JUGA
+  dapat 1 entri baru singkat di `CHANGELOG.md` (bukan cuma
+  `PROJECT_STATE.md`), supaya `body_path` Release CI berikutnya selalu
+  ikut versi commit yang sedang di-build, bukan republish entri lama.
+
 ## [UI][NEUMORPHISM] Shape + Typography ala Blade Runner, menyusul skema warna (2026-08-29, lanjutan Blade Runner)
 - **Trigger**: user eksplisit minta "terapkan shape/typography ala Blade
   Runner, seperti pada tema warnanya" -- menyusul `NeumorphismColors`

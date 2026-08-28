@@ -3,6 +3,71 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## [UI][NEUMORPHISM] Aksen ke-4 "Pengaturan" -> Neon Magenta (BR2049) -- menutup 4/4 sumbu Blade Runner (2026-08-29)
+
+Menyusul shape+typography di bawah: slot warna aksen ke-4 (ikon menu
+"Pengaturan" di Home) khusus gaya Neumorphism sekarang pakai warna
+sendiri, `NeoMagenta` (neon magenta/pink khas Blade Runner 2049, dipilih
+user dari 4 opsi), bukan lagi reuse warna Cupertino/M3 lama. Dengan ini
+identitas visual Blade Runner (warna + shape + tipografi + aksen ke-4)
+sudah lengkap 4/4.
+
+File diubah (2): `ui/theme/Color.kt` (+`NeoMagenta`/`NeoMagentaContainer`),
+`ui/theme/Theme.kt` (parsial, `NeumorphismExtra` + wiring `when`).
+
+**Catatan proses**: entri ini + 3 entri di bawahnya (shape+typography,
+rebalance Amber, skema warna) di-backfill/ditambahkan sekaligus setelah
+ditemukan CI selama ini publish body Release dari section TERATAS file
+ini, bukan dari `PROJECT_STATE.md` -- 3 batch sebelumnya cuma tercatat di
+`PROJECT_STATE.md` sehingga Release GitHub sempat nampilin deskripsi
+batch lama (v1.0.225 nampilin judul batch 2026-08-28). Mulai sekarang,
+tiap batch yang di-push wajib juga dapat entri singkat di sini.
+
+## [UI][NEUMORPHISM] Shape + Typography ala Blade Runner, menyusul skema warna (2026-08-29)
+
+`ui/theme/Shapes.kt`: `NeumorphismShapes` baru, keluarga `CutCornerShape`
+(sudut potong tegas, kebalikan arah `CupertinoShapes` yang bulat/lembut) --
+nilai dp per tingkat disamakan persis skala M3 baku (`PromptVaultShapes`,
+4/8/12/16/28) demi 0 perubahan ukuran komponen.
+
+`ui/theme/Type.kt`: `NeumorphismTypography` baru -- role
+display/headline/titleLarge/label pakai `CodeFont` (monospace) + bold/
+semibold + letter-spacing lebar ("signage neon/HUD terminal" khas Blade
+Runner), role titleMedium/titleSmall/body tetap `Sans` demi keterbacaan.
+Ukuran/line-height 100% reuse skala M3 baku.
+
+`ui/theme/Theme.kt`: `typography`/`shapes` di `PromptVaultTheme` diubah
+dari ternary `isCupertino` jadi `when(themeStyle)` 3-cabang (pola sama
+persis `colorScheme`) -- NEUMORPHISM sekarang dapat 2 aset barunya
+sendiri, 3 gaya lain 0 berubah.
+
+File diubah (3): `ui/theme/Shapes.kt`, `ui/theme/Type.kt`, `ui/theme/Theme.kt`.
+
+## [UI][NEUMORPHISM] Rebalance porsi Amber -- CTA "Scan Sekarang" (2026-08-29)
+
+User lapor via screenshot: gaya Neumorphism (Blade Runner) kerasa lebih
+dominan teal drpd amber walau kontras warna sudah seimbang -- akar
+masalahnya bobot visual (elemen besar/filled pakai `primary` teal, amber
+cuma di ikon kecil). Fix: tombol CTA "Scan Sekarang" (elemen paling
+menonjol di Home) khusus gaya Neumorphism sekarang pakai
+`colors.tertiary`/`onTertiary` (amber), 3 gaya lain tetap `primary`.
+
+File diubah (1): `ui/screens/HomeScreen.kt` (parsial).
+
+## [UI][NEUMORPHISM] Skema warna baru "Teal & Amber (Blade Runner)" -- khusus gaya Neumorphism (2026-08-29)
+
+Instruksi eksplisit user: skema warna Teal & Amber ala Blade Runner,
+khusus gaya Neumorphism saja. Palet baru di `Color.kt`
+(`NeoTeal`/`NeoTealDeep`/`NeoAmber` + varian on/container, semua lulus
+WCAG AA teks minimum, dihitung via script kontras). `Theme.kt`:
+`colorScheme` di `PromptVaultTheme` diubah dari ternary `isCupertino` jadi
+`when(themeStyle)` 3-cabang -- NEUMORPHISM dapat `NeumorphismColors`
+sendiri. Neutral/background/surface/error/outline/shape/typography/aksen
+ke-4 100% reuse token lama (0 berubah) -- scope sengaja cuma warna.
+
+File diubah (2): `ui/theme/Color.kt` (+palet baru), `ui/theme/Theme.kt`
+(parsial, `colorScheme` 3-cabang).
+
 ## [UI] Stacked Cards Effect kiri-atas/3-lapis -- diperluas ke SEMUA VaultCard (2026-08-28)
 
 Lanjutan batch sebelumnya (efek awalnya cuma di 1 kartu manifest Home).
