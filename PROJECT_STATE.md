@@ -26,6 +26,46 @@
 > -- berlaku PERMANEN mulai sesi ini utk SEMUA sesi berikutnya, sesi mana
 > pun DILARANG mencabut/melonggarkan tanpa instruksi eksplisit baru user.
 
+## [UI][NEUMORPHISM] Rebalance porsi Amber -- CTA "Scan Sekarang" (2026-08-29, lanjutan Blade Runner)
+- **Lanjutan entri di bawah** (skema warna Blade Runner) -- user lapor via
+  screenshot kedua: "Ternyata lebih dominan warna teal daripada amber nya"
+  di gaya Neumorphism. Ditanya balik cara rebalance (3 opsi via
+  `ask_user_input_v0`), user pilih: "Ya, kasih amber porsi lebih besar
+  (mis. tombol 'Scan Sekarang' jadi amber)".
+- **Root cause dominasi teal**: bukan soal hue/saturasi warna (Amber
+  malah kontras LEBIH tinggi drpd Teal, 7.30:1 vs 6.20:1, lihat entri
+  bawah) -- murni soal SEBARAN PEMAKAIAN. `colors.primary` (teal) dipakai
+  di elemen BESAR (segmented control "Beranda"/"Tampilan", kartu ikon
+  "Kelola Rule"/"Statistik", CTA "Scan Sekarang"), sedangkan
+  `colors.tertiary` (amber) cuma di ikon KECIL (clock/history/help,
+  16-20dp) -- jumlah pemakaian di `HomeScreen.kt` sebenarnya cukup
+  seimbang (5 primary vs 5 tertiary), tapi BOBOT VISUAL (luas
+  permukaan/elemen filled besar) jomplang ke teal.
+- **Fix** (`ui/screens/HomeScreen.kt`, 1 file): tombol CTA "Scan Sekarang"
+  (elemen paling menonjol di Home, filled penuh lebar layar) -- SEBELUMNYA
+  `color = colors.primary` (teal) DI SEMUA GAYA, sekarang KHUSUS
+  Neumorphism (`VaultTheme.style == ThemeStyleOption.NEUMORPHISM`) pakai
+  `colors.tertiary`/`colors.onTertiary` (amber). 3 gaya lain
+  (Glass/M3/Cupertino) TETAP `colors.primary`/`colors.onPrimary`, 0
+  berubah -- scope asli tetap "khusus Neumorphism only".
+- **TIDAK disentuh** (1 batch = 1 perubahan paling berdampak, bukan
+  rombak semua elemen sekaligus): segmented control, ikon "Kelola Rule"/
+  "Statistik" TETAP teal -- kalau user masih merasa kurang seimbang
+  setelah lihat hasil ini, bisa lanjut minta elemen lain menyusul.
+- File diubah (1, dalam batas Micro-Batch): `ui/screens/HomeScreen.kt`
+  (parsial: 1 import `ThemeStyleOption` + blok CTA). `FILE_MANIFEST.txt`/
+  `versionCode`/`versionName` TIDAK disentuh (Rule PINNED #1).
+- **Batas jujur**: BELUM PERNAH lewat `./gradlew`/device asli -- hasil
+  visual final (apakah proporsi ini sudah "cukup seimbang" menurut mata
+  user) tetap perlu diverifikasi user di HP, bukan cuma diasumsikan dari
+  kalkulasi ini.
+- **User WAJIB verifikasi di HP**: (1) build CI hijau, (2) gaya
+  Neumorphism -> tombol "Scan Sekarang" HARUS amber (bukan teal lagi),
+  teks/spinner di dalamnya HARUS tetap terbaca jelas, (3) elemen lain
+  (segmented control, ikon "Kelola Rule"/"Statistik") TETAP teal seperti
+  sebelumnya, (4) 3 gaya lain (Glass/M3/Cupertino) -> tombol "Scan
+  Sekarang" HARUS TETAP warna primary biasa (0 regresi).
+
 ## [UI][NEUMORPHISM] Skema warna baru "Teal & Amber (Blade Runner)" -- khusus gaya Neumorphism (2026-08-29)
 - **Instruksi eksplisit user**: "Terapkan kombinasi warna: Teal & Amber
   (Blade Runner). khusus theme Neumorphism only!!" -- lampiran screenshot

@@ -48,6 +48,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.elprompter.promptvault.R
+import com.elprompter.promptvault.data.ThemeStyleOption
 import com.elprompter.promptvault.ui.MainViewModel
 import com.elprompter.promptvault.ui.components.GroupedList
 import com.elprompter.promptvault.ui.components.GroupedListRow
@@ -210,6 +211,23 @@ fun HomeScreen(
                 animationSpec = tween(TactileTokens.PressAnimationMillis),
                 label = "ctaScale"
             )
+            // [2026-08-29, permintaan eksplisit user, lanjutan skema "Teal &
+            // Amber (Blade Runner)" khusus Neumorphism] User lapor via
+            // screenshot: teal (colors.primary) kerasa jauh lebih dominan
+            // drpd amber (colors.tertiary) di gaya Neumorphism -- primary
+            // dipakai di lebih banyak elemen BESAR (segmented control, kartu
+            // ikon "Kelola Rule"/"Statistik", CTA ini), sedangkan tertiary
+            // cuma nongol di ikon-ikon kecil (clock/history/help). Ditanya
+            // balik cara rebalance yang diinginkan (3 opsi) -- user pilih:
+            // kasih amber porsi ELEMEN BESAR juga, contoh konkret yang
+            // disebut sendiri = tombol "Scan Sekarang" ini. CTA paling
+            // menonjol di Home, jadi pilihan paling efektif utk nambah
+            // "bobot visual" amber tanpa nyentuh banyak file. KHUSUS
+            // Neumorphism -- 3 gaya lain (Glass/M3/Cupertino) TETAP
+            // colors.primary/colors.onPrimary, 0 berubah.
+            val isNeumorphismCta = VaultTheme.style == ThemeStyleOption.NEUMORPHISM
+            val ctaColor = if (isNeumorphismCta) colors.tertiary else colors.primary
+            val ctaContentColor = if (isNeumorphismCta) colors.onTertiary else colors.onPrimary
             TactileSurface(
                 onClick = onScanNow,
                 enabled = !isScanning,
@@ -218,7 +236,7 @@ fun HomeScreen(
                     .fillMaxWidth()
                     .scale(ctaScale),
                 shape = MaterialTheme.shapes.large,
-                color = colors.primary,
+                color = ctaColor,
                 elevation = TactileTokens.TactileElevationCta,
                 recessed = scanPressed
             ) {
@@ -227,9 +245,9 @@ fun HomeScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     if (isScanning) {
-                        CircularProgressIndicator(modifier = Modifier.size(18.dp), color = colors.onPrimary)
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), color = ctaContentColor)
                     } else {
-                        Text(stringResource(R.string.home_scan_now_button), color = colors.onPrimary, style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.home_scan_now_button), color = ctaContentColor, style = MaterialTheme.typography.titleMedium)
                     }
                 }
             }
