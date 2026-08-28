@@ -54,18 +54,37 @@ import androidx.compose.ui.unit.dp
  * mepet). Sisi gelap 0 batas atas WCAG (menggelapkan bg cuma menaikkan
  * kontras teks terang). Drop-shadow poin 1 100% di area KOSONG luar
  * kartu, 0 relevansi WCAG teks.
+ *
+ * (2026-08-29, permintaan eksplisit user) `FillHighlightTint` diganti dari
+ * [Primary] (biru, dulu brand color TUNGGAL app) ke [NeoTeal] ("Teal &
+ * Amber (Blade Runner)", lihat javadoc lengkap di `Color.kt`) -- SEKARANG
+ * Neumorphism sudah punya identitas warna SENDIRI ([NeumorphismColors],
+ * `Theme.kt`), jadi tint "ikatan warna brand" di kartu ini WAJIB ikut ganti
+ * ke teal, bukan lagi biru lama -- kalau tidak, kartu tetap kerasa biru
+ * padahal tombol/teks di sekitarnya sudah teal, identitas jadi setengah-
+ * setengah/tidak konsisten. `alpha=0.20` TIDAK diubah (cuma sumber hue-nya
+ * yang diganti, bukan intensitasnya). WCAG dihitung ULANG dgn metodologi
+ * IDENTIK persis di atas: composite alpha 0.20 -> (51,78,88) -> 5.12:1 vs
+ * `TextSecondary` (AA, ambang 4.5:1, margin nyaris identik dgn nilai lama
+ * 5.13:1 -- kebetulan sangat dekat, TIDAK perlu re-tuning alpha).
+ * `FillShadeTint`/`fillHighlightBrush()`/`fillShadeBrush()`/border
+ * ([Platinum]) 0 disentuh -- [Platinum] SENGAJA neutral/blend (keputusan
+ * eksplisit user v8.28.4, "lebih cocok pakai tone warna yang nyaru"),
+ * BUKAN bagian dari identitas 2-warna yang diminta sesi ini.
  */
 object NeumorphTokens {
     /** Elevasi drop-shadow (nilai `Surface.shadowElevation` baku, TANPA
-     * offset/wrapper custom sejak v8.28.0 -- lihat javadoc atas) --
-     * dinaikkan drpd kartu biasa ([TactileTokens.TactileElevationCard])
-     * supaya kartu terasa "mengambang" lebih jelas, ciri khas neumorphism
-     * timbul. */
+     * offset/wrapper custom sejak v8.28.0 -- lihat javadoc lengkap
+     * `NeumorphTokens.` di atas) -- dinaikkan drpd kartu biasa
+     * ([TactileTokens.TactileElevationCard]) supaya kartu terasa
+     * "mengambang" lebih jelas, ciri khas neumorphism timbul. */
     val ShadowElevation: Dp = 14.dp
 
-    /** Tint fill terang, kiri-atas -- basis [Primary] app (bukan putih
-     * polos, lihat alasan "tone" di javadoc atas). */
-    val FillHighlightTint: Color = Primary.copy(alpha = 0.20f)
+    /** Tint fill terang, kiri-atas -- basis [NeoTeal] ("Teal & Amber Blade
+     * Runner", identitas warna Neumorphism sejak 2026-08-29, lihat javadoc
+     * lengkap `NeumorphTokens.` di atas -- SEBELUMNYA [Primary]/biru, era
+     * sebelum Neumorphism punya skema warna sendiri). */
+    val FillHighlightTint: Color = NeoTeal.copy(alpha = 0.20f)
 
     /** Tint fill gelap, kanan-bawah -- netral (shadow gelap tidak perlu
      * ikatan warna brand, cukup hitam biasa). */

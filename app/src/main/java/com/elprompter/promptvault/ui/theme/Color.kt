@@ -171,3 +171,60 @@ val CupertinoOnRedContainer = Color(0xFFF6D7D5)
 
 val CupertinoIndigo = Color(0xFF9E9DE7)                // aksen ke-4 "slate" -- systemIndigo
 val CupertinoIndigoContainer = Color(0xFF27264F)
+
+/**
+ * (2026-08-29) Warna khusus gaya NEUMORPHISM -- kombinasi "Teal & Amber
+ * (Blade Runner)", permintaan eksplisit user. DIPAKAI KHUSUS oleh
+ * `NeumorphismColors` (`Theme.kt`, kondisional per `themeStyle`, pola
+ * IDENTIK `CupertinoColors` di atas) -- [PromptVaultColors] (dipakai 2
+ * gaya lain: Glass/M3) & [CupertinoColors] 0 disentuh/0 berubah. Cakupan
+ * SENGAJA dibatasi cuma 3 slot AKSEN (primary/secondary/tertiary) --
+ * neutral/background/surface/error/outline & aksen ke-4 "Pengaturan"
+ * ([VaultExtraColors]) SENGAJA 100% REUSE token lama (0 token baru), sama
+ * persis alasan [CupertinoColors]: identitas 2-warna cukup dibawa lewat
+ * slot aksen, background terpisah/aksen ke-4 baru tidak diminta.
+ *
+ * Hue: primary = TEAL H187 (cyan-teal terang, cahaya "hologram" khas
+ * poster Blade Runner), secondary = TEAL lebih hijau H172 (varian teal
+ * lebih teduh, SENGAJA beda hue tipis dari primary spy pola M3 baku
+ * primary/secondary tetap 2 hue berbeda -- lihat javadoc [Secondary] di
+ * atas), tertiary = AMBER/ORANGE H32 (lebih hangat & lebih jenuh dari
+ * amber warning M3 baku H42 di atas -- disengaja, supaya baca sbg identik
+ * "amber neon" duotone klasik Blade Runner, bukan amber redup semantik
+ * warning). Saturasi SEDIKIT lebih tinggi dari resep [Primary]/[Tertiary]
+ * M3 baku (~0.55) di atas -- 0.34-0.72 tergantung tone -- utk kesan "neon"
+ * yg diminta, TAPI tetap 1 keluarga metodologi kontras yg sama (bukan
+ * warna solid vivid mentah, tone tetap dikalibrasi WCAG spt biasa).
+ *
+ * Kontras (worst-case vs [SurfaceContainerHighest], metodologi identik
+ * seluruh file ini): Teal 6.20:1, TealDeep 6.60:1, Amber 7.30:1 -- semua
+ * lulus AA teks (>=4.5:1) dgn margin nyaman. On* vs base fill masing2:
+ * OnTeal 7.41:1, OnTealDeep 7.31:1, OnAmber 8.00:1 (semua AAA). Container
+ * vs [AppBackground] (info saja, konteks sama spt catatan audit 1.4.11 di
+ * atas -- container SELALU dipakai berbentuk jelas dgn elevasi sendiri):
+ * 1.90:1 utk ketiganya (disamakan presisi ke tingkat existing
+ * PrimaryContainer 1.82:1/dst, bukan kebetulan -- dicari eksplisit lewat
+ * script kalkulasi kontras spy "kegelapan" container konsisten lintas
+ * hue meski hue teal secara persepsi jauh lebih terang dari hue biru pada
+ * L yang sama, krn bobot channel hijau formula WCAG jauh lebih besar dari
+ * biru). OnXContainer vs XContainer: 7.79-7.80:1 (AAA).
+ *
+ * Audit titik pemakaian: sama seperti [CupertinoBlue] dkk di atas -- grep
+ * `Color(0x...)` di luar package `ui/theme` = 0 hasil, SELURUH app 100%
+ * konsumsi warna lewat `MaterialTheme.colorScheme.*` -- aman full-swap
+ * kondisional tanpa sentuh call site manapun.
+ */
+val NeoTeal = Color(0xFF4BC2D2)                        // primary -- teal cyan terang
+val NeoOnTeal = Color(0xFF12272A)
+val NeoTealContainer = Color(0xFF25464B)
+val NeoOnTealContainer = Color(0xFFC2E8ED)
+
+val NeoTealDeep = Color(0xFF7FC5BC)                    // secondary -- teal lebih hijau/teduh
+val NeoOnTealDeep = Color(0xFF1A2D2B)
+val NeoTealDeepContainer = Color(0xFF2F4643)
+val NeoOnTealDeepContainer = Color(0xFFCEE7E3)
+
+val NeoAmber = Color(0xFFEAB980)                       // tertiary -- amber/oranye hangat, jenuh
+val NeoOnAmber = Color(0xFF372715)
+val NeoAmberContainer = Color(0xFF533D25)
+val NeoOnAmberContainer = Color(0xFFF2DFC9)

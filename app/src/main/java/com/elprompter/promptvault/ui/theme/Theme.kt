@@ -106,6 +106,49 @@ private val CupertinoColors: ColorScheme = darkColorScheme(
 )
 
 /**
+ * (2026-08-29) Skema warna khusus gaya NEUMORPHISM -- "Teal & Amber (Blade
+ * Runner)", permintaan eksplisit user (lihat javadoc lengkap hue/kontras di
+ * `Color.kt`). Pola IDENTIK [CupertinoColors] di atas: neutral/background/
+ * surface/error/outline 100% REUSE dari [PromptVaultColors] (0 token baru)
+ * -- cuma 3 slot aksen (primary/secondary/tertiary) yang diganti.
+ */
+private val NeumorphismColors: ColorScheme = darkColorScheme(
+    primary = NeoTeal,
+    onPrimary = NeoOnTeal,
+    primaryContainer = NeoTealContainer,
+    onPrimaryContainer = NeoOnTealContainer,
+    secondary = NeoTealDeep,
+    onSecondary = NeoOnTealDeep,
+    secondaryContainer = NeoTealDeepContainer,
+    onSecondaryContainer = NeoOnTealDeepContainer,
+    tertiary = NeoAmber,
+    onTertiary = NeoOnAmber,
+    tertiaryContainer = NeoAmberContainer,
+    onTertiaryContainer = NeoOnAmberContainer,
+    background = AppBackground,
+    onBackground = TextPrimary,
+    surface = SurfaceDefault,
+    onSurface = TextPrimary,
+    surfaceVariant = SurfaceContainerHigh,
+    onSurfaceVariant = TextSecondary,
+    surfaceContainer = SurfaceContainer,
+    surfaceContainerHigh = SurfaceContainerHigh,
+    surfaceContainerHighest = SurfaceContainerHighest,
+    surfaceContainerLow = SurfaceContainerLow,
+    surfaceContainerLowest = SurfaceContainerLowest,
+    inverseSurface = TextPrimary,
+    inverseOnSurface = AppBackground,
+    inversePrimary = NeoTeal,
+    error = ErrorRed,
+    onError = OnErrorRed,
+    errorContainer = ErrorContainer,
+    onErrorContainer = OnErrorContainer,
+    outline = Outline,
+    outlineVariant = OutlineVariant,
+    scrim = Color.Black
+)
+
+/**
  * Aksen ke-4 di luar peran M3 baku, khusus menu "Pengaturan" (pola
  * "sistem 4-aksen" dipertahankan, lihat Color.kt). Nama field `slate`/
  * `slateContainer` SENGAJA TIDAK di-rename (walau sumber warnanya sekarang
@@ -165,16 +208,31 @@ object VaultTheme {
  * MENUTUP SEMUA 3 item pending restyling Cupertino murni (typography,
  * custom dialog, warna sistem) -- lihat [CupertinoTokens] utk daftar
  * lengkap progres.
+ *
+ * (2026-08-29, permintaan eksplisit user) `colorScheme` sekarang 3-cabang
+ * (bukan cuma cabang boolean `isCupertino`) -- NEUMORPHISM dapat skema
+ * warna sendiri, [NeumorphismColors] ("Teal & Amber (Blade Runner)", lihat
+ * javadoc lengkap di [NeumorphismColors] & `Color.kt`). `shapes`/
+ * `typography`/`LocalVaultExtraColors` TIDAK ikut berubah utk NEUMORPHISM
+ * (TETAP [PromptVaultShapes]/[PromptVaultTypography]/`VaultExtra`, sama
+ * persis GLASSMORPHISM/MATERIAL3) -- user cuma minta "kombinasi warna",
+ * bukan rombak shape/tipografi/aksen ke-4 spt restyling Cupertino murni di
+ * atas; scope sengaja dijaga sempit sesuai yang diminta.
  */
 @Composable
 fun PromptVaultTheme(themeStyle: ThemeStyleOption = ThemeStyleOption.GLASSMORPHISM, content: @Composable () -> Unit) {
     val isCupertino = themeStyle == ThemeStyleOption.CUPERTINO
+    val colorScheme = when (themeStyle) {
+        ThemeStyleOption.CUPERTINO -> CupertinoColors
+        ThemeStyleOption.NEUMORPHISM -> NeumorphismColors
+        else -> PromptVaultColors
+    }
     CompositionLocalProvider(
         LocalVaultExtraColors provides if (isCupertino) CupertinoExtra else VaultExtra,
         LocalThemeStyle provides themeStyle
     ) {
         MaterialTheme(
-            colorScheme = if (isCupertino) CupertinoColors else PromptVaultColors,
+            colorScheme = colorScheme,
             typography = if (isCupertino) CupertinoTypography else PromptVaultTypography,
             shapes = if (isCupertino) CupertinoShapes else PromptVaultShapes,
             content = content

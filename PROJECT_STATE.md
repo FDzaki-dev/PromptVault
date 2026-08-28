@@ -26,6 +26,85 @@
 > -- berlaku PERMANEN mulai sesi ini utk SEMUA sesi berikutnya, sesi mana
 > pun DILARANG mencabut/melonggarkan tanpa instruksi eksplisit baru user.
 
+## [UI][NEUMORPHISM] Skema warna baru "Teal & Amber (Blade Runner)" -- khusus gaya Neumorphism (2026-08-29)
+- **Instruksi eksplisit user**: "Terapkan kombinasi warna: Teal & Amber
+  (Blade Runner). khusus theme Neumorphism only!!" -- lampiran screenshot
+  Home (gaya Neumorphism aktif, kartu stacked-cards). Scope EKSPLISIT
+  cuma 1 gaya (Neumorphism) -- Glassmorphism/Material3/Cupertino WAJIB 0
+  berubah.
+- **Pola yang diikuti**: SAMA PERSIS precedent restyling Cupertino murni
+  (2026-08-27/28, lihat log di bawah) -- skema warna kondisional per
+  `themeStyle`, neutral/background/surface/error/outline 100% REUSE token
+  lama (0 token baru di situ), cuma slot AKSEN (primary/secondary/
+  tertiary) yang diganti. `PromptVaultTheme()` (`Theme.kt`) diubah dari
+  cabang boolean `isCupertino` jadi `when(themeStyle)` 3-cabang utk
+  `colorScheme` SAJA -- `shapes`/`typography`/`LocalVaultExtraColors`
+  TIDAK ikut kondisional baru (TETAP sama dgn Glass/M3 utk Neumorphism,
+  user cuma minta "kombinasi warna", bukan rombak shape/tipografi/aksen
+  ke-4 spt restyling Cupertino).
+- **Palet baru** (`Color.kt`, blok `NeoTeal`/`NeoTealDeep`/`NeoAmber` + 4
+  varian on/container tiap satu, methodology WCAG identik seluruh file --
+  dicari via script kalkulasi kontras Python, BUKAN tebakan visual):
+  - Primary = Teal H187 (`#4BC2D2`, cyan-teal terang) -- kontras vs
+    `SurfaceContainerHighest` 6.20:1.
+  - Secondary = Teal-hijau H172 (`#7FC5BC`, varian lebih teduh) -- 6.60:1.
+  - Tertiary = Amber/oranye H32 (`#EAB980`, lebih hangat & jenuh dari
+    amber-warning M3 baku H42) -- 7.30:1.
+  - Semua pasangan on*/container* 7.31-8.00:1 (AAA). Container vs
+    `AppBackground` disamakan presisi ke ~1.90:1 (setara tier existing
+    PrimaryContainer 1.82:1) -- dicari eksplisit krn hue teal secara
+    persepsi jauh LEBIH TERANG dari hue biru pada L yang sama (bobot
+    channel hijau formula WCAG jauh lebih besar), jadi TIDAK bisa reuse
+    L mentah dari resep [Primary]/[Tertiary] lama, harus dihitung ulang.
+  - Error/outline/neutral: 100% REUSE (`ErrorRed`/`Outline`/dst), 0 token
+    baru. Aksen ke-4 "Pengaturan" (`VaultExtraColors.slate`): TETAP
+    `SettingsAccent` (indigo) lama, SENGAJA tidak diganti -- scope
+    diminta cuma "Teal & Amber" 2 warna, bukan rombak 4 slot spt
+    Cupertino; user bisa minta lanjutan kalau mau aksen ke-4 disesuaikan.
+- **Titik krusial yg DITELUSURI (bukan cuma ganti `ColorScheme`)**:
+  `NeumorphTokens.kt` (`FillHighlightTint`, tint gradient kiri-atas yg
+  bikin kartu Neumorphism "kerasa ikatan warna brand" -- fitur eksplisit
+  dari v8.27.0 lama) SEBELUMNYA HARDCODE ke `Primary` (biru lama), BUKAN
+  baca `MaterialTheme.colorScheme.primary` dinamis -- kalau tidak
+  ditelusuri & ikut diganti, kartu Neumorphism akan TETAP kerasa biru
+  walau tombol/teks sekitarnya sudah teal (identitas setengah-setengah).
+  Diverifikasi via grep: `NeumorphTokens.*` HANYA dikonsumsi di
+  `TactileSurface.kt` di dalam cabang
+  `if (style == ThemeStyleOption.NEUMORPHISM)` -- 100% eksklusif
+  Neumorphism, aman diganti jadi literal `NeoTeal` langsung (TIDAK perlu
+  diubah jadi `@Composable`/dinamis, toh cuma pernah dibaca dlm konteks
+  itu). WCAG blend alpha=0.20 (nilai alpha TIDAK diubah) dihitung ULANG:
+  composite (51,78,88) -> 5.12:1 vs `TextSecondary` (AA, nyaris identik
+  margin nilai lama 5.13:1).
+- **TIDAK disentuh** (Zero-Unnecessary-Refactor + hormati keputusan
+  eksplisit user sebelumnya): `NeumorphTokens.Platinum`/`borderBrush()`
+  (border diagonal kartu) -- SENGAJA netral/blend, keputusan eksplisit
+  user v8.28.4 ("lebih cocok pakai tone warna yang nyaru"), BUKAN bagian
+  identitas 2-warna yang diminta sesi ini, jadi TETAP dibiarkan;
+  `CupertinoColors`/`PromptVaultColors` (Glass/M3/Cupertino) 0 baris
+  berubah; `versionCode`/`versionName` di `app/build.gradle.kts` TIDAK
+  disentuh sama sekali (Rule PINNED #1 di atas -- 100% otomatis
+  `GITHUB_RUN_NUMBER`, bukan sesi ini yang menentukan angkanya).
+- File diubah (3, dalam batas Micro-Batch): `ui/theme/Color.kt` (parsial,
+  1 blok baru + 3x4 token warna), `ui/theme/Theme.kt` (parsial, 1
+  `ColorScheme` baru + `when` 3-cabang di `PromptVaultTheme()`),
+  `ui/theme/NeumorphTokens.kt` (parsial, 1 baris `FillHighlightTint` +
+  KDoc). `FILE_MANIFEST.txt` TIDAK berubah (0 file baru/dihapus).
+- **Batas jujur**: seperti seluruh riwayat project, **BELUM PERNAH lewat
+  `./gradlew`/device asli** -- kalkulasi WCAG diverifikasi via script
+  Python terpisah (bukan cuma eyeball), tapi hasil visual sesungguhnya
+  (apakah kombinasi Teal+Amber ini benar "kerasa Blade Runner" di layar
+  asli, bukan cuma di atas kertas kontras) BELUM diverifikasi user.
+- **User WAJIB verifikasi di HP**: (1) build CI hijau, (2) di
+  Pengaturan/Tampilan pilih gaya "Neumorphism" -> Beranda & semua layar
+  lain HARUS terlihat teal (tombol "Scan Sekarang", ikon, switch aktif)
+  + amber (ikon warning/highlight) menggantikan biru+amber-redup lama,
+  (3) kartu (VaultCard/manifest Beranda dll) tint kiri-atas HARUS terasa
+  teal, BUKAN biru lagi, (4) ganti ke gaya Glassmorphism/Material3/
+  Cupertino -> HARUS TETAP seperti sebelumnya, 0 perubahan (Teal & Amber
+  CUMA utk Neumorphism), (5) teks tetap terbaca jelas di semua kombinasi
+  (WCAG sudah dihitung tapi verifikasi visual asli tetap final call).
+
 ## [UI] Stacked Cards Effect kiri-atas/3-lapis -- diperluas ke SEMUA VaultCard (2026-08-28, lanjutan batch sebelumnya)
 - **Konteks**: batch sebelumnya (lihat entri di bawah) sengaja SCOPE efek
   baru cuma ke 1 kartu (manifest Home) krn efek itu butuh inset 28dp/kartu
