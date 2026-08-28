@@ -1,5 +1,6 @@
 package com.elprompter.promptvault.ui.theme
 
+import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Shapes
 import androidx.compose.ui.unit.dp
@@ -49,4 +50,31 @@ val CupertinoShapes = Shapes(
     medium = RoundedCornerShape(18.dp),
     large = RoundedCornerShape(24.dp),
     extraLarge = RoundedCornerShape(32.dp)
+)
+
+/**
+ * (2026-08-29) Skala sudut KHUSUS gaya
+ * [com.elprompter.promptvault.data.ThemeStyleOption.NEUMORPHISM]
+ * ("Teal & Amber Blade Runner", lihat javadoc lengkap hue/kontras di
+ * `NeumorphismColors`/`Color.kt`) -- pola IDENTIK [CupertinoShapes] di atas
+ * (ganti keluarga `Shape` per `themeStyle` via `MaterialTheme.shapes.*` di
+ * `Theme.kt`, BUKAN override per-cabang di `TactileSurface`). Keluarga
+ * bentuknya `CutCornerShape` (sudut potong lurus/chamfer) -- KEBALIKAN arah
+ * "kesan" dari [CupertinoShapes] (Cupertino = lebih bulat/lembut, Blade
+ * Runner = sudut tegas/dipotong lurus, ciri panel/HUD retrofuturistik-
+ * industrial khas visual film-nya, bukan sudut membulat organik).
+ *
+ * Nilai dp per tingkat SENGAJA disamakan PERSIS skala [PromptVaultShapes]
+ * (M3 baku: 4/8/12/16/28) -- "parity footprint": komponen manapun yang
+ * pakai `MaterialTheme.shapes.*` (kotak ikon, kartu, sheet/dialog) 0
+ * berubah ukuran/proporsi saat pindah ke gaya Neumorphism, HANYA keluarga
+ * potongannya yang beda (lurus vs bulat) -- aman full-swap tanpa sentuh
+ * call site manapun, sama prinsip [CupertinoShapes].
+ */
+val NeumorphismShapes = Shapes(
+    extraSmall = CutCornerShape(4.dp),
+    small = CutCornerShape(8.dp),
+    medium = CutCornerShape(12.dp),
+    large = CutCornerShape(16.dp),
+    extraLarge = CutCornerShape(28.dp)
 )

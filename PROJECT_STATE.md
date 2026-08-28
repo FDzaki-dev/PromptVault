@@ -26,6 +26,52 @@
 > -- berlaku PERMANEN mulai sesi ini utk SEMUA sesi berikutnya, sesi mana
 > pun DILARANG mencabut/melonggarkan tanpa instruksi eksplisit baru user.
 
+## [UI][NEUMORPHISM] Shape + Typography ala Blade Runner, menyusul skema warna (2026-08-29, lanjutan Blade Runner)
+- **Trigger**: user eksplisit minta "terapkan shape/typography ala Blade
+  Runner, seperti pada tema warnanya" -- menyusul `NeumorphismColors`
+  ("Teal & Amber Blade Runner", 2 entri di bawah) yang sudah lebih dulu
+  ada tapi saat itu SENGAJA scope dipersempit cuma warna (lihat javadoc
+  lama `Theme.kt`, sekarang diperbarui bukan dihapus).
+- **Shape** (`ui/theme/Shapes.kt`, +1 val `NeumorphismShapes`): keluarga
+  `CutCornerShape` (sudut potong lurus/chamfer) -- kebalikan arah
+  `CupertinoShapes` (bulat/lembut). Nilai dp per tingkat SENGAJA disamakan
+  PERSIS `PromptVaultShapes` (4/8/12/16/28, skala M3 baku) -- "parity
+  footprint", 0 resiko ukuran komponen berubah di layar manapun saat
+  pindah gaya, cuma keluarga potongannya yang beda.
+- **Typography** (`ui/theme/Type.kt`, +1 val `NeumorphismTypography`):
+  role display/headline/titleLarge/label* pakai `CodeFont` (monospace,
+  reuse token lama, 0 font pihak ketiga baru) + weight lebih tebal
+  (Bold/SemiBold) + letter-spacing POSITIF lebar -- kesan "signage
+  neon/HUD terminal" khas kota Blade Runner. Role titleMedium/titleSmall/
+  body* TETAP `Sans` (`FontFamily.Default`) demi keterbacaan teks isi
+  (nama file, deskripsi rule). Semua ukuran/line-height 100% reuse
+  `PromptVaultTypography` (0 diketik ulang) -- hirarki M3 otomatis aman.
+- **Wiring** (`ui/theme/Theme.kt`, parsial): `typography`/`shapes` di
+  `PromptVaultTheme` diubah dari ternary boolean `isCupertino` jadi
+  `when (themeStyle)` 3-cabang, pola PERSIS `colorScheme` yang sudah lebih
+  dulu 3-cabang -- NEUMORPHISM -> `NeumorphismShapes`/`NeumorphismTypography`,
+  CUPERTINO tetap `Cupertino*`, sisanya (GLASSMORPHISM/MATERIAL3) tetap
+  `PromptVault*`, 0 berubah. Javadoc lama di atas fungsi (yang bilang
+  "shapes/typography TIDAK ikut berubah utk NEUMORPHISM") diperbarui
+  in-place (bukan dihapus) supaya tidak jadi info usang.
+- **TIDAK disentuh**: `LocalVaultExtraColors` (aksen ke-4 "Pengaturan")
+  TETAP `VaultExtra` -- di luar permintaan sesi ini (cuma shape+tipografi).
+  `NeumorphismColors`/`NeumorphTokens` (fill/border/stacked-cards) 0
+  berubah -- identitas warna Blade Runner yang sudah ada sebelumnya
+  tidak disentuh, sesi ini murni menyusulkan 2 sumbu visual yang tadinya
+  ditunda.
+- File diubah (3, PAS batas Micro-Batch): `ui/theme/Shapes.kt` (+1 val),
+  `ui/theme/Type.kt` (+1 val), `ui/theme/Theme.kt` (parsial: 2 blok
+  ternary -> `when`, 1 javadoc diperbarui). `FILE_MANIFEST.txt`/
+  `versionCode`/`versionName` TIDAK disentuh (Rule PINNED #1).
+- **Batas jujur**: BELUM PERNAH lewat `./gradlew`/device asli -- sanity
+  check sesi ini terbatas pada pemeriksaan sintaks (kurung/brace seimbang)
+  di 3 file, bukan compile Gradle sungguhan. Hasil visual final (apakah
+  "kesan Blade Runner" pada shape/tipografi sudah sesuai ekspektasi user)
+  tetap perlu diverifikasi user di HP.
+- **Pending Queue**: kosong -- 3 file di batch ini sudah menuntaskan
+  permintaan sesi ini secara utuh, 0 sisa pekerjaan menggantung.
+
 ## [UI][NEUMORPHISM] Rebalance porsi Amber -- CTA "Scan Sekarang" (2026-08-29, lanjutan Blade Runner)
 - **Lanjutan entri di bawah** (skema warna Blade Runner) -- user lapor via
   screenshot kedua: "Ternyata lebih dominan warna teal daripada amber nya"

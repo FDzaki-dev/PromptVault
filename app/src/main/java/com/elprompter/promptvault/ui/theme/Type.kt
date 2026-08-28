@@ -80,3 +80,53 @@ val CupertinoTypography = Typography(
     bodyMedium = TextStyle(fontFamily = Sans, fontWeight = FontWeight.Normal, fontSize = 15.sp, lineHeight = 20.sp, letterSpacing = (-0.24).sp),       // Subheadline
     bodySmall = TextStyle(fontFamily = Sans, fontWeight = FontWeight.Normal, fontSize = 12.sp, lineHeight = 16.sp, letterSpacing = 0.sp)                // Caption 1
 )
+
+/**
+ * (2026-08-29) Skala tipografi KHUSUS gaya `ThemeStyleOption.NEUMORPHISM`
+ * ("Teal & Amber Blade Runner", lihat javadoc lengkap hue/kontras warna di
+ * `NeumorphismColors`/`Color.kt`) -- pola IDENTIK [CupertinoTypography] di
+ * atas (ganti keluarga `Typography` per `themeStyle` di `Theme.kt`, 3 gaya
+ * lain 0 berubah).
+ *
+ * Beda pendekatan dari [CupertinoTypography] (yang JUGA ubah ukuran/line-
+ * height ikut skala HIG Apple): di sini ukuran & line-height SEMUA role
+ * DIPERTAHANKAN IDENTIK [PromptVaultTypography] (skala M3 baku) -- "parity
+ * footprint", 0 resiko layout/wrap teks berubah di komponen manapun. HANYA
+ * font-family/weight/letter-spacing yang diubah, sumber identitas visual
+ * "Blade Runner":
+ * - Role display/headline/titleLarge -> [CodeFont] (monospace, SUDAH ada
+ *   di file ini, reuse apa adanya -- 0 font pihak ketiga baru dibundel) +
+ *   weight lebih tebal (Bold/SemiBold) + letter-spacing POSITIF lebar
+ *   (+0.5..+1.5sp) -- kesan "signage neon/HUD terminal" raksasa khas kota
+ *   Blade Runner (papan iklan Atari/Coca-Cola, panel Spinner), KEBALIKAN
+ *   arah dari tracking negatif rapat ala SF Pro di [CupertinoTypography].
+ * - Role titleMedium/titleSmall/body* -> TETAP [Sans] (`FontFamily.Default`),
+ *   sengaja TIDAK ikut monospace -- teks isi/badan (nama file, deskripsi
+ *   rule) tetap butuh keterbacaan wajar; monospace penuh di SEMUA role
+ *   justru kontraproduktif utk app manajemen file harian.
+ * - Role label* -> [CodeFont] lagi + letter-spacing lebar (+0.8sp) -- label/
+ *   badge kecil (chip, tag) kebaca sbg "readout data" HUD, bukan label UI
+ *   generik.
+ *
+ * Hirarki ukuran per role (headlineLarge >= headlineMedium >= dst) otomatis
+ * TETAP terjaga krn seluruh nilai sp/lineHeight 100% reuse
+ * [PromptVaultTypography] (0 diketik ulang manual, 0 resiko typo yang
+ * jebolkan urutan).
+ */
+val NeumorphismTypography = Typography(
+    displayLarge = TextStyle(fontFamily = CodeFont, fontWeight = FontWeight.Bold, fontSize = 57.sp, lineHeight = 64.sp, letterSpacing = 1.5.sp),
+    displayMedium = TextStyle(fontFamily = CodeFont, fontWeight = FontWeight.Bold, fontSize = 45.sp, lineHeight = 52.sp, letterSpacing = 1.25.sp),
+    displaySmall = TextStyle(fontFamily = CodeFont, fontWeight = FontWeight.Bold, fontSize = 36.sp, lineHeight = 44.sp, letterSpacing = 1.sp),
+    headlineLarge = TextStyle(fontFamily = CodeFont, fontWeight = FontWeight.Bold, fontSize = 32.sp, lineHeight = 40.sp, letterSpacing = 1.sp),
+    headlineMedium = TextStyle(fontFamily = CodeFont, fontWeight = FontWeight.SemiBold, fontSize = 28.sp, lineHeight = 36.sp, letterSpacing = 0.75.sp),
+    headlineSmall = TextStyle(fontFamily = CodeFont, fontWeight = FontWeight.SemiBold, fontSize = 24.sp, lineHeight = 32.sp, letterSpacing = 0.75.sp),
+    titleLarge = TextStyle(fontFamily = CodeFont, fontWeight = FontWeight.SemiBold, fontSize = 22.sp, lineHeight = 28.sp, letterSpacing = 0.5.sp),
+    titleMedium = TextStyle(fontFamily = Sans, fontWeight = FontWeight.Medium, fontSize = 16.sp, lineHeight = 24.sp, letterSpacing = 0.15.sp),
+    titleSmall = TextStyle(fontFamily = Sans, fontWeight = FontWeight.Medium, fontSize = 14.sp, lineHeight = 20.sp, letterSpacing = 0.1.sp),
+    labelLarge = TextStyle(fontFamily = CodeFont, fontWeight = FontWeight.Medium, fontSize = 14.sp, lineHeight = 20.sp, letterSpacing = 0.8.sp),
+    labelMedium = TextStyle(fontFamily = CodeFont, fontWeight = FontWeight.Medium, fontSize = 12.sp, lineHeight = 16.sp, letterSpacing = 0.8.sp),
+    labelSmall = TextStyle(fontFamily = CodeFont, fontWeight = FontWeight.Medium, fontSize = 11.sp, lineHeight = 16.sp, letterSpacing = 0.8.sp),
+    bodyLarge = TextStyle(fontFamily = Sans, fontWeight = FontWeight.Normal, fontSize = 16.sp, lineHeight = 24.sp, letterSpacing = 0.5.sp),
+    bodyMedium = TextStyle(fontFamily = Sans, fontWeight = FontWeight.Normal, fontSize = 14.sp, lineHeight = 20.sp, letterSpacing = 0.25.sp),
+    bodySmall = TextStyle(fontFamily = Sans, fontWeight = FontWeight.Normal, fontSize = 12.sp, lineHeight = 16.sp, letterSpacing = 0.4.sp)
+)

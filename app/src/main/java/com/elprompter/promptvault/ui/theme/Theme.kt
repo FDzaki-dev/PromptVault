@@ -218,6 +218,22 @@ object VaultTheme {
  * persis GLASSMORPHISM/MATERIAL3) -- user cuma minta "kombinasi warna",
  * bukan rombak shape/tipografi/aksen ke-4 spt restyling Cupertino murni di
  * atas; scope sengaja dijaga sempit sesuai yang diminta.
+ *
+ * (2026-08-29, lanjutan sesi sama) SUSUL: `shapes`/`typography` KINI *juga*
+ * 3-cabang, pola PERSIS `colorScheme` di atas -- NEUMORPHISM dapat
+ * [NeumorphismShapes] (`Shapes.kt`, keluarga `CutCornerShape` -- sudut
+ * potong tegas, kebalikan arah bulat/lembut Cupertino) & [NeumorphismTypography]
+ * (`Type.kt`, [CodeFont] monospace+tebal+tracking lebar utk role
+ * display/headline/label -- kesan "signage/HUD terminal" khas Blade
+ * Runner). Paragraf di atas ("shapes/typography TIDAK ikut berubah")
+ * SEKARANG USANG -- diperbarui di sini alih-alih dihapus, konsisten pola
+ * arsip riwayat di seluruh file ini. Trigger: user eksplisit minta
+ * "shape/typography ala Blade Runner, seperti tema warnanya" (menyusul
+ * `NeumorphismColors` yang sudah lebih dulu ada) -- scope sekarang
+ * melengkapi 2 sumbu identitas visual yang tadinya sengaja ditunda.
+ * `LocalVaultExtraColors` (aksen ke-4 "Pengaturan") TETAP TIDAK berubah --
+ * di luar cakupan permintaan sesi ini (cuma shape+tipografi), tetap reuse
+ * `VaultExtra` sama seperti GLASSMORPHISM/MATERIAL3.
  */
 @Composable
 fun PromptVaultTheme(themeStyle: ThemeStyleOption = ThemeStyleOption.GLASSMORPHISM, content: @Composable () -> Unit) {
@@ -227,14 +243,24 @@ fun PromptVaultTheme(themeStyle: ThemeStyleOption = ThemeStyleOption.GLASSMORPHI
         ThemeStyleOption.NEUMORPHISM -> NeumorphismColors
         else -> PromptVaultColors
     }
+    val typography = when (themeStyle) {
+        ThemeStyleOption.CUPERTINO -> CupertinoTypography
+        ThemeStyleOption.NEUMORPHISM -> NeumorphismTypography
+        else -> PromptVaultTypography
+    }
+    val shapes = when (themeStyle) {
+        ThemeStyleOption.CUPERTINO -> CupertinoShapes
+        ThemeStyleOption.NEUMORPHISM -> NeumorphismShapes
+        else -> PromptVaultShapes
+    }
     CompositionLocalProvider(
         LocalVaultExtraColors provides if (isCupertino) CupertinoExtra else VaultExtra,
         LocalThemeStyle provides themeStyle
     ) {
         MaterialTheme(
             colorScheme = colorScheme,
-            typography = if (isCupertino) CupertinoTypography else PromptVaultTypography,
-            shapes = if (isCupertino) CupertinoShapes else PromptVaultShapes,
+            typography = typography,
+            shapes = shapes,
             content = content
         )
     }
