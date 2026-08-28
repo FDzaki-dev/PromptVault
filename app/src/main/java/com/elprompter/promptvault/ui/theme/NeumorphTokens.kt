@@ -163,6 +163,18 @@ object NeumorphTokens {
      * dari awal fitur ini dibuat). Turunkan ke 10dp -- masih terasa 1
      * lapis "tebal" (vs 9dp lama yg cuma bekas-2-lapis), tapi sliver tidak
      * lagi mengintip berlebihan.
+     *
+     * v8.36.0 — TIDAK diubah lagi di sini (tetap 10dp/kanan-bawah/1-lapis).
+     * Varian BARU "kiri-atas, 3 lapis" (permintaan user) sengaja DITARUH
+     * TERPISAH di token/fungsi `...TopLeft` di bawah, BUKAN menimpa token
+     * ini -- alasan: `StackedCardOffset`/`stackedCards()` ini dipakai
+     * bersama oleh SEMUA caller `TactileSurface(stackedCards=true)`
+     * (`VaultCard`, dipakai >10 layar TERMASUK item `LazyColumn` yang
+     * gap-nya cuma 4dp di `RuleListScreen`/`ActivityLogScreen` -- 3 lapis
+     * + inset besar yang dibutuhkan varian baru bakal bikin list itu
+     * medadak renggang/rusak kalau nimpa di sini). Lihat javadoc lengkap
+     * `StackedCardOffsetTopLeft` di bawah utk detail varian baru & kenapa
+     * cuma dipasang di 1 layar (Home).
      */
     val StackedCardOffset: Dp = 10.dp
 
@@ -194,6 +206,12 @@ object NeumorphTokens {
      * `AppBackground`, bukan makin pudar krn cuma 1 lapis). Fungsi
      * `stackedCards()` di bawah TIDAK berubah sama sekali -- sudah generik
      * thd panjang list (loop `.indices`), 1 elemen otomatis = 1 lapis.
+     *
+     * v8.36.0 — TIDAK diubah lagi di sini. Varian "kiri-atas, 3 lapis" baru
+     * pakai token warna TERPISAH ([StackedCardColorsTopLeft] di bawah),
+     * bukan menimpa daftar ini -- lihat alasan lengkap (kenapa tidak boleh
+     * nimpa token yang dipakai bersama >10 layar) di javadoc
+     * [StackedCardOffset] di atas.
      */
     val StackedCardColors: List<Color> = listOf(SurfaceContainerHighest)
 
@@ -232,6 +250,10 @@ object NeumorphTokens {
      * tanpa garis pembatas sendiri, terbaca sbg ketebalan MENYATU dgn kartu
      * utama di atasnya, bukan objek terpisah. Fill/offset/warna (v8.30.8)
      * TIDAK berubah.
+     *
+     * v8.36.0 — Fungsi ini TIDAK diubah lagi (tetap kanan-bawah, 1 lapis,
+     * dipakai bersama >10 layar). Varian baru ada di `stackedCardsTopLeft()`
+     * terpisah di bawah -- lihat javadoc lengkap di situ.
      */
     fun Modifier.stackedCards(): Modifier = this.drawBehind {
         val radius = CornerRadius(StackedCardCornerRadius.toPx())
@@ -243,6 +265,95 @@ object NeumorphTokens {
             val topLeft = Offset(shift, shift)
             drawRoundRect(
                 color = StackedCardColors[i],
+                topLeft = topLeft,
+                size = size,
+                cornerRadius = radius
+            )
+        }
+    }
+
+    /**
+     * v8.36.0 — "Stacked Cards Effect" varian KEDUA, permintaan eksplisit
+     * user: arah KIRI-ATAS (bukan kanan-bawah spt [stackedCards] existing)
+     * + 3 lapis (bukan 1) + WAJIB tidak terpotong/nyaru. Ditaruh sbg
+     * token/fungsi 100% TERPISAH dari [StackedCardOffset]/[StackedCardColors]/
+     * [stackedCards] di atas -- BUKAN modifikasi/replace -- krn yang lama
+     * dipakai bersama LEWAT `VaultCard` (opt-in tunggal `TactileSurface(
+     * stackedCards=true)`) di >10 layar, TERMASUK 2 `LazyColumn` rapat
+     * (`RuleListScreen` via `RuleCard`, `ActivityLogScreen` langsung --
+     * keduanya `Arrangement.spacedBy(4.dp)`, jauh lebih sempit dari ruang
+     * yang dibutuhkan 3-lapis+inset varian baru). Kalau varian baru nimpa
+     * token lama, SEMUA list itu mendadak dapat jarak antar-item yang jauh
+     * lebih renggang -- regresi tak diminta di layar yang bahkan tidak
+     * disinggung user. Jadi: opt-in kedua yang BENAR-BENAR terpisah,
+     * dipasang HANYA di 1 titik (`HomeScreen.kt`, kartu manifest/statistik
+     * -- kartu yang difoto user), lewat parameter baru
+     * `TactileSurface(stackedCardsTopLeft=...)`.
+     *
+     * Geometri (lihat fungsi `stackedCardsTopLeft()` di bawah): SAMA PERSIS
+     * pola [stackedCards] (loop `.indices.reversed()`, gambar PALING JAUH
+     * dulu supaya lapis lebih dekat menimpa sebagian lapis lebih jauh --
+     * "kartu terfan" yang benar) -- SATU-SATUNYA beda cuma tanda offset:
+     * `Offset(-shift, -shift)` (MINUS di kedua sumbu = kiri-atas) vs
+     * `Offset(shift, shift)` (kanan-bawah) di [stackedCards].
+     *
+     * PRASYARAT WAJIB offset negatif ini supaya "tanpa terpotong": fungsi
+     * ini HARUS dipanggil setelah `Modifier.padding(top =
+     * StackedCardInsetTopLeft, start = StackedCardInsetTopLeft)` sudah
+     * nempel LEBIH DULU di modifier chain yang sama (lihat `TactileSurface.
+     * kt`, cabang `stackedCardsTopLeft`) -- tanpa padding itu, offset
+     * negatif akan menggambar KELUAR bounds node (bisa ketutup sibling di
+     * atas kartu / kepotong tepi layar kiri). Dengan padding itu nempel
+     * duluan, `size`/origin `DrawScope` di bawah ini otomatis jadi versi
+     * yang SUDAH disusutkan inset -- fungsi ini sendiri TETAP 0 tahu soal
+     * padding (murni generik, padding itu tanggung jawab pemanggil, pola
+     * sama persis dgn [stackedCards] lama).
+     */
+    val StackedCardOffsetTopLeft: Dp = 8.dp
+
+    /** Ruang kosong (`Modifier.padding`) yang WAJIB ditempel `TactileSurface.
+     * kt` SEBELUM `stackedCardsTopLeft()` di chain -- lihat javadoc lengkap
+     * di [StackedCardOffsetTopLeft] di atas. Nilai: offset terjauh 3-lapis
+     * = [StackedCardOffsetTopLeft] * 3 = 24dp, + margin aman 4dp = 28dp
+     * (hindari sliver terluar mepet PAS di tepi 0px, rawan artefak
+     * anti-alias 1px di device densitas ganjil). */
+    val StackedCardInsetTopLeft: Dp = 28.dp
+
+    /** Warna 3 lapis "kiri-atas" -- menaik terang MAKIN JAUH dari kartu,
+     * krn tiap lapis cuma "mengintip" selebar 1 langkah
+     * [StackedCardOffsetTopLeft] (8dp) di luar lapis di depannya, jadi
+     * lapis PALING JAUH (index terakhir) PALING TERPAPAR ke `AppBackground`
+     * gelap polos di sekitarnya -- makin ke luar, makin butuh kontras kuat
+     * spy TIDAK "nyaru" (syarat eksplisit user). Ketiga warna reuse token
+     * existing (0 hue baru, prinsip monokrom neutral spt `Platinum` di
+     * border):
+     * 1. Index 0 (TERDEKAT kartu, shift 8dp): `SurfaceContainerHigh` --
+     *    beda tone tipis tapi tetap jelas dari `SurfaceContainer` (kartu
+     *    itu sendiri).
+     * 2. Index 1 (TENGAH, shift 16dp): `SurfaceContainerHighest` -- tone
+     *    paling terang dari 2 pilihan lama [StackedCardColors] (v8.30.1),
+     *    sudah lulus audit kontras vs `AppBackground` sebelumnya.
+     * 3. Index 2 (TERJAUH, shift 24dp): `Outline` -- satu tingkat lagi di
+     *    atas `SurfaceContainerHighest`, token neutral abu-biru yang sudah
+     *    dipakai sbg border/garis fungsional lain di app (bukan warna
+     *    baru), sengaja paling kontras krn lapis ini paling berisiko
+     *    tenggelam ke `AppBackground`. */
+    val StackedCardColorsTopLeft: List<Color> = listOf(
+        SurfaceContainerHigh,
+        SurfaceContainerHighest,
+        Outline
+    )
+
+    /** Modifier stacked-cards varian KIRI-ATAS -- lihat javadoc lengkap di
+     * [StackedCardOffsetTopLeft]. Geometri identik [stackedCards], MINUS di
+     * `topLeft` = satu-satunya beda. */
+    fun Modifier.stackedCardsTopLeft(): Modifier = this.drawBehind {
+        val radius = CornerRadius(StackedCardCornerRadius.toPx())
+        for (i in StackedCardColorsTopLeft.indices.reversed()) {
+            val shift = StackedCardOffsetTopLeft.toPx() * (i + 1)
+            val topLeft = Offset(-shift, -shift)
+            drawRoundRect(
+                color = StackedCardColorsTopLeft[i],
                 topLeft = topLeft,
                 size = size,
                 cornerRadius = radius

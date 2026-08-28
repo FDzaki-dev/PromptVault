@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -79,6 +80,13 @@ fun TactileSurface(
     // `VaultCard.kt` -- `GroupedListRow`/`EmptyState`/`TactileSwitch`/dst
     // (termasuk kotak ikon menu) TIDAK disentuh sama sekali.
     stackedCards: Boolean = false,
+    // [v8.36.0] Opt-in KEDUA, TERPISAH dari `stackedCards` di atas --
+    // default `false`, 0 dampak ke caller manapun (termasuk `VaultCard`,
+    // yang TETAP pakai `stackedCards` lama, TIDAK disentuh). Varian
+    // kiri-atas/3-lapis, lihat javadoc lengkap `NeumorphTokens.
+    // StackedCardOffsetTopLeft` utk alasan kenapa opt-in terpisah &
+    // dipasang HANYA di 1 titik (`HomeScreen.kt`, kartu manifest/statistik).
+    stackedCardsTopLeft: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val style = VaultTheme.style
@@ -133,10 +141,27 @@ fun TactileSurface(
         // pemanggil (kelas regresi v8.28.0 TIDAK terulang). `!recessed`
         // krn elemen cekung "tenggelam", kontradiktif dgn efek tumpukan
         // kartu yang menonjol keluar.
-        val neumorphModifier = if (stackedCards && !recessed) {
-            with(NeumorphTokens) { modifier.stackedCards() }
-        } else {
-            modifier
+        //
+        // [v8.36.0] `stackedCardsTopLeft` (param BARU di bawah, TERPISAH
+        // dari `stackedCards`) -- varian kiri-atas/3-lapis, WAJIB
+        // `.padding(top=.., start=..)` (`NeumorphTokens.
+        // StackedCardInsetTopLeft`) ditempel SEBELUM `.stackedCardsTopLeft()`
+        // di chain yang sama (bukan `Box` baru, pola aman identik
+        // `.stackedCards()` di atas) supaya lapis yang mengintip kiri-atas
+        // gambar DI DALAM ruang yang sudah dialokasikan node ini sendiri --
+        // 0 bocor ke sibling/tepi layar. `stackedCards` lama (cabang
+        // pertama di bawah) SENGAJA 0 disentuh -- lihat alasan lengkap
+        // (kenapa tidak boleh nimpa, dipakai bareng >10 layar termasuk 2
+        // `LazyColumn` rapat) di javadoc `NeumorphTokens.
+        // StackedCardOffsetTopLeft`.
+        val neumorphModifier = when {
+            stackedCardsTopLeft && !recessed -> with(NeumorphTokens) {
+                modifier
+                    .padding(top = StackedCardInsetTopLeft, start = StackedCardInsetTopLeft)
+                    .stackedCardsTopLeft()
+            }
+            stackedCards && !recessed -> with(NeumorphTokens) { modifier.stackedCards() }
+            else -> modifier
         }
         if (onClick != null) {
             Surface(

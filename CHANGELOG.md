@@ -3,6 +3,41 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## [UI] Stacked Cards Effect kartu manifest Home -- arah kiri-atas, 3 lapis, tanpa terpotong (2026-08-28)
+
+Instruksi user (via screenshot): balik arah stacked-card effect kartu
+manifest/statistik Home ke kiri-atas, 3 lapis (bekas 1), tanpa
+kepotong/bocor ke elemen lain, dan tiap lapis wajib kontras jelas (tidak
+"nyaru").
+
+Efek lama dipakai bersama lewat `VaultCard` di >10 layar termasuk 2
+`LazyColumn` rapat (`RuleListScreen`, `ActivityLogScreen`, gap cuma 4dp) --
+menimpa langsung bakal merusak jarak antar-item di situ. Fix: opt-in KEDUA
+yang terpisah total (`stackedCardsTopLeft`), token/fungsi lama 0 berubah,
+dipasang HANYA di kartu manifest Home (panggil `TactileSurface` langsung,
+bukan lewat `VaultCard`).
+
+`NeumorphTokens.kt`: token baru `StackedCardOffsetTopLeft` (8dp/lapis),
+`StackedCardInsetTopLeft` (28dp, ruang wajib via `Modifier.padding` supaya
+lapis tidak bocor/kepotong), `StackedCardColorsTopLeft` (3 warna existing,
+menaik terang makin jauh dari kartu: `SurfaceContainerHigh` ->
+`SurfaceContainerHighest` -> `Outline`), `Modifier.stackedCardsTopLeft()`
+(offset `Offset(-shift,-shift)`, arah dibalik dari versi lama). 
+
+`TactileSurface.kt`: parameter baru `stackedCardsTopLeft: Boolean = false`,
+padding inset ditempel SEBELUM draw di modifier chain (pola sama dgn efek
+lama, 0 wrapper `Box` baru). `HomeScreen.kt`: 1 pemanggilan `VaultCard`
+(kartu manifest) diganti `TactileSurface` langsung + flag baru, isi konten
+0 berubah. `VaultCard.kt`: 0 disentuh -- semua caller lain tetap efek lama
+(kanan-bawah, 1 lapis).
+
+Belum diverifikasi build CI/device nyata (sandbox sesi ini tanpa akses
+jaringan Gradle).
+
+File diubah (3): `ui/theme/NeumorphTokens.kt` (parsial, additive),
+`ui/components/TactileSurface.kt` (parsial), `ui/screens/HomeScreen.kt`
+(parsial, 1 call site).
+
 ## [FIX] CI merah lagi di "Read app version" -- fix sesi lalu ternyata tidak pernah sampai ke repo (2026-08-28)
 
 User upload log Actions asli: job `build` gagal di step "Read app version",

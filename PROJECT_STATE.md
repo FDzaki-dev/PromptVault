@@ -26,6 +26,68 @@
 > -- berlaku PERMANEN mulai sesi ini utk SEMUA sesi berikutnya, sesi mana
 > pun DILARANG mencabut/melonggarkan tanpa instruksi eksplisit baru user.
 
+## [UI] Stacked Cards Effect -- arah dibalik ke kiri-atas, 3 lapis, khusus kartu manifest Home (2026-08-28)
+- **Instruksi user**: screenshot kartu manifest/statistik Home (tema
+  Neumorphism) + teks "Ubah arah stacked card effect agar menghadap ke kiri
+  atas dengan 3 layer bertumpuk, tanpa offset/truncated (tambahkan
+  inset/sejenisnya) gak boleh terlihat nyaru sama sekali!!".
+- **Keputusan arsitektur (WAJIB dibaca sebelum sentuh fitur ini lagi)**:
+  efek "stacked cards" lama (`NeumorphTokens.stackedCards()` /
+  `TactileSurface(stackedCards=...)`) dipakai BERSAMA lewat `VaultCard` di
+  >10 layar -- termasuk 2 `LazyColumn` RAPAT (`RuleListScreen` via
+  `RuleCard`, `ActivityLogScreen` langsung, keduanya `Arrangement.
+  spacedBy(4.dp)`). Nimpa token/fungsi itu langsung dgn versi 3-lapis +
+  inset besar (perlu ~28dp ruang kosong per kartu utk "tanpa terpotong")
+  bakal bikin KEDUA list itu mendadak sangat renggang -- regresi nyata di
+  layar yang bahkan tidak disinggung user. Fix: dibuat opt-in KEDUA yang
+  100% TERPISAH (`stackedCardsTopLeft`), token lama 0 disentuh/0 berubah
+  nilai, dipasang HANYA di 1 titik: kartu manifest/statistik `HomeScreen.kt`
+  (kartu yang difoto user) -- dipanggil via `TactileSurface(...)` LANGSUNG
+  (bukan lewat `VaultCard`, yang tetap pakai efek lama utk semua caller lain
+  apa adanya) supaya efek baru tidak menjalar ke `VaultCard.kt` sama sekali.
+- **`ui/theme/NeumorphTokens.kt`** (parsial, HANYA nambah, 0 baris lama
+  dihapus/diubah nilainya): token/fungsi baru `StackedCardOffsetTopLeft`
+  (8dp/lapis), `StackedCardInsetTopLeft` (28dp = 3x8dp + margin aman 4dp),
+  `StackedCardColorsTopLeft` (3 warna reuse existing, menaik terang makin
+  jauh dari kartu: `SurfaceContainerHigh` -> `SurfaceContainerHighest` ->
+  `Outline`, supaya lapis PALING JAUH -- paling terpapar ke `AppBackground`
+  polos -- paling kontras & tidak "nyaru"), `Modifier.stackedCardsTopLeft()`
+  (geometri identik `stackedCards()` lama, cuma tanda offset dibalik jadi
+  `Offset(-shift, -shift)`).
+- **`ui/components/TactileSurface.kt`** (parsial): parameter opt-in baru
+  `stackedCardsTopLeft: Boolean = false` (default 0 dampak). Cabang
+  NEUMORPHISM: kalau `true` (dan `!recessed`), `Modifier.padding(top =
+  StackedCardInsetTopLeft, start = StackedCardInsetTopLeft)` ditempel
+  SEBELUM `.stackedCardsTopLeft()` di modifier chain yang SAMA dgn
+  `Surface` (pola aman identik `stackedCards()` lama -- BUKAN `Box`
+  pembungkus baru, tidak mengulang regresi `weight()`/`align()` v8.28.0)
+  -- padding ini yang bikin lapis kiri-atas gambar DI DALAM ruang yang
+  sudah dialokasikan node itu sendiri ke parent, bukan bocor ke sibling
+  atau kepotong tepi layar ("tanpa offset/truncated" sesuai instruksi).
+  Cabang `stackedCards` lama (dan cabang MATERIAL3/CUPERTINO/Glass) 0
+  diubah.
+- **`ui/screens/HomeScreen.kt`** (parsial): 1 pemanggilan `VaultCard(...)`
+  (kartu manifest/statistik, satu-satunya `VaultCard` di file ini) diganti
+  `TactileSurface(...)` langsung dgn `shape`/`color`/`elevation` DISALIN
+  PERSIS dari `VaultCard.kt` (supaya visual identik di luar arah
+  stacked-card) + `stackedCardsTopLeft = true`. Import `VaultCard` yang jadi
+  tidak terpakai ikut dihapus. Isi `content` (4x `ManifestRow` + kondisional
+  `lastScanSummary`/`hasSkippedFiles`) 0 diubah sama sekali.
+- **`ui/components/VaultCard.kt`**: **0 disentuh sama sekali** (dicek ulang
+  post-batch, diff kosong) -- semua caller lain (`RuleCard`, `GroupedListRow`,
+  `AddEditRuleScreen`, `ActivityLogScreen`, `StatisticsScreen`,
+  `SkippedFilesScreen`, `PanduanScreen`, `DiagnosticsScreen`,
+  `SettingsScreen`) TIDAK terdampak batch ini, efek stacked-card mereka
+  tetap arah kanan-bawah 1-lapis spt sebelumnya.
+- **Belum diverifikasi build CI/device nyata** (sandbox sesi ini tanpa
+  akses jaringan Gradle, tidak bisa kompilasi lokal) -- hanya review manual
+  menyeluruh tiap file yang diubah (brace balance dicek, semua simbol baru
+  ditelusuri sampai ke definisinya). Minta user konfirmasi build APK CI
+  sukses & tampilan kartu Home di HP sesuai sebelum dianggap selesai total.
+- File diubah (3, dalam batas Micro-Batch): `ui/theme/NeumorphTokens.kt`
+  (parsial, additive), `ui/components/TactileSurface.kt` (parsial),
+  `ui/screens/HomeScreen.kt` (parsial, 1 call site).
+
 ## [INSIDEN+FIX] CI merah lagi -- fix "Read app version" (sesi lalu) ternyata TIDAK PERNAH sampai ke repo asli (2026-08-28)
 - **Laporan user**: upload ZIP log Actions asli (`logs_89757911596.zip`),
   pesan "?!!". Isi: job `build` gagal PERSIS di step **"Read app version"**,
