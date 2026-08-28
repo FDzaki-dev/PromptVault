@@ -54,6 +54,7 @@ import com.elprompter.promptvault.ui.components.GroupedListRow
 import com.elprompter.promptvault.ui.components.SegmentedControl
 import com.elprompter.promptvault.ui.components.TactileSurface
 import com.elprompter.promptvault.ui.components.ThemeStyleToggle
+import com.elprompter.promptvault.ui.components.VaultCard
 import com.elprompter.promptvault.ui.theme.TactileTokens
 import com.elprompter.promptvault.ui.theme.VaultTheme
 
@@ -175,25 +176,11 @@ fun HomeScreen(
                 )
             } else {
 
-            // [v8.36.0] `TactileSurface` dipanggil LANGSUNG (bukan `VaultCard`)
-            // KHUSUS kartu ini -- permintaan eksplisit user: arah stacked-card
-            // effect kartu ini (kartu yang difoto user) dibalik ke kiri-atas +
-            // 3 lapis (`stackedCardsTopLeft`, opt-in BARU & TERPISAH, lihat
-            // javadoc lengkap di `NeumorphTokens.kt`/`TactileSurface.kt`) --
-            // `stackedCards` lama TETAP dipakai `VaultCard` apa adanya di
-            // >10 layar lain (RuleCard/list, Settings, Statistik, dst, 0
-            // disentuh -- 2 di antaranya list berbasis lazy-loading rapat
-            // 4dp yang bakal rusak jarak antar-itemnya kalau varian baru
-            // dipasang di situ juga). `shape`/`color`/`elevation` di bawah
-            // DISALIN PERSIS dari `VaultCard.kt` supaya tampilan kartu ini
-            // 100% sama selain arah stacked-card-nya.
-            TactileSurface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.medium,
-                color = MaterialTheme.colorScheme.surfaceContainer,
-                elevation = TactileTokens.TactileElevationCard,
-                stackedCardsTopLeft = true
-            ) {
+            // [v8.36.1] Balik ke `VaultCard()` polos -- `VaultCard` sendiri
+            // sekarang sudah pakai `stackedCardsTopLeft` (lihat `VaultCard.
+            // kt`), jadi pemanggilan `TactileSurface` langsung khusus di
+            // sini (batch sebelumnya) sudah tidak perlu lagi.
+            VaultCard(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     ManifestRow(icon = Icons.Filled.Rule, tint = colors.primary, label = stringResource(R.string.home_stat_rule_active), value = "$ruleCount")
                     ManifestRow(icon = Icons.Filled.Schedule, tint = colors.tertiary, label = stringResource(R.string.home_stat_autoscan), value = if (autoSortEnabled) stringResource(R.string.home_stat_autoscan_interval_fmt, intervalMinutes) else stringResource(R.string.home_stat_autoscan_off))

@@ -26,6 +26,42 @@
 > -- berlaku PERMANEN mulai sesi ini utk SEMUA sesi berikutnya, sesi mana
 > pun DILARANG mencabut/melonggarkan tanpa instruksi eksplisit baru user.
 
+## [UI] Stacked Cards Effect kiri-atas/3-lapis -- diperluas ke SEMUA VaultCard (2026-08-28, lanjutan batch sebelumnya)
+- **Konteks**: batch sebelumnya (lihat entri di bawah) sengaja SCOPE efek
+  baru cuma ke 1 kartu (manifest Home) krn efek itu butuh inset 28dp/kartu
+  yang bakal melebarkan jarak antar-item di 2 `LazyColumn` rapat
+  (`RuleListScreen`, `ActivityLogScreen`, `spacedBy(4.dp)`). User lapor
+  screenshot: "kenapa cuman 1 yang dapat" -- ditanya balik via pilihan
+  (bukan diasumsikan), user PILIH eksplisit: **"Semua VaultCard, termasuk 2
+  list rapat (jarak antar-item bakal melebar)"** -- trade-off DIKETAHUI &
+  DITERIMA user sendiri, bukan asumsi sepihak Claude.
+- **`ui/components/VaultCard.kt`** (parsial, 1 baris param): `stackedCards
+  = true` -> `stackedCardsTopLeft = true`. Krn `VaultCard` dipakai >10
+  layar, perubahan 1 baris ini otomatis menjalar ke SEMUA caller-nya (efek
+  lama kanan-bawah/1-lapis sekarang tidak dipakai di mana pun lagi).
+- **`ui/screens/HomeScreen.kt`** (parsial): kartu manifest dibalik dari
+  pemanggilan `TactileSurface` langsung (workaround khusus batch
+  sebelumnya) balik ke `VaultCard()` polos -- sekarang `VaultCard` sendiri
+  sudah bawa efek yang sama, workaround itu jadi tidak perlu lagi. Import
+  `VaultCard` dikembalikan.
+- **`ui/theme/NeumorphTokens.kt` / `ui/components/TactileSurface.kt`**: 0
+  disentuh batch ini -- token/fungsi `stackedCards()`/`StackedCardOffset`/
+  `StackedCardColors` (varian lama) SENGAJA DIBIARKAN ada sbg kode tak
+  terpakai (0 caller lagi setelah `VaultCard.kt` pindah ke
+  `stackedCardsTopLeft`), TIDAK dihapus paksa -- alasan: infrastruktur
+  varian baru (`stackedCardsTopLeft`/`StackedCardOffsetTopLeft`/dst) sudah
+  siap dari batch sebelumnya, batch ini murni soal WHO memanggilnya, bukan
+  soal implementasi ulang.
+- **Dampak visual DIKETAHUI user**: `RuleListScreen` (list Kelola Rule) &
+  tab Undo `ActivityLogScreen` sekarang jarak antar-kartunya lebih renggang
+  drpd sebelumnya (tiap kartu +28dp ruang atas & lebih sempit di kiri utk
+  lapis yang mengintip) -- INI SENGAJA, bukan bug, sesuai pilihan user.
+- **Belum diverifikasi build CI/device nyata** (sandbox sesi ini tanpa
+  akses jaringan Gradle) -- preflight_check.sh lolos bersih (14/14).
+- File diubah (2, dalam batas Micro-Batch): `ui/components/VaultCard.kt`
+  (parsial, 1 baris param), `ui/screens/HomeScreen.kt` (parsial, revert 1
+  call site + import).
+
 ## [UI] Stacked Cards Effect -- arah dibalik ke kiri-atas, 3 lapis, khusus kartu manifest Home (2026-08-28)
 - **Instruksi user**: screenshot kartu manifest/statistik Home (tema
   Neumorphism) + teks "Ubah arah stacked card effect agar menghadap ke kiri

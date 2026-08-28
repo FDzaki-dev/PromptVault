@@ -3,6 +3,26 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## [UI] Stacked Cards Effect kiri-atas/3-lapis -- diperluas ke SEMUA VaultCard (2026-08-28)
+
+Lanjutan batch sebelumnya (efek awalnya cuma di 1 kartu manifest Home).
+User tanya "kenapa cuman 1 yang dapat", ditawari pilihan, user pilih:
+terapkan ke SEMUA `VaultCard` termasuk 2 `LazyColumn` rapat
+(`RuleListScreen`, `ActivityLogScreen`), menerima konsekuensi jarak
+antar-item jadi lebih renggang di situ.
+
+`VaultCard.kt`: `stackedCards=true` diganti `stackedCardsTopLeft=true` (1
+baris) -- menjalar otomatis ke semua >10 caller. `HomeScreen.kt`: workaround
+`TactileSurface` langsung dibalik ke `VaultCard()` polos (sudah tidak perlu
+lagi). `NeumorphTokens.kt`/`TactileSurface.kt` tidak disentuh -- infra
+varian baru sudah ada dari batch sebelumnya.
+
+Dampak yang DIKETAHUI & DITERIMA user: list Kelola Rule & tab Undo Riwayat
+Aktivitas sekarang berjarak lebih renggang antar-kartu.
+
+File diubah (2): `ui/components/VaultCard.kt` (parsial, 1 baris),
+`ui/screens/HomeScreen.kt` (parsial, revert 1 call site).
+
 ## [UI] Stacked Cards Effect kartu manifest Home -- arah kiri-atas, 3 lapis, tanpa terpotong (2026-08-28)
 
 Instruksi user (via screenshot): balik arah stacked-card effect kartu
