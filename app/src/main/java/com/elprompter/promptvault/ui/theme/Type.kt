@@ -41,6 +41,65 @@ val PromptVaultTypography = Typography(
 )
 
 /**
+ * (2026-08-29, permintaan eksplisit user "perkuat typography Glassmorphism
+ * murni") Skala tipografi KHUSUS `ThemeStyleOption.GLASSMORPHISM` -- pola
+ * IDENTIK [CupertinoTypography]/[NeumorphismTypography] di bawah (ganti
+ * keluarga `Typography` per `themeStyle` di `Theme.kt`). Sebelum batch ini,
+ * GLASSMORPHISM & MATERIAL3 100% berbagi [PromptVaultTypography] yg sama
+ * persis (0 dibedakan) -- mulai batch ini GLASSMORPHISM dapat asetnya
+ * sendiri, MATERIAL3 TETAP [PromptVaultTypography] (M3 baku murni, 0
+ * berubah).
+ *
+ * **PENTING -- supersede catatan lama**: javadoc `GlassTokens.kt` (v8.23.0)
+ * mendaftar "typography SEMUA TIDAK DISENTUH" sbg salah satu dari 3 syarat
+ * eksplisit "Glassmorphism murni" saat itu. Instruksi user SESI INI
+ * ("perkuat typography Glassmorphism murni") eksplisit membalik syarat
+ * lama tsb utk 1 aspek (typography) -- sesuai hirarki resmi (User Inst
+ * TERBARU > Core Protocol > riwayat di `PROJECT_STATE.md`/komentar lama).
+ * Catatan supersede lengkap ditulis di `GlassTokens.kt` (bukan dihapus di
+ * sana, diperbarui in-place, konsisten pola arsip riwayat seluruh
+ * codebase).
+ *
+ * "Perkuat" diterjemahkan jadi 2 sumbu, KEDUANYA tetap `FontFamily.Default`
+ * (Sans) -- 0 font pihak ketiga baru, konsisten prinsip lama:
+ * - Role display/headline/titleLarge/labelLarge (hirarki visual tertinggi
+ *   -- yg paling butuh berdiri tegas di atas fill translucent blur
+ *   [GlassTokens]) -> weight dinaikkan 1 tingkat dari M3 baku (Normal ->
+ *   Medium/SemiBold) + letter-spacing POSITIF halus (+0.1..+0.15sp,
+ *   ganti tracking negatif/nol M3 baku) -- kesan "elegan, ringan, cahaya
+ *   menembus kaca", BUKAN tebal/padat spt Blade Runner (`CodeFont` TIDAK
+ *   dipakai di sini -- 2 identitas sengaja dibedakan arah: Glass = ringan/
+ *   lapang, Blade Runner = padat/teknikal).
+ * - Role titleMedium/titleSmall/label(Medium/Small)/body* -> 100% REUSE
+ *   [PromptVaultTypography] apa adanya (0 diketik ulang manual) -- teks
+ *   isi/badan SENGAJA dibiarkan ringan (bukan ikut diperkuat) supaya
+ *   kesan "kaca lapang/airy" glassmorphism tidak hilang jadi padat di
+ *   SEMUA role (beda arah dari cara Blade Runner memperkuat SEMUA role
+ *   non-body).
+ *
+ * Ukuran/line-height SEMUA role 100% IDENTIK [PromptVaultTypography] (M3
+ * baku) -- "parity footprint", 0 resiko layout/wrap berubah di komponen
+ * manapun.
+ */
+val GlassTypography = Typography(
+    displayLarge = TextStyle(fontFamily = Sans, fontWeight = FontWeight.Medium, fontSize = 57.sp, lineHeight = 64.sp, letterSpacing = 0.sp),
+    displayMedium = TextStyle(fontFamily = Sans, fontWeight = FontWeight.Medium, fontSize = 45.sp, lineHeight = 52.sp, letterSpacing = 0.15.sp),
+    displaySmall = TextStyle(fontFamily = Sans, fontWeight = FontWeight.Medium, fontSize = 36.sp, lineHeight = 44.sp, letterSpacing = 0.15.sp),
+    headlineLarge = TextStyle(fontFamily = Sans, fontWeight = FontWeight.SemiBold, fontSize = 32.sp, lineHeight = 40.sp, letterSpacing = 0.15.sp),
+    headlineMedium = TextStyle(fontFamily = Sans, fontWeight = FontWeight.SemiBold, fontSize = 28.sp, lineHeight = 36.sp, letterSpacing = 0.15.sp),
+    headlineSmall = TextStyle(fontFamily = Sans, fontWeight = FontWeight.Medium, fontSize = 24.sp, lineHeight = 32.sp, letterSpacing = 0.1.sp),
+    titleLarge = TextStyle(fontFamily = Sans, fontWeight = FontWeight.SemiBold, fontSize = 22.sp, lineHeight = 28.sp, letterSpacing = 0.1.sp),
+    titleMedium = TextStyle(fontFamily = Sans, fontWeight = FontWeight.Medium, fontSize = 16.sp, lineHeight = 24.sp, letterSpacing = 0.15.sp),
+    titleSmall = TextStyle(fontFamily = Sans, fontWeight = FontWeight.Medium, fontSize = 14.sp, lineHeight = 20.sp, letterSpacing = 0.1.sp),
+    labelLarge = TextStyle(fontFamily = Sans, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, lineHeight = 20.sp, letterSpacing = 0.2.sp),
+    labelMedium = TextStyle(fontFamily = Sans, fontWeight = FontWeight.Medium, fontSize = 12.sp, lineHeight = 16.sp, letterSpacing = 0.5.sp),
+    labelSmall = TextStyle(fontFamily = Sans, fontWeight = FontWeight.Medium, fontSize = 11.sp, lineHeight = 16.sp, letterSpacing = 0.5.sp),
+    bodyLarge = TextStyle(fontFamily = Sans, fontWeight = FontWeight.Normal, fontSize = 16.sp, lineHeight = 24.sp, letterSpacing = 0.5.sp),
+    bodyMedium = TextStyle(fontFamily = Sans, fontWeight = FontWeight.Normal, fontSize = 14.sp, lineHeight = 20.sp, letterSpacing = 0.25.sp),
+    bodySmall = TextStyle(fontFamily = Sans, fontWeight = FontWeight.Normal, fontSize = 12.sp, lineHeight = 16.sp, letterSpacing = 0.4.sp)
+)
+
+/**
  * (lanjutan restyling Cupertino murni, 2026-08-27) Skala "iOS-ish" (angka
  * dari HIG Apple, size class Large -- publik, bukan hasil scraping/reverse-
  * engineer aset berlisensi) -- HANYA dipakai saat `ThemeStyleOption.CUPERTINO`

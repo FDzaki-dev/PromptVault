@@ -254,6 +254,16 @@ object VaultTheme {
  * bertahap sepanjang sesi hari ini. Var lokal `isCupertino` (dipakai
  * ternary boolean lama) DIHAPUS -- sudah 0 pemakai lagi stlh baris
  * terakhir ini ikut pindah ke `when`.
+ *
+ * (2026-08-29, sesi baru) `typography` SEKARANG bercabang 4-arah (bukan 3)
+ * -- GLASSMORPHISM dapat asetnya sendiri, [GlassTypography] (`Type.kt`,
+ * javadoc lengkap di sana termasuk catatan SUPERSEDE thd syarat lama
+ * `GlassTokens.kt` v8.23.0 yg pernah bilang typography Glass tidak boleh
+ * disentuh). MATERIAL3 sekarang SATU-SATUNYA gaya yg pakai
+ * [PromptVaultTypography] via `else` (sebelumnya GLASSMORPHISM ikut
+ * numpang cabang `else` yg sama, sekarang sudah dipisah).
+ * `colorScheme`/`shapes`/`extraColors` GLASSMORPHISM TIDAK ikut berubah
+ * sesi ini -- scope sengaja cuma typography sesuai yg diminta.
  */
 @Composable
 fun PromptVaultTheme(themeStyle: ThemeStyleOption = ThemeStyleOption.GLASSMORPHISM, content: @Composable () -> Unit) {
@@ -265,6 +275,7 @@ fun PromptVaultTheme(themeStyle: ThemeStyleOption = ThemeStyleOption.GLASSMORPHI
     val typography = when (themeStyle) {
         ThemeStyleOption.CUPERTINO -> CupertinoTypography
         ThemeStyleOption.NEUMORPHISM -> NeumorphismTypography
+        ThemeStyleOption.GLASSMORPHISM -> GlassTypography
         else -> PromptVaultTypography
     }
     val shapes = when (themeStyle) {

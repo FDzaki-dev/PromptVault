@@ -3,6 +3,22 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## [UI][GLASSMORPHISM] Perkuat typography Glassmorphism murni -- pisah dari MATERIAL3 (2026-08-29)
+
+GLASSMORPHISM & MATERIAL3 sebelumnya berbagi typography M3 baku yang sama
+persis. Sekarang GLASSMORPHISM dapat `GlassTypography` sendiri: role
+display/headline/titleLarge/labelLarge lebih tebal (Medium/SemiBold) +
+letter-spacing sedikit lebih lebar untuk lebih menonjol di atas fill
+translucent/blur, role body/label kecil tetap ringan (M3 baku) demi kesan
+"kaca lapang". MATERIAL3 sendiri 0 berubah.
+
+Catatan: syarat lama "typography Glassmorphism tidak boleh disentuh"
+(v8.23.0) di-supersede eksplisit oleh instruksi user sesi ini -- dicatat
+di `GlassTokens.kt` (paragraf lama TIDAK dihapus, cuma ditandai usang).
+
+File diubah (3): `ui/theme/Type.kt` (+`GlassTypography`), `ui/theme/Theme.kt`
+(parsial), `ui/theme/GlassTokens.kt` (parsial, javadoc saja).
+
 ## [UI][NEUMORPHISM] Aksen ke-4 "Pengaturan" -> Neon Magenta (BR2049) -- menutup 4/4 sumbu Blade Runner (2026-08-29)
 
 Menyusul shape+typography di bawah: slot warna aksen ke-4 (ikon menu

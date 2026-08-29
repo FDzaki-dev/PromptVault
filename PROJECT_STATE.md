@@ -26,6 +26,56 @@
 > -- berlaku PERMANEN mulai sesi ini utk SEMUA sesi berikutnya, sesi mana
 > pun DILARANG mencabut/melonggarkan tanpa instruksi eksplisit baru user.
 
+## [UI][GLASSMORPHISM] Perkuat typography Glassmorphism murni -- pisah dari MATERIAL3 (2026-08-29, sesi baru)
+- **Trigger**: instruksi baru user, "perkuat typography Glassmorphism
+  murni". Sebelum batch ini GLASSMORPHISM & MATERIAL3 100% berbagi
+  `PromptVaultTypography` yg sama persis (nebeng cabang `else`), 0
+  dibedakan.
+- **Konflik dgn catatan lama ditemukan & di-supersede (bukan diabaikan
+  diam2)**: javadoc `GlassTokens.kt` v8.23.0 pernah eksplisit mendaftar
+  "typography ... SEMUA TIDAK DISENTUH" sbg salah satu dari 3 syarat
+  "Glassmorphism murni" hasil instruksi user WAKTU ITU. Sesuai hirarki
+  resmi (User Inst TERBARU > Core Protocol > riwayat lama), instruksi
+  sesi ini membalik syarat tsb utk 1 aspek (typography) -- SUDAH
+  diberitahukan ke user singkat di chat sebelum eksekusi. `GlassTokens.kt`
+  diberi 1 paragraf SUPERSEDE baru (bukan menghapus paragraf lama -- arsip
+  riwayat kenapa aturan lama pernah ada tetap utuh).
+- **Type.kt** (+1 val): `GlassTypography` baru. Role
+  display/headline/titleLarge/labelLarge (hirarki tertinggi, paling butuh
+  berdiri tegas di atas fill translucent blur) -> weight naik 1 tingkat
+  (Normal -> Medium/SemiBold) + letter-spacing positif halus (+0.1..
+  +0.15sp) -- kesan "elegan/ringan/cahaya menembus kaca". Role
+  titleMedium/titleSmall/label(Medium/Small)/body* -> 100% REUSE
+  `PromptVaultTypography` apa adanya (SENGAJA tidak ikut diperkuat, jaga
+  kesan "kaca lapang/airy" di teks isi). Ukuran/line-height semua role
+  identik M3 baku (parity footprint).
+- **Theme.kt** (parsial): `typography` di `PromptVaultTheme` jadi 4-cabang
+  (GLASSMORPHISM -> `GlassTypography` baru dipisah dari `else`).
+  MATERIAL3 sekarang satu2nya pemakai `PromptVaultTypography` via `else`.
+  `colorScheme`/`shapes`/`extraColors` GLASSMORPHISM TIDAK ikut berubah --
+  scope sengaja cuma typography.
+- **Bug ditemukan sendiri & diperbaiki sebelum sempat dikirim**: proses
+  `str_replace` pertama utk nyisip `GlassTypography` di `Type.kt`
+  TIDAK SENGAJA ikut menghapus baris pembuka javadoc `CupertinoTypography`
+  (`/**` + fragmen kalimat pembuka "Skala 'iOS-ish' (angka") krn baris tsb
+  kepakai sbg anchor akhir `old_str`, tapi tidak ikut ditulis ulang di
+  `new_str`. Efeknya: teks lanjutan javadoc lama jadi floating TANPA
+  `/**` pembuka (bakal gagal compile, dianggap kode bukan komentar) + 1
+  kurung `)` orphan (unmatched). **Ketahuan LANGSUNG lewat
+  `scripts/preflight_check.sh` item #1** (kurung tidak seimbang, delta
+  tepat 0/-1 di `Type.kt`) sebelum sempat di-package/dikirim ke user --
+  persis fungsi preflight yg dimaksudkan. Diperbaiki dgn nyisip ulang 2
+  baris yg hilang; re-run preflight penuh (14/14 ✅) sebelum lanjut.
+  Dicatat scr jujur di sini krn ini nyaris jadi ZIP rusak terkirim.
+- File diubah (3, PAS batas Micro-Batch): `ui/theme/Type.kt` (+1 val),
+  `ui/theme/Theme.kt` (parsial), `ui/theme/GlassTokens.kt` (parsial,
+  +1 paragraf supersede, 0 logic diubah).
+- **Batas jujur**: BELUM lewat `./gradlew`/device asli -- sanity check
+  terbatas pada preflight statis (kurung, YAML, XML, dll) + review manual,
+  bukan compile Gradle sungguhan. Hasil visual "kesan diperkuat" tetap
+  perlu diverifikasi user di HP.
+- **Pending Queue**: kosong.
+
 ## [UI][NEUMORPHISM] Aksen ke-4 "Pengaturan" -> Neon Magenta (BR2049), menutup 4/4 sumbu Blade Runner (2026-08-29, lanjutan Blade Runner)
 - **Trigger**: lanjutan langsung dari entri "Root cause GitHub Release
   notes stale" di bawah -- user diajukan 4 opsi warna via tombol

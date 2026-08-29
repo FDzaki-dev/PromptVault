@@ -45,6 +45,17 @@ import androidx.compose.ui.unit.dp
  *    SEPENUHNYA dekoratif (bukan batas grafis fungsional, prinsip sama
  *    dgn `OutlineVariant` di [Color.kt]) -- TIDAK tunduk ambang 3:1
  *    WCAG 1.4.11.
+ *
+ * **(2026-08-29) SUPERSEDE syarat #1 di atas ("typography ... SEMUA TIDAK
+ * DISENTUH")**: instruksi eksplisit user sesi ini, "perkuat typography
+ * Glassmorphism murni", membalik syarat itu KHUSUS utk sumbu typography --
+ * sesuai hirarki resmi (User Inst TERBARU > Core Protocol > catatan lama
+ * di komentar/`PROJECT_STATE.md`). Paragraf syarat #1 di atas SENGAJA
+ * TIDAK dihapus (arsip riwayat kenapa aturan lama ada), TAPI sudah tidak
+ * berlaku lagi persis apa adanya -- lihat [GlassTypography] (`Type.kt`)
+ * utk isi & alasan lengkap "perkuat"-nya. Syarat #2/#3 (base color calm,
+ * 100% WCAG) TIDAK terdampak/TETAP berlaku penuh -- yg disupersede HANYA
+ * larangan sentuh typography.
  */
 object GlassTokens {
     /** Fill permukaan "terangkat" (VaultCard, dialog, sheet, CTA, kotak ikon/chip -- semua level non-recessed pakai token yang sama, `TactileSurface` tidak punya parameter tingkat ukuran terpisah). */
