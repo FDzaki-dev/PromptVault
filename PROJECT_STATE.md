@@ -26,6 +26,47 @@
 > -- berlaku PERMANEN mulai sesi ini utk SEMUA sesi berikutnya, sesi mana
 > pun DILARANG mencabut/melonggarkan tanpa instruksi eksplisit baru user.
 
+## [UI][GLASSMORPHISM] Shape "frosted-glass corner" -- pisah dari MATERIAL3, lanjutan lengkapi Glass 2/4 (2026-08-29, sesi baru lanjutan)
+- **Trigger**: user ditanya "Glassmorphism lanjut dilengkapi juga?" (3
+  opsi tombol), user pilih **"Ya, shape dulu (frosted-glass corner)"**.
+- **Konflik dgn catatan lama, sama pola spt typography batch sebelumnya**:
+  javadoc `GlassTokens.kt` v8.23.0 jg mendaftar "shape radius ... SEMUA
+  TIDAK DISENTUH" sbg bagian syarat #1 "Glassmorphism murni". Disupersede
+  lagi utk sumbu ini (User Inst TERBARU > catatan lama), dicatat sbg
+  paragraf baru terpisah di `GlassTokens.kt` (bukan menimpa paragraf
+  supersede typography sebelumnya).
+- **Shapes.kt** (+1 val): `GlassShapes` baru, keluarga `RoundedCornerShape`
+  (sama spt Cupertino, Compose stok 0 dukung squircle asli) TAPI radius
+  PALING besar/lembut dari SEMUA 4 gaya (10/14/20/28/36dp -- lebih besar
+  dari CupertinoShapes 8/12/18/24/32) -- kesan "sudut kaca beku" sesuai
+  hint eksplisit user "frosted-glass corner".
+- **Theme.kt** (parsial): `shapes` di `PromptVaultTheme` jadi 4-cabang
+  (GLASSMORPHISM -> `GlassShapes`, dipisah dari `else`). MATERIAL3 sekarang
+  satu2nya pemakai `PromptVaultShapes` via `else`. `colorScheme`/
+  `extraColors` GLASSMORPHISM MASIH belum berubah (scope sesi ini baru
+  shape).
+- **Progres Glass 2/4**: typography (batch sebelumnya) + shape (batch ini)
+  sudah dipisah dari MATERIAL3. colorScheme & aksen ke-4 MASIH numpang
+  `else` bareng MATERIAL3 -- sisa 2/4 kalau user mau lanjut lagi.
+- File diubah (3, PAS batas Micro-Batch): `ui/theme/Shapes.kt` (+1 val),
+  `ui/theme/Theme.kt` (parsial), `ui/theme/GlassTokens.kt` (parsial,
+  +1 paragraf supersede, 0 logic diubah).
+- Preflight `scripts/preflight_check.sh` ✅ 14/14 (kurung diverifikasi
+  manual dulu per file SEBELUM run preflight, belajar dari insiden bug
+  paren batch sebelumnya -- 0 insiden serupa kali ini).
+- **Catatan teknis sesi**: container/filesystem kerja Claude sempat RESET
+  di antara giliran (`/home/claude` kosong lagi stlh user jeda utk jawab
+  pertanyaan tombol) -- source of truth dipulihkan dgn re-extract ZIP
+  TERAKHIR yg sudah dikirim (`/mnt/user-data/outputs/PromptVault-1.0.224.zip`,
+  masih persisten), BUKAN minta user upload ulang. Diverifikasi isinya
+  (`GlassTypography`/`NeoMagenta` masih ada) sebelum lanjut edit -- 0
+  histori batch sebelumnya yg hilang.
+- **Batas jujur**: sama spt batch2 sebelumnya, BELUM lewat `./gradlew`/
+  device asli. Hasil visual "kesan frosted-glass" tetap perlu diverifikasi
+  user di HP.
+- **Pending Queue**: kosong (2/4 sisa NANTI kalau diminta lanjut, bukan
+  otomatis dikerjakan skrng).
+
 ## [UI][GLASSMORPHISM] Perkuat typography Glassmorphism murni -- pisah dari MATERIAL3 (2026-08-29, sesi baru)
 - **Trigger**: instruksi baru user, "perkuat typography Glassmorphism
   murni". Sebelum batch ini GLASSMORPHISM & MATERIAL3 100% berbagi

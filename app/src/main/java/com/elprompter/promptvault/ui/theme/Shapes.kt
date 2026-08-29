@@ -78,3 +78,41 @@ val NeumorphismShapes = Shapes(
     large = CutCornerShape(16.dp),
     extraLarge = CutCornerShape(28.dp)
 )
+
+/**
+ * (2026-08-29, sesi baru "lanjut dilengkapi") Skala sudut KHUSUS gaya
+ * [com.elprompter.promptvault.data.ThemeStyleOption.GLASSMORPHISM] -- pola
+ * IDENTIK [CupertinoShapes]/[NeumorphismShapes] di atas. Sebelum batch ini
+ * GLASSMORPHISM & MATERIAL3 100% berbagi [PromptVaultShapes] yg sama
+ * persis (nebeng cabang `else` di `Theme.kt`), 0 dibedakan.
+ *
+ * **Supersede lanjutan**: javadoc `GlassTokens.kt` v8.23.0 jg mendaftar
+ * "shape radius ... SEMUA TIDAK DISENTUH" sbg salah satu syarat lama
+ * "Glassmorphism murni" (sudah di-supersede sebagian utk typography di
+ * batch sebelumnya, lihat [GlassTypography] `Type.kt`). Instruksi user
+ * sesi ini ("shape dulu (frosted-glass corner)") membalik syarat itu utk
+ * sumbu shape jg -- catatan supersede diperluas di `GlassTokens.kt`.
+ *
+ * Keluarga tetap `RoundedCornerShape` (sama spt [CupertinoShapes], Compose
+ * stok 0 dukung squircle asli), TAPI radius per tingkat SENGAJA dibuat
+ * PALING besar/lembut dari SEMUA 4 gaya (10/14/20/28/36, lebih besar dari
+ * [CupertinoShapes] 8/12/18/24/32) -- kesan "sudut kaca beku (frosted)"
+ * yg diminta: bidang lebar/plush/bubble-like, bukan sekadar "agak bulat"
+ * spt Cupertino. Urutan naik extraSmall->extraLarge tetap dijaga (sama
+ * disiplin monoton spt semua skala shape lain di file ini).
+ *
+ * Sama spt [CupertinoShapes]/[NeumorphismShapes]: dipasang kondisional di
+ * `PromptVaultTheme` (`Theme.kt`), otomatis menjalar ke SEMUA caller
+ * `MaterialTheme.shapes.*` (termasuk default `TactileSurface.shape`), 0
+ * call site lain perlu disentuh. Caveat yg sama jg berlaku: ~11 titik
+ * `RoundedCornerShape(Xdp)` literal langsung (lihat javadoc
+ * [CupertinoShapes]) TETAP tidak ikut berubah gaya apapun, di luar
+ * cakupan batch ini.
+ */
+val GlassShapes = Shapes(
+    extraSmall = RoundedCornerShape(10.dp),
+    small = RoundedCornerShape(14.dp),
+    medium = RoundedCornerShape(20.dp),
+    large = RoundedCornerShape(28.dp),
+    extraLarge = RoundedCornerShape(36.dp)
+)

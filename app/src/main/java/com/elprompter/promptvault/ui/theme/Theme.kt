@@ -264,6 +264,17 @@ object VaultTheme {
  * numpang cabang `else` yg sama, sekarang sudah dipisah).
  * `colorScheme`/`shapes`/`extraColors` GLASSMORPHISM TIDAK ikut berubah
  * sesi ini -- scope sengaja cuma typography sesuai yg diminta.
+ *
+ * (2026-08-29, sesi lanjutan lagi) SUSUL: `shapes` KINI *juga* bercabang
+ * 4-arah, pola PERSIS `typography` di atas -- GLASSMORPHISM dapat
+ * [GlassShapes] (`Shapes.kt`, `RoundedCornerShape` PALING besar/lembut
+ * dari 4 gaya -- kesan "sudut kaca beku/frosted", javadoc lengkap di sana
+ * termasuk supersede lanjutan thd `GlassTokens.kt`). Paragraf tepat di
+ * atas ("shapes GLASSMORPHISM TIDAK ikut berubah") SEKARANG usang --
+ * diperbarui di sini. MATERIAL3 tetap satu2nya pemakai [PromptVaultShapes]
+ * via `else`. `colorScheme`/`extraColors` GLASSMORPHISM MASIH belum
+ * berubah -- scope sesi ini baru shape, warna/aksen-4 nyusul kalau
+ * diminta lanjut.
  */
 @Composable
 fun PromptVaultTheme(themeStyle: ThemeStyleOption = ThemeStyleOption.GLASSMORPHISM, content: @Composable () -> Unit) {
@@ -281,6 +292,7 @@ fun PromptVaultTheme(themeStyle: ThemeStyleOption = ThemeStyleOption.GLASSMORPHI
     val shapes = when (themeStyle) {
         ThemeStyleOption.CUPERTINO -> CupertinoShapes
         ThemeStyleOption.NEUMORPHISM -> NeumorphismShapes
+        ThemeStyleOption.GLASSMORPHISM -> GlassShapes
         else -> PromptVaultShapes
     }
     val extraColors = when (themeStyle) {

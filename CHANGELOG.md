@@ -3,6 +3,19 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## [UI][GLASSMORPHISM] Shape "frosted-glass corner" -- pisah dari MATERIAL3 (2026-08-29)
+
+Menyusul typography di bawah: GLASSMORPHISM sekarang dapat shape sendiri,
+`GlassShapes` -- radius PALING besar/lembut dari 4 gaya (10/14/20/28/36dp)
+untuk kesan "sudut kaca beku" yang lebih plush/bubble-like dibanding
+Cupertino. MATERIAL3 tetap `PromptVaultShapes` lama, 0 berubah.
+
+Progres Glass: typography + shape sudah dipisah dari MATERIAL3. colorScheme
+& aksen ke-4 masih menyusul kalau diminta lanjut.
+
+File diubah (3): `ui/theme/Shapes.kt` (+`GlassShapes`), `ui/theme/Theme.kt`
+(parsial), `ui/theme/GlassTokens.kt` (parsial, javadoc saja).
+
 ## [UI][GLASSMORPHISM] Perkuat typography Glassmorphism murni -- pisah dari MATERIAL3 (2026-08-29)
 
 GLASSMORPHISM & MATERIAL3 sebelumnya berbagi typography M3 baku yang sama

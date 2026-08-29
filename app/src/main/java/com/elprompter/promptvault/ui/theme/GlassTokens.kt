@@ -56,6 +56,16 @@ import androidx.compose.ui.unit.dp
  * utk isi & alasan lengkap "perkuat"-nya. Syarat #2/#3 (base color calm,
  * 100% WCAG) TIDAK terdampak/TETAP berlaku penuh -- yg disupersede HANYA
  * larangan sentuh typography.
+ *
+ * **(2026-08-29, sesi lanjutan) SUPERSEDE LANJUTAN syarat #1 -- sumbu
+ * "shape radius"**: instruksi user sesi ini, "shape dulu (frosted-glass
+ * corner)", membalik bagian "shape radius ... SEMUA TIDAK DISENTUH" dari
+ * syarat #1 jg (sumbu ke-2 dari syarat itu yg dibalik, setelah typography
+ * di paragraf di atas). Lihat [GlassShapes] (`Shapes.kt`) utk isi & alasan
+ * lengkap radius barunya. Sisa syarat #1 (layout/spacing/interaksi/
+ * press-scale) MASIH utuh berlaku -- HANYA typography & shape radius yg
+ * sudah disupersede sejauh ini, base color ([Color.kt] hue H222) & warna
+ * dasar TETAP tidak disentuh.
  */
 object GlassTokens {
     /** Fill permukaan "terangkat" (VaultCard, dialog, sheet, CTA, kotak ikon/chip -- semua level non-recessed pakai token yang sama, `TactileSurface` tidak punya parameter tingkat ukuran terpisah). */
