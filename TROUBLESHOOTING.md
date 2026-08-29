@@ -1,4 +1,4 @@
-# Troubleshooting PromptVault
+# Troubleshooting Sortify
 
 Panduan cepat kalau ada masalah build/CI atau perilaku app yang aneh.
 

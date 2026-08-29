@@ -1,4 +1,4 @@
-# FILE_MANIFEST.txt -- PromptVault
+# FILE_MANIFEST.txt -- Sortify (dulu PromptVault)
 # Regenerasi otomatis dari isi disk aktual (find), v8.30.5, 2026-08-24
 
 .github/workflows/build.yml

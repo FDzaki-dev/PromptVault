@@ -1,4 +1,4 @@
-# PROJECT_STATE.md -- PromptVault
+# PROJECT_STATE.md -- Sortify (repo/folder/package tetap PromptVault, lihat README.md)
 > WAJIB dibaca Claude di awal SETIAP sesi baru, sebelum melanjutkan kerja apa
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
@@ -25,6 +25,95 @@
 > apa yang dikerjakannya. Tepat berada sebelum: '[SCRIPT: DAILY UPDATE]'!!"
 > -- berlaku PERMANEN mulai sesi ini utk SEMUA sesi berikutnya, sesi mana
 > pun DILARANG mencabut/melonggarkan tanpa instruksi eksplisit baru user.
+
+## [REBRAND] Nama tampilan PromptVault -> Sortify (2026-08-29)
+- **Instruksi user, verbatim**: "Saya mau rebranding nama project jadi
+  lebih simpel, memorable, dan konteks aplikasi langsung tersampaikan
+  (kosmetik, user facing, rename file project GitHub dan sesi only. Zero
+  touch bagian vital dan yang sudah lama stable!!)". Nama baru belum
+  ditentukan user -- diajukan 4 kandidat lewat `ask_user_input_v0`
+  (Sortify/AutoSort/Tidyload/DropSort), user pilih **Sortify**.
+- **Audit scope SEBELUM eksekusi** (grep menyeluruh semua occurrence
+  "PromptVault" di project, bukan tebak): literal "PromptVault" dipakai di
+  2 peran BERBEDA yang harus dipisah:
+  1. **Brand/display name** (aman diganti, "kosmetik" beneran) -- `app_name`,
+     teks onboarding/notifikasi/widget/panduan/settings-desc yang menyebut
+     app sebagai SUBJEK kalimat ("PromptVault memindai...", "PromptVault
+     butuh izin...").
+  2. **Kontrak nama folder/identitas fungsional** (BUKAN kosmetik, ini
+     "vital & sudah lama stable" persis yang diminta di-zero-touch) --
+     ditemukan di: `FileSorter.kt` (`SAF_ROOT_FOLDER_NAME`,
+     `SAF_ROOT_CACHE_KEY`, `File(downloadsDir, "PromptVault")`, root folder
+     default), `BackupManager.kt` (`ROOT_FOLDER_NAME`, komentar eksplisit
+     "literal PromptVault sudah jadi kontrak"), `UpdateRepository.kt`
+     (`REPO` -- dipakai buat query GitHub Releases API, HARUS match nama
+     repo asli), `CrashLogger.kt` (`RELATIVE_DIR =
+     "Documents/PromptVault/logs/"`), class/file Kotlin `PromptVaultApp.kt`
+     / `PromptVaultRoot` / `PromptVaultShapes`, `applicationId`/`namespace`
+     (`com.elprompter.promptvault`), dan repo GitHub asli
+     (`github.com/FDzaki-dev/PromptVault`).
+- **Keputusan scope (fully derivable dari instruksi user sendiri, bukan
+  interpretasi bebas)**: kategori 1 DIGANTI, kategori 2 ZERO TOUCH TOTAL.
+  Kalau kategori 2 ikut diubah: `BackupManager` gagal kenali backup lama
+  user (restore rusak), `UpdateRepository` gagal cek update (query ke repo
+  yang nggak ada), dan ratusan import Kotlin di seluruh project harus
+  diubah (bukan lagi "kosmetik", jadi refactor struktural masif -- persis
+  yang DILARANG instruksi user).
+- **strings.xml -- 14 dari 22 occurrence diganti** (list lengkap: `app_name`,
+  `auto_sort_notif_text`, `settings_restore_message`,
+  `settings_interval_section_desc`, `settings_conflict_section_desc`,
+  `settings_update_section_desc`, `pandu_intro`, `pandu_section1_body`,
+  `pandu_warning_shizuku`, `onboarding_step1_title`,
+  `onboarding_step3_body`, `onboarding_step6_body`,
+  `permission_gate_message`, `widget_scan_label`). Dieksekusi via script
+  Python match-by-string-name (bukan blind find-replace teks) supaya tidak
+  ada resiko kena string yang salah kategori. Diverifikasi count sebelum/
+  sesudah: 14 baru "Sortify", 8 sisa masih "PromptVault" persis prediksi.
+- **8 string TIDAK diubah** (kategori 2, folder-path-tied):
+  `rule_edit_hold_back_zip_hint`, `settings_saf_section_desc`,
+  `settings_saf_documents_warning`, `settings_shizuku_path_warning`,
+  `diag_crashlog_desc`, `pandu_section3_body`, `onboarding_step4_body`,
+  `activitylog_dest_local_fmt` -- semua menyebut "PromptVault" sebagai NAMA
+  FOLDER ASLI yang beneran dibuat app (match `SAF_ROOT_FOLDER_NAME` dkk di
+  atas). Ganti teksnya doang tanpa ganti foldernya beneran = app "bohong"
+  ke user soal nama folder yang sebenarnya dibuat.
+- **settings.gradle.kts**: `rootProject.name` "PromptVault" -> "Sortify" --
+  cuma label kosmetik Gradle (muncul di log build/Android Studio project
+  tree), 0 pengaruh ke `applicationId`/output APK/path apa pun.
+- **Docs (VIP, di luar limit Micro-Batch)**: judul H1 `README.md` /
+  `PROJECT_STATE.md` (file ini) / `PROJECT_STATE_ARCHIVE.md` / `ROADMAP.md`
+  / `TROUBLESHOOTING.md` / `FILE_MANIFEST.txt` / `CHANGELOG.md` diganti ke
+  "Sortify" (+ catatan singkat "dulu/tetap PromptVault" di masing-masing
+  supaya tidak ambigu). `README.md` dapat 1 blok catatan rebranding
+  eksplisit di atas (kenapa repo/package tetap PromptVault). `MAINTENANCE.md`
+  bagian onboarding-cepat diupdate supaya sesi depan kenali KEDUA nama
+  ("lanjutkan project Sortify" ATAU "...PromptVault" = project yang sama).
+  **0 riwayat log historis** (badan `CHANGELOG.md`/`PROJECT_STATE.md`/
+  `PROJECT_STATE_ARCHIVE.md` yang sudah ada) ditulis ulang -- itu catatan
+  kronologis permanen tentang apa yang BENERAN terjadi saat itu (masih sah
+  disebut "PromptVault" karena itu memang namanya waktu itu).
+- **Penamaan ZIP & script Termux ke depan**: TETAP pakai prefix
+  `PromptVault` (bukan `Sortify`) -- folder lokal `~/projects/`, remote
+  git `origin`, dan `[NamaFolderProyek]`/`[NamaFileAplikasi]` di script
+  Termux immutable semuanya masih merujuk `PromptVault` (repo asli, zero
+  touch). Ganti prefix ZIP tanpa ganti repo asli would break
+  `find ~/projects -iname "..."` di script Daily Update (bikin folder BARU
+  kosong alih-alih update yang lama -- persis skenario "vital yang jangan
+  disentuh"). Kalau user mau repo GitHub-nya juga di-rename fisik
+  (`gh repo rename`), itu keputusan terpisah yang belum diminta sesi ini.
+- File diubah TOTAL (2 kode + 8 dokumentasi VIP, 0 file baru/dihapus,
+  `FILE_MANIFEST.txt` isinya sama cuma judul berubah): `strings.xml`,
+  `settings.gradle.kts`, `README.md`, `PROJECT_STATE.md`,
+  `PROJECT_STATE_ARCHIVE.md`, `MAINTENANCE.md`, `ROADMAP.md`,
+  `TROUBLESHOOTING.md`, `FILE_MANIFEST.txt`, `CHANGELOG.md`.
+- **Batas jujur**: BELUM PERNAH lewat `./gradlew`/device asli seperti biasa
+  -- ini murni edit resource-string/teks (XML value + markdown), risiko
+  compile-break MENDEKATI NOL (tidak ada perubahan tipe/struktur Kotlin
+  sama sekali), tapi **user WAJIB cek visual di app asli**: (1) nama app
+  di launcher/app switcher, (2) widget scan label, (3) teks onboarding
+  7 langkah (step 1 & step 3 & step 6 kena), (4) notifikasi auto-sort
+  saat scan jalan, (5) beberapa teks di Pengaturan (interval/conflict/
+  update section desc) & Panduan Penggunaan.
 
 ## [DOCS] Arsipkan riwayat batch usang + sinkronisasi README.md & CHANGELOG.md (2026-08-29, sesi VIP Docs)
 - **Trigger**: instruksi eksplisit user, "Arsipkan dokumentasi yang sudah

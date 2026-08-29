@@ -12,5 +12,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "PromptVault"
+rootProject.name = "Sortify"
 include(":app")

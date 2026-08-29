@@ -1,9 +1,17 @@
-# PromptVault
+# Sortify
+
+> **Rebranding 2026-08-27**: app ini sebelumnya bernama **PromptVault**.
+> Nama tampilan (launcher, notifikasi, teks dalam app) sudah pindah ke
+> **Sortify**. Nama repo GitHub, `applicationId`, nama folder default di
+> Downloads/SAF, dan nama file/class Kotlin **SENGAJA TETAP** `PromptVault`
+> -- itu semua kontrak fungsional lama (lihat `PROJECT_STATE.md` untuk audit
+> lengkap scope rename), ganti itu = breaking change, bukan kosmetik.
 
 App Android offline untuk merapikan otomatis file (ekstensi apa saja) di folder
 Downloads ke folder tujuan, berdasarkan rule pattern yang kamu buat sendiri.
 
-Repo publik: https://github.com/FDzaki-dev/PromptVault
+Repo publik: https://github.com/FDzaki-dev/PromptVault (nama repo tetap
+`PromptVault`, lihat catatan rebranding di atas)
 
 > **Versi**: `versionName` APK 100% otomatis dari nomor run GitHub Actions
 > (`1.0.<run_number>`), BUKAN nomor semantik manual -- cek tab **Rilis**
@@ -46,7 +54,7 @@ Claude yang melanjutkan pengembangan, bukan untuk end-user.
 
 ## Untuk melanjutkan project ini di sesi Claude baru
 
-Cukup bilang ke Claude: *"lanjutkan project PromptVault, ini repo-nya:
-https://github.com/FDzaki-dev/PromptVault"* -- Claude bisa langsung
+Cukup bilang ke Claude: *"lanjutkan project Sortify (repo GitHub: PromptVault),
+ini repo-nya: https://github.com/FDzaki-dev/PromptVault"* -- Claude bisa langsung
 `web_fetch` `CHANGELOG.md`/`MAINTENANCE.md` dari situ buat dapat konteks
 penuh tanpa perlu upload ZIP ulang. Detail lengkap ada di `MAINTENANCE.md`.

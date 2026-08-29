@@ -1,4 +1,4 @@
-# PROJECT_STATE_ARCHIVE.md -- PromptVault (Riwayat Batch Diarsipkan)
+# PROJECT_STATE_ARCHIVE.md -- Sortify (dulu PromptVault, Riwayat Batch Diarsipkan)
 > File ini menyimpan riwayat batch/versi LAMA yang sudah diarsipkan dari
 > `PROJECT_STATE.md` per sesi 2026-08-29 (instruksi user: "Arsipkan
 > dokumentasi yang sudah stale"). **0 konten dihapus** -- semua log

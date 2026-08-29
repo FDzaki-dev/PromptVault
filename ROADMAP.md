@@ -1,4 +1,4 @@
-# Roadmap PromptVault -- Menuju 100% Fungsionalitas & Polish
+# Roadmap Sortify -- Menuju 100% Fungsionalitas & Polish
 
 > Moto: **low-risk, high-value dulu**. Tiap item diberi skor Risiko/Nilai +
 > estimasi jumlah file (proxy kompleksitas batch, patokan

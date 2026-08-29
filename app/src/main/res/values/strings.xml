@@ -1,11 +1,11 @@
 <resources>
-    <string name="app_name">PromptVault</string>
+    <string name="app_name">Sortify</string>
 
     <!-- Batch §5: notification channel + teks foreground service auto-sort -->
     <string name="auto_sort_channel_name">Auto-Sort</string>
     <string name="auto_sort_channel_desc">Status pemindaian otomatis file di folder Downloads</string>
     <string name="auto_sort_notif_title">Auto-sort berjalan</string>
-    <string name="auto_sort_notif_text">PromptVault sedang menyortir file di Downloads</string>
+    <string name="auto_sort_notif_text">Sortify sedang menyortir file di Downloads</string>
     <string name="auto_sort_result_notif_title">Auto-sort selesai</string>
     <string name="manual_scan_notif_title">Scan berjalan</string>
     <string name="manual_scan_result_notif_title">Scan selesai</string>
@@ -86,7 +86,7 @@
          string tetap sama persis. -->
     <string name="settings_title">Pengaturan</string>
     <string name="settings_restore_title">Konfigurasi Lama Ditemukan</string>
-    <string name="settings_restore_message">Folder \"%1$s\" ini sudah pernah dipakai PromptVault sebelumnya (backup tersimpan %2$s): %3$d rule, %4$d log aktivitas, %5$d riwayat pemindahan. Root folder ini TIDAK akan dibuat ulang/duplikat -- kalau kamu baru saja install ulang app, pulihkan konfigurasi lamanya di sini.</string>
+    <string name="settings_restore_message">Folder \"%1$s\" ini sudah pernah dipakai Sortify sebelumnya (backup tersimpan %2$s): %3$d rule, %4$d log aktivitas, %5$d riwayat pemindahan. Root folder ini TIDAK akan dibuat ulang/duplikat -- kalau kamu baru saja install ulang app, pulihkan konfigurasi lamanya di sini.</string>
     <string name="settings_restore_confirm">Pulihkan Konfigurasi Lama</string>
     <string name="settings_restore_dismiss">Mulai Kosong Saja</string>
     <string name="settings_open_guide">Buka Panduan Penggunaan</string>
@@ -96,11 +96,11 @@
     <string name="settings_autosort_desc_off">Auto-sort dinonaktifkan. Scan manual tetap tersedia.</string>
 
     <string name="settings_interval_section_title">Interval Auto-Scan</string>
-    <string name="settings_interval_section_desc">Seberapa sering PromptVault memindai Downloads di latar belakang. Android tidak mengizinkan kurang dari 15 menit.</string>
+    <string name="settings_interval_section_desc">Seberapa sering Sortify memindai Downloads di latar belakang. Android tidak mengizinkan kurang dari 15 menit.</string>
     <string name="settings_interval_unit_minutes_fmt">%1$d menit</string>
     <string name="settings_interval_unit_hours_fmt">%1$d jam</string>
     <string name="settings_conflict_section_title">Kalau Nama File Sudah Ada di Tujuan</string>
-    <string name="settings_conflict_section_desc">Apa yang dilakukan PromptVault kalau file dengan nama yang sama sudah ada di folder tujuan.</string>
+    <string name="settings_conflict_section_desc">Apa yang dilakukan Sortify kalau file dengan nama yang sama sudah ada di folder tujuan.</string>
     <string name="settings_conflict_rename">Ganti nama otomatis</string>
     <string name="settings_conflict_skip">Lewati</string>
     <string name="settings_conflict_overwrite">Timpa</string>
@@ -146,7 +146,7 @@
     <string name="settings_import_success_fmt">%1$d rule berhasil diimpor.</string>
     <string name="settings_import_button">Import</string>
     <string name="settings_update_section_title">Pembaruan Aplikasi</string>
-    <string name="settings_update_section_desc">Cek versi terbaru PromptVault langsung dari GitHub Releases.</string>
+    <string name="settings_update_section_desc">Cek versi terbaru Sortify langsung dari GitHub Releases.</string>
     <string name="settings_update_check_button">Cek Pembaruan</string>
     <string name="settings_update_checking">Memeriksa rilis terbaru...</string>
     <string name="settings_update_uptodate_fmt">Sudah versi terbaru (v%1$s).</string>
@@ -191,14 +191,14 @@
     <string name="diag_next_run_unknown">tidak diketahui</string>
     <string name="diag_status_checked_fmt">Dicek pada: %1$s</string>
     <string name="pandu_title">Panduan Penggunaan</string>
-    <string name="pandu_intro">Ringkasan cara kerja PromptVault. Bisa dibuka lagi kapan saja dari sini -- tidak perlu mengulang onboarding.</string>
+    <string name="pandu_intro">Ringkasan cara kerja Sortify. Bisa dibuka lagi kapan saja dari sini -- tidak perlu mengulang onboarding.</string>
     <string name="pandu_section1_title">1. Cara kerja dasar</string>
-    <string name="pandu_section1_body">PromptVault memindai folder Downloads, lalu mencocokkan tiap file ke \"rule\" yang kamu buat (pattern nama file + folder tujuan). File yang cocok langsung dipindah -- bukan disalin, file aslinya hilang dari Downloads (tapi bisa di-undo, lihat poin 6). Kalau beberapa rule sama-sama bisa cocok ke satu file, rule PALING ATAS di daftar \"Kelola Rule\" yang menang. Urutan rule bisa diubah lewat tombol naik/turun di layar itu.</string>
+    <string name="pandu_section1_body">Sortify memindai folder Downloads, lalu mencocokkan tiap file ke \"rule\" yang kamu buat (pattern nama file + folder tujuan). File yang cocok langsung dipindah -- bukan disalin, file aslinya hilang dari Downloads (tapi bisa di-undo, lihat poin 6). Kalau beberapa rule sama-sama bisa cocok ke satu file, rule PALING ATAS di daftar \"Kelola Rule\" yang menang. Urutan rule bisa diubah lewat tombol naik/turun di layar itu.</string>
     <string name="pandu_section2_title">2. Checklist setup pertama kali</string>
     <string name="pandu_section2_body">(1) Beri izin penyimpanan saat diminta. (2) Buka \"Kelola Rule\" -&gt; \"Tambah Rule\", isi pattern (mis. *.pdf) dan nama folder tujuan -- ada live preview file mana saja di Downloads yang cocok SEBELUM disimpan. (3) Tekan \"Scan Sekarang\" di Home untuk uji coba manual pertama kali, atau tunggu auto-sort jalan sendiri sesuai interval di Pengaturan.</string>
     <string name="pandu_section3_title">3. Ke mana file disortir?</string>
     <string name="pandu_section3_body">Default: Downloads/PromptVault/&lt;nama rule&gt;/, dibuat otomatis, tidak perlu setup apapun. Dua opsi lanjutan di Pengaturan kalau kamu butuh tujuan lain: \"Folder Tujuan Kustom\" (SAF, termasuk kartu SD -- subfolder \"PromptVault\" dibuat otomatis juga di dalamnya) atau \"Mode Shizuku\" (butuh aplikasi Shizuku terpasang &amp; jalan).</string>
-    <string name="pandu_warning_shizuku">Khusus Mode Shizuku: folder ROOT tujuan HARUS SUDAH ADA secara fisik SEBELUM diisi di Pengaturan -- buat dulu sendiri lewat file manager. PromptVault TIDAK PERNAH membuat folder root lewat Shizuku sendiri. Kalau folder belum ada, scan akan GAGAL dengan pesan error yang jelas, bukan membuatkannya diam-diam. (Folder Tujuan Kustom via SAF di atas beda -- root-nya DIBUAT OTOMATIS.)</string>
+    <string name="pandu_warning_shizuku">Khusus Mode Shizuku: folder ROOT tujuan HARUS SUDAH ADA secara fisik SEBELUM diisi di Pengaturan -- buat dulu sendiri lewat file manager. Sortify TIDAK PERNAH membuat folder root lewat Shizuku sendiri. Kalau folder belum ada, scan akan GAGAL dengan pesan error yang jelas, bukan membuatkannya diam-diam. (Folder Tujuan Kustom via SAF di atas beda -- root-nya DIBUAT OTOMATIS.)</string>
     <string name="pandu_section4_title">4. Kalau nama file sudah ada di tujuan</string>
     <string name="pandu_section4_body">Diatur di Pengaturan -&gt; \"Kalau Nama File Sudah Ada di Tujuan\", 3 pilihan: \"Ganti nama otomatis\" (default, paling aman -- file baru dapat nama lain, tidak ada yang hilang), \"Lewati\" (file baru tidak dipindah, file lama di tujuan tidak disentuh), \"Timpa\" (file lama di tujuan DIHAPUS PERMANEN dan TIDAK BISA di-undo -- pilih ini hanya kalau kamu yakin).</string>
     <string name="pandu_section5_title">5. Auto-sort &amp; notifikasi latar belakang</string>
@@ -236,18 +236,18 @@
 
 
     <!-- [Roadmap Fase 1.3 batch 6/N, 2026-08-20] Ekstraksi MURNI OnboardingScreen.kt -->
-    <string name="onboarding_step1_title">Selamat datang di PromptVault</string>
+    <string name="onboarding_step1_title">Selamat datang di Sortify</string>
     <string name="onboarding_step1_body">App ini memindai folder Downloads kamu dan memindahkan file (ekstensi apa saja) ke folder tujuan, sesuai rule yang kamu buat sendiri. Tidak ada rule = tidak ada file yang dipindah.</string>
     <string name="onboarding_step2_title">Rule = pattern + folder tujuan</string>
     <string name="onboarding_step2_body">Tiap rule punya pattern nama file (mis. *.pdf atau laporan-*.txt) dan nama folder tujuan. File yang cocok pattern langsung dipindah ke folder itu. Kalau ada beberapa rule yang bisa cocok ke file yang sama, rule PALING ATAS di daftar yang menang (first-match-wins) -- urutan rule penting.</string>
     <string name="onboarding_step3_title">Izin penyimpanan</string>
-    <string name="onboarding_step3_body">PromptVault perlu izin akses penyimpanan (sesuai versi Android kamu) supaya bisa membaca &amp; memindahkan file di Downloads. Tanpa izin ini, app tidak bisa memindai sama sekali.</string>
+    <string name="onboarding_step3_body">Sortify perlu izin akses penyimpanan (sesuai versi Android kamu) supaya bisa membaca &amp; memindahkan file di Downloads. Tanpa izin ini, app tidak bisa memindai sama sekali.</string>
     <string name="onboarding_step4_title">Ke mana file disortir?</string>
     <string name="onboarding_step4_body">Default: Downloads/PromptVault/&lt;nama rule&gt;/, dibuat otomatis. Folder tujuan kustom (SAF, di Pengaturan) juga otomatis dibuatkan subfolder \"PromptVault\" di dalamnya -- tidak perlu setup manual. Kekecualian: mode Shizuku (lanjutan) -- folder ROOT-nya HARUS SUDAH ADA lebih dulu, dibuat manual lewat file manager; kalau belum ada, scan akan gagal dengan pesan error yang jelas, bukan membuatkannya diam-diam.</string>
     <string name="onboarding_step5_title">Kalau nama file sudah ada di tujuan</string>
     <string name="onboarding_step5_body">Ada 3 pilihan (atur di Pengaturan): Ganti nama otomatis (aman, default), Lewati (file lama tidak disentuh), atau Timpa (file lama di tujuan DIHAPUS PERMANEN, tidak bisa di-undo). Pilih Timpa hanya kalau kamu yakin.</string>
     <string name="onboarding_step6_title">Auto-sort berjalan sendiri</string>
-    <string name="onboarding_step6_body">Setelah rule dibuat, jika Auto-Sort aktif, PromptVault akan memindai Downloads secara berkala di latar belakang sesuai interval yang kamu atur di Pengaturan (minimal 15 menit, batas sistem Android). Notifikasi kecil akan muncul saat auto-sort sedang berjalan.</string>
+    <string name="onboarding_step6_body">Setelah rule dibuat, jika Auto-Sort aktif, Sortify akan memindai Downloads secara berkala di latar belakang sesuai interval yang kamu atur di Pengaturan (minimal 15 menit, batas sistem Android). Notifikasi kecil akan muncul saat auto-sort sedang berjalan.</string>
     <string name="onboarding_step7_title">Salah pindah? Ada Undo</string>
     <string name="onboarding_step7_body">Buka \"Riwayat Aktivitas &amp; Undo\" dari Home untuk membatalkan pemindahan file, satu per satu atau tekan-lama lalu sapukan jari untuk pilih banyak sekaligus. Lupa detail apapun dari panduan ini? Buka \"Panduan Penggunaan\" di menu Home kapan saja -- tidak perlu mengulang onboarding ini dari awal.</string>
     <string name="onboarding_progress_fmt">Langkah %1$d dari %2$d</string>
@@ -311,7 +311,7 @@
          Fase 1.3"; setelah ini seluruh app 100% stringResource, nol
          literal UI hardcode tersisa. -->
     <string name="permission_gate_title">Izin Diperlukan</string>
-    <string name="permission_gate_message">PromptVault butuh akses ke semua file supaya bisa memindahkan file di Downloads ke folder yang kamu tentukan. Tanpa izin ini, app tidak bisa bekerja.</string>
+    <string name="permission_gate_message">Sortify butuh akses ke semua file supaya bisa memindahkan file di Downloads ke folder yang kamu tentukan. Tanpa izin ini, app tidak bisa bekerja.</string>
     <string name="permission_gate_open_settings">Buka Pengaturan Izin</string>
     <string name="permission_gate_recheck">Sudah diizinkan, cek ulang</string>
     <string name="permission_gate_denied_fallback">Izin ditolak permanen? Buka Pengaturan Aplikasi</string>
@@ -319,7 +319,7 @@
     <!-- [Fase 3.1 roadmap, 2026-08-21] Widget home screen — dipakai
          widget_scan.xml (RemoteViews) & ScanWidgetProvider.kt, BUKAN
          Compose (proses widget terpisah dari Activity). -->
-    <string name="widget_scan_label">PromptVault</string>
+    <string name="widget_scan_label">Sortify</string>
     <string name="widget_scan_action">Ketuk untuk Scan Sekarang</string>
     <string name="widget_scan_toast">Scan dimulai di latar belakang…</string>
     <string name="widget_scan_description">Scan &amp; sortir Downloads sekali ketuk, tanpa buka app.</string>

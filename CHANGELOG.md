@@ -1,7 +1,31 @@
-# Changelog PromptVault
+# Changelog Sortify (dulu PromptVault)
 
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
+
+## [REBRAND] Nama tampilan PromptVault -> Sortify (2026-08-29)
+
+Instruksi eksplisit user: nama app dinilai kurang "simpel, memorable, dan
+konteks aplikasi langsung tersampaikan" -- dipilih **Sortify** dari 4
+kandidat yang diajukan (Sortify/AutoSort/Tidyload/DropSort). Diaudit dulu
+sebelum eksekusi: literal "PromptVault" ternyata bukan cuma branding, tapi
+juga kontrak folder fungsional di banyak tempat (`SAF_ROOT_FOLDER_NAME`,
+`BackupManager.ROOT_FOLDER_NAME`, `UpdateRepository.REPO`, class
+`PromptVaultApp`/`PromptVaultRoot`). Scope rename jadi **cuma nama
+tampilan** (`app_name` + 13 string murni-branding lain, judul dokumentasi)
+-- `applicationId`, nama file/class Kotlin, nama folder default di
+Downloads/SAF, dan nama repo GitHub **SENGAJA TETAP** `PromptVault` (zero
+touch, sesuai instruksi user "jangan sentuh bagian vital/stable"). 8 string
+lain yang menyebut "PromptVault" sebagai NAMA FOLDER ASLI (bukan brand)
+sengaja TIDAK diubah -- ganti teksnya doang tanpa ganti foldernya beneran
+malah bikin app "bohong" ke user. Detail audit lengkap per-string &
+alasannya: `PROJECT_STATE.md`.
+
+File diubah (2 kode): `strings.xml` (14 dari 22 string "PromptVault" jadi
+"Sortify"), `settings.gradle.kts` (label Gradle kosmetik). Docs (VIP,
+di luar limit): `README.md`, `PROJECT_STATE.md`, `MAINTENANCE.md`,
+`ROADMAP.md`, `TROUBLESHOOTING.md`, `FILE_MANIFEST.txt`, `CHANGELOG.md`
+ini sendiri -- semua cuma judul/header, 0 riwayat log lama ditulis ulang.
 
 ## [UI][GLASSMORPHISM] colorScheme & aksen ke-4 -- MENUTUP 4/4 sumbu Glass (2026-08-29)
 

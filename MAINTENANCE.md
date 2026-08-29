@@ -9,9 +9,12 @@ penting, bukan opsional.
 
 ## Cara tercepat "onboarding" di sesi Claude yang baru
 
-Repo ini **publik** di `https://github.com/FDzaki-dev/PromptVault`. Kalau
-sesi baru dimulai dan user bilang "lanjutkan project PromptVault", cara
-PALING HEMAT WAKTU & TOKEN untuk dapat konteks penuh:
+Repo ini **publik** di `https://github.com/FDzaki-dev/PromptVault` (nama
+repo TETAP `PromptVault` -- app-nya sendiri di-rebrand jadi **Sortify**
+2026-08-27, lihat README.md). Kalau sesi baru dimulai dan user bilang
+"lanjutkan project Sortify" ATAU "lanjutkan project PromptVault" (keduanya
+merujuk project yang SAMA), cara PALING HEMAT WAKTU & TOKEN untuk dapat
+konteks penuh:
 
 1. `web_fetch` langsung 4 file ini (tidak perlu minta user upload ZIP dulu):
    - `https://raw.githubusercontent.com/FDzaki-dev/PromptVault/main/PROJECT_STATE.md` (paling penting -- keputusan arsitektur & riwayat insiden)
