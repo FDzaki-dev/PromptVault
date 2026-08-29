@@ -1,0 +1,5896 @@
+# PROJECT_STATE_ARCHIVE.md -- PromptVault (Riwayat Batch Diarsipkan)
+> File ini menyimpan riwayat batch/versi LAMA yang sudah diarsipkan dari
+> `PROJECT_STATE.md` per sesi 2026-08-29 (instruksi user: "Arsipkan
+> dokumentasi yang sudah stale"). **0 konten dihapus** -- semua log
+> kronologis di bawah dipindah verbatim dari `PROJECT_STATE.md`, bukan
+> diringkas/dibuang, sesuai aturan permanen "log kronologis, jangan
+> dihapus" di file tsb.
+>
+> **Kapan baca file ini**: HANYA kalau butuh detail teknis batch/insiden
+> lama (era versioning manual `vX.Y.Z`, sebelum governance auto-versioning
+> `1.0.<GITHUB_RUN_NUMBER>` per 2026-08-27) yang tidak lagi relevan buat
+> kerja sesi berjalan. Untuk onboarding sesi baru & kerja aktif, cukup baca
+> `PROJECT_STATE.md` (sudah berisi rules pinned + batch terkini + status
+> terbaru + referensi arsitektur + riwayat insiden permanen).
+>
+> **Cakupan arsip ini**: 2 bagian, urut sesuai posisi asli di
+> `PROJECT_STATE.md` (descending, terbaru dulu):
+> 1. Riwayat batch versi manual `v8.35.6` (2026-08-27) turun sampai
+>    `Insiden #6` (2026-08-06) -- 21 batch + insiden pra-governance.
+> 2. Section lama "Versi/batch terakhir yang selesai" (berhenti di
+>    versionCode 42/v2.8.0, 2026-08-05) -- sudah SANGAT usang & digantikan
+>    section "Status Terkini" baru di `PROJECT_STATE.md`, diarsipkan utuh
+>    di sini demi konteks historis, BUKAN dihapus.
+
+---
+
+## v8.35.6 -- FITUR BARU: guard "Buang Perubahan?" saat keluar Edit rule (2026-08-27)
+- **Instruksi eksplisit user** (lanjutan 2 laporan bug v8.35.4/v8.35.5):
+  "kalau ada perubahan yang diterapkan user tetapi belum disimpan, wajib
+  trigger tab konfirmasi jika user hendak meninggalkan setting rule!! (entah
+  itu pakai button/gesture back)". Konteks: user paham 2 fix sebelumnya
+  sudah benar & dialog overlap yang WAJIB "Tetap Simpan" itu memang
+  by-design (`ModalBottomSheet.onDismissRequest` = Batal, standar di semua
+  konfirmasi app) -- tapi kasus SPESIFIK ini beda: user BELUM SEMPAT tap
+  Simpan sama sekali, keburu keluar layar (tombol panah kembali ATAU
+  gesture/tombol back sistem Android) -- 0 peringatan sebelumnya, form
+  hilang total tanpa disadari.
+- **Implementasi** (`ui/screens/AddEditRuleScreen.kt`):
+  - `hasUnsavedChanges: Boolean` -- dihitung ulang tiap recomposition (bukan
+    `remember`, perbandingan String/Boolean murah) dari field form SEKARANG
+    vs baseline: `existingRule` kalau EDIT rule lama, blank/default kalau
+    TAMBAH rule baru (`existingRule == null`). Mencakup SEMUA field yang bisa
+    diketik/ditoggle user di layar ini: `folderName`, `pattern`,
+    `excludePattern`, `minSizeKbText`, `maxSizeKbText`, `holdBackLatestZip`.
+  - `BackHandler(enabled = hasUnsavedChanges) { showDiscardConfirm = true }`
+    (`androidx.activity.compose.BackHandler`, dependency `activity-compose`
+    SUDAH ada di `app/build.gradle.kts` sejak lama, 0 dependency baru) --
+    intersep gesture/tombol back SISTEM. `enabled` diikat ke
+    `hasUnsavedChanges` -- kalau TIDAK ada perubahan, handler nonaktif &
+    perilaku back baku (pop back stack, sama efeknya dgn `onCancel()`) tetap
+    jalan seperti biasa, 0 perubahan perilaku utk kasus "tidak ada
+    perubahan" (mayoritas kasus: buka Edit lalu langsung keluar tanpa
+    ngetik apa pun).
+  - `VaultTopBar` `onBack`: SEBELUMNYA `onCancel` langsung -- sekarang
+    `{ if (hasUnsavedChanges) showDiscardConfirm = true else onCancel() }`,
+    pola identik BackHandler di atas (tombol panah & gesture sistem sekarang
+    treated SAMA, sesuai instruksi eksplisit user "entah itu pakai
+    button/gesture back").
+  - Sheet baru `VaultActionSheet` ("Buang Perubahan?", `isDestructive = true`
+    -- pola sama dgn konfirmasi hapus rule, krn aksi ini merusak/tidak bisa
+    dibatalkan): `onConfirm` -> tutup sheet + `onCancel()` (lanjut keluar,
+    perubahan dibuang), `onDismiss` (Batal/back/tap-luar sheet ini sendiri)
+    -> cuma tutup sheet, TETAP di layar Edit, semua field form UTUH tidak
+    hilang (state `rememberSaveable` tidak disentuh sama sekali oleh sheet
+    ini).
+  - 3 string baru (`res/values/strings.xml`, prefix `rule_edit_discard_*`,
+    konsisten dgn `rule_edit_confirm_*` yang sudah ada): title, message,
+    confirmLabel (dismissLabel pakai default `VaultActionSheet` = "Batal",
+    tidak perlu string baru).
+- **TIDAK disentuh** (Zero-Unnecessary-Refactor): sheet konfirmasi overlap/
+  duplikat yang SUDAH ADA (`pendingCheck`/`pendingRule`, fix v8.35.5) --
+  guard baru ini 100% independen, jalur BERBEDA (guard ini soal "keluar
+  layar", bukan soal "tap Simpan"); `VaultActionSheet.kt` sendiri (dipakai
+  ulang apa adanya, 0 parameter baru ditambah ke komponennya); layar lain
+  (`RuleListScreen`, `SettingsScreen`, dst) -- guard ini SENGAJA scope
+  sempit HANYA `AddEditRuleScreen` sesuai konteks laporan bug, bukan pola
+  umum lintas-layar yang belum diminta.
+- File diubah (3, dalam batas Micro-Batch): `ui/screens/AddEditRuleScreen.kt`
+  (parsial: 1 import, blok state baru, `VaultTopBar` `onBack`, 1 sheet baru
+  di akhir composable), `res/values/strings.xml` (3 string baru), `app/
+  build.gradle.kts` (versi). `FILE_MANIFEST.txt` TIDAK berubah.
+- **Batas jujur**: seperti seluruh riwayat project, **BELUM PERNAH lewat
+  `./gradlew`/device asli** -- `BackHandler` dependency (`activity-compose`)
+  SUDAH lama ada di project (dipakai transitif oleh Navigation Compose),
+  tapi pemakaian eksplisit `BackHandler` composable ini BARU PERTAMA KALI
+  di seluruh riwayat project (grep sebelum implementasi: 0 hasil) --
+  RISIKO LEBIH TINGGI dari fix biasa (API belum pernah divalidasi compile
+  di sandbox `./gradlew`, cuma dicek `preflight_check.sh` statis).
+- **User WAJIB verifikasi di HP**: (1) build CI hijau (PALING PENTING utk
+  fitur ini -- `BackHandler` API baru, kalau ada typo import/signature baru
+  ketahuan di sini), (2) buka Edit rule lama -> ubah 1 field APA SAJA (mis.
+  nyalakan toggle) -> TANPA tap Simpan, tekan tombol panah kembali
+  VaultTopBar -> sheet "Buang Perubahan?" HARUS muncul, (3) ulangi #2 tapi
+  pakai gesture/tombol back sistem Android (bukan tombol di app) -> sheet
+  HARUS TETAP muncul (bukan cuma tombol panah yang ke-cover), (4) di sheet
+  itu tap "Batal" -> HARUS balik ke form Edit, field yang barusan diubah
+  HARUS MASIH ADA (tidak hilang), (5) tap "Buang" -> HARUS keluar ke daftar
+  rule, perubahan TIDAK tersimpan (sesuai namanya), (6) buka Edit rule ->
+  TANPA ubah apa pun -> tombol panah kembali / gesture back -> HARUS
+  LANGSUNG keluar TANPA sheet apa pun (0 regresi kasus "tidak ada
+  perubahan"), (7) alur Simpan normal (v8.35.4/v8.35.5, toggle+Simpan
+  tanpa dialog overlap kalau pattern tak berubah) tetap jalan seperti
+  sebelumnya -- 0 regresi.
+- versionCode 196->197, versionName 8.35.5->8.35.6.
+
+## v8.35.5 -- FIX lanjutan: skip dialog konfirmasi overlap kalau pattern tak berubah (2026-08-27)
+- **Lanjutan laporan v8.35.4** -- fix v8.35.4 (await Job sebelum popBackStack)
+  BENAR tapi TIDAK CUKUP: user kirim screenshot bukti dialog "Perlu konfirmasi"
+  (tumpang tindih dgn "All-Zip vault") MUNCUL persis saat cuma menyalakan
+  toggle "Tahan versi .zip terbaru di Downloads" -- root cause SEBENARNYA:
+  `checkBeforeSave` (duplicate+overlap) jalan pada SETIAP tap Simpan, TIDAK
+  peduli field apa yang benar2 diubah user.
+- **Root cause presisi**: `RuleOverlapChecker.findOverlaps()` &
+  `RuleRepository.checkBeforeSave()` (duplicate check) SAMA-SAMA cuma baca
+  `rule.pattern` (vs pattern rule lain) -- 0 dependency ke `holdBackLatestZip`/
+  `excludePattern`/`minSizeKb`/`maxSizeKb`/`folderName`/`enabled`. Rule di
+  screenshot user SUDAH tumpang tindih pattern dgn "All-Zip vault" SEJAK
+  SEBELUM edit ini (kondisi lama, tidak berubah) -- tapi `AddEditRuleScreen`
+  tetap re-tampilkan dialog konfirmasi di SETIAP Simpan, termasuk saat
+  satu-satunya perubahan adalah toggle yang sama sekali tidak mempengaruhi
+  matching pattern. Kalau user menutup dialog itu (Batal/back/tap luar,
+  BUKAN "Tetap Simpan") mengira itu cuma info -- `pendingRule` dibuang,
+  SELURUH form (termasuk toggle yang baru dinyalakan) TIDAK PERNAH tersimpan
+  sama sekali. Ini match PERSIS 3 jawaban user di sesi sebelumnya ("muncul
+  setelah balik ke daftar & buka Edit lagi", TANPA sadar ada pop-up).
+- **Fix (1 file, titik paling presisi)**: `AddEditRuleScreen.kt`, tombol
+  Simpan -- tambah `patternUnchanged = existingRule != null &&
+  existingRule.pattern == rule.pattern`; kalau `true`, `checkBeforeSave`
+  DI-SKIP (anggap `SaveRuleCheck.Ok` langsung, tanpa panggil
+  `onCheckBeforeSave` sama sekali) -- rule LANGSUNG tersimpan tanpa dialog.
+  Kalau pattern BERUBAH (termasuk rule baru, `existingRule == null`), perilaku
+  TIDAK BERUBAH SAMA SEKALI -- `onCheckBeforeSave` tetap jalan & dialog tetap
+  muncul kalau memang overlap/duplikat baru terdeteksi (fitur ini TETAP utuh
+  utk kasus yang benar2 relevan).
+- **Kenapa aman (0 kehilangan info)**: overlap yang sudah ada TETAP kelihatan
+  user lewat badge peringatan di `RuleListScreen` (`hasOverlapWarning`,
+  dihitung `viewModel.findAllOverlaps()` independen dari layar Edit) -- skip
+  dialog ini di jalur "pattern tak berubah" tidak menyembunyikan tumpang
+  tindih yang sudah ada, cuma hilangkan re-konfirmasi berulang utk kondisi
+  yang sudah diketahui/diterima user sebelumnya.
+- **TIDAK disentuh**: `RuleOverlapChecker.kt`, `RuleRepository.checkBeforeSave()`
+  (logika deteksi 100% sama, cuma TIDAK dipanggil kalau pattern tak berubah),
+  `RuleListScreen.kt` (badge overlap tetap jalan spt biasa), fix v8.35.4
+  (Job/`saveRuleJob.join()` di `MainActivity.kt` TETAP ada & masih relevan --
+  dialog utk kasus pattern BERUBAH masih butuh itu).
+- File diubah (2, dalam batas Micro-Batch): `ui/screens/AddEditRuleScreen.kt`
+  (parsial, 1 blok tombol Simpan), `app/build.gradle.kts` (versi).
+  `FILE_MANIFEST.txt` TIDAK berubah.
+- **Batas jujur**: seperti seluruh riwayat project, **BELUM PERNAH lewat
+  `./gradlew`/device asli** -- root cause kali ini dikonfirmasi LANGSUNG dari
+  screenshot user (bukan tebakan/trace kode semata spt v8.35.4), tapi fix-nya
+  sendiri tetap belum diverifikasi jalan di HP.
+- **User WAJIB verifikasi di HP**: (1) build CI hijau, (2) buka Edit rule yang
+  SUDAH tumpang tindih dgn rule lain (persis kasus screenshot) -> nyalakan/
+  matikan toggle "Tahan versi .zip terbaru" TANPA ubah pattern -> Simpan ->
+  dialog "Perlu konfirmasi" TIDAK BOLEH muncul lagi, langsung balik ke daftar
+  -> buka Edit lagi -> toggle HARUS sesuai yang barusan diset, (3) rule yang
+  SAMA, kali ini ubah pattern-nya -> Simpan -> dialog overlap HARUS TETAP
+  muncul seperti biasa (0 regresi di jalur yang memang butuh konfirmasi), (4)
+  bikin rule baru dgn pattern yang sengaja tumpang tindih -> Simpan -> dialog
+  HARUS TETAP muncul (jalur rule baru 100% tidak berubah).
+- versionCode 195->196, versionName 8.35.4->8.35.5.
+
+## v8.35.4 -- FIX: saklar per-rule "balik OFF sendiri" saat Edit rule dibuka lagi (2026-08-27)
+- **Laporan user**: saklar "Tahan versi .zip terbaru di Downloads" (`holdBackLatestZip`,
+  `AddEditRuleScreen`) kelihatan mati sendiri -- tepatnya: dinyalakan + Simpan
+  (TANPA pop-up konfirmasi duplikat/tumpang tindih), balik ke daftar rule, lalu
+  buka Edit rule LAMA itu lagi -> saklar sudah OFF lagi. Dikonfirmasi via
+  `ask_user_input_v0` (3 pertanyaan) sebelum eksekusi -- bukan tebakan.
+- **Audit ditelusuri** (bukan Fast-Track -- state persistence bug, butuh trace
+  penuh): `Rule.holdBackLatestZip` -> `AddEditRuleScreen.kt` (state+konstruksi
+  `Rule(...)`) -> `MainActivity.kt` (`onSave`) -> `MainViewModel.saveRule()` ->
+  `RuleRepository.upsertRule()` (DataStore). Ketiga lapis PALING BAWAH (Rule
+  model, RuleRepository, JSON serialize) sudah benar & konsisten dgn KDoc batch
+  1/2 fitur ini (v8.33.0/v8.33.1) -- root cause ADA di titik penyambung UI<->ViewModel.
+- **Root cause**: `MainViewModel.saveRule()` SEBELUMNYA fire-and-forget
+  (`viewModelScope.launch{...}`, Job dibuang, fungsi return `Unit`) -- pemanggil
+  di `MainActivity.kt` (`onSave` tombol Simpan) langsung panggil
+  `navController.popBackStack()` TANPA menunggu tulisan `DataStore` selesai.
+  `viewModel.rules` (StateFlow yang dibaca ulang `AddEditRuleScreen` via
+  `rules.firstOrNull{it.id==ruleId}` tiap kali layar Edit dibuka) baru terisi
+  nilai baru SETELAH tulisan itu benar2 rampung (proses async terpisah,
+  `flow.collect{state.value=it}`). Kalau user buka lagi Edit rule yang SAMA
+  sebelum proses async itu selesai, `existingRule` yang diterima
+  `AddEditRuleScreen` MASIH versi lama (toggle OFF) -- `rememberSaveable`
+  men-seed state awal dari situ = persis gejala yang dilaporkan.
+- **Fix (2 file, titik penyambung SAJA -- tidak sentuh 3 lapis bawah yang
+  sudah benar)**: `MainViewModel.saveRule()` sekarang **return `Job`** hasil
+  `viewModelScope.launch{}` (sebelumnya dibuang/`Unit`) -- pemanggil yang PERLU
+  menunggu bisa `.join()`, pemanggil yang tidak perlu (toggle enable/disable
+  per-rule di `RuleCard`, `MainActivity.kt` baris `onToggleEnabled`) TETAP
+  boleh abaikan nilai kembalian ini, 0 perubahan perilaku di titik itu (Kotlin
+  mengizinkan lambda `-> Unit` membuang nilai balik non-Unit). `MainActivity.kt`
+  (`onSave` tombol Simpan `AddEditRuleScreen`): tangkap `Job` dari `saveRule()`,
+  `scope.launch { saveRuleJob.join(); navController.popBackStack() }` --
+  `popBackStack()` sekarang PASTI terjadi SETELAH tulisan `DataStore` (+ set
+  `RuleSaveFeedback` kalau `announce=true`) rampung, bukan cuma "biasanya
+  keburu" seperti sebelumnya. `scope` yang dipakai SUDAH ada
+  (`rememberCoroutineScope()` di `PromptVaultRoot`, baris atas `NavHost` --
+  tidak buat scope baru).
+- **TIDAK disentuh** (Zero-Unnecessary-Refactor, root cause SUDAH presisi di 1
+  titik): `data/Rule.kt`, `data/RuleRepository.kt`, `util/FileSorter.kt`
+  (`computeLatestZipHeldBack()`), `ui/screens/AddEditRuleScreen.kt`,
+  `ui/components/TactileSwitch.kt`/`RuleCard.kt` -- SEMUA sudah diverifikasi
+  benar lewat trace manual, 0 perubahan.
+- File diubah (3, dalam batas Micro-Batch): `ui/MainViewModel.kt` (parsial: 1
+  import `Job` + signature+body `saveRule()`), `MainActivity.kt` (parsial: 1
+  blok `onSave`), `app/build.gradle.kts` (versi).
+  `FILE_MANIFEST.txt` TIDAK berubah (0 file baru/dihapus).
+- **Batas jujur**: seperti seluruh riwayat project, **BELUM PERNAH lewat
+  `./gradlew`/device asli** -- fix berbasis trace kode + Kotlin coroutine
+  ordering guarantee (`Job.join()` menjamin urutan, bukan tebakan timing),
+  BUKAN dites langsung di HP.
+- **User WAJIB verifikasi di HP**: (1) build CI hijau, (2) buka Edit rule lama
+  -> nyalakan toggle "Tahan versi .zip terbaru di Downloads" -> Simpan (tanpa
+  pop-up muncul) -> balik ke daftar -> buka Edit rule itu LAGI -> toggle HARUS
+  tetap ON, (3) ulangi utk mematikan toggle (ON->OFF->Simpan->cek lagi) -- 2
+  arah harus konsisten, (4) toggle enable/disable per-rule di kartu daftar
+  (`RuleCard`) tetap normal seperti sebelumnya (0 regresi, jalur itu sengaja
+  tidak diubah perilakunya).
+- versionCode 194->195, versionName 8.35.3->8.35.4.
+
+## v8.35.3 -- Cabut PINNED rule #2 (posisi box skrip commit) (2026-08-27)
+- **Instruksi user, eksplisit & literal**: cabut rule #2 di section PINNED
+  ("Box skrip commit WAJIB tampil DI ATAS heading 'Update Harian:'") --
+  alasan user: sesi lain sudah bisa menalar hal ini sendiri, tidak perlu
+  dipin sebagai aturan wajib terpisah.
+- **Fix (dokumentasi murni, task mikro -- Fast-Track, tanpa audit
+  menyeluruh)**: rule #2 dihapus dari section PINNED `PROJECT_STATE.md`.
+  Rule #1 (bump versi wajib tiap sesi) TETAP, tidak disentuh -- user cuma
+  minta cabut #2. Catatan footer PINNED diperbarui menyebut pencabutan ini
+  (bukan dihapus diam-diam tanpa jejak -- tetap traceable kapan & kenapa),
+  tanggal instruksi asli (2026-08-21) tetap dipertahankan sebagai konteks
+  historis.
+- File diubah (2): `PROJECT_STATE.md` (parsial, section PINNED), `app/
+  build.gradle.kts` (versi, sesuai rule #1 yang justru TETAP berlaku).
+  `FILE_MANIFEST.txt` TIDAK berubah.
+- versionCode 193->194, versionName 8.35.2->8.35.3.
+
+## v8.35.2 -- Reposisi Stale Run Guard + pangkas MAINTENANCE.md (2026-08-27)
+- **Instruksi user (2 item Pending Queue)**: (1) "Pangkas rules yang kurang
+  penting/bisa dinalar sendiri oleh sesi lain pada file project.md, dan
+  sejenisnya", (2) "Cabut run stale guard, lalu tempatkan pada tempat yang
+  seharusnya!!".
+- **Interpretasi eksplisit item (1)** (nama file di prompt user tidak persis
+  cocok file manapun -- "project.md" TIDAK ada di repo): diaudit ke-5 file
+  `.md` governance (`PROJECT_STATE.md`, `MAINTENANCE.md`, `README.md`,
+  `ROADMAP.md`, `TROUBLESHOOTING.md`). `PROJECT_STATE.md` bagian PINNED
+  ("ATURAN WAJIB SESI") cuma 2 aturan, KEDUANYA instruksi eksplisit user
+  2026-08-21 (bukan generik/bisa-ditebak) -- TIDAK dipangkas. `README.md`/
+  `ROADMAP.md`/`TROUBLESHOOTING.md` isinya spesifik & tidak redundan (riwayat
+  bug nyata, keputusan fitur, panduan user) -- TIDAK dipangkas.
+  `MAINTENANCE.md` (judulnya sendiri "Catatan Perawatan... sesi berikutnya")
+  yang PALING cocok sbg target "rules" -- diaudit isinya, 4 dari ~9 section
+  ternyata KURANG PENTING/bisa dinalar sendiri: (a) "Struktur proyek" --
+  cuma daftar folder standar Android/Kotlin, kelihatan sendiri lewat
+  eksplorasi direktori, (b) "Soal versi Gradle di CI" -- DUPLIKAT PERSIS
+  (malah kurang detail) dari komentar inline step "Setup Gradle" di
+  `build.yml`, (c) "PENTING: | tee WAJIB set -o pipefail" -- DUPLIKAT PERSIS
+  dari komentar inline step "Decode keystore" di `build.yml`, (d) "Alur
+  kerja standar tiap sesi" -- cuma rangkum ulang section lain di dokumen
+  yang sama + sudah dicakup instruksi standar user sendiri (Packaging & Chat
+  Format). (b)/(c) TIDAK dihapus total tanpa jejak -- diganti 1 catatan
+  pointer ke lokasi kanonik di `build.yml` (info tetap ketemu, cuma tidak
+  disalin ulang di 2 tempat yang bisa desync). File turun 116->82 baris.
+- **TIDAK dipangkas dari `MAINTENANCE.md`** (genuinely non-obvious/wajib):
+  "Cara tercepat onboarding" (URL repo + urutan fetch persis), "WAJIB
+  sebelum kirim ZIP" (command preflight), "Versi & commit" (invariant
+  sumber kebenaran versi), "Item kategori 7 preflight yang sudah
+  diverifikasi aman" (whitelist operasional, hemat token/waktu sesi
+  berikutnya -- justru SEJALAN dgn semangat "pangkas yang tidak perlu").
+- **Item (2) -- Stale Run Guard**: SEBELUMNYA step ke-2 di `build.yml`
+  (setelah `Checkout`). Root masalah: guard cuma butuh SHA remote (`git
+  ls-remote`, murni jaringan, TIDAK butuh isi repo), tapi nempel di remote
+  alias `origin` yang baru ada SETELAH `Checkout` jalan -- akibatnya
+  checkout (network+disk I/O) tetap kebuang percuma tiap kali terjadi stale
+  re-run, PADAHAL tujuan guard ini dari awal (komentar v8.18.0) persis
+  "batalkan SEBELUM buang waktu". **Fix**: dipindah jadi step PALING
+  PERTAMA (sebelum `Checkout`) -- `origin` (butuh checkout) diganti URL
+  remote eksplisit terautentikasi `GITHUB_TOKEN` bawaan (pola
+  `x-access-token:<token>@github.com/<repo>.git`, token & repo diambil dari
+  context `secrets.GITHUB_TOKEN`/`github.repository` bawaan Actions) supaya
+  `git ls-remote` bisa jalan TANPA checkout sama sekali. Logika perbandingan SHA & pesan
+  error 100% tidak berubah (cuma sumber `REMOTE_SHA` yang diganti cara
+  ambilnya). Divalidasi lewat `python3 -c "import yaml; yaml.safe_load(...)"`
+  di sandbox -- YAML well-formed & urutan step terkonfirmasi (guard = step
+  0, Checkout = step 1).
+- **TIDAK disentuh** (Zero-Unnecessary-Refactor + Protected File, Edit
+  Parsial Only sesuai izin eksplisit user item (2)): 14 step lain di
+  `build.yml` (JDK/Gradle setup, compile/test/build, rename APK, upload
+  artifact, publish release, force-latest, upload log gagal, cleanup
+  keystore) -- 0 diubah selain reposisi+URL 1 step guard. `FILE_MANIFEST.txt`
+  TIDAK berubah (0 file baru/dihapus, cuma isi 2 file existing berubah).
+- File diubah (3, dalam batas Micro-Batch): `.github/workflows/build.yml`
+  (parsial, protected file -- izin eksplisit dari instruksi user item 2),
+  `MAINTENANCE.md` (parsial, 4 section dipangkas/diringkas), `app/
+  build.gradle.kts` (versi).
+- **Batas jujur**: seperti seluruh riwayat project, **BELUM PERNAH lewat
+  `./gradlew`/CI asli** -- reposisi step divalidasi cuma lewat parser YAML
+  statis (struktur/urutan benar), BUKAN run job asli. `git ls-remote` via
+  URL eksplisit + token adalah pola standar (dipakai juga oleh
+  `actions/checkout` sendiri secara internal), risiko rendah, tapi tetap
+  butuh 1x run CI hijau buat konfirmasi guard benar2 mencegat SEBELUM
+  checkout di skenario stale re-run nyata (belum ada kejadian re-run buat
+  ditest sejak fix ini).
+- **User WAJIB verifikasi**: (1) build CI hijau seperti biasa di push
+  normal (guard harus LOLOS di commit terbaru, bukan cuma di skenario
+  gagal), (2) kalau nanti ada re-run manual dari commit lama (skenario yang
+  memicu guard), step "Stale run guard (anti-desync)" HARUS muncul gagal
+  merah SEBAGAI STEP PERTAMA (sebelum "Checkout" sama sekali sempat
+  jalan) -- beda dari sebelumnya yang gagal di step KEDUA.
+- versionCode 192->193, versionName 8.35.1->8.35.2.
+
+## v8.35.1 -- FIX row overlap: judul teks nabrak/nutupin TactileSwitch (2026-08-27)
+- **Laporan user**: screenshot toggle "Tahan versi .zip terbaru di Downloads"
+  (`AddEditRuleScreen`) -- teks judul mentok lalu NABRAK switch, lingkaran
+  switch kepotong/setengah kelihatan di tepi layar. Diminta juga: "pastikan
+  logic yang identik dapat semua" -- jadi diaudit SELURUH pemakaian
+  `TactileSwitch` di project (grep menyeluruh, bukan cuma file yang di-screenshot).
+- **Root cause**: pola `Row(Arrangement.SpaceBetween) { Text(...) ;
+  TactileSwitch(...) }` -- `Text` TIDAK dikasih `Modifier.weight(1f)`/batas
+  lebar, jadi diukur di lebar alaminya sendiri dulu (bisa melebihi sisa
+  ruang row) SEBELUM `TactileSwitch` diukur. Judul panjang ("Tahan versi
+  .zip terbaru di Downloads") dorong switch sampai kepotong tepi layar --
+  persis gejala di screenshot.
+- **Audit lengkap 5 titik pakai `TactileSwitch` (grep, bukan tebak)**: (1)
+  `AddEditRuleScreen.kt` baris toggle hold-back-zip -- POLA SAMA, teks
+  terpanjang di antara semua, ini yang kena di screenshot. (2)
+  `SettingsScreen.kt` toggle "Auto-Sort" -- POLA SAMA (teks pendek, belum
+  kejadian tapi rentan di font besar/aksesibilitas). (3) `SettingsScreen.kt`
+  toggle "Mode Shizuku (Lanjutan)" -- POLA SAMA. (4) `ThemeStyleToggle.kt`
+  (`ThemeStyleSwitchRow`, dipakai 4x: Glassmorphism/Neumorphism/Material 3
+  Murni/Cupertino) -- POLA SAMA persis di komponen bersama. (5)
+  `RuleCard.kt` -- BEDA pola (`Arrangement.SpaceEvenly`, isinya cuma
+  ikon+switch, TIDAK ada `Text` di row itu) -- TIDAK mungkin kena bug ini,
+  sengaja TIDAK disentuh (DO NOT TOUCH, di luar scope).
+- **Fix, identik di ke-4 titik (bukan 1 titik lalu nebak sisanya sama)**:
+  `Text` judul dikasih `modifier = Modifier.weight(1f).padding(end = 12.dp)`
+  -- teks jadi wrap ke baris berikutnya kalau kepanjangan (bukan overflow
+  nabrak switch), `TactileSwitch` selalu utuh kelihatan di tepi kanan, +
+  jarak aman 12dp antara teks & switch.
+- **TIDAK disentuh** (Zero-Unnecessary-Refactor): `RuleCard.kt` (pola beda,
+  lihat poin audit #5), `TactileSwitch.kt` sendiri (komponennya benar,
+  masalah cuma di row pemanggilnya), semua styling/warna/ukuran switch.
+- File diubah (3, pas batas Micro-Batch): `AddEditRuleScreen.kt` (parsial,
+  1 Text), `SettingsScreen.kt` (parsial, 2 Text di 2 row beda), `ThemeStyleToggle.kt`
+  (parsial, 1 Text di `ThemeStyleSwitchRow` -- otomatis kebenerin 4 pemanggilnya
+  sekaligus krn 1 komponen dipakai ulang). `app/build.gradle.kts` (versi).
+  `FILE_MANIFEST.txt` TIDAK berubah (0 file baru/dihapus).
+- **Batas jujur**: fix ini berbasis analisis constraint-layout Compose
+  standar (weight+SpaceBetween) yang SUDAH dipakai benar di tempat lain di
+  project ini (mis. 2 `OutlinedTextField` size filter, tombol GitHub PAT) --
+  tapi seperti seluruh riwayat project, **BELUM PERNAH lewat
+  `./gradlew`/device asli** di sandbox ini.
+- **User WAJIB verifikasi di HP**: (1) build CI hijau, (2) buka "Tambah
+  Rule" -> toggle "Tahan versi .zip terbaru di Downloads" HARUS utuh
+  kelihatan (tidak kepotong tepi layar) baik teks 1 baris maupun 2 baris
+  (coba font besar di Aksesibilitas HP), (3) Pengaturan -> toggle
+  Auto-Sort & Mode Shizuku sama, (4) Pengaturan -> Gaya Tema (4 switch
+  Glassmorphism/Neumorphism/Material 3/Cupertino) sama, (5) kartu kontrol
+  rule (naik/turun/switch/edit/hapus) TETAP seperti sebelumnya (0 regresi,
+  area ini sengaja tidak disentuh).
+- versionCode 191->192, versionName 8.35.0->8.35.1.
+
+## v8.35.0 -- FIX layout/inset: keyboard (IME) menimpa field input di semua tab (2026-08-27)
+- **Instruksi user**: "tambahkan pembatas layout/inset keseluruh tab. Agar
+  semua terlihat normal dan gak truncated!!" -- tanpa screenshot/gejala
+  spesifik, jadi diaudit dulu SELURUH 9 layar sebelum menebak fix (bukan
+  Fast-Track -- task ini eksplisit lintas-tab, bukan tweak mikro 1 file).
+- **Audit dilakukan (grep menyeluruh, bukan asumsi)**: (1) `VaultTopBar`
+  (dipakai 8/9 layar) pakai `TopAppBar` M3 asli -- insets status bar SUDAH
+  otomatis benar. (2) Semua 9 `Scaffold(...) { padding -> ... }` DIVERIFIKASI
+  satu-satu, SEMUA konsumsi `padding` (termasuk `HomeScreen` yg sempat
+  dicurigai -- ternyata diterapkan di `Column` bertingkat dalam `Box`, BUKAN
+  bug). (3) FAB `RuleListScreen` sudah py `contentPadding(bottom=88dp)` sejak
+  v2.24.0, tidak regresi. (4) `imePadding`/`WindowInsets.ime` -- **grep 0
+  HASIL di SELURUH project** & `AndroidManifest.xml` **TIDAK PERNAH** set
+  `android:windowSoftInputMode` -- SATU-SATUNYA gap nyata ditemukan.
+- **Root cause**: `enableEdgeToEdge()` (`MainActivity.onCreate`, aktif sejak
+  v3.0.0) bikin window digambar edge-to-edge, TAPI tanpa `imePadding()` di
+  mana pun & tanpa `windowSoftInputMode` eksplisit di manifest, keyboard
+  MENIMPA konten alih-alih mendorongnya ke atas -- di layar dgn banyak field
+  (`AddEditRuleScreen`, 5 field: folderName/pattern/exclude/minSize/maxSize),
+  field bagian bawah jadi ketutup keyboard saat diketik = persis "truncated"
+  yang dilaporkan user. `ActivityLogScreen`/`RuleListScreen` (search box) &
+  `SettingsScreen` (GitHub PAT token field) kena gap yang sama, walau
+  dampaknya lebih ringan (cuma 1 field per layar, bukan form panjang).
+- **Fix, 1 titik fondasi (bukan disebar ke 9 file layar)**: `Modifier.
+  imePadding()` ditambah ke `NavHost(...)` di `MainActivity.kt`
+  (`PromptVaultRoot`) -- efek menjalar OTOMATIS ke SEMUA tab/layar tanpa
+  perlu disentuh satu-satu, pola SAMA PERSIS `GlassPanel`/`TactileSurface`
+  (1 primitif diubah, seluruh app ikut). `AndroidManifest.xml` (protected,
+  edit parsial): `android:windowSoftInputMode="adjustResize"` di `<activity>`
+  -- kombinasi RESMI direkomendasikan Android bareng `imePadding()` utk
+  migrasi edge-to-edge, konsisten API 26-34 (minSdk project ini).
+- **TIDAK disentuh** (Zero-Unnecessary-Refactor -- gap lain TIDAK ditemukan,
+  jadi TIDAK ada alasan sentuh): 9 file `ui/screens/*.kt` (Scaffold/padding
+  masing2 sudah benar, cukup diverifikasi bukan diubah), `VaultTopBar.kt`,
+  FAB `RuleListScreen.kt`, semua styling/tema.
+- File diubah (2): `MainActivity.kt` (parsial: 1 import + 1 modifier param
+  NavHost), `AndroidManifest.xml` (parsial: 1 atribut + komentar). `app/
+  build.gradle.kts` (versi). Preflight: 14/14 kategori PASS (termasuk #10
+  well-formedness XML -- sempat ada insiden minor SENDIRI saat menulis
+  komentar penjelasan `windowSoftInputMode`: draft awal taruh `<!-- -->` DI
+  DALAM daftar atribut tag `<activity ...>`, XML TIDAK mengizinkan komentar
+  di tengah attribute list start-tag -- KETANGKAP & diperbaiki (komentar
+  dipindah ke atas SEBELUM tag `<activity`) SEBELUM packaging, bukan lolos
+  ke user).
+- **Batas jujur**: fix ini menutup gap KONKRET yang TERVERIFIKASI (0
+  `imePadding` di seluruh project, bukan tebakan) -- tapi seperti seluruh
+  riwayat project ini, **BELUM PERNAH lewat `./gradlew`/device asli**.
+  Kalau "truncated" yang dimaksud user TERNYATA bukan soal keyboard (mis.
+  teks nama file terpotong ellipsis -- itu BY DESIGN sejak v8.15.0, bukan
+  bug) atau area lain yang belum ketahuan dari audit statis ini, kirim
+  screenshot/gejala konkret (layar mana, kondisi apa) supaya sesi
+  berikutnya bisa bertarget, bukan audit ulang dari nol.
+- **User WAJIB verifikasi di HP**: (1) build CI hijau, (2) buka "Tambah
+  Rule" (5 field) -> tap field PALING BAWAH (Ukuran Maks KB) -> keyboard
+  muncul -> field tsb HARUS tetap terlihat/bisa diketik (TIDAK ketutup
+  keyboard, konten terdorong ke atas), (3) search box di "Kelola Rule" &
+  "Riwayat Aktivitas" & field token PAT GitHub di Pengaturan -- sama, tidak
+  ketutup keyboard, (4) semua tab lain (Home, Statistik, Panduan, dst) tetap
+  normal seperti sebelumnya (0 regresi visual di layar TANPA input teks).
+- versionCode 190->191, versionName 8.34.1->8.35.0.
+
+## v8.34.1 -- ROLLBACK: R8 minify+shrinkResources dimatikan lagi, regresi besar dilaporkan user (2026-08-27)
+- **User laporan**: "Terjadi great regression sehabis R8 minify+shrinkResources
+  aktif" -- TIDAK disertai crash log/stack trace terlampir, TIDAK disebut
+  gejala spesifik selain "SAF logic" & fitur "keeping latest modified files"
+  (= `computeLatestZipHeldBack()`/`holdBackLatestZip`, v8.32.0-v8.33.1) yang
+  diminta jadi prioritas dilindungi dari regresi.
+- **Audit dilakukan SEBELUM putuskan pendekatan** (bukan langsung tebak fix):
+  grep menyeluruh project utk pola reflection/by-name yang R8-sensitive
+  (`Class.forName`, `getIdentifier(`, `::class.java`, `getDeclaredField/Method`,
+  `newInstance(`) -- SATU-SATUNYA titik yang genuinely by-name/reflection
+  adalah `ShizukuManager.kt` (`FileOpsUserService::class.java.name` utk
+  `ComponentName`), dan itu SUDAH tercakup rule `-keep class
+  com.elprompter.promptvault.shizuku.** { *; }` yang ditambahkan v8.34.0.
+  `computeLatestZipHeldBack()` (`util/FileSorter.kt`) & seluruh jalur SAF
+  (`DocumentFile`/`ContentResolver`, tidak ada reflection) murni pure Kotlin
+  logic/direct method call/API Android publik -- TIDAK ADA pola R8-unsafe
+  baru yang ketemu di luar 3 blok keep rule yang SUDAH ada di
+  `proguard-rules.pro` sejak v8.34.0.
+- **Keputusan: ROLLBACK, bukan tambah keep rule tebakan**. Alasan: (1)
+  audit di atas TIDAK menemukan celah konkret baru utk ditambal -- menambah
+  rule tanpa target jelas cuma menebak, (2) sandbox kerja Claude TIDAK punya
+  akses `./gradlew`/device asli sama sekali (keterbatasan permanen,
+  dicatat konsisten sepanjang riwayat project) -- TIDAK ADA cara
+  memverifikasi tebakan apa pun di sini, (3) v8.34.0 SENDIRI sudah menulis
+  eksplisit "RISIKO LEBIH TINGGI dari compile-fix biasa" & 8 poin verifikasi
+  wajib device asli -- laporan "great regression" ini KEMUNGKINAN BESAR
+  persis skenario yang sudah diperingatkan di situ, (4) **STABILITY WINS**
+  (Rule Hierarchy #2, prioritas di atas kecepatan/ukuran APK) & pola
+  established project ini sendiri (v8.22.15, v8.22.21, v8.26.0 -- semua
+  rollback ke state TERBUKTI stabil saat regresi tidak bisa didiagnosis
+  presisi tanpa device/log asli) -- ROLLBACK adalah SATU-SATUNYA jalan yang
+  bisa dijamin 100% menutup regresi SAF & "latest modified files" (2 area
+  prioritas eksplisit user), bukan cuma "mungkin membaik".
+- **Implementasi** (1 file): `app/build.gradle.kts` buildType `release` --
+  `isMinifyEnabled`/`isShrinkResources` true->false (kembali ke state SEBELUM
+  v8.34.0, TERBUKTI stabil sepanjang riwayat project sampai sesi itu).
+  `proguardFiles(...)` TETAP dipanggil (harmless saat minify off, minim diff
+  -- Zero-Unnecessary-Refactor). Komentar lama v8.34.0 di buildType `release`
+  DIGANTI komentar rollback (Zero-Unnecessary-Refactor tetap dipegang --
+  bukan hapus riwayat, komentar lama TETAP terarsip permanen di CHANGELOG.md
+  v8.34.0 & entri PROJECT_STATE.md v8.34.0 di bawah).
+- **TIDAK disentuh** (Zero-Unnecessary-Refactor + DO NOT TOUCH):
+  `app/proguard-rules.pro` -- 3 blok keep rule (kotlinx.serialization/
+  WorkManager/Shizuku) dari v8.34.0 SENGAJA DIBIARKAN UTUH, dorman tapi siap
+  dipakai lagi. `FILE_MANIFEST.txt` TIDAK berubah (0 file baru/dihapus).
+- **Kalau user MASIH ingin fitur pangkas-ukuran-APK ini ke depan**: WAJIB
+  sertakan crash log APK release asli (Crash Logger sudah ada,
+  `Documents/PromptVault/logs/`) atau deskripsi gejala konkret (layar mana,
+  aksi apa, error apa) saat minta diaktifkan ulang -- supaya keep rule bisa
+  ditambah BERTARGET sesuai bukti nyata, bukan diulang blind seperti v8.34.0
+  yang berujung regresi ini. Tanpa itu, mengaktifkan ulang cuma mengulang
+  risiko yang sama persis.
+- File diubah (1): `app/build.gradle.kts`. `FILE_MANIFEST.txt` TIDAK
+  berubah. Preflight: N/A di sandbox ini (tidak ada `./gradlew`), diverifikasi
+  manual keseimbangan kurung `{}` file (18/18) setelah edit -- sempat ada
+  insiden minor SENDIRI saat proses edit (baris `buildTypes {` sempat
+  terhapus tidak sengaja oleh 1 `str_replace`, KETANGKAP & diperbaiki
+  SEBELUM packaging lewat verifikasi kurung, bukan lolos ke user).
+- Confidence Rating: **95%** (revert 2 boolean ke state yang SUDAH terbukti
+  stabil sepanjang seluruh riwayat project sebelum v8.34.0 -- risiko rendah
+  by design, bukan fitur baru; tidak 100% semata krn tetap belum lewat
+  `./gradlew`/CI asli di sandbox ini).
+- **User WAJIB verifikasi**: (1) build CI hijau, (2) APK release install
+  normal tanpa crash langsung, (3) fitur SAF (folder tujuan kustom, scan,
+  undo) & "tahan versi .zip terbaru" (v8.32.0-v8.33.1) berfungsi normal
+  seperti sebelum v8.34.0 -- ini adalah baseline yang SUDAH pernah
+  terverifikasi user di versi-versi sebelumnya, bukan area baru.
+- versionCode 189->190, versionName 8.34.0->8.34.1.
+
+## v8.34.0 -- FITUR BARU: R8 minify+shrinkResources aktif ("pangkas ukuran aplikasi") (2026-08-26)
+- **Permintaan eksplisit user**: "pangkas ukuran aplikasi sampai menyisakan
+  logic+struktur yang benar-benar kepakai".
+- **Keputusan pendekatan (bukan audit manual)**: codebase ini 100+ file --
+  audit manual "file mana yang tidak kepakai" berisiko tinggi salah tebak
+  (reflection/DI implisit gampang lolos mata manusia, kontradiksi langsung
+  dgn STABILITY WINS + Zero-Unnecessary-Refactor). R8 (code shrinker resmi
+  AGP) + resource shrinker memangkas berdasar ANALISIS REACHABILITY STATIS
+  dari titik masuk nyata (Activity/Provider/Worker terdaftar di Manifest,
+  named references lain) -- lebih aman & lebih menyeluruh drpd manual,
+  DAN otomatis ikut kelas/resource baru sesi-sesi mendatang tanpa perlu
+  diingat-ingat manual lagi.
+- **Implementasi** (2 file): `app/build.gradle.kts` buildType `release`:
+  `isMinifyEnabled` false->true, `isShrinkResources` BARU true.
+  `app/proguard-rules.pro`: +3 blok keep rule WAJIB, masing2 utk area yg
+  kegagalannya SILENT saat runtime (bukan compile error) kalau tidak
+  dikecualikan:
+  1. kotlinx.serialization (`$$serializer` pattern generik project-wide,
+     BUKAN daftar manual -- otomatis ikut `@Serializable` baru nanti;
+     `util/VaultConfigBackup.kt` & `update/UpdateModels.kt` sebelumnya
+     TIDAK tercakup rule `data.**` yang sudah ada duluan).
+  2. WorkManager (`AutoSortWorker`/`ManualScanWorker` -- diinstansiasi
+     `Class.forName()` by-string oleh WorkManager internal, BUKAN
+     reference langsung).
+  3. Shizuku (`rikka.shizuku.**` + `shizuku/**` -- binder ke proses
+     Shizuku EKSTERNAL, nama kelas harus identik kedua sisi).
+- **TIDAK disentuh**: `debug` buildType TETAP `isMinifyEnabled = false`
+  (dev build harus gampang di-debug/stack trace jelas, tidak ada alasan
+  minify di debug). Rule `-keep class com.elprompter.promptvault.data.**`
+  yang SUDAH ADA sebelumnya TIDAK dihapus/dipersempit (Zero-Unnecessary-
+  Refactor -- optimisasi lebih jauh di package itu di luar scope
+  permintaan user sesi ini, cukup TAMBAH yang kurang).
+- File diubah (2): `app/build.gradle.kts` (buildType release + versi),
+  `app/proguard-rules.pro`. `preflight_check.sh` 14/14 lolos.
+  `FILE_MANIFEST.txt` TIDAK berubah (0 file baru/dihapus).
+- **Belum diverifikasi CI hijau** (keterbatasan permanen lingkungan Claude
+  -- tidak ada akses `./gradlew`/network di sini utk jalankan R8 asli).
+  **RISIKO LEBIH TINGGI dari compile-fix biasa** krn R8 BISA compile
+  sukses tapi APK release CRASH/rusak saat runtime kalau ada area lain yg
+  terlewat dari 3 keep rule di atas (kelas bug BERBEDA dari seluruh
+  riwayat project ini -- biasanya compile-time, ini genuinely runtime-only,
+  R8 tidak pernah gagal di tahap `:app:minifyReleaseWithR8` walau hasil
+  APK-nya rusak).
+- **User WAJIB verifikasi MENYELURUH di HP pakai APK RELEASE (bukan
+  debug)**: (1) build CI hijau (`:app:minifyReleaseWithR8` sukses), (2)
+  app buka normal tanpa crash langsung (tanda paling umum keep rule
+  kurang), (3) scan manual + auto-sort jalan normal (Room/DataStore), (4)
+  export/import rule JSON (kotlinx.serialization -- PALING RENTAN kalau
+  keep rule kurang, hasil field bisa null diam2 tanpa crash), (5)
+  "Selamatkan uninstall"/restore config JSON dari SAF (VaultConfigBackup,
+  serializable package util/), (6) in-app updater cek+download rilis
+  (UpdateModels, serializable package update/), (7) toggle Shizuku
+  ON+jalankan scan via Shizuku (binder), (8) auto-sort terjadwal BENAR2
+  jalan sendiri di background tanpa buka app dulu (WorkManager
+  Class.forName() -- tidak bisa dites cuma dgn buka app manual). **Kalau
+  ADA satu saja dari 8 poin ini gagal di APK release (padahal debug/APK
+  lama normal): kirim crash log (Crash Logger MediaStore sudah ada,
+  Documents/PromptVault/logs/) -- itu tanda ada area lain yang perlu
+  ditambah ke proguard-rules.pro, BUKAN R8 dimatikan lagi balik ke false.**
+- **Ukuran APK actual TIDAK bisa diukur di sini** (tidak ada akses
+  `./gradlew assembleRelease` + `ls -la` hasil APK) -- user WAJIB
+  bandingkan sendiri ukuran APK v8.34.0 vs v8.33.1 di GitHub Release
+  setelah CI hijau, sbg bukti nyata fitur ini benar2 memangkas ukuran.
+- versionCode 188->189, versionName 8.33.1->8.34.0.
+
+## v8.33.1 -- BATCH 2/2: UI toggle "tahan versi .zip terbaru" (2026-08-26)
+- Menutup Pending Queue batch 1 (v8.33.0 di bawah): wiring UI utk
+  `Rule.holdBackLatestZip` yang sebelumnya cuma ada di model+logika inti.
+- **Implementasi** (`ui/screens/AddEditRuleScreen.kt`):
+  - State baru `holdBackLatestZip` (`rememberSaveable`, seed dari
+    `existingRule?.holdBackLatestZip`) -- pola identik field lain di layar
+    ini (bertahan rotasi/process death).
+  - Row baru (`TactileSwitch`, pola SAMA PERSIS dgn
+    `settings_autosort_title`/`settings_shizuku_section_title` di
+    `SettingsScreen.kt`) ditaruh setelah blok "Filter Ukuran File", sebelum
+    live preview pattern.
+  - **Keputusan desain (Pending Queue batch 1 tandai ini "FLAG UTK
+    DIPUTUSKAN")**: toggle SELALU tampil, TIDAK dikondisikan cek substring
+    ".zip" di pattern -- alasan: pattern boleh CSV multi-ekstensi (mis.
+    "*.zip, *.rar"), dan kondisional UI berisiko toggle "hilang"/state
+    reset diam-diam kalau user edit pattern belakangan. Syarat aktual
+    (scope .zip+SAF saja) dijelaskan lewat hint text di bawah toggle,
+    bukan disembunyikan via UI kondisional.
+  - Diteruskan ke konstruksi `Rule(...)` di `onSave` (parameter baru
+    `holdBackLatestZip = holdBackLatestZip`, named arg -- `enabled` TETAP
+    tidak disentuh di sini spt sebelumnya, field itu memang dikelola
+    terpisah lewat `onToggleEnabled` di `MainActivity.kt`, TIDAK diubah).
+- `res/values/strings.xml`: 2 string baru, prefix
+  `rule_edit_hold_back_zip_*` (title + hint) -- hint eksplisit sebutkan
+  syarat scope (SAF only, mode lokal/Shizuku tidak terpengaruh) sesuai
+  precedent semua hint lain di layar ini.
+- File diubah (3): `ui/screens/AddEditRuleScreen.kt`, `res/values/
+  strings.xml`, `app/build.gradle.kts` (versi). `preflight_check.sh` 14/14
+  lolos. `FILE_MANIFEST.txt` TIDAK berubah (0 file baru/dihapus).
+- **Fitur SEKARANG LENGKAP end-to-end** (model batch 1 + UI batch 2) --
+  TIDAK ADA lagi Pending Queue tersisa utk fitur toggle ini.
+- **Belum diverifikasi CI hijau maupun device asli** (keterbatasan
+  lingkungan Claude, konsisten seluruh riwayat project). **User WAJIB
+  verifikasi di HP**: (1) build CI hijau, (2) buka Tambah/Edit Rule ->
+  toggle baru terlihat & bisa di-tap, state tersimpan setelah rotasi
+  layar, (3) simpan rule dgn toggle ON, pattern cocok .zip, tujuan scan
+  folder kustom SAF -> taruh 2+ .zip beda waktu modif di Downloads -> scan
+  -> HANYA yang paling baru tertahan (5 poin verifikasi fungsional
+  lengkap sudah dicatat di entri v8.32.0 di bawah, sekarang baru bisa
+  dites krn toggle-nya sudah ada), (4) rule LAIN dgn toggle OFF (default)
+  -> pastikan .zip yg cocok TETAP dipindah semua spt biasa, tidak ada yg
+  ketahan.
+- versionCode 187->188, versionName 8.33.0->8.33.1.
+
+## v8.33.0 -- BATCH 1/2: Toggle per rule "tahan versi .zip terbaru" (2026-08-26)
+- **Permintaan eksplisit user**: fitur v8.32.0/v8.32.1 ("tahan versi .zip
+  terbaru saat scan, scope .zip+SAF") SEBELUMNYA otomatis berlaku ke SEMUA
+  rule yang cocok scope tsb tanpa kontrol -- user minta saklar/toggle CUSTOM
+  KHUSUS per rule, supaya HANYA rule yang dipilih user secara eksplisit yang
+  boleh menyisakan file `lastModified()` terbaru di Downloads. Rule lain
+  (toggle OFF/default) tetap perilaku lama scope ini: SEMUA file .zip yang
+  cocok dipindahkan, tidak ada yang ditahan.
+- **Implementasi batch 1 (model + logika inti SAJA, UI menyusul batch 2)**:
+  - `data/Rule.kt`: field baru `holdBackLatestZip: Boolean = false`,
+    ditambahkan DI AKHIR parameter list (bukan di tengah) -- aman utk semua
+    call site named-args yang sudah ada (`AddEditRuleScreen.kt`, seluruh
+    test JVM) DAN aman utk decode JSON rule lama tanpa field ini (Kotlinx
+    serialization pakai default `false` utk field yang tidak ada di JSON
+    sumber, `RuleRepository` sudah `ignoreUnknownKeys = true` dua arah).
+  - `util/FileSorter.kt`, `computeLatestZipHeldBack()`: 1 baris guard baru
+    `if (!topRule.holdBackLatestZip) continue` SEBELUM file masuk grouping
+    -- rule dgn toggle OFF tidak pernah ikut dihitung "punya versi terbaru
+    yang ditahan" sama sekali, filenya lewat jalur `processCandidate()`
+    normal spt tidak ada fitur ini. KDoc fungsi diperbarui jelaskan syarat
+    opt-in baru ini.
+- **STATE SEMENTARA sampai batch 2 selesai**: semua rule (lama MAUPUN baru)
+  otomatis start dgn toggle OFF krn belum ada UI utk menyalakannya -- efek
+  praktis batch ini SENDIRIAN: fitur "tahan versi terbaru" jadi TIDAK AKTIF
+  utk siapa pun (default aman, BUKAN regresi berbahaya -- cuma balik ke
+  perilaku SEBELUM v8.32.0 ada: semua .zip dipindah spt biasa). Ini SENGAJA
+  (Micro-Batch cap 3 file/respons, `app/build.gradle.kts` versi WAJIB tiap
+  sesi ikut menghabiskan slot) -- BUKAN dianggap selesai, lihat Pending
+  Queue di bawah, ditutup batch berikutnya SEGERA.
+- File diubah (3): `data/Rule.kt`, `util/FileSorter.kt`, `app/build.gradle.kts`
+  (versi). `preflight_check.sh` 14/14 lolos. `FILE_MANIFEST.txt` TIDAK
+  berubah (0 file baru/dihapus).
+- **⏳ PENDING QUEUE (batch 2, WAJIB segera menyusul)**: (1) UI toggle di
+  `AddEditRuleScreen.kt` (pakai `TactileSwitch`, pola row sama persis dgn
+  `settings_autosort_title`/`settings_shizuku_section_title` di
+  `SettingsScreen.kt`) -- HANYA relevan tampil kalau `pattern` user mengarah
+  ke `.zip` (perlu keputusan: selalu tampil vs kondisional cek substring
+  ".zip" di pattern -- FLAG UTK DIPUTUSKAN BATCH 2, default aman kalau ragu:
+  selalu tampil + hint text jelaskan "hanya berlaku kalau tujuan scan folder
+  kustom & pattern cocok file .zip"), diteruskan ke konstruksi `Rule(...)`
+  di `onSave`; (2) `res/values/strings.xml` -- label toggle + hint/deskripsi
+  singkat (2 string baru, prefix `rule_edit_hold_back_zip_*` biar konsisten
+  penamaan dgn string rule_edit_* lain).
+- **Belum diverifikasi CI hijau** -- WAJIB dicek run Actions berikutnya
+  SEBELUM lanjut batch 2 (kalau merah, prioritas fix compile dulu drpd
+  lanjut UI).
+- versionCode 186->187, versionName 8.32.1->8.33.0.
+
+## v8.32.1 -- COMPILE-FIX: computeLatestZipHeldBack() Array<File> vs List<File> (2026-08-26)
+- **Gejala**: user upload `build-failure-log-v8_32_0.zip`. `:app:compileDebugKotlin`
+  DAN `:app:compileReleaseKotlin` FAILED -- `FileSorter.kt:849:67: Type
+  mismatch: inferred type is Array<File> but List<File> was expected`.
+- **Root cause**: `computeLatestZipHeldBack()` (fitur baru v8.32.0, lihat
+  entri di bawah) dideklarasikan menerima `candidateFiles: List<File>`,
+  padahal `listCandidateFiles()` (fungsi lama, TIDAK diubah sesi v8.32.0)
+  mengembalikan `Array<File>` -- Kotlin TIDAK auto-convert `Array<T>` ke
+  `List<T>` di titik pemanggilan (beda dari Java yang lebih longgar),
+  meskipun keduanya sama-sama bisa di-`for`/`.map`/`.maxByOrNull` sehingga
+  isi fungsinya sendiri terlihat benar saat ditulis -- gap-nya murni di
+  DEKLARASI TIPE parameter, bukan logika. `preflight_check.sh` (statis,
+  tanpa compiler Kotlin asli) tidak mendeteksi ini -- konsisten dgn
+  keterbatasan yang sudah berkali-kali dicatat di project ini (kelas bug
+  yang HANYA ketahuan lewat compiler asli, sama seperti insiden
+  `coroutineScope` v2.8.0 & `decodeFromString` v2.20.3 dulu).
+- **Fix**: ganti tipe parameter `computeLatestZipHeldBack(candidateFiles:
+  List<File>, ...)` -> `Array<File>`, cocok dgn tipe asli yang dioper dari
+  `scanAndSortToDestination()`. 1 baris, isi fungsi & logika grouping/
+  pemilihan versi terbaru TIDAK berubah sama sekali (for-loop & extension
+  `maxByOrNull` bekerja identik di Array maupun List).
+- File diubah (2): `util/FileSorter.kt` (1 baris tipe parameter),
+  `app/build.gradle.kts` (versi). `FILE_MANIFEST.txt` tidak berubah.
+  `preflight_check.sh` 14/14 lolos.
+- **Belum diverifikasi CI hijau** -- WAJIB dicek run Actions berikutnya
+  sebelum lanjut verifikasi fungsional (5 poin checklist di entri v8.32.0
+  di bawah, yang SEMUA masih menunggu build hijau lebih dulu).
+- versionCode 185->186, versionName 8.32.0->8.32.1.
+
+## v8.32.0 -- FITUR BARU: "Tahan versi terbaru" saat scan, scope .zip+SAF SAJA (2026-08-26)
+- **Permintaan eksplisit user**: saat scan (manual MAUPUN auto-sort, keduanya
+  lewat `scanAndSort()` yang sama, tidak ada percabangan caller baru), file
+  yang cocok rule dipindahkan seperti biasa KECUALI 1 file "versi paling
+  baru" per rule dibiarkan tetap di Downloads -- supaya user selalu punya
+  akses cepat ke build/rilis terbarunya tanpa gali folder vault. Scope
+  DIBATASI EKSPLISIT ke kombinasi **.zip + tujuan folder kustom SAF SAJA**
+  (disebut user sendiri di prompt) -- mode lokal (Downloads/PromptVault
+  default) dan mode Shizuku TIDAK disentuh sama sekali, perilaku lama
+  (pindahkan SEMUA yang cocok) tetap 100% berlaku di luar 2 syarat itu.
+- **2 keputusan desain diklarifikasi via `ask_user_input_v0` SEBELUM nulis
+  kode** (bukan ditebak -- area ini exact match dgn Insiden #7 lama:
+  "kalau ragu soal peran/scope SAF, tanya eksplisit dulu"):
+  1. "Versi terbaru" = `File.lastModified()` (BUKAN parsing angka versi
+     dari nama file) -- konsisten dgn `isLikelyStillWriting()` yang juga
+     baca waktu file dari sumber yang sama, tidak menambah cara baca
+     timestamp kedua yang independen.
+  2. Pengelompokan **PER RULE** (bukan per "keluarga nama file/basename") --
+     di antara file .zip yang cocok 1 rule prioritas-tertinggi yang sama,
+     1 file paling baru per rule itu yang ditahan. Kalau 1 rule cuma dapat
+     1 file .zip scan ini, file itu otomatis "yang terbaru" satu-satunya --
+     TETAP ditahan (tidak dipindah), baru dipindah scan berikutnya setelah
+     ada file .zip lain yang lebih baru muncul untuk rule yang sama.
+- **Implementasi** (`util/FileSorter.kt` SAJA, 1 file): fungsi baru
+  `computeLatestZipHeldBack(candidateFiles, rules)` -- PURE (tanpa I/O SAF),
+  dipanggil SEKALI SERIAL di `scanAndSortToDestination()` SEBELUM `async{}`
+  fan-out paralel (pola IDENTIK `resolveSafRuleDestinations()` -- hindari
+  race antar-coroutine kalau dihitung per-file, pelajaran lama yang sama
+  persis dgn insiden duplikat folder v2.19.2). Hasilnya (`Set<String>`
+  berisi `File.absolutePath`) diteruskan sbg parameter baru
+  `latestZipHeldBack` ke `processCandidate()` (default `emptySet()`, 1 call
+  site, aman) -- dicek PALING AWAL (sebelum stability-check 1 detik, biar
+  tidak nunggu delay percuma utk file yang memang tidak akan dipindah scan
+  ini), file yang match masuk `CandidateOutcome.Skipped` dgn alasan
+  eksplisit ("Ditahan di Downloads: ini versi .zip PALING BARU untuk rule
+  ... -- Versi lama dipindah otomatis, versi ini menunggu sampai ada yang
+  lebih baru lagi.") -- otomatis muncul di layar "Detail File Dilewati"
+  yang sudah ada, TIDAK perlu UI/kategori skip baru.
+- **Kenapa ini AMAN utk `AutoSortWorker` tanpa sentuh worker sama sekali**:
+  `scanAndSort()` (titik masuk tunggal, dipanggil MainViewModel MAUPUN
+  AutoSortWorker) TIDAK berubah signature -- percabangan baru sepenuhnya di
+  DALAM `scanAndSortToDestination()`, jadi otomatis berlaku di kedua mode
+  scan sesuai permintaan user ("baik otomatis/manual sekalipun") tanpa
+  butuh perubahan apa pun di caller manapun.
+- **Efek pada mode lokal/Shizuku**: NOL -- `computeLatestZipHeldBack()`
+  hanya dipanggil kalau `destinationRoot != null` (SAF aktif); `scanAndSortViaShizuku()`/`processCandidateShizuku()` adalah jalur kode
+  TERPISAH TOTAL yang sama sekali tidak memanggil fungsi baru ini.
+- File diubah (1) + versi: `util/FileSorter.kt`, `app/build.gradle.kts`
+  (versi). `FILE_MANIFEST.txt` TIDAK berubah (0 file baru/dihapus).
+  `preflight_check.sh` 14/14 lolos bersih.
+- **Belum lewat `./gradlew`/device asli** (keterbatasan permanen lingkungan
+  kerja Claude, konsisten seluruh riwayat project). **User WAJIB
+  verifikasi di HP**: (1) build CI hijau, (2) folder tujuan kustom SAF
+  aktif, taruh 2+ file .zip berbeda waktu modifikasi yang cocok 1 rule yang
+  sama di Downloads -> scan -> HANYA file paling baru yang TETAP di
+  Downloads, sisanya pindah ke folder tujuan, (3) rule lain yang cocok file
+  NON-.zip (mis. .txt) di folder kustom SAF yang sama -> pastikan SEMUA
+  tetap dipindah seperti biasa (tidak ada yang ditahan, scope tidak bocor
+  ke ekstensi lain), (4) mode LOKAL (tanpa folder kustom SAF) -> pastikan
+  file .zip tetap dipindah semua seperti perilaku lama (nol regresi di luar
+  scope), (5) cek "Detail File Dilewati" menampilkan alasan "Ditahan di
+  Downloads..." dgn jelas utk file yang sengaja tidak dipindah.
+- Confidence Rating: **85%** (scope sempit + 1 fungsi PURE baru tanpa
+  I/O SAF sendiri, reuse matching logic yang sudah teruji lama
+  `RuleOverlapChecker.matchingRules` -- tapi tetap turun dari 90%+ standar
+  krn ini titik keputusan BARU yang belum ada preseden lain di project ini
+  untuk "menahan file dgn sengaja" -- semua fitur skip sebelumnya adalah
+  hasil KEGAGALAN/konflik, bukan keputusan disengaja).
+- versionCode 184->185, versionName 8.31.4->8.32.0.
+
+## v8.31.4 -- HOTFIX build gagal + RESTYLING HYBRID -> CUPERTINO (2026-08-25)
+- **Root cause build gagal v8.31.3** (user upload `build-failure-log-
+  v8_31_3.zip`): `VaultActionSheet.kt` import `androidx.compose.ui.font.
+  FontWeight` -- package SALAH (`Unresolved reference: font`), benar:
+  `androidx.compose.ui.text.font.FontWeight`. `preflight_check.sh` TIDAK
+  bisa tangkap ini (cuma statis, bukan compiler) -- keterbatasan yang
+  sudah berkali-kali dicatat, sekarang BENAR-BENAR kejadian pertama kali.
+- **Restyling**: user "mending restyling dari hybrid -> Cupertino style
+  murni total". `ThemeStyleOption.HYBRID` -> `CUPERTINO` (rename, tetap
+  gaya ke-4 yang sama, bukan ke-5) -- arah ke depan: identitas Cupertino
+  PENUH, bukan cuma aksen di atas M3.
+- Elevasi cabang Cupertino di `TactileSurface.kt` sekarang 0dp SELALU
+  (sebelumnya masih ikut `effectiveElevation`) -- grouped list iOS flat
+  total, tidak pernah shadow.
+- **⚠️ Migrasi**: siapa pun yang sempat pilih "Hybrid" (termasuk user sesi
+  ini) fallback ke default tanpa crash (valueOf+getOrDefault sudah ada),
+  TAPI pilihan ke-reset diam-diam -- **WAJIB pilih ulang "Cupertino" manual**
+  di Pengaturan.
+- File diubah (8, Atomic Change -- rename enum tidak bisa dipecah batch).
+  Verifikasi MANUAL ekstra (bukan cuma preflight) krn insiden barusan: grep
+  0 sisa HybridTokens/HYBRID aktif, semua import dicek 1-1 di titik pakai.
+- `preflight_check.sh` 14/14 lolos. Confidence Rating: **85%** -- **WAJIB
+  tunggu CI hijau** sebelum lanjut batch berikutnya, jangan ulangi insiden.
+- versionCode 183->184, versionName 8.31.3->8.31.4.
+
+## v8.31.3 -- Lanjut sempurnakan HYBRID: action sheet Cupertino asli (2026-08-25)
+- "masih lanjut". `VaultActionSheet.kt` bercabang per `VaultTheme.style`:
+  gaya lain tetap Button+OutlinedButton filled. HYBRID: TextButton polos
+  dipisah HorizontalDivider hairline, destructive merah, cancel bold --
+  pola `UIAlertController(.actionSheet)` iOS asli.
+- File diubah (1): `VaultActionSheet.kt`. `preflight_check.sh` 14/14 lolos.
+- Confidence Rating: **75%** -- belum verifikasi device, cek semua alur
+  hapus/undo yang pakai sheet ini masih berfungsi (cuma tampilan berubah).
+- versionCode 182->183, versionName 8.31.2->8.31.3.
+
+## v8.31.2 -- Lanjut sempurnakan HYBRID: corner radius lebih besar (2026-08-25)
+- "lanjut sempurnakan" -- perluasan MVP v8.31.1. `PromptVaultTheme`
+  (`Theme.kt`) pilih `shapes` KONDISIONAL per `themeStyle`: HYBRID pakai
+  `HybridShapes` baru (8/12/18/24/32dp), gaya lain tetap `PromptVaultShapes`
+  (4/8/12/16/28dp M3 baku).
+- Efek menjalar OTOMATIS ke semua caller `MaterialTheme.shapes.*` --
+  termasuk default param `TactileSurface.shape` sendiri -- 0 file caller
+  lain disentuh.
+- **Caveat**: ~11 titik `RoundedCornerShape(Xdp)` literal TIDAK ikut
+  berubah, di luar cakupan batch ini.
+- File diubah (2): `Shapes.kt`, `Theme.kt`. `preflight_check.sh` 14/14
+  lolos. Confidence Rating: **75%**.
+- versionCode 181->182, versionName 8.31.1->8.31.2.
+
+## v8.31.1 -- Gaya ke-4: HYBRID, Material 3 + aksen Cupertino (2026-08-24)
+- Instruksi: "terapkan hybrid style pada theme material 3" + klarifikasi
+  "Cupertino style yang mau di hybrid". BUKAN gaya dari nol -- kerangka
+  100% jalur MATERIAL3 flat + 1 aksen: hairline border SELALU tampil
+  (signature Cupertino, iOS pakai garis tipis bukan shadow tebal).
+- MVP SENGAJA dibatasi 1 primitif (`TactileSurface`) + toggle -- corner
+  radius besar/"continuous" ala iOS & cupertino-style dialog/bottom sheet
+  BELUM dikerjakan, perluasan terpisah kalau diminta lanjut.
+- File diubah (4) + 1 baru (`HybridTokens.kt`). `ThemeStyleOption` pakai
+  `valueOf`/`.name` (backward-compatible, 0 migrasi). 0 `when`-exhaustive
+  lain di codebase yang perlu disentuh (diverifikasi grep).
+- **Insiden minor**: preflight kategori 14 (tag `[vX.Y.Z]` di block
+  comment, bug KSP v8.23.5) sempat gagal di `HybridTokens.kt` -- fixed ke
+  `(v8.31.1)` kurung biasa.
+- `preflight_check.sh` 14/14 lolos. Confidence Rating: **75%** (fitur
+  visual baru, belum verifikasi device asli).
+- versionCode 180->181, versionName 8.30.9->8.31.1.
+
+## v8.30.9 -- Fix: sliver stacked card dibuat menyatu, bukan terpisah (2026-08-24)
+- User: "dibuat seakan-akan tersambung". Root cause: outline stroke
+  (v8.30.2) membungkus sisi sliver yang mengintip -- kebaca sbg "tepi kartu
+  lain", kontradiktif dgn maksud "1 lapis nyambung" (v8.30.7).
+- Fix: outline stroke dihapus total (`StackedOutline`/`StackedOutlineWidth`
+  dihapus, sudah 0 pemakaian lain), sliver jadi solid flat tanpa garis
+  pembatas sendiri. Fill/offset (10dp, v8.30.8) TIDAK berubah.
+- File diubah (1): `NeumorphTokens.kt`. `preflight_check.sh` 14/14 lolos.
+- Confidence Rating: **85%**. versionCode 179->180, versionName
+  8.30.8->8.30.9.
+
+## v8.30.8 -- Fix: stacked card offset kebablasan ke kanan+bawah (2026-08-24)
+- Laporan user via screenshot device asli: 15dp (v8.30.7) kelewatan.
+  `StackedCardOffset` 15dp -> 10dp. Arah offset (kanan+bawah) tidak berubah
+  -- memang arah aslinya, bukan bug baru.
+- File diubah (1): `NeumorphTokens.kt`. `preflight_check.sh` 14/14 lolos.
+- Confidence Rating: **80%** -- nilai 10dp best-guess, belum dikonfirmasi
+  user pas atau perlu turun lagi.
+- versionCode 178->179, versionName 8.30.7->8.30.8.
+
+## v8.30.7 -- Stacked cards: 1 lapis aja, tapi agak tebal (2026-08-24)
+- Instruksi langsung user (di luar pending queue widget). `StackedCardColors`
+  2 warna -> 1 (`SurfaceContainerHighest`). `StackedCardOffset` 9dp -> 15dp
+  biar sliver tunggal tetap chunky. Fungsi `stackedCards()` 0 diubah.
+- File diubah (1): `NeumorphTokens.kt`. `preflight_check.sh` 14/14 lolos.
+- Pending queue widget (tombol CTA/ikon menu/tab SegmentedControl) TIDAK
+  disentuh, masih 3 item nunggu.
+- Confidence Rating: **85%**. versionCode 177->178, versionName
+  8.30.6->8.30.7.
+
+## v8.30.6 -- Pending Queue #1: Saklar tenggelam-timbul ikut ON/OFF (2026-08-24)
+- Batas 1 task/batch, item #1 dari 4 pending queue v8.30.5. Track
+  `TactileSwitch.kt` SEBELUMNYA `recessed = true` PERMANEN -- fix: ikut
+  `recessed = !checked`, pola SAMA PERSIS yang sudah dipakai thumb (thumb
+  0 diubah). OFF = track+thumb cekung, ON = track+thumb timbul.
+- File diubah (1): `TactileSwitch.kt`. `preflight_check.sh` 14/14 lolos.
+- **⏳ Sisa Pending Queue (3 dari 4, urutan bebas)**: (2) Tombol CTA efek
+  "ketekan", (3) kotak ikon menu concave, (4) tab aktif SegmentedControl
+  timbul.
+- Confidence Rating: **85%** -- belum verifikasi device asli.
+  versionCode 176->177, versionName 8.30.5->8.30.6.
+
+## v8.30.5 -- REVERT rotasi kartu tumpuk ke flat + 4 item polish baru masuk pending queue (2026-08-24)
+- User diberi 4 opsi elemen lain yang bisa dipoles ala Neumorphism
+  (via `ask_user_input_v0`), user pilih SEMUA 4 + 1 instruksi tambahan:
+  "kembalikan efek kartu tumpuk jadi datar kesamping, gak miring lagi".
+  Batas 1 task/batch -- REVERT (paling kecil/kontained) dikerjakan
+  DULU sesi ini, 4 item polish baru DICATAT sbg pending queue.
+- **Fix (dikerjakan sesi ini)**: `NeumorphTokens.stackedCards()` --
+  `rotate()` (v8.30.3/v8.30.4) DIHAPUS TOTAL, balik ke murni offset
+  diagonal lurus (v8.30.2: fill + outline, TANPA rotasi). Import
+  `rotate` yg jadi unused ikut dihapus. `StackedFanAngle` token juga
+  dihapus (tidak dipakai lagi).
+- File diubah (1): `ui/theme/NeumorphTokens.kt`. `preflight_check.sh`
+  14/14 lolos.
+- **⏳ PENDING QUEUE (4 item, urutan bebas -- SEMUA diminta user,
+  belum ditentukan prioritas)**:
+  1. Saklar/Switch (`TactileSwitch.kt`) -- efek tenggelam-timbul saat
+     ON/OFF (mis. track cekung saat OFF, thumb timbul saat ON).
+  2. Tombol CTA (mis. "Scan Sekarang") -- efek "ketekan" visual saat
+     ditap (state pressed, kemungkinan lewat `interactionSource`).
+  3. Kotak ikon menu (`GroupedListRow.kt`/ikon di `ManifestRow`) --
+     concave/cekung, BEDA treatment dari kartu utama (yang timbul).
+  4. Tab Beranda/Tampilan (`SegmentedControl.kt`) -- tab aktif "timbul"
+     dari yang tidak aktif (bukan cuma beda warna spt sekarang).
+- versionCode 175->176, versionName 8.30.4->8.30.5.
+
+## v8.30.4 -- FIX: rotasi kipas "kasar & truncated" di kartu tinggi (2026-08-24)
+- User lapor via screenshot: "agak kasar dan truncated yah" -- rotasi
+  v8.30.3 kelihatan ekstrem & kepotong tepi layar, KHUSUSNYA di kartu
+  tinggi (grouped-list menu 6 baris "Kelola Rule" dst), meski kartu
+  kecil ("Rule aktif") kelihatan wajar.
+- **Root cause**: pivot rotasi di POJOK kiri-atas (`Offset.Zero`,
+  v8.30.3) -- jarak dari pivot ke sudut jauh kartu = DIAGONAL PENUH,
+  makin tinggi kartu makin jauh diagonalnya, makin besar sapuan rotasi
+  di sudut jauh (bisa puluhan-ratusan px utk kartu tinggi) -- jauh
+  melebihi layar, kepotong tepi. Efek jadi TIDAK PROPORSIONAL antar
+  ukuran kartu (kecil vs tinggi beda drastis).
+- **Fix**: pivot pindah ke TENGAH kartu (`size.center`) -- jarak ke
+  sudut jauh jadi SETENGAH diagonal, otomatis ~separuh sapuan. Sudut
+  `StackedFanAngle` juga diperkecil 3.5° -> 1.2° per layer. Kombinasi
+  keduanya: sapuan max di kartu TERTINGGI app (grouped-list ~700dp)
+  turun dari puluhan-ratusan px jadi ~16px -- proporsional & terkendali
+  di SEMUA ukuran kartu, bukan cuma yang kecil.
+- File diubah (1): `ui/theme/NeumorphTokens.kt`. `preflight_check.sh`
+  14/14 lolos.
+- **User WAJIB verifikasi**: cek kartu "Kelola Rule" (grouped-list
+  panjang) DAN kartu "Rule aktif" (pendek) -- keduanya harus terlihat
+  proporsional, tidak ada yang kepotong tepi layar lagi.
+- versionCode 174->175, versionName 8.30.3->8.30.4.
+
+## v8.30.3 -- Poles Stacked Cards Effect: rotasi kipas + offset diperbesar (2026-08-24)
+- User: "bisa lebih wah lagi??" -- lanjut poles setelah v8.30.2 (garis
+  tepi). Efek offset lurus sejajar dirasa masih kurang "hidup".
+- **Fix**: `NeumorphTokens.stackedCards()` -- tiap lapis sekarang
+  dibungkus `rotate(degrees=, pivot=Offset.Zero)` (DrawScope, geometris
+  murni -- BUKAN shadow/gradient, tetap patuh "0 pencahayaan" dari
+  v8.30.0) sebelum digambar, `StackedFanAngle = 3.5f` derajat dikali
+  index layer -- kesan "kartu terfan/dikocok" klasik, bukan cuma geser
+  sejajar. Pivot di pojok kiri-atas (SAMA dgn arah offset existing) --
+  kartu memutar & bergeser konsisten 1 arah ke kanan-bawah.
+  `StackedCardOffset` juga dinaikkan 7dp->9dp biar makin kebaca.
+- **Regresi kecil ketahuan & diperbaiki SENDIRI saat proses**: draft awal
+  edit tidak sengaja menghapus deklarasi `StackedOutline`/
+  `StackedOutlineWidth` (v8.30.2) saat replace block -- ketahuan lewat
+  grep verifikasi SEBELUM commit, ditambahkan kembali.
+- File diubah (1): `ui/theme/NeumorphTokens.kt`. `preflight_check.sh`
+  14/14 lolos.
+- versionCode 173->174, versionName 8.30.2->8.30.3.
+
+## v8.30.2 -- Poles Stacked Cards Effect: tambah garis tepi per lapis (2026-08-24)
+- User: "bisa lebih dipoles lagi effect nya??" -- efek v8.30.1 sudah
+  terlihat tapi tiap lapis cuma blok fill polos, kurang kebaca sbg
+  kartu terpisah.
+- **Fix**: `NeumorphTokens.stackedCards()` -- tiap lapis sekarang dapat
+  `drawRoundRect(style = Stroke(...))` di atas fill-nya (garis tepi 1dp,
+  warna `StackedOutline` = reuse `OutlineVariant`, 0 hue baru). TETAP
+  flat solid (`Stroke` bukan alpha/gradient/shadow) -- prinsip "0
+  pencahayaan" dari v8.30.0 tetap dipegang, murni tambahan definisi
+  tepi.
+- File diubah (1): `ui/theme/NeumorphTokens.kt`. `preflight_check.sh`
+  14/14 lolos.
+- versionCode 172->173, versionName 8.30.1->8.30.2.
+
+## v8.30.1 -- FIX: Stacked Cards Effect invisible, warna nyaris sama gelap (2026-08-24)
+- User lapor via 2 screenshot (Beranda, tab Tampilan): "mana Stacked
+  Cards Effect nya" -- efek v8.30.0 TIDAK terlihat sama sekali di HP.
+- **Root cause DITELUSURI, BUKAN bug teknik**: mekanisme `drawBehind` +
+  urutan modifier chain (sebelum `clip` internal `Surface`) diverifikasi
+  ulang & SUDAH benar. Masalah murni PILIHAN WARNA:
+  `SurfaceContainerLowest` (0x090A0C) ternyata LEBIH GELAP dari
+  `AppBackground` (0x0D0E12, latar app itu sendiri), dan
+  `SurfaceContainerLow` (0x111317) cuma beda ~4-5 unit/channel --
+  bagian "mengintip" di luar tepi kartu tenggelam total ke background
+  gelap, defacto invisible meski secara teknis tergambar benar.
+- **Fix**: `NeumorphTokens.StackedCardColors` ganti dari
+  `[SurfaceContainerLow, SurfaceContainerLowest]` (lebih gelap dari
+  kartu) ke `[SurfaceContainerHigh, SurfaceContainerHighest]` (LEBIH
+  TERANG dari `SurfaceContainer`/warna kartu, jelas kontras vs
+  `AppBackground`). Tetap reuse token existing (0 hue baru), tetap FLAT
+  solid (0 shadow/gradient/alpha) -- 0 prinsip lain dari v8.30.0
+  berubah, MURNI ganti 2 referensi warna.
+- File diubah (1): `ui/theme/NeumorphTokens.kt`. `preflight_check.sh`
+  14/14 lolos.
+- **User WAJIB verifikasi**: buka Beranda mode Neumorphism, cek tepi
+  kanan-bawah kartu "Rule aktif" -- harus kelihatan 2 lapis kartu
+  mengintip lebih terang di belakangnya.
+- versionCode 171->172, versionName 8.30.0->8.30.1.
+
+## v8.30.0 -- Stacked Cards Effect di tema Neumorphism (permintaan eksplisit: tanpa utak-atik pencahayaan & icon menu) (2026-08-24)
+- **User**: "tambahkan Stacked Cards Effect pada theme Neumorphism tanpa
+  utak-atik pencahayaan dan icon menu sama sekali ok!!".
+- **Teknik**: `NeumorphTokens.stackedCards()` -- `Modifier.drawBehind{}`
+  ditempel LANGSUNG ke modifier chain yang SAMA dgn `Surface` (BUKAN `Box`
+  pembungkus baru -- histori regresi v8.28.0 soal `Box` merusak
+  `Modifier.weight()`/`align()` TIDAK BOLEH terulang). Gambar 2 lapis
+  rounded-rect FLAT SOLID (reuse `SurfaceContainerLow`/
+  `SurfaceContainerLowest`, 0 hue baru), offset kumulatif 7dp/14dp ke
+  kanan-bawah (arah SAMA dgn shadow existing). Karena `drawBehind` ada
+  SEBELUM `clip(shape)` internal `Surface` di urutan chain, bagian di
+  DALAM kartu tertutup fill utama (tidak berubah) -- HANYA bagian yang
+  offset MELEBIHI tepi kartu yang mengintip terlihat, PERSIS efek
+  "tumpukan kartu" -- prinsip sama persis knp `Modifier.shadow()` bisa
+  "bleed" di luar shape (clip cuma berlaku ke draw SETELAHNYA di chain).
+- **"Tanpa utak-atik pencahayaan"**: `ShadowElevation`/`FillHighlightTint`/
+  `FillShadeTint`/`fillHighlightBrush()`/`fillShadeBrush()`/border di
+  `NeumorphTokens.kt` **0 baris berubah**. Lapis stacked-card FLAT SOLID
+  murni, TANPA shadow/gradient/alpha -- mekanisme terpisah total.
+- **"Tanpa utak-atik icon menu sama sekali"**: parameter opt-in BARU
+  `TactileSurface(stackedCards: Boolean = false)`, default `false` di
+  SEMUA caller existing -- `GroupedListRow` (kotak ikon menu),
+  `EmptyState`, `TactileSwitch`, `SegmentedControl`, `WarningBanner`,
+  `VaultActionSheet` **0 baris disentuh sama sekali**, tetap `false`.
+  HANYA `VaultCard.kt` diaktifkan (`stackedCards = true`) -- kartu paling
+  besar/dominan, efek tumpukan paling masuk akal di situ, bukan kotak
+  ikon kecil. `RuleCard.kt` otomatis ikut (dipanggil via `VaultCard`, 0
+  perubahan file itu sendiri).
+- Digerbang `!recessed` juga (elemen cekung "tenggelam", kontradiktif dgn
+  efek tumpukan yang menonjol keluar) & `style == NEUMORPHISM` saja
+  (efek ini eksklusif tema itu, tidak menjalar ke Glass/Material3 Murni).
+- File diubah (3): `ui/theme/NeumorphTokens.kt` (token + fungsi baru,
+  append-only), `ui/components/TactileSurface.kt` (parameter opt-in +
+  wiring di cabang NEUMORPHISM saja), `ui/components/VaultCard.kt`
+  (aktifkan flag). `preflight_check.sh` 14/14 lolos. Balance kurung/siku 0
+  di ketiga file.
+- **BELUM PERNAH lewat `./gradlew` asli atau device fisik**. Mengingat
+  histori regresi berulang di area Neumorphism, user WAJIB verifikasi: (1)
+  VaultCard (Beranda, Kelola Rule via RuleCard) sekarang punya 1-2 lapis
+  "kartu" gelap mengintip di sudut kanan-bawah; (2) `Modifier.weight()`
+  MANA PUN (SegmentedControl 2 tab) TETAP proporsional 50/50, 0 regresi
+  kelas v8.28.0; (3) kotak ikon GroupedListRow/EmptyState/switch/dst 0
+  berubah sama sekali; (4) Glassmorphism & Material3 Murni 0 berubah.
+- versionCode 170->171, versionName 8.29.0->8.30.0.
+
+## v8.29.0 -- Sempurnakan UI/UX: WarningBanner ikut tema aktif (dulu bypass semua gaya) (2026-08-23)
+- **User**: "lanjutkan sempurnakan UI/UX" (tanpa target spesifik). Audit
+  cepat: grep semua komponen `ui/components/` yang TIDAK referensi
+  `TactileSurface`/`VaultTheme` -- ketemu `WarningBanner.kt` (dipakai di
+  kartu SAF custom destination & Mode Shizuku, `SettingsScreen.kt`) pakai
+  `Modifier.background()` polos, flat, SATU-SATUNYA permukaan berisi
+  konten yang bypass total sistem tema (Glass/Neumorphism/Material3
+  Murni) -- tetap flat kotak biasa walau user ganti tema, tidak konsisten
+  dgn kartu lain di sekitarnya.
+- **Fix**: `WarningBanner.kt` -- `Modifier.background(colors.error.copy(
+  alpha=0.12f), RoundedCornerShape)` diganti `TactileSurface(color =
+  colors.errorContainer)` -- sekarang ikut treatment tema aktif (shadow+
+  tint Neumorphism / sheen+border Glass / flat Material3 Murni). Teks/ikon
+  TETAP `colors.error` (bukan `onErrorContainer`) -- mempertahankan
+  urgensi visual merah asli yang SENGAJA dipilih sejak fitur ini dibuat
+  (2026-08-17, lihat KDoc lama di file yang sama).
+- **WCAG**: pasangan `error` vs `errorContainer` BARU (beda dari
+  `onErrorContainer` vs `errorContainer` yang sudah terverifikasi 8.28:1
+  di Color.kt) -- dihitung ulang skrip Python formula W3C: 4.75:1 (AA,
+  ambang 4.5:1, lulus tapi margin tipis -- didokumentasikan apa adanya,
+  bukan dibulatkan/dilebih-lebihkan).
+- File diubah (1): `ui/components/WarningBanner.kt`. `preflight_check.sh`
+  14/14 lolos (sempat kena check #14 -- tag `[v8.29.0]` di block comment,
+  langsung diperbaiki ke `(v8.29.0)` sebelum lanjut, bukti check itu
+  benar-benar dipakai bukan formalitas). Balance kurung 0.
+- **BELUM PERNAH lewat `./gradlew` asli**. User WAJIB verifikasi: (1)
+  banner peringatan (SAF custom destination & Mode Shizuku di Pengaturan)
+  sekarang kelihatan "timbul"/"kaca" sesuai tema aktif, bukan kotak flat
+  merah polos lagi; (2) teks tetap kebaca jelas (merah di atas
+  errorContainer gelap); (3) Glassmorphism & Material3 Murni juga
+  diperiksa (bukan cuma Neumorphism) krn `TactileSurface` mempengaruhi
+  KETIGA gaya sekaligus.
+- versionCode 169->170, versionName 8.28.4->8.29.0.
+
+## v8.28.4 -- Border Neumorphism: Ice Cyan -> Platinum (nyaru, bukan aksen) (2026-08-23)
+- User: "keknya emang lebih cocok pakai tone warna yang nyaru deh" --
+  ganti dari `IceCyan` (aksen kontras, v8.28.3) ke `Platinum`
+  (0xFFC8CDD6, opsi lain yang SAMA-SAMA sudah diusulkan Claude
+  sebelumnya: "netral abu-terang, klasik neumorphism, MONOKROM bukan
+  warna aksen"). Filosofi beda: bukan cari kontras mencolok, tapi blend
+  ke palet gelap netral app.
+- **Fix**: `NeumorphTokens.kt` -- `IceCyan` dihapus, `Platinum` token
+  baru. `borderBrush()` pakai `Platinum`. Nama fungsi/`BorderWidth`
+  TIDAK berubah (sudah netral sejak v8.28.3). Gradient diagonal
+  (v8.28.2) 0 berubah.
+- File diubah (1): `ui/theme/NeumorphTokens.kt`. `preflight_check.sh`
+  14/14 lolos.
+- versionCode 168->169, versionName 8.28.3->8.28.4.
+
+## v8.28.3 -- Border Neumorphism: warna emas -> Ice Cyan (2026-08-23)
+- User tanya saran warna border pengganti emas -- Claude usulkan 5 opsi
+  (Ice Cyan/Lavender/Platinum/Electric Indigo/Mint), user pilih **Ice
+  Cyan** eksplisit + tegaskan gradient diagonal (v8.28.2) TETAP
+  dipertahankan, cuma warnanya yang ganti.
+- **Fix**: `NeumorphTokens.kt` -- `IceCyan = Color(0xFF7DD3E0)` token
+  baru, dipakai gantikan `Tertiary` di brush gradient. Fungsi/token
+  di-rename biar tidak menyesatkan (bukan emas lagi):
+  `goldBorderBrush()` -> `borderBrush()`, `GoldBorderWidth` ->
+  `BorderWidth` (`GoldBorderColor` solid sudah dihapus di v8.28.2,
+  tidak relevan lagi). `TactileSurface.kt` ikut update ke nama baru.
+  Arah gradient (`Brush.linearGradient` default start/end, diagonal
+  kiri-atas->kanan-bawah) 0 berubah dari v8.28.2, sesuai instruksi.
+- File diubah (2): `ui/theme/NeumorphTokens.kt`,
+  `ui/components/TactileSurface.kt`. `preflight_check.sh` 14/14 lolos.
+- versionCode 167->168, versionName 8.28.2->8.28.3.
+
+## v8.28.2 -- Border Neumorphism: solid -> gradient diagonal fade (2026-08-23)
+- User lapor via 4 screenshot: border emas v8.28.1 "lebih mirip border
+  neon emas" (solid rata di semua sisi) -- maksud sebenarnya "muncul
+  dari sisi kiri atas membentang lalu fade out ke sisi kanan bawah".
+- **Fix**: `NeumorphTokens.GoldBorderColor: Color` (solid) diganti
+  `goldBorderBrush(): Brush` -- `Brush.linearGradient(listOf(Tertiary,
+  Color.Transparent))` TANPA `start`/`end` eksplisit (default
+  `start=Offset.Zero`/kiri-atas, `end=Offset.Infinite` -> Compose resolve
+  jadi diagonal PERSIS ukuran elemen saat digambar, sama arah persis dgn
+  `fillHighlightBrush()`/`fillShadeBrush()` yang sudah ada -- 1 arah
+  cahaya konsisten). `TactileSurface.kt`: `BorderStroke(width, brush)`
+  (overload yang menerima `Brush`, bukan cuma `Color` -- API standar
+  `androidx.compose.foundation.BorderStroke`).
+- File diubah (2): `ui/theme/NeumorphTokens.kt`,
+  `ui/components/TactileSurface.kt`. `preflight_check.sh` 14/14 lolos.
+- **User WAJIB verifikasi**: border sekarang pekat di sudut kiri-atas
+  tiap kartu, meluruh transparan menuju kanan-bawah -- bukan rata solid.
+- versionCode 166->167, versionName 8.28.1->8.28.2.
+
+## v8.28.1 -- Border keemasan Neumorphism dikembalikan (2026-08-23)
+- User lapor via 2 screenshot (Beranda + tab Tampilan, saklar Neumorphism
+  ON): "kembalikan sekat pembatas luar/Border keemasan yang timbul itu,
+  biar jadi identitas unik dari theme Neumorphism ini" -- border sempat
+  hilang tanpa sengaja saat emergency fix layout v8.28.0 (fix itu HANYA
+  fokus buang wrapper `Box`/shadow-caster yang merusak `weight()`, tidak
+  sadar `border` juga ikut tidak diteruskan ke `Surface()` di 2 titik).
+- **Fix**: `NeumorphTokens.kt` -- 2 token baru, `GoldBorderColor` (pakai
+  `Tertiary`/0xFFDABF81, SUDAH ada di palette -- 0 hue baru) &
+  `GoldBorderWidth` (1.5dp). `TactileSurface.kt` -- `border =
+  neumorphBorder` (fallback ke gold token, TAPI hormati `border` caller
+  eksplisit kalau ada, pola sama persis cabang Glassmorphism) ditambah
+  ke KEDUA `Surface()` (onClick & non-onClick) cabang NEUMORPHISM.
+- **WCAG**: border dekoratif (garis tepi, bukan teks) -- prinsip sama
+  `OutlineVariant`/glass-edge Glassmorphism, TIDAK tunduk ambang 3:1.
+- File diubah (2): `ui/theme/NeumorphTokens.kt`,
+  `ui/components/TactileSurface.kt`. `preflight_check.sh` 14/14 lolos
+  (termasuk check #14 baru, bug KDoc bracket `[vX.Y.Z]` v8.23.5 -- 0
+  pelanggaran, dicek eksplisit sebelum commit ini krn NeumorphTokens.kt
+  disentuh).
+- **User WAJIB verifikasi**: tab Tampilan -> nyalakan Neumorphism ->
+  semua kartu/kontrol harus punya garis tepi emas/tan tipis timbul.
+- versionCode 165->166, versionName 8.28.0->8.28.1.
+
+## v8.28.0 -- FIX REGRESI NYATA v8.27.0: tab "Tampilan" hilang + kartu blank (2026-08-23)
+- **User laporan via 3 screenshot** (Kelola Rule, Riwayat Aktivitas,
+  Beranda), nada frustrasi: "kenapa banyak yang ke distorsi/anomali sih,
+  mana tab theme hilang juga!!". Bukti konkret: SegmentedControl "Tampilan"
+  tab HILANG TOTAL (cuma "Beranda" muncul), beberapa kartu render sbg kotak
+  KOSONG blank besar (Log list & VaultCard Beranda).
+- **Root cause ditemukan**: v8.27.0 membungkus `Surface` konten dalam
+  `Box { shadowCasterSurface (offset); Surface(modifier=modifier) }` supaya
+  shadow-caster bisa digambar DI BELAKANG dgn offset -- TAPI ini artinya
+  `modifier` caller (yang di `SegmentedControl.kt` berisi `Modifier.
+  weight(1f)` utk 2 tab 50/50) jadi nempel di `Surface` yang merupakan
+  CUCU dari `Row`, BUKAN anak LANGSUNG (`Row` cuma lihat `Box` pembungkus
+  sbg anaknya). `RowScope.weight()`/`BoxScope.align()` HANYA dikenali kalau
+  modifier itu ada tepat di anak LANGSUNG scope-nya -- Row jadi tidak tahu
+  elemen itu punya weight, distribusi lebar 2 tab ambyar total (1 "hilang",
+  yang lain kolaps/blank). Kelas bug BARU (beda dari 3 kegagalan
+  sebelumnya: lemah tak terlihat / washed-out / SEKARANG layout rusak) --
+  konsekuensi tak terduga dari menambah 1 layer `Box` pembungkus.
+- **Fix**: wrapper `Box` + shadow-caster offset custom DIHAPUS TOTAL,
+  balik ke SATU `Surface(shadowElevation=)` polos (tanpa offset manual) --
+  PERSIS pola cabang Glass/Material3 yang TERBUKTI aman (1 node, modifier
+  caller nempel LANGSUNG, weight/align otomatis benar lagi krn Row/Column
+  sekarang benar-benar lihat node yang punya weight). Token `ShadowOffset`
+  (v8.27.0) dihapus dari `NeumorphTokens.kt` (sudah tidak relevan). Fill
+  gradient tint (terang kiri-atas pakai `Primary`/gelap kanan-bawah, v8.27.0
+  poin 2) **TIDAK diubah sama sekali** -- itu 100% aman krn terjadi DI
+  DALAM `content()`, tidak pernah menyentuh struktur node luar `Surface`,
+  jadi tetap jadi sumber utama kesan "timbul/cekung" sekarang.
+- **Konsekuensi yang disadari & diterima**: shadow sekarang SATU arah
+  native Android standar (bukan lagi "dual-offset custom" v8.27.0) --
+  trade-off SADAR: stabilitas layout (weight/align semua caller, bukan
+  cuma SegmentedControl -- diverifikasi grep SEMUA caller `TactileSurface`
+  di app, 0 pemakaian weight/align lain yang keliru) jauh lebih prioritas
+  drpd efek visual "lebih canggih" setelah 3 percobaan berturut-turut
+  gagal dgn cara BEDA-BEDA (v8.23.x/v8.25.x/v8.27.0).
+- File diubah (2): `ui/components/TactileSurface.kt` (cabang Neumorphism
+  saja), `ui/theme/NeumorphTokens.kt` (hapus 1 token unused). `preflight_
+  check.sh` lolos bersih (14/14). Balance kurung/kurung-siku 0 di kedua
+  file.
+- **BELUM PERNAH lewat `./gradlew` asli atau device fisik**. Mengingat
+  pola kegagalan berulang (4x sekarang), user SANGAT DIANJURKAN
+  verifikasi ketat sebelum lanjut fitur lain: (1) tab "Beranda"/"Tampilan"
+  KEDUANYA muncul & proporsi 50/50 benar; (2) 0 kartu/kotak blank di
+  MANAPUN (Kelola Rule, Riwayat Aktivitas, Beranda, semua layar lain yang
+  belum di-screenshot); (3) kesan timbul/cekung masih ada (dari fill tint,
+  mungkin lebih halus drpd v8.27.0 krn shadow tidak lagi dual-offset);
+  (4) Glassmorphism & Material3 Murni 0 berubah (tidak disentuh batch ini).
+- versionCode 164->165, versionName 8.27.0->8.28.0.
+
+## v8.27.0 -- Maksimalkan efek timbul/cekung Neumorphism (dilarang glow/blooming) + fix "tone kurang" (2026-08-23)
+- **User feedback via 2 screenshot** (Beranda + tab Tampilan, state v8.26.0
+  revert darurat): "udah normal sih, tapi kek ada yang kurang gitu tone
+  warnanya. dan mungkin masih bisa dimaksimalkan lagi untuk efek
+  timbul+cekungan nya (**dilarang keras pakai teknik: glow, blooming, dan
+  sejenisnya!!**)".
+- **Analisis**: v8.26.0 (revert darurat) = `Surface` M3 baku + border polos,
+  0 depth custom -- makanya "kurang". Percobaan v8.25.x yang GAGAL sebelum
+  revert pakai `Brush.radialGradient` blob (blur lingkaran simetris) --
+  ITU PERSIS definisi "glow/blooming" yang sekarang dilarang eksplisit,
+  jadi TIDAK dicoba lagi sama sekali dgn cara apa pun.
+- **Fix, HANYA 2 primitif yang SUDAH terbukti stabil, 0 teknik baru**:
+  (1) Drop-shadow asli SATU sisi (gelap, kanan-bawah) via `Surface(
+  shadowElevation=)` warna DEFAULT (bukan ambientColor/spotColor custom --
+  itu akar masalah v8.23.2-v8.23.6) -- shadow ini mengikuti BENTUK kartu
+  (rounded-rect), bukan blob lingkaran, jadi bukan glow. (2) Tint gradient
+  DI DALAM fill (terang kiri-atas, gelap kanan-bawah) via `Brush.
+  linearGradient` -- PERSIS teknik `GlassTokens.highlightBrush()` (sheen)
+  yang sudah live & stabil di cabang Glass, tinggal dipakai lagi di sini.
+  Border v8.26.0 DIHAPUS -- neumorphism otentik tidak pernah pakai outline,
+  bentuknya murni dari shadow+fill.
+- **Fix "tone kurang"**: tint terang sekarang pakai `Primary` (biru-cool
+  brand app, sudah ada, dipakai tombol "Scan Sekarang") BUKAN putih
+  generik -- kartu jadi ikatan warna sama identitas app. TETAP calm/cool
+  (warna itu sendiri sudah calm, direuse apa adanya, 0 hue baru).
+- **WCAG**: worst-case `TextSecondary` diblend titik puncak tint Primary di
+  tier surface paling terang: alpha 0.20 -> 5.13:1 (AA, margin disisakan --
+  0.22 sudah 4.94:1, lebih mepet). Dihitung skrip Python formula W3C.
+  Drop-shadow 100% di area kosong luar kartu, 0 relevansi WCAG teks.
+- **`border` param TactileSurface**: diverifikasi via grep SEBELUM
+  dihapus dari cabang Neumorphism -- 0 caller manapun (`VaultCard`,
+  `GroupedListRow`, `TactileSwitch`, dst) pernah mengirim `border`
+  eksplisit, jadi 0 regresi fungsional dari penghapusan itu.
+- File diubah (2): `ui/theme/NeumorphTokens.kt` (rewrite total, 3
+  percobaan gagal sebelumnya di-dokumentasikan di javadoc, bukan dihapus
+  dari histori), `ui/components/TactileSurface.kt` (cabang Neumorphism
+  saja). `preflight_check.sh` lolos bersih (14/14, termasuk check #14 KDoc
+  bracket-tag yang jadi biang error compile v8.25.x kemarin -- 0 tag
+  `[vX.Y.Z]` di block comment file ini). Balance kurung/kurung-siku 0.
+- **BELUM PERNAH lewat `./gradlew` asli atau device fisik**. Mengingat 2x
+  kegagalan sebelumnya (lemah tak terlihat, lalu washed-out total), user
+  WAJIB verifikasi visual nyata sebelum dianggap final: (1) shadow gelap
+  kanan-bawah kartu terlihat jelas & mengikuti bentuk kartu (bukan blob
+  lingkaran); (2) sisi terang kiri-atas terasa "menangkap cahaya" (tint
+  Primary, di DALAM bentuk, bukan meleber keluar); (3) 0 washed-out/pudar
+  di permukaan MANAPUN; (4) Glassmorphism & Material3 Murni 0 berubah.
+- versionCode 163->164, versionName 8.26.0->8.27.0.
+
+## v8.26.0 -- REVERT DARURAT: teknik shadow Neumorphism bikin SELURUH UI washed-out (2026-08-23)
+- User laporan pakai (2x screenshot, Beranda DAN Tampilan sama-sama pudar
+  total, hampir semua elemen nyaris tak terlihat) + eksplisit minta
+  "revert ke versi sebelumnya" + screenshot referensi rupa yang benar
+  (border solid jelas di semua kartu, kontras normal).
+- **Root cause**: teknik "shadow ganda genuine" (v8.25.4,
+  `drawBehind`+`nativeCanvas`+`Paint.setShadowLayer`+gradient brush
+  custom di `NeumorphTokens`) -- teknik ke-4 percobaan efek "timbul"
+  Neumorphism (v8.23.2 tipis -> v8.23.6 dinaikkan alpha, masih kurang ->
+  v8.25.3 border bevel -> v8.25.4 shadow genuine) -- kali ini BUKAN cuma
+  "kurang kelihatan", tapi BENAR-BENAR MERUSAK kontras di SELURUH app.
+  Karena `VaultTheme.style` global (dipakai SEMUA `TactileSurface`), user
+  yang testing Neumorphism sebagai tema aktif jadi kena washout di
+  SETIAP layar (Beranda, Tampilan, dst), bukan cuma baris toggle-nya.
+  Root cause TEKNIS pastinya TIDAK ditelusuri lebih lanjut (di luar scope
+  revert darurat -- prioritas STABIL dulu).
+- **Fix = REVERT TOTAL** teknik shadow/brush custom: cabang NEUMORPHISM
+  di `TactileSurface.kt` sekarang `Surface` M3 baku + `BorderStroke`
+  solid (`NeumorphTokens.BorderWidth`/`BorderColor`, 1.5dp, putih alpha
+  0.35f) -- PERSIS pola aman yang sudah terbukti stabil di cabang
+  Material3 Murni (0 masalah dilaporkan sepanjang riwayat). Pembeda dari
+  Material3 Murni SEKARANG cuma border, bukan lagi shadow/gradient
+  custom apa pun.
+- `NeumorphTokens.kt` ditulis ulang TOTAL -- `concaveBrush`/`convexBrush`/
+  `concaveShadow`/`convexShadow`/token warna shadow lama semua DIHAPUS
+  (0 file lain reference simbol2 itu, dikonfirmasi lewat grep sebelum
+  hapus). Cuma sisa 2 token: `BorderWidth`, `BorderColor`.
+- File diubah (2, PAS batas 1 task/batch): `ui/components/TactileSurface.kt`,
+  `ui/theme/NeumorphTokens.kt`. `preflight_check.sh` lolos bersih.
+- **Pelajaran dicatat (WAJIB dibaca sebelum coba efek "timbul" custom
+  lagi)**: 4 percobaan berturut-turut (v8.23.2/v8.23.6/v8.25.3/v8.25.4)
+  semua gagal dgn cara BEDA-BEDA (tipis, masih tipis, "belum sempurna",
+  lalu MERUSAK TOTAL) -- pola ini nunjukin teknik shadow/brush custom di
+  Compose (tanpa akses visual nyata utk verifikasi tiap percobaan) risiko
+  tinggi utk fitur dekoratif murni. Kalau diminta lagi: WAJIB user
+  verifikasi screenshot SETIAP iterasi sebelum lanjut ke iterasi
+  berikutnya (bukan berturut-turut tanpa jeda konfirmasi), ATAU terima
+  border-only sebagai batas aman permanen utk gaya ini.
+- Confidence 85% -- perbaikan pakai API paling sederhana & paling
+  terbukti stabil di seluruh project (Surface+BorderStroke, dipakai
+  puluhan tempat lain tanpa masalah), TAPI tetap belum bisa dites visual
+  nyata di sesi ini.
+- versionCode 162->163, versionName 8.25.5->8.26.0.
+
+## v8.25.5 -- Fix compile error: 2 import hilang (ripple, toArgb) (2026-08-23)
+- User upload build-failure-log-v8_25_4: `compileDebugKotlin`+
+  `compileReleaseKotlin` FAILED, 6 error unik (12 total, x2 varian) --
+  SEMUA "Unresolved reference", BUKAN masalah bracket/parser seperti
+  batch-batch sebelumnya. Real missing-import compile error.
+- **Root cause #1**: `TactileSurface.kt` import
+  `androidx.compose.material3.ripple.ripple` -- fungsi factory `ripple()`
+  versi baru ini butuh Material3 lebih baru dari yang disediakan
+  compose-bom 2024.06.00 project ini (belum tersedia di versi itu).
+- **Fix #1**: ganti ke `androidx.compose.material.ripple.rememberRipple()`
+  -- API lama, stabil, selalu tersedia, valid dipakai sbg `Indication`
+  walau di app berbasis Material3 (pola umum/luas dipakai).
+- **Root cause #2**: `NeumorphTokens.kt` (teknik dual soft-shadow
+  `drawBehind`+`nativeCanvas`+`setShadowLayer`, "teknik ke-4" dari
+  v8.25.4) manggil `.toArgb()` di 4 tempat tanpa
+  `import androidx.compose.ui.graphics.toArgb` -- extension function
+  Compose, wajib import eksplisit.
+- **Fix #2**: import ditambahkan.
+- File diubah (2, PAS batas 1 task/batch): `ui/components/TactileSurface.kt`,
+  `ui/theme/NeumorphTokens.kt`. `preflight_check.sh` lolos bersih.
+- Confidence 90% -- fix berdasar pesan compiler ASLI+presisi (nama symbol
+  hilang persis disebutkan), bukan tebakan.
+- versionCode 161->162, versionName 8.25.4->8.25.5.
+
+## v8.25.4 -- GANTI TEKNIK KE-4: border bevel -> dual soft-shadow genuine (2026-08-22)
+- User kirim palet+spec CSS literal PERSIS (base #181a20, convex/concave
+  dual `box-shadow` dgn hex+offset+blur eksak, accent neon 3-stop) hasil
+  ekstraksi dari referensi visual asli (dashboard neumorphism genuine) --
+  "sudah menunjukkan Neumorphism yang diinginkan, tapi belum sempurna".
+- **Root cause v8.25.3 (bevel border) msh "belum sempurna"**: garis
+  bingkai TEGAS 2dp itu SECARA TEKNIK beda dari soft-shadow neumorphism
+  genuine -- neumorphism asli TIDAK PERNAH pakai garis tepi solid, tapi
+  2 shadow BLUR (terang+gelap) yang MELEBUR halus ke background
+  sekitarnya, itu sumber kesan "empuk"-nya, bukan garis presisi.
+- **Fix (ganti total ke-4x)**: implementasi shadow ganda SUNGGUHAN via
+  `Paint.setShadowLayer` (Android native, dual-offset dual-warna) --
+  PERSIS terjemahan `box-shadow` CSS user. `NeumorphTokens.kt` REWRITE
+  PENUH: token warna 1:1 dari spec (`ConvexGradientStart/End`,
+  `ConvexShadowDark/Light`, versi Concave dibalik arah + teknik inset
+  clip+stroke, `AccentGradientColors`/`AccentShadowColor` disediakan tapi
+  SENGAJA belum dipasang -- lihat poin scope di bawah), + 2 fungsi
+  extension `Modifier.convexShadow()`/`concaveShadow()`. `TactileSurface.kt`
+  cabang Neumorphism: `Surface` M3 DILEPAS (cuma terima solid `Color`,
+  tidak bisa gradient `Brush`) -> `Box` polos + shadow (drawBehind, layer
+  BAWAH) + `.clip(shape).background(brush)` (layer ATAS, nutup badan
+  shadow, cuma sisakan bagian yg "mengintip" di tepi -- PERSIS efek CSS
+  box-shadow ganda) + `clickable`+`ripple()` M3 manual (gantikan
+  interaksi bawaan `Surface` yg hilang).
+- **Scope decision (accent neon TIDAK di-wire)**: token
+  `AccentGradientColors` (pink-oranye-emas) DISEDIAKAN persis spec, TAPI
+  TIDAK dipasang ke tombol/elemen mana pun batch ini -- brand accent app
+  ini biru periwinkle (`pv_primary_accent`) dipakai KONSISTEN lintas 3
+  gaya tema & puluhan file/screen; menimpanya jadi gradient hangat di
+  sini = REBRAND GLOBAL tak diminta, di luar scope "benerin kartu
+  neumorphism yg belum sempurna" (dikonfirmasi dari screenshot user:
+  keluhan soal KARTU/toggle, bukan warna aksen). Token siap dipakai kalau
+  user tunjuk elemen spesifik mana yg dimaksud "accent aktif".
+- **Circular dial gauge/bottom nav bar (image 3) TIDAK dibangun**:
+  gambar itu murni referensi GAYA/TEKNIK shadow (mood board), bukan
+  permintaan fitur baru -- app ini file-sorter, 0 use-case dial/bottom-
+  nav yg masuk akal ditambahkan. Diadaptasi sesuai instruksi "adaptasi",
+  bukan disalin literal fitur yg tidak relevan.
+- **Kenapa `Paint.setShadowLayer` (bukan `BlurMaskFilter`/kombinasi lain)**:
+  shadow shape (bukan teks) baru didukung PENUH hardware-accelerated
+  canvas sejak API 28 -- project ini eksplisit target arsitektur modern
+  API 31+ (aturan pinned), jadi trade-off "shadow tidak tampak di API<28,
+  fallback flat gradient polos TANPA crash" DITERIMA sesuai arahan
+  "dilarang overthinking backward-compat OS lama".
+- File diubah (2): `ui/theme/NeumorphTokens.kt` (rewrite penuh ke-4x),
+  `ui/components/TactileSurface.kt` (cabang Neumorphism, teknik ke-4).
+  `preflight_check.sh` 14/14 lolos LANGSUNG (0 iterasi fix -- KDoc baru
+  konsisten pakai `(v8.25.4)`).
+  Confidence Rating: **75%** (teknik `setShadowLayer` dual-offset adalah
+  solusi yg TERBUKTI dipakai luas di komunitas Compose utk kasus PERSIS
+  ini, TAPI turun dari rating batch lain krn: (1) riwayat 3x percobaan
+  neumorphism sebelumnya semua terbukti "belum sempurna" di device asli
+  meski masing2 terlihat solid secara kode/preflight, (2) fungsi extension
+  member di dalam `object` -- pola `with(NeumorphTokens) { modifier.
+  convexShadow(...) }` -- BELUM ada preseden dipakai di codebase ini
+  sebelumnya, sintaks valid Kotlin tapi kombinasi dgn `drawIntoCanvas`+
+  `nativeCanvas`+`setShadowLayer` di Compose BELUM pernah divalidasi
+  compile/runtime nyata di project spesifik ini).
+- **User WAJIB verifikasi**: (1) build CI hijau (paling kritis batch ini,
+  API framework native jarang dipakai sebelumnya), (2) buka Neumorphism
+  -- shadow ganda blur terlihat di tepi kartu (terang kiri-atas, gelap
+  kanan-bawah utk kartu biasa), (3) toggle/track OFF (recessed) kesan
+  cekung (gelap kiri-atas, terang kanan-bawah, DI DALAM tepi), (4) tap
+  kartu/tombol tetap ada ripple (interaksi tidak hilang meski `Surface`
+  M3 dilepas).
+- versionCode 160->161, versionName 8.25.3->8.25.4.
+
+## v8.25.3 -- GANTI TEKNIK KE-3: fill tint -> border bevel (root cause final) (2026-08-22)
+- User laporkan v8.25.2 (screenshot): "jadi default lagi sih, tapi efek
+  glow nya masih ganggu gak sesuai Neumorphism murni. dan masih flat
+  macam tema yang lain (gak ada unsur cekung+timbul realistis)" -- 2
+  masalah: (a) MASIH ada residu "glow" yang dirasa gak fit, (b) fill
+  tint v8.25.2 (alpha 0.16/0.42, dibatasi WCAG) TERBUKTI nyaris tak
+  kebaca di layar HP nyata -- terlalu subtle utk disebut "cekung+timbul".
+- **Root cause FINAL ditemukan**: neumorphism genuine (referensi user)
+  TIDAK PERNAH mewarnai SELURUH badan elemen (fill wash) -- kesan
+  timbulnya dari BINGKAI/TEPI (rim light+shadow) yang SEMPIT. Fill wash
+  PASTI harus dibatasi alpha rendah krn menimpa area teks (WCAG), padahal
+  garis bingkai TIPIS (2dp) di TEPI TIDAK PERNAH ditempati teks (semua
+  card punya padding konten >=16dp) -- BEBAS dari batas WCAG sama sekali,
+  alpha bisa jauh lebih tinggi & tetap 100% aman. Ini kelas teknik BEDA
+  dari 2 percobaan sebelumnya (v8.24.0 fill wash lemah, v8.25.0 glow blob
+  luar "uncanny", v8.25.2 fill wash WCAG-safe tapi tetap lemah) -- bukan
+  tuning ulang, GANTI PENDEKATAN.
+- **Fix**: `NeumorphTokens.kt` rewrite total -- token fill
+  (`SurfaceHighlightTint`/`SurfaceShadeTint`/`surfaceHighlightBrush`/
+  `surfaceShadeBrush`) DIHAPUS, ganti `BevelWidth` (2dp),
+  `BevelLightColor`/`BevelDarkColor` (alpha 0.65, JAUH lebih tinggi krn 0
+  kewajiban WCAG teks), `bevelBrush(lightCorner, darkCorner)` (diagonal
+  linear, arah ditentukan parameter, 1 fungsi bukan 2). `TactileSurface.kt`
+  -- 2 `Box` tint DI BELAKANG content() DIHAPUS, ganti
+  `Modifier.border(BorderStroke(BevelWidth, bevelBrush), shape)` via
+  parameter `border` `Surface` M3 (built-in, otomatis clip ke `shape`,
+  otomatis dihormati kalau caller suatu saat kirim `border` sendiri --
+  `border ?: BorderStroke(...)`, pola sama persis cabang Glass).
+  `recessed` membalik urutan warna di `bevelBrush()` (bukan brush
+  terpisah lagi, cukup tukar argumen).
+- **Kenapa ini juga jawab keluhan (a) "glow masih ganggu"**: teknik
+  BARU ini 0% overlap dgn definisi "glow" dlm bentuk apa pun -- tidak ada
+  blur/scale/offset (itu v8.25.0), tidak ada fill wash tipis yang
+  terlihat spt kabut (itu v8.24.0-v8.25.2) -- garis bingkai TEGAS &
+  presisi di tepi shape, teknik neumorphism paling standar/umum dipakai.
+- **TIDAK disentuh**: Glassmorphism/Material3 branch, `Color.kt`,
+  `GlassTokens.kt`, default tema.
+- File diubah (2): `ui/theme/NeumorphTokens.kt` (rewrite penuh),
+  `ui/components/TactileSurface.kt` (branch Neumorphism, teknik ke-3).
+  `preflight_check.sh` 14/14 lolos (termasuk check #14 -- KDoc baru sudah
+  ditulis pakai `(v8.25.3)`, bukan `[v8.25.3]`, dari awal kali ini).
+  Confidence Rating: **80%** (root cause analysis kali ini lebih kuat
+  drpd 2 percobaan sebelumnya -- teknik border-bevel adalah standar
+  industri utk neumorphism, bukan lagi tuning alpha yang sudah 2x
+  dilaporkan gagal -- tapi TETAP belum diverifikasi di device fisik,
+  turun dari 90%+ krn riwayat berkali-kali salah duga sebelumnya di gaya
+  visual ini spesifik).
+- **User WAJIB verifikasi**: build CI hijau, buka Neumorphism -- cek (1)
+  garis tepi kartu terlihat jelas (terang kiri-atas, gelap kanan-bawah),
+  (2) 0 elemen blur/blob di luar kartu, (3) 0 wash/tint yang menutupi
+  seluruh badan kartu. Kalau bingkai 2dp masih kurang tebal/kurang
+  kontras secara visual, next step realistis: naikkan `BevelWidth`
+  (bukan alpha lagi, sudah di 0.65 yang cukup tinggi) -- dicatat kalau
+  dilaporkan.
+- versionCode 159->160, versionName 8.25.2->8.25.3.
+
+## v8.25.2 -- REVERT total glow-blob Neumorphism, fokus cekung+timbul saja (2026-08-22)
+- User upload screenshot app ASLI (image1) vs referensi desain soft-UI
+  neumorphism genuine (image2): "jadi uncanny gini, balikin semua setelan
+  nya ke default, fokus tingkatkan 'cekung+timbul' only". Teknik "glow
+  blob di luar kartu" (v8.25.0, radial gradient di-scale 1.7x+offset
+  16dp) menghasilkan halo/blob blur besar di sekeliling tiap kartu --
+  BUKAN kesan cekung/timbul genuine spt referensi, malah kayak artifact
+  render aneh.
+- **Revert (bukan tuning, HAPUS TOTAL)**: seluruh teknik glow-luar
+  (`GlowScale`/`GlowOffset`/`LightGlowColor`/`DarkGlowColor`/
+  `glowBrush()` di `NeumorphTokens.kt`, 2 layer `Box` offset+scale di
+  `TactileSurface.kt`) DIHAPUS -- tidak ada elemen visual di luar batas
+  kartu sama sekali lagi, PERSIS spt referensi (efek timbul HANYA dari
+  tint di dalam bentuk, tidak pernah "meleber" keluar).
+- **Fokus "cekung+timbul" diperkuat** (satu2nya lapisan tersisa, fill
+  gradient v8.24.0): `SurfaceHighlightTint` 0.14->0.16 (batas atas
+  MUTLAK WCAG-aman, dihitung PRESIS ulang via formula relative-luminance
+  -- 0.16=4.53:1 lulus AA, 0.18=4.25:1 GAGAL, jadi TIDAK dinaikkan lebih
+  dari itu), `SurfaceShadeTint` 0.22->0.42 (0 batas WCAG, sisi gelap
+  bebas dikuatkan). Area gradient DILEBARKAN (stop 0.55/0.45 -> 0.65/0.35)
+  supaya tint kelihatan menutupi bidang lebih luas TANPA menaikkan alpha
+  puncak -- cara kedua menaikkan kesan "timbul" yang tidak mengubah angka
+  WCAG worst-case sama sekali.
+- **Struktur disederhanakan**: wrapper `Box` luar (dulu utk posisikan
+  glow blob) dihapus, `modifier` sekarang langsung di `Surface`, sekarang
+  konsisten dgn cabang Glass/Material3 (dulu Neumorphism satu2nya cabang
+  yg beda struktur). Import `scale`/`offset` yang jadi tidak terpakai
+  ikut dihapus.
+- **Insiden preflight tercatat**: draft awal batch ini SEMPAT kena
+  ketangkep check #14 (guard baru v8.25.1) -- KDoc baru yang ditulis
+  pakai tag `[v8.25.2]` (pola sama persis yang baru saja di-guard).
+  Diperbaiki jadi `(v8.25.2)` SEBELUM sempat di-zip -- bukti guard
+  v8.25.1 langsung berguna di sesi berikutnya.
+- **TIDAK disentuh**: gaya Glassmorphism & Material3 (branch lain di
+  `TactileSurface.kt`), `Color.kt`, pilihan tema default user (tetap
+  `SettingsRepository.DEFAULT_THEME_STYLE`, bukan diganti ke tema lain --
+  "balikin ke default" ditafsirkan sbg parameter Neumorphism-nya sendiri,
+  BUKAN pindah gaya tema, sesuai instruksi "fokus tingkatkan cekung+timbul
+  ONLY" yang menyiratkan tetap di Neumorphism).
+- File diubah (2): `ui/theme/NeumorphTokens.kt` (rewrite penuh, token
+  glow dihapus), `ui/components/TactileSurface.kt` (branch Neumorphism
+  disederhanakan + import dibersihkan). `preflight_check.sh` 14/14
+  lolos. Confidence Rating: **85%** (perhitungan WCAG presisi & sanity
+  check preflight sudah solid, tapi hasil visual akhir "apakah sekarang
+  terasa cekung+timbul cukup" tetap SUBJEKTIF & belum diverifikasi
+  langsung di device fisik -- turun dari 90%+ krn itu, konsisten dgn
+  pola riwayat v8.23.6/v8.24.0/v8.25.0 yang berkali-kali user laporkan
+  "masih belum kerasa" sampai akhirnya ketemu masalahnya bukan di alpha).
+- **User WAJIB verifikasi**: build CI hijau, buka toggle "Tampilan" ->
+  Neumorphism -- pastikan (1) TIDAK ADA lagi blob/halo blur di luar
+  kartu, (2) efek cekung/timbul di DALAM kartu terasa (walau lebih halus
+  drpd referensi krn batas WCAG). Kalau MASIH kurang kerasa dgn batas
+  WCAG saat ini, opsi berikutnya BUKAN naikkan alpha lagi (sudah di batas
+  mutlak) -- perlu teknik lain (mis. `drawBehind` custom shape bevel,
+  bukan gradient linear polos), dicatat sbg next step kalau dilaporkan.
+- versionCode 158->159, versionName 8.25.1->8.25.2.
+
+## v8.25.1 -- FIX BUILD FAILURE: regresi bug KDoc `[vX.Y.Z]` di NeumorphTokens.kt (2026-08-22)
+- User upload `build-failure-log-v8_25_0.zip`: `kspDebugKotlin`+
+  `kspReleaseKotlin` FAILED, 2x "Closing bracket expected" di
+  `NeumorphTokens.kt:54:12`. Hitung kurung manual (exclude comment) --
+  file 100% seimbang, konsisten dgn insiden LAMA v8.23.5.
+- **Root cause**: PERSIS root cause v8.23.5 (lihat log v8.23.5 di bawah)
+  -- KDoc `[v8.25.0]` di block comment `/** */` (baris 54, rewrite total
+  file utk teknik gradient baru) tersandung parser referensi KDoc KSP di
+  "8.25.0" (angka+titik). REGRESI: fix v8.23.5 cuma manual (6 tag diganti
+  saat itu), TIDAK ada guard otomatis -- rewrite total file di v8.25.0
+  reintroduce pola yang sama persis tanpa sadar.
+- **Fix**: `[v8.25.0]` -> `(v8.25.0)` (kurung biasa) di baris 54,
+  SATU-SATUNYA lokasi tag `[vX.Y.Z]` di block comment `/** */` di seluruh
+  project (grep project-wide dijalankan -- 5 lokasi lain semua `//` line
+  comment, TIDAK vulnerable, TIDAK disentuh).
+- **Guard permanen ditambah** (`scripts/preflight_check.sh`, check #14
+  baru): scan semua block comment `/** ... */` di seluruh `.kt`, cari
+  pola `[v<digit>.<digit>` -- FAIL kalau ketemu. Disanity-test manual:
+  reintroduce bug sementara -> check #14 KETANGKEP -> revert -> lolos
+  lagi. Guard ini yang TIDAK ADA saat v8.23.5, sekarang ADA supaya kelas
+  bug ini TIDAK BISA lolos preflight lagi ke-3 kalinya.
+- File diubah (2): `ui/theme/NeumorphTokens.kt` (1 baris),
+  `scripts/preflight_check.sh` (+check #14). `preflight_check.sh` 14/14
+  lolos (13 lama + 1 baru). Confidence Rating: **95%** (root cause
+  sudah PERSIS terverifikasi sebelumnya di v8.23.5 dgn build CI asli,
+  fix identik pola yang sudah terbukti berhasil + guard baru
+  disanity-test manual berhasil tangkap & lolos ulang).
+- **User WAJIB verifikasi**: build CI hijau (`kspDebugKotlin`/
+  `kspReleaseKotlin` lolos).
+- versionCode 157->158, versionName 8.25.0->8.25.1.
+
+## v8.25.0 -- ROOT CAUSE FIX: shadow Neumorphism diganti total, terbukti tak terlihat vs referensi asli (2026-08-23)
+- **User bandingkan langsung** (2 screenshot: referensi desain Neumorphism
+  asli vs Beranda app) -- "jelas-jelas punya kamu gak terasa sama sekali
+  unsur Neumorphism (efek timbul+cekung)". Bukti konkret: fix alpha
+  v8.23.6 + fill 3-lapis v8.24.0 TIDAK CUKUP, kartu masih terlihat flat.
+- **Root cause SEBENARNYA ditemukan**: `Modifier.shadow(ambientColor=,
+  spotColor=)` (teknik v8.23.2) memakai renderer shadow BAWAAN Android
+  View (elevation/ambient+spot light) -- didesain utk shadow GELAP OPAK
+  standar Material, BUKAN "glow" warna TERANG custom. Sisi terang nyaris
+  tidak pernah benar-benar render di device fisik APAPUN besar alpha-nya
+  -- ini KENAPA fix v8.23.6 (cuma naikkan alpha, teknik sama) tetap gagal.
+- **Fix**: `Modifier.shadow` DIBUANG TOTAL di cabang Neumorphism, diganti
+  `Brush.radialGradient` murni Compose (3-stop, falloff lembut, TIDAK
+  bergantung renderer shadow platform sama sekali -- selalu render
+  identik semua API/GPU, teknik SAMA yang sudah terbukti aman dipakai
+  `GlassTokens.highlightBrush()`/fill 3-lapis v8.24.0). Blob digambar
+  `.scale(1.7f)` (jauh lebih besar dari kartu) + offset 16dp (naik dari
+  7dp lama) supaya area "meleber" di luar kartu jauh lebih luas & jelas
+  kebaca, bukan beberapa dp tipis di tepi seperti sebelumnya.
+- **`NeumorphTokens.kt`**: `ShadowOffset`/`ShadowBlurRadius`/
+  `LightShadowColor`/`DarkShadowColor` (era `Modifier.shadow`) DIHAPUS,
+  diganti `GlowScale`/`GlowOffset`/`LightGlowColor`(0.50f)/
+  `DarkGlowColor`(0.90f)/`glowBrush()`. `SurfaceHighlightTint`/
+  `SurfaceShadeTint`/`surfaceHighlightBrush()`/`surfaceShadeBrush()`
+  (fill 3-lapis, v8.24.0) **TIDAK disentuh sama sekali** -- laporan bug
+  kali ini murni soal glow LUAR, bukan fill DALAM yang sudah oke.
+- **3 syarat user ditelusuri ulang** (metodologi sama persis): (1) murni
+  gradient dekoratif, 0 border/translucency; (2) White/Black netral, 0 hue
+  baru; (3) WCAG -- glow 100% di area KOSONG luar kartu (bukan di atas
+  teks), 0 pasangan teks/ikon baru diperkenalkan, fill tetap 100% opaque
+  (pasangan teks/kontras yang sudah diverifikasi v8.0.0-v8.24.0 100%
+  tidak berubah) -- 0 perhitungan ulang diperlukan.
+- File diubah (2): `ui/theme/NeumorphTokens.kt`, `ui/components/
+  TactileSurface.kt` (cabang Neumorphism saja; cabang Glass & Material3
+  Murni 0 disentuh). `preflight_check.sh` lolos bersih (13/13), balance
+  kurung 0 di kedua file.
+- **BELUM PERNAH lewat `./gradlew` asli atau device fisik di sandbox ini**
+  -- klaim "root cause" di atas MASUK AKAL secara teknis (dikonfirmasi 2
+  siklus fix-gagal berturut2 dgn teknik lama) tapi TETAP HARUS
+  diverifikasi visual nyata oleh user, bukan diasumsikan pasti benar.
+  User WAJIB verifikasi: (1) kartu Neumorphism SEKARANG kelihatan blob
+  lembut besar di sekitar tepi (terang kiri-atas, gelap kanan-bawah),
+  bukan cuma garis tipis; (2) fill "puffy" dalam (v8.24.0) masih ada,
+  tidak hilang; (3) Glassmorphism & Material 3 Murni 0 berubah; (4) blob
+  besar tidak sampai menutupi/mengganggu keterbacaan konten SEKITAR kartu
+  (kartu lain, teks di luar kartu) -- kalau terlalu agresif, `GlowScale`/
+  `GlowOffset` bisa diturunkan di batch berikutnya.
+- versionCode 156->157, versionName 8.24.0->8.25.0.
+
+## v8.24.0 -- Neumorphism: fill "puffy" 3-lapis (permintaan eksplisit: bukan shadow/opaque yang diutak-atik) (2026-08-23)
+- **User minta eksplisit** (via screenshot tab "Tampilan" + Beranda):
+  "bukan bagian shadow/opaque nya yang diutak-atik, tapi background kartu
+  nya dibikin berlapis 3 sehingga memunculkan desain 3D khas Neumorphism
+  asli". Konteks: shadow ganda (v8.23.2, dinaikkan kontrasnya v8.23.6)
+  SUDAH oke & TIDAK boleh disentuh -- yang kurang otentik adalah fill
+  Surface-nya sendiri, dulu 1 lapis flat polos (0 kesan cembung/3D di
+  DALAM bentuknya sendiri, kedalaman 100% dari shadow di LUAR saja).
+- **Fix**: `NeumorphTokens.kt` -- `ShadowOffset`/`ShadowBlurRadius`/
+  `LightShadowColor`/`DarkShadowColor` (v8.23.2/v8.23.6) **0 baris
+  diubah**, murni TAMBAHAN token baru: `SurfaceHighlightTint` (White
+  alpha 0.14f) + `SurfaceShadeTint` (Black alpha 0.22f) +
+  `surfaceHighlightBrush()`/`surfaceShadeBrush()` (pola sama persis
+  `GlassTokens.highlightBrush()`, `Brush.linearGradient` tanpa start/end
+  eksplisit). `TactileSurface.kt` cabang Neumorphism: `content()`
+  dibungkus 2 `Box` brush dekoratif (`propagateMinConstraints = true` --
+  fix pola yang SAMA PERSIS dgn regresi centering yang sudah pernah
+  ditemukan di cabang Glass, dicegah terulang dari awal, bukan nunggu
+  dilaporkan). `recessed` membalik arah fill-brush, konsisten dgn shadow
+  arah (satu "sumber cahaya" yang sama utk kedua lapisan).
+- **3 syarat user ditelusuri** (sama persis metodologi `NeumorphTokens.kt`
+  javadoc): (1) murni gradient dekoratif DI DALAM fill opaque, bukan
+  border/translucency ala Glass; (2) White/Black netral, 0 hue baru;
+  (3) WCAG dihitung ulang -- worst-case `TextSecondary` (kontras terkecil)
+  diblend dgn TITIK PUNCAK gradient terang di tier surface paling terang:
+  alpha 0.14 -> 4.84:1 (AA, margin disisakan sengaja -- 0.16 sudah mepet
+  4.53:1, makanya TIDAK dipakai). Sisi gelap 0 batas atas WCAG (menggelapkan
+  bg cuma menaikkan kontras teks terang, tidak pernah menurunkan) -- dipilih
+  0.22 (lebih kuat dari sisi terang, rasio sama spirit dgn LightShadowColor:
+  DarkShadowColor 0.35:0.70 di atasnya).
+- File diubah (2): `ui/theme/NeumorphTokens.kt` (append-only, 0 baris lama
+  diubah), `ui/components/TactileSurface.kt` (cabang Neumorphism saja,
+  cabang Glass & Material3 Murni 0 disentuh). `preflight_check.sh` lolos
+  bersih (13/13), balance kurung/tanda kurung 0 di kedua file.
+- **BELUM PERNAH lewat `./gradlew` asli di sandbox ini**. User WAJIB
+  verifikasi: (1) kartu Neumorphism sekarang kelihatan "cembung"/3D nyata
+  (gradient terang kiri-atas, gelap kanan-bawah, DI DALAM bentuk kartu,
+  bukan cuma shadow di tepi); (2) shadow di luar bentuk TIDAK berubah sama
+  sekali dari v8.23.6; (3) gaya Glassmorphism & Material 3 Murni 0 berubah
+  (cabang lain di `TactileSurface.kt` tidak disentuh); (4) teks di dalam
+  kartu (termasuk di sudut paling terang) tetap kebaca jelas, 0 kontras
+  drop yang kentara.
+- versionCode 155->156, versionName 8.23.6->8.24.0.
+
+## v8.23.6 -- FIX BUG NYATA: Neumorphism sama Material3 gak kelihatan beda (2026-08-23)
+- User laporan pakai (screenshot 2x, toggle Neumorphism vs Material 3
+  Murni): visualnya IDENTIK, 0 perbedaan kelihatan.
+- **Root cause**: kode branch-nya SUDAH benar (`TactileSurface.kt` -- dua
+  jalur berbeda total), tapi `NeumorphTokens` (v8.23.2) alpha shadow-nya
+  jauh terlalu tipis: putih 0.06f / hitam 0.45f. Shadow neumorphism cuma
+  kelihatan sebagai "bleed" tipis DI LUAR bentuk konten (fill di atasnya
+  nutup sisanya) -- di alpha seringan itu, terutama sisi terang (6%!),
+  efeknya nyaris 0% kebaca di layar HP nyata. BUKAN bug rendering/salah
+  cabang -- efeknya beneran ada, cuma nyaris tak terlihat.
+- **Fix**: alpha dinaikkan jauh (putih 0.06f->0.35f, hitam 0.45f->0.70f),
+  blur radius 12dp->18dp, offset 6dp->7dp -- teknik (2 Box beroffset +
+  Modifier.shadow) TIDAK direstrukturisasi, cuma kontras dinaikkan biar
+  "efek timbul" (permintaan awal fitur ini) beneran kebaca, bukan cuma
+  ada di kode doang.
+- File diubah (1, PAS batas 1 task/batch): `ui/theme/NeumorphTokens.kt`.
+  `preflight_check.sh` lolos bersih.
+- Confidence 70% -- perbaikan berdasar analisis kode+screenshot (bukan
+  compiler), TIDAK bisa dites visual nyata di sesi ini (0 emulator/device).
+  Kalau MASIH kurang kelihatan, next step: naikkan lagi alpha atau
+  restrukturisasi teknik shadow (mis. drawBehind manual, bukan
+  Modifier.shadow bawaan) -- belum dicoba, dicatat kalau perlu.
+- versionCode 154->155, versionName 8.23.5->8.23.6.
+
+## v8.23.5 -- FIX ROOT CAUSE: bug parser KDoc KSP di tag `[vX.Y.Z]`, bukan bug bracket biasa (2026-08-23)
+- User upload build-failure-log-v8_23_4: `kspDebugKotlin`+`kspReleaseKotlin`
+  FAILED, 6x "Closing bracket expected" tersebar di 4 file berbeda
+  (SettingsRepository.kt x2, MainViewModel.kt, ThemeStyleToggle.kt,
+  Theme.kt x2) -- SEMUA di baris komentar `/** ... */`, TIDAK ADA di kode
+  asli. Cek manual (hitung kurung per file, exclude comment/string) --
+  KEENAM file 100% seimbang. Preflight check bawaan project (hitung
+  `{`/`}` polos) juga bilang "seimbang" -- keduanya BENAR, tapi salah
+  kelas masalah.
+- **Root cause SEBENARNYA ditemukan**: posisi kolom error di KEENAM
+  kejadian PERSIS di karakter "." tepat setelah "v8" dalam tag komentar
+  `[v8.23.X]` -- KSP (compiler Kotlin utk Symbol Processing, beda dari
+  compiler utama) mem-parse `[...]` di dalam KDoc sebagai REFERENSI
+  BERNAMA (`[MyClass.myMethod]`-style, fitur KDoc asli), lalu tersandung
+  pas ketemu `.23` (digit tidak valid sbg lanjutan identifier setelah
+  titik) -- bukan bug bracket biasa, tapi salah tafsir `[v8.23.2]` sebagai
+  usaha referensi qualified-name yg gagal separuh jalan. Tag `//` (line
+  comment) di file LAIN (TactileSurface.kt, HomeScreen.kt) yg pakai pola
+  SAMA `[v8.23.X]` TIDAK kena -- KDoc reference-parsing cuma aktif di
+  `/** */` block comment, bukan `//`.
+- **Fix**: 6 tag `[v8.23.2]`/`[v8.23.4]` di dalam KDoc diganti jadi
+  `(v8.23.2)`/`(v8.23.4)` (kurung biasa, bukan siku) -- kurung biasa TIDAK
+  dianggap sintaks referensi KDoc apa pun, aman total. 5 tag `//` di
+  file lain TIDAK disentuh (tidak vulnerable, sudah dikonfirmasi lewat
+  daftar error yang TIDAK menyebut file2 itu).
+- File diubah (4, PAS batas 1 task/batch -- fix root cause tunggal):
+  `data/SettingsRepository.kt`, `ui/MainViewModel.kt`,
+  `ui/components/ThemeStyleToggle.kt`, `ui/theme/Theme.kt`.
+  `preflight_check.sh` lolos bersih.
+- **Pelajaran dicatat**: JANGAN pakai tag KDoc `[vX.Y.Z]` (bracket siku +
+  angka bertitik) di comment block `/** */` manapun ke depan -- selalu
+  pakai `(vX.Y.Z)` (kurung biasa) atau tulis di line comment `//`. Ini
+  BUKAN gaya penulisan project yang salah secara umum (ratusan tag
+  `[SAF v2, ...]`/`[fix audit P0 ...]` di file lain AMAN krn ada teks
+  sebelum angka/titik, bukan `v` langsung diikuti digit-titik-digit).
+- Confidence 90% -- ini PERTAMA KALINYA sesi ini fix berdasar pesan error
+  compiler ASLI+dianalisis presisi (posisi kolom persis), bukan tebakan.
+- versionCode 153->154, versionName 8.23.4->8.23.5.
+
+## v8.23.4 -- Glassmorphism batch 3: saklar ON/OFF (bukan radio) + tema ke-3 (2026-08-23)
+- User eksplisit: "saya juga mintanya saklar on-off, bukan radio button.
+  biar 3 theme bisa digunakan" -- 2 perubahan sekaligus, 1 batch krn
+  saling terkait (UI switch + jumlah opsi).
+- **Tema ke-3 ditambah**: `MATERIAL3` (flat/opaque) -- `ThemeStyleOption`
+  sekarang `GLASSMORPHISM`/`NEUMORPHISM`/`MATERIAL3`. Cabang baru di
+  `TactileSurface.kt`: PERSIS perilaku primitif v8.0.0 SEBELUM
+  Glassmorphism dihidupkan lagi (`Surface` M3 baku, `color`/`border`
+  caller apa adanya, 0 alpha/sheen/shadow ganda) -- bukan implementasi
+  baru, restorasi kode lama yang sudah pernah diverifikasi.
+- **UI diganti radio->switch**: `ThemeStyleToggle.kt` -- baris opsi
+  sekarang pakai `TactileSwitch` (bukan ikon Check/RadioButtonUnchecked +
+  tap-select seluruh baris). Tetap MUTUALLY EXCLUSIVE (state `selected`
+  tunggal dari DataStore, BUKAN 3 boolean independen -- tidak mungkin ada
+  situasi 2 gaya "ON" bersamaan atau 0 gaya aktif, sesuai sifat
+  `TactileSurface` yg cuma render 1 gaya per panggilan). Menyalakan
+  switch lain otomatis mematikan switch sebelumnya (via recomposition
+  `checked = selected == option`), menekan switch yang SEDANG ON
+  di-ignore (`onCheckedChange` cuma diteruskan saat `checked=true`) --
+  mencegah state tidak valid "0 gaya aktif".
+- 1 string baru (`theme_toggle_material3`), 0 string dihapus (
+  `theme_toggle_coming_soon` sudah dihapus di v8.23.2, tidak diulang).
+- **TIDAK disentuh**: default tetap GLASSMORPHISM (`SettingsRepository.DEFAULT_THEME_STYLE`,
+  0 regresi user existing), `GlassTokens.kt`/`NeumorphTokens.kt`/
+  `Color.kt` (0 perubahan token warna/WCAG di batch ini -- murni
+  penambahan 1 opsi + ganti komponen UI pemilihnya).
+- File diubah (3): `ui/components/TactileSurface.kt`,
+  `data/SettingsRepository.kt`, `ui/components/ThemeStyleToggle.kt`,
+  `res/values/strings.xml`. `preflight_check.sh` 13/13 lolos.
+- **User WAJIB verifikasi visual**: tab "Tampilan" sekarang tampil 3
+  baris dgn saklar (bukan radio-check), nyalakan salah satu otomatis
+  matikan yg lain, pilih Material 3 Murni -> app balik flat/opaque
+  (tanpa glass/shadow ganda) spt sebelum v8.23.0.
+- versionCode 152->153, versionName 8.23.3->8.23.4.
+
+## v8.23.3 -- FIX REGRESI: centering rusak akibat Glassmorphism (v8.23.1) (2026-08-23)
+- User lapor via screenshot: teks "Scan Sekarang" & ikon di semua menu
+  grouped list tiba-tiba tidak center (nempel kiri-atas). Root cause
+  DITEMUKAN & DIPERBAIKI di `TactileSurface.kt` -- 0 file caller
+  (`HomeScreen.kt`, dst) perlu disentuh, bug murni di primitif v8.23.1.
+- **Akar masalah**: `Box` pembungkus sheen highlight (v8.23.1) TIDAK
+  diberi `propagateMinConstraints = true`. Default Compose Box
+  melonggarkan min-constraint ke 0 utk child non-`matchParentSize` --
+  memutus tight-constraint (mis. `fillMaxWidth` dari CTA) yang
+  sebelumnya (v8.0.0-v8.23.0, `content()` langsung jadi child `Surface`)
+  MENGALIR OTOMATIS ke `content()` lewat `propagateMinConstraints=true`
+  internal M3 `Surface`. Efeknya: `Box(padding, contentAlignment=Center)`
+  di caller (tanpa `fillMaxWidth` eksplisit, MENGANDALKAN constraint yg
+  diteruskan) balik ke ukuran wrap-content sekecil teksnya -- terlihat
+  seolah "nempel kiri-atas" krn Box-nya sendiri jadi sekecil itu, BUKAN
+  krn `contentAlignment=Center` berhenti berfungsi.
+- **Fix**: tambah `propagateMinConstraints = true` ke Box pembungkus
+  sheen (cabang Glassmorphism).
+- **Bug KEDUA ditemukan SAAT audit fix di atas** (BELUM sempat dilaporkan
+  user, ditangkap sebelum jadi masalah nyata): cabang Neumorphism
+  (v8.23.2) SEMUA 3 child (2 shadow + `Surface`) pakai `matchParentSize()`
+  -- 0 child "anchor" utk menentukan ukuran Box, resiko collapse ke
+  tinggi 0 di device beneran (tidak kelihatan simetris di deskripsi teks
+  manapun, cuma ketahuan dari audit ulang kode). Fix: `Surface` (BUKA
+  `matchParentSize()`) jadi anchor, 2 shadow Box match ke situ,
+  `modifier` asli (mis. fillMaxWidth CTA) pindah ke Box terluar +
+  `propagateMinConstraints=true` (pola sama fix di atas).
+- **Pelajaran dicatat eksplisit**: WAJIB pertimbangkan
+  `propagateMinConstraints` SETIAP kali menambah lapisan `Box` pembungkus
+  DI ANTARA `Surface`/M3 primitif dan `content()` caller -- constraint
+  propagation Compose Box TIDAK otomatis transparan, beda dgn asumsi
+  intuitif "cuma nambah 1 layer visual, harusnya 0 efek layout".
+- File diubah (1): `ui/components/TactileSurface.kt`. `preflight_check.sh`
+  13/13 lolos.
+- **User WAJIB verifikasi**: buka Beranda, cek "Scan Sekarang" & ikon
+  semua menu center lagi spt sebelum v8.23.1. Cek juga mode Neumorphism
+  (tab Tampilan) -- kartu/kontrol harus tetap render normal (tidak
+  collapse/hilang).
+- versionCode 151->152, versionName 8.23.2->8.23.3.
+
+## v8.23.2 -- Glassmorphism batch 2/N: toggle "Tampilan" LIVE, Neumorphism ditambah (2026-08-22)
+- User eksplisit: "toggle dikerjakan sungguhan (switch Glass<->Neumorphism)"
+  -- lanjut pending item v8.23.0 #2/#3 (switch runtime + persistensi),
+  SEKALIGUS menuntaskan gaya Neumorphism yang sebelumnya cuma nama opsi
+  di toggle tanpa engine.
+- **Data layer**: `ThemeStyleOption` (GLASSMORPHISM/NEUMORPHISM) DIPINDAH
+  dari `ui/components/ThemeStyleToggle.kt` ke `data/SettingsRepository.kt`
+  (pola sama `ConflictStrategy`) -- persisten via DataStore
+  (`theme_style_option` key), default GLASSMORPHISM (match visual de
+  facto sejak v8.23.1, 0 regresi tampilan utk user existing).
+- **CompositionLocal**: `LocalThemeStyle` baru di `Theme.kt`, diekspos
+  `VaultTheme.style`. `PromptVaultTheme(themeStyle = ...)` param baru
+  (default GLASSMORPHISM, non-breaking). `MainActivity.kt` (protected,
+  edit parsial) koleksi `viewModel.themeStyle` sebelum `PromptVaultTheme`,
+  teruskan sbg param -- 1 sumber kebenaran utk SELURUH subtree app.
+- **Neumorphism BARU DIIMPLEMENTASI PENUH** (bukan cuma placeholder):
+  file baru `NeumorphTokens.kt` (shadow offset/blur/warna terang-gelap,
+  netral bukan warm) + `TactileSurface.kt` cabang total saat
+  `NEUMORPHISM` -- fill OPAQUE (beda dari Glass yang translucent), TANPA
+  border/sheen, kedalaman dari sepasang `Modifier.shadow` (terang
+  kiri-atas, gelap kanan-bawah, offset berlawanan) dgn 2 `Box` diletak
+  DI BAWAH `Surface` fill (fill menutupi titik asal, sisi meleber keluar
+  yang kebaca -- ciri khas soft-UI). `recessed=true` membalik arah
+  shadow (kesan "ditekan", bukan "timbul").
+- **Audit ulang 3 syarat user (berlaku KEDUA gaya)**: (1) murni tanpa
+  campur aduk -- Neumorphism 0 pakai token Glass (translucency/border/
+  sheen) & sebaliknya, dua cabang kode terpisah total di
+  `TactileSurface`. (2) calm/bukan warm -- shadow Neumorphism netral
+  (hitam/putih alpha), 0 hue baru; hue dasar (H222 biru) tetap dari
+  Color.kt, tidak disentuh di kedua gaya. (3) WCAG -- Neumorphism fill
+  100% OPAQUE (bukan translucent), kontras teks PERSIS angka worst-case
+  yang sudah diverifikasi Color.kt, 0 ketidakpastian tambahan (lebih
+  simpel drpd Glass yg translucent).
+- **Toggle "Segera hadir" DIHAPUS** (`ThemeStyleToggle.kt` + string
+  `theme_toggle_coming_soon` dihapus, `theme_toggle_description` diubah)
+  -- badge itu sekarang salah/tidak akurat krn pilihan MEMANG berefek
+  nyata. `HomeScreen.kt` param `themeStyle`/`onSelectThemeStyle` baru
+  (ganti `remember` lokal), `MainViewModel.kt` expose
+  `themeStyle: StateFlow` + `setThemeStyle()` (pola manual StateFlow
+  PERSIS sama dgn `conflictStrategy`, BUKAN `.stateIn` -- konsisten
+  konvensi file, hindari import belum-terverifikasi).
+- **Koreksi kesalahan saat menulis batch ini**: sempat salah sisip baris
+  baru DI TENGAH chain `.let{}` milik `conflictStrategy` (memutus
+  ekspresi multi-baris) -- ketahuan & diperbaiki SEBELUM lanjut, pola
+  StateFlow manual utk `themeStyle` ditulis ulang identik strukturnya.
+  Dicatat di sini sesuai prinsip transparansi log, BUKAN disembunyikan.
+- File diubah (6) + 1 baru: `data/SettingsRepository.kt`,
+  `ui/MainViewModel.kt`, `ui/components/ThemeStyleToggle.kt`,
+  `ui/theme/Theme.kt`, `ui/components/TactileSurface.kt`,
+  `ui/screens/HomeScreen.kt`, `MainActivity.kt` (protected, edit
+  parsial), `res/values/strings.xml`, BARU `ui/theme/NeumorphTokens.kt`.
+  `preflight_check.sh` 13/13 lolos.
+- **User WAJIB verifikasi visual**: buka tab "Tampilan" di Beranda,
+  pilih Neumorphism -- SEMUA kartu/kontrol app harus berubah jadi flat
+  opaque + shadow ganda (bukan glass lagi). Pilih Glassmorphism lagi --
+  balik ke translucent+glint+sheen. Tutup & buka app lagi -- pilihan
+  harus PERSISTEN (DataStore, bukan reset ke Glassmorphism).
+- **⏳ Pending queue**: audit komponen LAIN yang mungkin tidak lewat
+  `TactileSurface` (v8.23.1, masih belum diaudit -- dibawa dari batch
+  sebelumnya).
+- versionCode 150->151, versionName 8.23.1->8.23.2.
+
+## v8.23.1 -- Glassmorphism batch 1/N: engine visual di TactileSurface (2026-08-22)
+- Lanjut pending queue item #1 dari v8.23.0 ("definisi token warna aktual
+  per-gaya, Glassmorphism: border+gradient kaca") -- permintaan baru user
+  eksplisit: "mulai dari glassmorphism, secara bertahap, sampai tuntas",
+  3 syarat: (1) gaya visual Glassmorphism MURNI tanpa keluar dari gaya
+  desain itu sendiri, (2) base color WAJIB calm/bukan warm, (3) 100%
+  WCAG. Batas 1 task/batch -- strategi "bertahap": ubah SATU primitif
+  fondasi (`TactileSurface`), efek menjalar otomatis ke SELURUH app
+  (VaultCard/RuleCard/GroupedListRow/dst, semua 0 disentuh) tanpa perlu
+  batch terpisah per layar.
+- **File baru**: `ui/theme/GlassTokens.kt` -- token alpha fill (raised
+  0.82f/recessed 0.60f), alpha border glass-edge (0.16f/0.07f), brush
+  sheen highlight vertikal. Javadoc lengkap menelusuri 3 syarat user +
+  audit WCAG (lihat poin di bawah).
+- **File diubah**: `ui/components/TactileSurface.kt` -- signature publik
+  **0 berubah** (semua call site existing otomatis dapat wajah glass baru
+  tanpa disentuh). 3 lapisan: fill translucent (alpha dari GlassTokens,
+  hue/warna dasar TIDAK diganti -- tetap H222 biru calm dari Color.kt
+  v8.0.0, TIDAK disentuh sesi ini), border glass-edge default (HANYA
+  kalau caller tidak kirim `border` sendiri -- diverifikasi 0 call site
+  saat ini yang kirim `border` eksplisit), sheen gradient vertikal
+  (dilewati saat `recessed=true`, kesan cekung tidak boleh "berkilau").
+- **Audit WCAG (syarat #3)**: backdrop app SELALU tema gelap sendiri
+  (AppBackground/SurfaceContainer*, tidak pernah foto/konten terang) &
+  SELALU sama-gelap-atau-lebih-gelap dari tingkat surface manapun --
+  fill translucent HANYA bisa bergeser LEBIH GELAP dari nilai opaque
+  nominalnya, TIDAK PERNAH lebih terang. Artinya kontras teks terang di
+  atasnya SELALU >= angka worst-case opaque yang sudah diverifikasi
+  Color.kt (11.64:1/7.54:1), termasuk kasus paling ketat yang ditelusuri
+  manual: label `SegmentedControl` (warna `Primary`, worst-case opaque
+  5.89:1) duduk LANGSUNG di atas fill `recessed` -- fill nyata di sana
+  (`SurfaceContainerHigh`) SUDAH lebih gelap dari acuan worst-case
+  (`SurfaceContainerHighest`), jadi makin aman, bukan makin mepet.
+  Border/sheen 100% dekoratif (prinsip sama `OutlineVariant`), TIDAK
+  tunduk ambang 3:1.
+- **⚠️ BELUM diwire ke `ThemeStyleToggle`/tab "Tampilan" (scaffold
+  v8.23.0)**: Glass sekarang berlaku GLOBAL/tidak bersyarat di
+  `TactileSurface` (bukan dipicu toggle Glassmorphism yang masih
+  "Segera hadir" & 0 efek). Ini artinya badge "Segera hadir" di tab
+  Tampilan sekarang SEDIKIT tidak akurat (Glass SUDAH ada efek nyata di
+  app, walau bukan lewat toggle itu) -- **butuh keputusan user**: (a)
+  toggle nanti dikerjakan sungguhan jadi switch Glass<->Neumorphism (2
+  pending item v8.23.0 #2/#3, CompositionLocal + DataStore), ATAU
+  (b) toggle scaffold dihapus krn Glass sekarang "satu-satunya gaya"
+  bukan pilihan. TIDAK diputuskan sepihak sesi ini -- di luar cakupan
+  "mulai dari glassmorphism" yang diminta (murni visual primitif).
+- **TIDAK disentuh**: `Color.kt`/`Theme.kt` (hue/base color 0 berubah,
+  sesuai syarat #2 -- tetap H222 calm), `TactileTokens.kt` (elevasi M3
+  0 berubah), layout/spacing/typography semua layar, Robolectric/test
+  infra (TETAP dihapus permanen sejak v8.22.21 -- lihat riwayat, TIDAK
+  disinggung/dicoba lagi sesi ini).
+- File diubah (1) + 1 baru: `ui/components/TactileSurface.kt`, BARU
+  `ui/theme/GlassTokens.kt`. `preflight_check.sh` 13/13 lolos.
+- **User WAJIB verifikasi visual**: buka semua layar, cek kartu/kontrol
+  terlihat translucent+glint+sheen (bukan flat opaque M3 lama), teks
+  tetap terbaca jelas di semua kondisi (termasuk elemen recessed:
+  switch OFF, grabber sheet, segmented control track).
+- **⏳ Pending queue (lanjut batch berikutnya)**: sisa gaya
+  Glassmorphism di komponen LAIN yang TIDAK lewat `TactileSurface` (cek
+  ada/tidaknya -- perlu audit), keputusan wiring `ThemeStyleToggle` di
+  atas, item lama v8.23.0 #2/#3 (switch runtime, persistensi) MASIH
+  pending independen dari keputusan itu.
+- versionCode 149->150, versionName 8.23.0->8.23.1.
+
+## v8.23.0 -- FITUR BARU (KERANGKA): tab "Tampilan" di Beranda, picker gaya tema Glassmorphism/Neumorphism -- 2026-08-22
+- **User minta eksplisit**: tab baru di Beranda khusus toggle 2 gaya tema
+  custom (Glassmorphism/Neumorphism), TEGAS diinstruksikan "jangan kerjakan
+  isinya dulu, cukup kerangkanya saja" -- BUKAN permintaan full engine
+  switch tema, murni scaffold UI.
+- **Implementasi**: `SegmentedControl` (komponen existing, sama yg dipakai
+  tab Log/Undo di `ActivityLogScreen.kt`, 0 perubahan pada komponen itu
+  sendiri) ditambah di atas `Column` Beranda -- 2 opsi "Beranda"/"Tampilan".
+  Tab "Beranda" (index 0) = konten LAMA persis (VaultCard+CTA+GroupedList),
+  dibungkus `else` block, 0 perubahan logic/tampilan. Tab "Tampilan"
+  (index 1) = komponen BARU `ThemeStyleToggle` (`ui/components/
+  ThemeStyleToggle.kt`) -- 2 opsi selectable (`TactileSurface` + ikon
+  check/radio), badge "Segera hadir" eksplisit.
+- **KERANGKA MURNI, ditulis eksplisit di KDoc `ThemeStyleToggle.kt`**: state
+  pilihan (`enum class ThemeStyleOption`) & tab aktif SAMA-SAMA `remember`
+  LOKAL di `HomeScreen.kt` -- TIDAK ditulis ke DataStore/Prefs manapun,
+  TIDAK menyentuh `Theme.kt`/`Color.kt`/`TactileSurface.kt`/komponen render
+  manapun. Menekan opsi Glassmorphism/Neumorphism **0 efek visual** ke app
+  saat ini -- sengaja, badge "Segera hadir" menjelaskan ini ke user supaya
+  tidak dikira bug.
+- **Bug ditemukan & DIPERBAIKI sebelum packaging**: komentar XML baru di
+  `strings.xml` sempat pakai `--` di dalam `<!-- ... -->` -- **kelas bug
+  berulang ke-5** (v2.6.0, v2.24.1, v7.0.0, v8.5.0b, sekarang) -- preflight
+  kategori #10 menangkapnya benar SEBELUM packaging kali ini (bukan lolos
+  ke CI dulu baru ketahuan seperti v8.5.0b). Fix: ganti `--` jadi `;`.
+- **Pending Queue (DI LUAR SCOPE batch ini, menyusul kalau diminta)**:
+  (1) definisi token warna aktual per-gaya (Glassmorphism: border+gradient
+  kaca; Neumorphism: dual-shadow terarah -- referensi teknik dari sesi lain
+  yang pernah dikerjakan di base v2.x project ini, TIDAK ikut ter-carry ke
+  v8.x krn 2 base sempat divergen, lihat riwayat chat), (2) mekanisme
+  switch runtime nyata di `Theme.kt` (kemungkinan `CompositionLocal` baru
+  utk pilih teknik render per komponen), (3) persistensi pilihan user
+  (DataStore, pola sama `SettingsScreen.kt`).
+- File diubah (3) + 1 baru: `ui/screens/HomeScreen.kt`, `res/values/
+  strings.xml`, `FILE_MANIFEST.txt`; BARU `ui/components/
+  ThemeStyleToggle.kt`. `preflight_check.sh` lolos bersih (13/13, termasuk
+  well-formedness XML setelah fix `--`).
+- **BELUM PERNAH lewat `./gradlew` asli di sandbox ini**. User WAJIB
+  verifikasi: (1) tab "Beranda"/"Tampilan" muncul & switch mulus tanpa
+  crash; (2) tab "Beranda" tampilannya IDENTIK sebelum batch ini (0
+  regresi); (3) tab "Tampilan" nampilin 2 opsi + badge "Segera hadir",
+  tekan opsi TIDAK mengubah tampilan app (memang sengaja).
+- versionCode 148->149, versionName 8.22.21->8.23.0.
+
+## v8.22.21 ROLLBACK -- Robolectric OOM TERULANG PERSIS walau 2 lapis mitigasi v8.22.16 sudah aktif (2026-08-22)
+- **Gejala**: user upload `build-failure-log-v8_22_20.zip`. Compile SUKSES (fix DSL v8.22.20 terbukti jalan), TAPI `:app:testDebugUnitTest FAILED` -- "Process 'Gradle Test Executor 1' finished with non-zero exit value 10", 0 stack trace/assertion. **Sinyal identik 1:1 dgn v8.22.14** (yang memicu rollback v8.22.15).
+- **Konteks penting**: ini kali PERTAMA `testOptions.unitTests.all{}` (maxParallelForks=1 + maxHeapSize=2048m, ditulis v8.22.16) BENAR-BENAR jalan -- sebelumnya keburu gagal di step Gradle-version (v8.22.17) lalu gap diagnostik (v8.22.18) lalu bug syntax DSL sendiri (v8.22.20). Sekarang teruji nyata: 2 lapis mitigasi TIDAK CUKUP, runner CI (~7GB) tetap OOM menjalankan Robolectric.
+- **Fix = ROLLBACK sesuai kontingensi yang SUDAH ditulis eksplisit di v8.22.16** ("kalau MASIH merah dgn sinyal OOM sama meski 2 lapis mitigasi -> skip Robolectric permanen, terima reboot-survival end-to-end sbg gap test terdokumentasi"): hapus `testOptions.unitTests{}` block + 4 baris `testImplementation` (Robolectric/androidx.test:core/androidx.test.ext:junit/work-testing) di `app/build.gradle.kts`, hapus file `worker/BootSurvivalWorkManagerTest.kt` (diverifikasi 100% unreferenced via grep sebelum hapus).
+- **TIDAK dicoba**: `org.gradle.parallel=false` (opsi lain yg sempat ditulis di v8.22.16, TAPI belum ada bukti itu akan berhasil & dampaknya lebih luas -- prioritas "regresi dilarang keras" = kembali ke state TERBUKTI hijau, bukan coba tebakan ke-3).
+- **TIDAK disentuh**: `AutoSortLifecycleLogic.kt`/`AutoSortLifecycleLogicTest.kt` (pure-logic, TIDAK butuh Robolectric, tetap jalan), semua production code.
+- File diubah (2) + 1 dihapus: `app/build.gradle.kts`, `FILE_MANIFEST.txt`; DIHAPUS `worker/BootSurvivalWorkManagerTest.kt`.
+- **⏳ PENDING QUEUE**: reboot-survival end-to-end test via Robolectric TIDAK dicoba lagi kecuali user eksplisit minta & terima risiko OOM CI (sudah 2x percobaan gagal identik: v8.22.14, sekarang). Kalau diminta lagi: opsi belum tercoba = `org.gradle.parallel=false` global, atau jalankan test di runner GitHub Actions yg lebih besar (`ubuntu-latest-4-cores`/self-hosted).
+- versionCode 147->148, versionName 8.22.20->8.22.21.
+
+## v8.22.20 COMPILE-FIX -- Kotlin DSL `unitTests.all{}` implicit receiver: `maxParallelForks`/`maxHeapSize` unresolved (2026-08-22)
+- **Gejala**: user upload `build-failure-log-v8_22_19.zip`. `Configure project :app` gagal -- `Unresolved reference: maxParallelForks` & `maxHeapSize` di `app/build.gradle.kts:89-90`.
+- **Root cause**: `unitTests { all { maxParallelForks = 1; maxHeapSize = "2048m" } }` (ditambah v8.22.16) -- lambda `all(Action<Test>)` di Kotlin DSL TIDAK memberi implicit receiver `Test`, cuma parameter `it: Test`. Akses properti bare (`maxParallelForks = 1`) salah resolve ke scope luar, bukan ke `it`.
+- **Fix**: `it.maxParallelForks = 1` & `it.maxHeapSize = "2048m"`. 2 baris, nol perubahan logika/nilai.
+- versionCode 146->147, versionName 8.22.19->8.22.20.
+- **Belum diverifikasi CI hijau** -- WAJIB dicek run Actions berikutnya.
+
+## v8.22.19 -- Fix RACE CONDITION di logging v8.22.18 sendiri: exec>tee kehilangan log step yang exit cepat (2026-08-22)
+- User upload build-failure-log-v8_22_18: ADA `stale-run-guard.log`,
+  `read-version.log`, `generate-wrapper.log` -- TAPI TETAP TIDAK ADA
+  `decode-keystore.log`, padahal step "Decode keystore" persis yang perlu
+  dilihat (step SETELAH generate-wrapper yg terakhir berhasil).
+- **Root cause (bug di fix v8.22.18 sendiri, bukan CI/keystore)**: pola
+  `exec > >(tee file) 2>&1` yang ditambahkan v8.22.18 menjalankan `tee` di
+  SUBSHELL BACKGROUND lewat process substitution -- kalau step exit CEPAT
+  (mis. langsung `exit 1` tak lama setelah baris `exec`), shell utama bisa
+  selesai/step di-terminate SEBELUM subshell tee sempat membuka/menulis
+  file ke disk sama sekali. Race condition murni, bukan bug logic di
+  keystore/secret.
+- **Fix**: ganti ke pola `{ block; } 2>&1 | tee file` (tee FOREGROUND,
+  anggota pipeline biasa -- shell WAJIB tunggu tee selesai sebelum
+  pipeline dianggap kelar) di ke-4 step yang kena (Stale run guard, Read
+  app version, Generate wrapper, Decode keystore) -- PERSIS pola yang
+  SUDAH terbukti reliable di "Compile, test, and build" sejak awal
+  (build-all.log SELALU lengkap di setiap kegagalan sebelumnya, termasuk
+  v8.22.14).
+- File diubah (1, PAS batas 1 task/batch): `.github/workflows/build.yml`.
+  `preflight_check.sh` lolos bersih.
+- **Isi step Decode keystore/dst SENDIRI TETAP TIDAK diubah** -- masih
+  belum ada bukti nyata itu sumber masalah aslinya (SEKARANG baru akan
+  ketahuan dari `decode-keystore.log` kalau memang di situ yang gagal).
+- Confidence 65% utk logging kali ini AKHIRNYA lengkap. Kalau masih
+  hilang log tertentu lagi, kemungkinan ada step LAIN yang perlu pola
+  sama (mis. "Rename APK"/"Force-flag Latest") -- belum disentuh sesi
+  ini, di luar scope (Decode keystore prioritas krn itu yang sedang
+  dicurigai).
+- versionCode 145->146, versionName 8.22.18->8.22.19.
+
+## v8.22.18 -- CI merah LAGI, tapi kali ini fix v8.22.17 TERBUKTI jalan -- gap diagnostik, bukan bug baru (2026-08-22)
+- User upload build-failure-log-v8_22_17: **MASIH tanpa `build-all.log`**,
+  cuma sisa `configuration-cache-report.html` -- TAPI kali ini bukti di
+  dalamnya BEDA total dari v8.22.16: `documentationLink` mengarah ke
+  `docs.gradle.org/8.9/...` (BUKAN 9.7.0 lagi), `totalProblemCount: 0`,
+  `requestedTasks: "wrapper --gradle-version 8.9..."`. **Kesimpulan: fix
+  v8.22.17 (pin gradle-version 8.9) SUKSES** -- step "Generate pinned
+  Gradle Wrapper" sekarang jalan bersih pakai Gradle 8.9 yang benar.
+- **Masalah sebenarnya**: kegagalan v8.22.18 ini ada di step SETELAH
+  wrapper generation (paling mungkin "Decode keystore", satu-satunya step
+  tersisa sebelum "Compile, test, build") -- TAPI TIDAK ADA CARA melihat
+  errornya, karena SEBELUM batch ini cuma step "Compile, test, and build"
+  yang merekam output ke file (`build-all.log`). Step lain (Stale run
+  guard, Read app version, Generate wrapper, Decode keystore) cuma nulis
+  ke log step Actions bawaan, yang TIDAK ikut ter-upload oleh step
+  "Upload build log on failure" (cuma ambil `build-all.log` +
+  `**/build/reports/**`).
+- **Fix batch ini = TUTUP GAP DIAGNOSTIK ini**, bukan tebak-tebak isi
+  error "Decode keystore" tanpa bukti: SEMUA step sekarang rekam
+  stdout+stderr sendiri lewat `exec > >(tee <nama>.log) 2>&1` (bukan
+  `cmd | tee file` -- exec TIDAK bikin pipe yg bisa masking exit code,
+  jadi malah LEBIH aman dari pola `| tee` lama, tidak perlu trik pipefail
+  workaround). Upload-on-failure sekarang ambil `*.log` (glob), bukan 1
+  nama file spesifik -- kegagalan step manapun ke depan otomatis
+  ter-capture.
+- **TIDAK diubah**: isi step Decode keystore/Stale run guard/dst sendiri
+  (logic-nya, bukan cuma cara merekam output) -- BELUM TAHU itu memang
+  sumber masalahnya, jangan tebak sebelum ada bukti.
+- File diubah (1, PAS batas 1 task/batch): `.github/workflows/build.yml`.
+  `preflight_check.sh` lolos bersih (YAML valid).
+- **⚠️ Confidence 60%** utk build ini SENDIRI jadi hijau (belum tentu --
+  root cause aslinya masih belum diketahui!) tapi **95% kalau MASIH
+  merah, sekarang PASTI ketahuan tepat step & pesan errornya** dari log
+  yang di-upload. User: kalau merah lagi, upload ulang
+  build-failure-log-nya -- kali ini akan ada `decode-keystore.log` (atau
+  `stale-run-guard.log`/`read-version.log`/`generate-wrapper.log`) yang
+  isinya pesan error asli, bukan tebakan lagi.
+- versionCode 144->145, versionName 8.22.17->8.22.18.
+
+## v8.22.17 -- FIX ROOT CAUSE CI: pin gradle-version di setup-gradle, bukan bug Robolectric (2026-08-22)
+- User upload build-failure-log-v8_22_16: **TIDAK ADA `build-all.log` sama
+  sekali** di artifact (beda total dari kegagalan v8.22.14 yang ada log
+  lengkap) -- cuma sisa `configuration-cache-report.html` dari step
+  sebelumnya. Artinya gagal SEBELUM step "Compile, test, and build release
+  APK" (yang bikin file log itu) sempat jalan -- 2 lapis fix Robolectric
+  v8.22.16 TIDAK RELEVAN dgn kegagalan ini (belum sempat diuji).
+- **Root cause ditemukan** dari isi `configuration-cache-report.html`
+  (embedded JSON diagnostics): link dokumentasi deprecation mengarah ke
+  `docs.gradle.org/9.7.0/...` -- runner image sudah menyediakan Gradle
+  ambien 9.7.0 (bergeser dari "9.6.1" yang diantisipasi komentar lama),
+  TIDAK KOMPATIBEL dgn AGP 8.5.2. Step "Setup Gradle" (`gradle/actions/
+  setup-gradle@v3`) SEBELUMNYA dipanggil TANPA `gradle-version:` -- cuma
+  nyiapkan caching, TIDAK provision binary sendiri -- jadi step berikutnya
+  ("Generate pinned Gradle Wrapper (8.9)") terpaksa pakai `gradle` ambien
+  9.7.0 utk MENJALANKAN `gradle wrapper --gradle-version 8.9`, yg berarti
+  Gradle 9.7.0 itu sendiri yang harus configure project (baca AGP 8.5.2)
+  SEBELUM sempat menghasilkan wrapper 8.9 -- crash duluan di situ.
+- **Fix**: `with: gradle-version: '8.9'` ditambahkan ke step "Setup Gradle"
+  -- action ini PROVISION sendiri binary Gradle 8.9 (download resmi dari
+  dalam action, tidak bergantung image runner), dipakai utk SEMUA step
+  Gradle berikutnya termasuk generate-wrapper. Menghilangkan sumber drift
+  versi ini secara PERMANEN (bukan cuma sekali), bukan cuma tambal
+  kejadian ini.
+- **TIDAK disentuh**: `testOptions`/Robolectric/`BootSurvivalWorkManagerTest.kt`
+  (v8.22.16, belum sempat diuji krn gagal duluan sebelum situ -- TETAP
+  status "belum terverifikasi", bukan berarti sudah gagal juga).
+- File diubah (1, PAS batas 1 task/batch -- fix root cause tunggal):
+  `.github/workflows/build.yml`.
+  `preflight_check.sh` lolos bersih (YAML valid).
+- **⚠️ Confidence 70%** -- fix ini ADALAH pola standar/dianjurkan resmi utk
+  masalah drift versi Gradle di CI (provision eksplisit lewat action,
+  bukan bergantung ambien), tapi TETAP belum bisa dijalankan nyata di
+  sesi ini (0 akses network/gradle). Kalau step ini lolos, langkah
+  berikutnya baru akan menguji Robolectric v8.22.16 utk PERTAMA KALINYA
+  -- kalau CI merah lagi, PERIKSA DULU apakah gagalnya di step Robolectric
+  (build-all.log ADA kali ini) atau masih di step Gradle/wrapper
+  (build-all.log TIDAK ADA lagi) -- dua kelas masalah yang beda, jangan
+  disamakan.
+- versionCode 143->144, versionName 8.22.16->8.22.17.
+
+## v8.22.16 -- Re-add Robolectric dgn fix OOM eksplisit (maxParallelForks + CI 1-varian) (2026-08-22)
+- Lanjutan v8.22.15 (rollback): user minta reboot-survival test ditambah
+  lagi TAPI kali ini beneran fix root cause OOM, bukan cuma revert.
+- **2 lapis mitigasi** (bukan cuma 1) atas root cause v8.22.14 (2 JVM
+  Robolectric paralel di runner CI terbatas):
+  1. `app/build.gradle.kts` -- `testOptions.unitTests.all { maxParallelForks
+     = 1; maxHeapSize = "2048m" }` (baru, eksplisit -- sebelumnya default
+     Gradle yg biasanya = jumlah core CPU runner).
+  2. `.github/workflows/build.yml` -- invocation gradlew SEKARANG cuma
+     `testDebugUnitTest` (drop `testReleaseUnitTest`). Project tidak punya
+     test source set per-buildType (`app/src/test/` tunggal, bukan
+     `testDebug/`/`testRelease/`) -- 0 coverage hilang, cuma hilangkan
+     duplikasi 2 JVM Robolectric jalan bersamaan.
+- Dependency `testImplementation` (Robolectric 4.13, androidx.test:core
+  1.6.1, androidx.test.ext:junit 1.2.1, androidx.work:work-testing 2.9.1) +
+  `testOptions.unitTests.isIncludeAndroidResources` DITAMBAH LAGI, versi
+  SAMA PERSIS dgn v8.22.14 (versi bukan penyebab OOM).
+- File test `worker/BootSurvivalWorkManagerTest.kt` ditulis ULANG dari
+  spesifikasi 4 skenario di log v8.22.14 (file lama sudah terlanjur
+  dihapus di rollback v8.22.15, TIDAK sempat dibaca isinya sebelum
+  dihapus) -- isi baru: `WorkManagerTestInitHelper`+`SynchronousExecutor`,
+  4 test (reboot ON->ENQUEUED, reboot OFF->tidak ada worker aktif, reboot
+  ON->OFF->ON->state akhir konsisten, `AutoSortWorker.doWork()` nyata
+  dieksekusi saat OFF->`Result.Success` no-op).
+- **TIDAK disentuh**: `AutoSortLifecycleLogic.kt`/`AutoSortLifecycleLogicTest.kt`,
+  `WorkScheduler`/`BootCompletedReceiver`/`AutoSortWorker` (production code,
+  0 perubahan, cuma dipakai apa adanya dari test), `gradle.properties`
+  (`org.gradle.parallel=true` TETAP -- tidak perlu dimatikan global, cukup
+  dibatasi di level test task + kurangi jadi 1 varian).
+- File diubah (3, PAS batas 1 task/batch): `app/build.gradle.kts`,
+  `.github/workflows/build.yml`, BARU `worker/BootSurvivalWorkManagerTest.kt`.
+  + `FILE_MANIFEST.txt` (bookkeeping, re-add 1 baris).
+  `preflight_check.sh` lolos bersih.
+- **⚠️ TETAP TIDAK BISA diverifikasi compile/run nyata di sesi ini** (0 akses
+  gradle/Android SDK/network) -- Confidence Rating **75%** (lebih rendah dari
+  v8.22.14/80% krn kali ini reconstructing test file dari spesifikasi log,
+  bukan dari file asli yang sempat dibaca). **User WAJIB pantau run CI
+  pertama ekstra ketat** -- kalau MASIH merah dgn sinyal OOM yang sama
+  meski sudah 2 lapis mitigasi, opsi berikutnya: turunkan
+  `org.gradle.parallel` jadi `false` (dampak lebih luas, belum dicoba), atau
+  skip Robolectric permanen & terima reboot-survival end-to-end sebagai gap
+  test yang didokumentasikan (bukan dites).
+- **⏳ PENDING QUEUE**: KOSONG kalau CI hijau. Kalau CI masih merah: lihat
+  opsi di atas.
+- versionCode 142->143, versionName 8.22.15->8.22.16.
+
+## v8.22.15 -- ROLLBACK: CI merah, Robolectric bikin Gradle Test Executor crash (2026-08-22)
+- User upload `build-failure-log-v8.22.14`: `testReleaseUnitTest` +
+  `testDebugUnitTest` SAMA-SAMA gagal, "Process 'Gradle Test Executor N'
+  finished with non-zero exit value 10" -- 0 stack trace/assertion, 0
+  output test spesifik apa pun. Bukan bug logic (kompilasi + lint vital +
+  packageRelease semua SUKSES duluan).
+- **Analisis**: sinyal ini (crash worker senyap, exit 10, KEDUA varian
+  gagal identik bersamaan, 0 assertion) klasik Robolectric OOM di runner
+  CI terbatas (`ubuntu-latest`, ~7GB) -- `org.gradle.parallel=true`
+  (gradle.properties) bikin `testDebugUnitTest`+`testReleaseUnitTest`
+  jalan BERSAMAAN dalam 1 invocation gradlew (`compileDebugKotlin
+  testDebugUnitTest testReleaseUnitTest assembleRelease`), masing2 spawn
+  JVM Robolectric sendiri (classloading shadow Android SDK berat) di atas
+  Gradle+Kotlin daemon yang masih resident dari fase compile. TEPAT
+  skenario yang sudah diperingatkan eksplisit di v8.22.14 (\"Confidence
+  Rating 80%\", \"user WAJIB pantau CI ekstra ketat\").
+- **Fix = ROLLBACK PERSIS sesuai kontingensi yang SUDAH ditulis di
+  v8.22.14** (bukan tambal baru): revert `app/build.gradle.kts` ke state
+  v8.22.13 (hapus 4 baris `testImplementation` Robolectric/androidx.test/
+  work-testing + block `testOptions.unitTests.isIncludeAndroidResources`),
+  hapus file test `worker/BootSurvivalWorkManagerTest.kt` (100%
+  unreferenced, murni test infra, 0 kode lain kena).
+- **TIDAK disentuh**: `AutoSortLifecycleLogic.kt`/`AutoSortLifecycleLogicTest.kt`
+  (v8.22.12, pure-logic test, TIDAK butuh Robolectric, TETAP jalan),
+  `DiagnosticsScreen.kt` (v8.22.13), scan logic, semua fitur non-test-infra.
+- File diubah (2) + 1 dihapus: `app/build.gradle.kts`,
+  `FILE_MANIFEST.txt`; DIHAPUS `worker/BootSurvivalWorkManagerTest.kt`.
+  `preflight_check.sh` lolos bersih.
+- **Pelajaran dicatat**: kalau reboot-survival/WorkManager end-to-end test
+  diminta lagi nanti, JANGAN Robolectric di 2 test task paralel tanpa
+  `maxParallelForks`/heap eksplisit di `testOptions.unitTests.all{}}`, ATAU
+  jalankan cuma 1 varian (`testDebugUnitTest` saja) di CI -- bukan
+  dilarang total, tapi butuh constraint eksplisit supaya tidak OOM di
+  runner terbatas. TIDAK dieksekusi sekarang (di luar scope rollback ini,
+  1 task/batch) -- dicatat di Pending Queue.
+- **⏳ PENDING QUEUE**: (1) Kalau reboot-survival test end-to-end tetap
+  diinginkan ke depan: setup ulang Robolectric TAPI dengan
+  `maxParallelForks=1`/heap eksplisit per test task, atau batasi CI cuma
+  jalankan 1 varian unit test.
+- versionCode 141->142, versionName 8.22.14->8.22.15.
+
+## v8.22.14 -- Pending queue P2 #5-lanjutan, setup Robolectric + reboot survival test (2026-08-22)
+- Eksekusi item pending TERAKHIR dari antrean audit (v8.22.11 -> v8.22.12
+  -> v8.22.13, semua item lain sudah tuntas). Batas 1 task/batch --
+  tidak ada item lain di pending queue setelah ini per audit user
+  2026-08-22.
+- **⚠️ RISIKO EKSPLISIT (WAJIB dibaca sebelum push)**: batch ini mengubah
+  `app/build.gradle.kts` (protected asset, dependency BARU) TANPA akses
+  gradle/Android SDK/network di sesi ini -- TIDAK BISA diverifikasi
+  compile/run. CI (`build.yml`) menjalankan `testDebugUnitTest
+  testReleaseUnitTest` SEBELUM `assembleRelease` DALAM SATU perintah
+  gradle yang sama (lihat step \"Compile, test, and build release APK\") --
+  kalau dependency/test baru gagal compile atau gagal assert, SELURUH
+  pipeline release (termasuk APK) ikut gagal, bukan cuma test yang merah.
+  Confidence Rating batch ini **80%** (lebih rendah dari batch biasa)
+  krn ketidakpastian genuinely tidak bisa dihilangkan tanpa run gradle
+  asli -- **user WAJIB pantau run CI pertama setelah push ini lebih
+  ketat dari biasanya**, siap revert `app/build.gradle.kts` (3 baris
+  `testImplementation` + block `testOptions` baru, lihat CHANGELOG) kalau
+  merah.
+- **Dependency baru** (`testImplementation`, 0 pengaruh ke release APK
+  App itu sendiri -- murni test classpath): `org.robolectric:robolectric:4.13`,
+  `androidx.test:core:1.6.1`, `androidx.test.ext:junit:1.2.1` (sudah ada
+  di androidTestImplementation, ditambah varian testImplementation),
+  `androidx.work:work-testing:2.9.1` (PERSIS sama versi
+  `work-runtime-ktx` yang sudah dipakai -- wajib sinkron, API internal
+  WorkManager sensitif mismatch versi). Plus `testOptions.unitTests.isIncludeAndroidResources = true`
+  di block `android {}` (wajib utk Robolectric baca manifest/res).
+- **Test baru**: `worker/BootSurvivalWorkManagerTest.kt` (4 test, Robolectric
+  + `WorkManagerTestInitHelper`, WorkManager ASLI bukan mock): (1) reboot
+  simulasi dgn toggle ON -> worker periodik ENQUEUED, (2) reboot dgn
+  toggle OFF -> tidak ada worker aktif, (3) reboot berulang ON->OFF->ON
+  -> state akhir konsisten dgn toggle terakhir, (4) `AutoSortWorker.doWork()`
+  BENAR-BENAR dieksekusi (bukan cuma pure-logic gate spt
+  `AutoSortLifecycleLogicTest` v8.22.12) saat toggle OFF -> verifikasi
+  `Result.success()` no-op nyata.
+- **Reboot disimulasikan LANGSUNG panggil**
+  `WorkScheduler.rescheduleFromSavedSettings()` (badan kerja
+  `BootCompletedReceiver` SETELAH `goAsync()`), BUKAN lewat `onReceive()`
+  itu sendiri -- `goAsync()`+coroutine fire-and-forget tidak bisa
+  di-await sinkron dari test, dan itu sendiri murni proteksi lifecycle
+  proses OS (Robolectric 1 JVM, tidak pernah benar2 matikan proses),
+  bukan logic yang perlu diuji benar/salah. Didokumentasikan eksplisit
+  di javadoc test supaya sesi berikutnya tidak salah kira ini "belum
+  lengkap".
+- **TIDAK disentuh**: `AutoSortLifecycleLogic.kt`/`AutoSortLifecycleLogicTest.kt`
+  (v8.22.12, tetap dipakai apa adanya, TIDAK diduplikasi), scan logic
+  (`FileSorter`/`ScanExecution`), `DiagnosticsScreen.kt` (v8.22.13).
+- File diubah (1) + 1 baru: `app/build.gradle.kts`, BARU
+  `test/.../worker/BootSurvivalWorkManagerTest.kt`. `preflight_check.sh`
+  13/13 lolos (cek statis -- TIDAK setara `./gradlew test` beneran,
+  lihat peringatan risiko di atas).
+- **User WAJIB verifikasi**: (1) **PANTAU run CI Actions pertama ekstra
+  ketat**, khususnya step compile+test, (2) kalau merah & sulit
+  didiagnosis cepat, opsi tercepat: revert 4 baris `testImplementation`
+  baru + block `testOptions` di `app/build.gradle.kts` dan file test
+  baru (rollback ke v8.22.13, 0 fitur lain kena krn scope batch ini
+  murni test infra), (3) kalau hijau, build CI + APK seperti biasa.
+- **⏳ PENDING QUEUE**: KOSONG -- semua item audit 2026-08-22 (P2 #3/#4/#5,
+  P3 #6) sudah dieksekusi per batch masing2. Sesi berikutnya mulai dari
+  nol/instruksi baru user, TIDAK ada carry-over otomatis.
+- versionCode 140->141, versionName 8.22.13->8.22.14.
+
+## v8.22.13 -- Pending queue P3 #6, Diagnostics bedakan toggle/WorkManager/next-run (2026-08-22)
+- Eksekusi P3 #6 dari pending queue (v8.22.12): Diagnostics belum bedakan
+  `autoSortEnabled` vs WorkManager state vs next scheduled run. Batas
+  1 task/batch -- P2 #5-lanjutan (setup Robolectric, reboot survival
+  test) TETAP pending, TIDAK disentuh sesi ini (butuh ubah
+  `app/build.gradle.kts` dependency yang tidak bisa diverifikasi
+  compile/run tanpa akses gradle/Android SDK, lihat catatan v8.22.12).
+- **Sebelumnya**: `readWorkStatus()` di `DiagnosticsScreen.kt` cuma
+  tampilkan `WorkInfo.state` mentah -- user tidak bisa bedakan apakah
+  state itu MEMANG cerminan toggle Auto-Sort di Pengaturan, atau
+  WorkManager belum sinkron (ada latency propagasi setelah toggle
+  diubah). Tidak ada info kapan scan berikutnya bakal jalan.
+- **Fix**: `readWorkStatus()` sekarang tampilkan 3 baris terpisah: (1)
+  toggle `autoSortEnabled` dari `SettingsRepository` (sumber kebenaran
+  UI Pengaturan, DIBACA LANGSUNG, bukan diturunkan dari WorkManager),
+  (2) state WorkManager apa adanya, (3) `WorkInfo.nextScheduleTimeMillis`
+  (tersedia sejak androidx.work 2.9.0, project sudah pakai 2.9.1) --
+  `Long.MAX_VALUE` (tidak ada jadwal diketahui, mis. worker CANCELLED)
+  diformat sbg teks "tidak diketahui", bukan angka mentah.
+- Fungsi diubah dari `private fun` jadi `private suspend fun` (perlu
+  `SettingsRepository.getAutoSortEnabled()` yang suspend) -- aman krn
+  satu2nya pemanggil sudah di dalam `LaunchedEffect` (coroutine scope).
+- 6 string baru (`diag_status_toggle_fmt`, `diag_toggle_on`,
+  `diag_toggle_off`, `diag_status_workinfo_fmt`, `diag_next_run_unknown`,
+  `diag_status_checked_fmt`), 1 string LAMA DIHAPUS (`diag_status_fmt`,
+  100% unreferenced setelah restrukturisasi ini -- diganti 3 string di
+  atas, bukan penghapusan file per Aturan #6 jadi tidak butuh izin
+  terpisah, murni penggantian resource string dalam 1 task).
+- **TIDAK disentuh**: `AutoSortWorker`/`WorkScheduler`/`ScanExecution`
+  (scan logic & scheduling), `AutoSortLifecycleLogic.kt` (v8.22.12,
+  tetap dipakai apa adanya), UI card lain di `DiagnosticsScreen.kt`
+  (crash log, downloads file names, manual verify steps).
+- File diubah (2): `ui/screens/DiagnosticsScreen.kt`, `res/values/strings.xml`.
+  `preflight_check.sh` 13/13 lolos. Confidence Rating: **92%** (perubahan
+  UI-only + baca DataStore/WorkManager yang sudah dipakai pola serupa di
+  tempat lain; turun dari 95%+ krn `nextScheduleTimeMillis` behaviour
+  persis di WorkManager versi tertentu/device tertentu belum pernah
+  diverifikasi visual di HP nyata).
+- **User WAJIB verifikasi**: build CI hijau, buka Diagnostik dari Home,
+  cek 3 baris (toggle/state/jadwal berikutnya) tampil masuk akal --
+  khususnya coba matikan Auto-Sort di Pengaturan lalu buka Diagnostik
+  lagi, toggle line harus langsung berubah NONAKTIF walau state
+  WorkManager mungkin masih nunjuk CANCELLED beberapa saat.
+- **⏳ PENDING QUEUE (1 item)**:
+  1. P2 #5-lanjutan: Setup Robolectric + `androidx.work:work-testing`,
+     test end-to-end reboot survival (BootCompletedReceiver) -- lihat
+     v8.22.12 utk alasan kenapa ditunda (risiko ubah dependency tanpa
+     verifikasi compile).
+- versionCode 139->140, versionName 8.22.12->8.22.13.
+
+## v8.22.12 -- Pending queue P2 #5 (partial), pure-logic test lifecycle Auto-Sort (2026-08-22)
+- Eksekusi P2 #5 dari pending queue (v8.22.11): "Test lifecycle Auto-Sort
+  belum lengkap (7 skenario ON/OFF/reboot/widget)". Batas 1 task/batch --
+  P3 #6 (Diagnostics autoSortEnabled vs WorkManager state) TETAP pending.
+- **Scope**: project 0 infra Robolectric/instrumented (dikonfirmasi
+  v8.22.11) -- menambah itu butuh ubah dependency `app/build.gradle.kts`
+  (protected asset) yang TIDAK bisa diverifikasi compile/run di sesi ini
+  (tanpa akses gradle/Android SDK). Jalan aman: extract-function keputusan
+  PURE dari 3 file worker ke 1 file baru, test murni JVM (pola sama
+  `RuleRepositoryPureLogicTest`/`FileSorterPureLogicTest`), 0 dependency
+  baru.
+- **File baru**: `worker/AutoSortLifecycleLogic.kt` -- 5 fungsi pure:
+  `shouldRunPeriodicScan` (gate ON/OFF), `shouldRunManualScan` (selalu
+  true, regression guard asimetri manual), `shouldScheduleWork`
+  (scheduler ON->schedule/OFF->cancel), `ongoingNotifTitleRes` &
+  `resultNotifTitleRes` (pemilihan judul notif manual vs periodik,
+  v8.22.11).
+- **Rewire APA ADANYA** (0 perubahan perilaku, murni panggil fungsi baru):
+  `AutoSortWorker.doWork()`, `WorkScheduler.syncFromSavedSettings()`,
+  `AutoSortNotification.foregroundInfo()` + `resultNotification()`.
+- **Test baru**: `AutoSortLifecycleLogicTest.kt` (9 test) -- cover 6 dari
+  7 skenario audit: ON/OFF periodik (2), manual selalu jalan (1),
+  scheduler schedule/cancel (2), judul notif ongoing+hasil x manual/
+  periodik (4).
+- **TIDAK tercakup, TETAP pending** (bukan dianggap selesai): eksekusi
+  nyata `doWork()`/`WorkManager` end-to-end, dan reboot survival
+  (`BootCompletedReceiver` restart proses + enqueue ulang) -- keduanya
+  genuinely butuh Robolectric/instrumented test yg infra-nya belum ada.
+  P2 #5 diturunkan ke item pending baru yang LEBIH SEMPIT: "Setup
+  Robolectric + work-testing, tulis test end-to-end reboot survival."
+- File diubah (4): `worker/AutoSortWorker.kt`, `worker/WorkScheduler.kt`,
+  `worker/AutoSortNotification.kt`, BARU `worker/AutoSortLifecycleLogic.kt`,
+  BARU `test/.../worker/AutoSortLifecycleLogicTest.kt`. 0 string.xml
+  baru (reuse 4 string existing dari v8.22.11). `preflight_check.sh`
+  13/13 lolos. Confidence Rating: **90%** (extract-function murni,
+  semua call site ditelusuri; turun dari 95%+ krn `.kt` baru dgn
+  referensi `R.string.*` di unit test BELUM ada preseden di project ini
+  -- valid secara Gradle Android standar, tapi belum pernah dicoba di
+  codebase ini sebelumnya, tidak bisa dikompilasi-verifikasi di sesi ini).
+- **User WAJIB verifikasi**: build CI hijau, `./gradlew testDebugUnitTest`
+  lolos termasuk 9 test baru di `AutoSortLifecycleLogicTest`.
+- **⏳ PENDING QUEUE (2 item)**:
+  1. P2 #5-lanjutan: Setup Robolectric + `androidx.work:work-testing`,
+     test end-to-end reboot survival (BootCompletedReceiver).
+  2. P3 #6: Diagnostics belum bedakan `autoSortEnabled` vs WorkManager
+     state vs next scheduled run.
+- versionCode 138->139, versionName 8.22.11->8.22.12.
+
+## v8.22.11 -- Fix P2 audit #4, wording notifikasi Manual Scan (2026-08-22)
+- Lanjutan audit (batch v8.22.10 tutup P2 #3). Eksekusi P2 #4: notifikasi
+  Manual Scan salah semantik. Batas 1 task/batch -- 2 item audit sisanya
+  TETAP di pending queue.
+- **Bug**: `runScanAndReport` (ScanExecution.kt) di-share oleh
+  `AutoSortWorker` (periodik) & `ManualScanWorker` (widget/manual) --
+  notifikasi ongoing+hasil SELALU pakai title "Auto-sort berjalan"/
+  "Auto-sort selesai" walau scan-nya dipicu MANUAL, karena
+  `AutoSortNotification.foregroundInfo`/`resultNotification` tidak tahu
+  siapa pemanggilnya.
+- **Fix**: parameter `isManual: Boolean` baru di `runScanAndReport`
+  (diteruskan APA ADANYA ke `AutoSortNotification`, 0 pengaruh ke
+  FileSorter/scan logic). 2 string baru: `manual_scan_notif_title`
+  ("Scan berjalan"), `manual_scan_result_notif_title` ("Scan selesai").
+  `AutoSortNotification.foregroundInfo`/`resultNotification` pilih title
+  berdasarkan `isManual` -- string `text`/`summary`/breakdown per-rule
+  TIDAK diubah (sudah generik sejak awal, tidak pernah sebut "Auto-sort").
+  `AutoSortWorker` panggil `isManual = false`, `ManualScanWorker` panggil
+  `isManual = true`.
+- **TIDAK disentuh**: `FileSorter`, channel notifikasi (`CHANNEL_ID`
+  sama, 1 channel utk keduanya -- audit tidak minta channel terpisah),
+  `AutoSortWorker`/`ManualScanWorker` gate logic (v8.22.8 race fix tetap
+  utuh), widget (`ScanWidgetProvider`) tidak tersentuh sama sekali.
+- File diubah (4): `worker/ScanExecution.kt`, `worker/AutoSortNotification.kt`,
+  `worker/AutoSortWorker.kt`, `worker/ManualScanWorker.kt`, +2 string di
+  `strings.xml`. `preflight_check.sh` 13/13 lolos. **Regression test:
+  BELUM ditulis** (butuh Robolectric/instrumented utk uji Notification
+  builder asli, 0 infra itu ada di project -- termuat implisit di
+  pending queue #2 "test lifecycle Auto-Sort", bukan tambahan baru).
+  Confidence Rating: **90%** (perubahan straightforward, semua call site
+  ditelusuri & konsisten -- turun dari 95%+ krn belum ada test otomatis
+  utk notifikasi & belum diverifikasi visual notifikasi asli di device).
+- **User WAJIB verifikasi**: build CI hijau, (1) tap widget "Scan
+  Sekarang" -> notifikasi bilang "Scan berjalan"/"Scan selesai" (BUKAN
+  "Auto-sort..."), (2) tunggu auto-scan periodik jalan -> notifikasi
+  tetap "Auto-sort berjalan"/"Auto-sort selesai" seperti biasa.
+- **⏳ PENDING QUEUE (2 item dari audit, batas 1 task/batch)**:
+  1. P2 #5: Test lifecycle Auto-Sort belum lengkap (7 skenario ON/OFF/
+     reboot/widget) -- termasuk regression test race fix v8.22.8 & fix
+     wording notif v8.22.11 ini.
+  2. P3 #6: Diagnostics belum bedakan `autoSortEnabled` vs WorkManager
+     state vs next scheduled run.
+- versionCode 137->138, versionName 8.22.10->8.22.11.
+
+## v8.22.10 -- Fix P2 audit #3, validasi invariant Import Rule (2026-08-22)
+- Lanjutan audit (batch v8.22.9 tutup P1 #2). Eksekusi P2 #3: Import Rule
+  belum validasi invariant sebelum persist. Batas 1 task/batch -- 3 item
+  audit sisanya TETAP di pending queue.
+- **Bug/celah**: `RuleRepository.importFromJson` decode JSON lalu LANGSUNG
+  merge+persist tanpa validasi apa pun -- padahal jalur TAMBAH/EDIT manual
+  (`AddEditRuleScreen`) sudah wajibkan `folderName` lolos
+  `validateRuleFolderName` sejak fix P0-1 (2026-08-16, cegah path
+  traversal "../"). Import JSON jadi CELAH BYPASS validator yang sama:
+  file JSON corrupt/edit manual/lama bisa selipkan `folderName` traversal,
+  `pattern` kosong, atau `minSizeKb > maxSizeKb`, lolos ke storage.
+- **Fix**: fungsi pure baru `isValidImportedRule(rule)` (top-level,
+  `RuleRepository.kt`, pola sama `nextAvailableFileName`) cek: id tidak
+  blank, `folderName` lolos `isValidRuleFolderName` (validator YANG SAMA
+  dgn jalur manual, bukan duplikasi logic baru), `pattern` tidak blank,
+  `minSizeKb`/`maxSizeKb` masing2 >=0 kalau tidak null, `minSizeKb <=
+  maxSizeKb` kalau keduanya ada. `importFromJson` filter tiap rule lewat
+  fungsi ini SEBELUM merge -- rule invalid di-SKIP diam-diam (bukan
+  gagalkan seluruh import), `importedCount` cuma hitung yang valid &
+  benar2 ter-persist.
+- **TIDAK disentuh** (sesuai instruksi audit "jangan refactor
+  repository"): struktur `ImportOutcome`/signature publik
+  `importFromJson` (tetap `(Boolean, Int)`), `exportAsJson`, `upsertRule`,
+  overlap/duplicate checker, `validateRuleFolderName` sendiri (dipakai
+  ulang apa adanya, bukan diduplikasi).
+- **Test baru**: `RuleRepositoryPureLogicTest.kt` (9 test) -- rule
+  well-formed lolos, id/pattern/folderName blank ditolak, folder
+  traversal (`../../etc`, `a/b`, `..`) ditolak, ukuran negatif ditolak,
+  min>max ditolak, min==max & null keduanya diterima.
+- File diubah (2) + 1 baru: `data/RuleRepository.kt`, BARU
+  `test/.../data/RuleRepositoryPureLogicTest.kt`. `preflight_check.sh`
+  13/13 lolos. Confidence Rating: **90%** (validator inti
+  `validateRuleFolderName` sudah battle-tested sejak P0-1, pure function
+  baru ditelusuri manual thd 9 test case -- turun dari 95%+ krn
+  `./gradlew test` belum dijalankan sungguhan di batch ini).
+- **User WAJIB verifikasi**: build CI hijau (termasuk 9 test baru),
+  coba import JSON berisi `folderName: "../evil"` atau `pattern: ""` --
+  rule itu TIDAK boleh muncul di daftar rule setelah import.
+- **⏳ PENDING QUEUE (3 item dari audit, batas 1 task/batch)**:
+  1. P2 #4: Notifikasi Manual Scan salah wording ("Auto-sort
+     berjalan/selesai" harusnya "Scan berjalan/selesai" generik).
+  2. P2 #5: Test lifecycle Auto-Sort belum lengkap (7 skenario ON/OFF/
+     reboot/widget) -- termasuk regression test race fix v8.22.8.
+  3. P3 #6: Diagnostics belum bedakan `autoSortEnabled` vs WorkManager
+     state vs next scheduled run.
+- versionCode 136->137, versionName 8.22.9->8.22.10.
+
+## v8.22.9 -- Fix P1 audit #2, rename extensionless trailing dot (2026-08-22)
+- Lanjutan audit `PromptVault_v8_22_7_Final_Audit...md` (batch v8.22.8
+  tutup P1 #1). Eksekusi P1 #2: rename extensionless salah, `README`
+  jadi `README_1.` (titik trailing nyasar). Batas 1 task/batch --
+  4 item audit sisanya TETAP di pending queue.
+- **Bug**: `nextAvailableFileName` (FileSorter.kt) SELALU format
+  `"${base}_$counter.$ext"` walau `ext` kosong -- hasil titik trailing
+  nyasar. Bug ini SEBELUMNYA sengaja dipertahankan (Fase 1.1 ekstraksi
+  "bug-for-bug parity"), tapi audit user konfirmasi ini bug NYATA, bukan
+  perilaku yang perlu dijaga -- 3 blok rename lain di file yang sama
+  (`restoreTarget` undo, ~3 lokasi) SUDAH benar sejak awal (cek
+  `ext.isNotEmpty()`), cuma fungsi ini yang ketinggalan.
+- **Fix**: `candidate = if (ext.isNotEmpty()) "${base}_$counter.$ext"
+  else "${base}_$counter"` -- `README` (conflict) -> `README_1` (tanpa
+  titik), file berekstensi tidak berubah sama sekali (path `ext.isNotEmpty()`
+  identik dgn sebelumnya).
+- **Test**: `FileSorterPureLogicTest.kt` -- test lama yang MENGUNCI bug
+  (`"README_1."` expected) diganti mengunci perilaku BENAR (`"README_1"`),
+  +1 test baru (multi-conflict extensionless, `README_3`). Test lain di
+  file yang sama (conflict berekstensi) TIDAK disentuh, tetap lolos.
+- **TIDAK disentuh**: 3 blok rename undo (`restoreTarget`, sudah benar),
+  logic scan/match/pattern, SAF/Shizuku, arsitektur.
+- File diubah (2): `util/FileSorter.kt`, `test/.../FileSorterPureLogicTest.kt`.
+  `preflight_check.sh` 13/13 lolos. Confidence Rating: **95%** (fix 1
+  baris + regression test lokal terverifikasi manual thd 2 kasus
+  (single & multi-conflict), risiko regresi sangat rendah -- turun dari
+  100% krn `./gradlew test` belum dijalankan sungguhan di batch ini,
+  cuma ditelusuri manual).
+- **User WAJIB verifikasi**: build CI hijau (`testDebugUnitTest`/
+  `testReleaseUnitTest` termasuk test baru ini).
+- **⏳ PENDING QUEUE (4 item dari audit, batas 1 task/batch)**:
+  1. P2 #3: Import Rule belum validasi invariant sebelum persist
+     (folderName, pattern, minKb/maxKb >=0 & minKb<=maxKb, ID/payload).
+  2. P2 #4: Notifikasi Manual Scan salah wording ("Auto-sort
+     berjalan/selesai" harusnya "Scan berjalan/selesai" generik).
+  3. P2 #5: Test lifecycle Auto-Sort belum lengkap (7 skenario ON/OFF/
+     reboot/widget) -- termasuk regression test race fix v8.22.8.
+  4. P3 #6: Diagnostics belum bedakan `autoSortEnabled` vs WorkManager
+     state vs next scheduled run.
+- versionCode 135->136, versionName 8.22.8->8.22.9.
+
+## v8.22.8 -- CABUT DISCONTINUED: fix P1 audit #1, scheduler race ON/OFF (2026-08-22)
+- Status DISCONTINUED (v8.22.7) DICABUT -- user upload audit bug baru
+  (`PromptVault_v8_22_7_Final_Audit_Straight_To_The_Point.md`, 6 item).
+  Batas 1 task/batch: eksekusi HANYA P1 #1 (paling kritis -- race
+  konkurensi bisa BATALKAN toggle OFF user secara diam-diam). 5 item
+  sisanya masuk Pending Queue (lihat bawah), TIDAK dikerjakan batch ini.
+- **Bug**: `PromptVaultApp.onCreate()`/`BootCompletedReceiver` baca
+  DataStore (mis. ON) lewat coroutine sendiri, lalu panggil
+  `WorkScheduler.schedule()` -- kalau user SEMPAT toggle OFF di antara
+  baca & panggil itu (coroutine startup "telat"), `schedule()` dari
+  coroutine lama bisa dieksekusi SETELAH `cancel()` dari coroutine
+  toggle user -- net result: scheduler balik ON walau user baru saja
+  matiin. Root cause: 2 coroutine independen ubah WorkManager tanpa
+  ordering/serialisasi apa pun.
+- **Fix (`WorkScheduler.kt`)**: `schedule()`/`cancel()` jadi `private`.
+  1 `Mutex` baru menyerialkan SEMUA jalur apply lewat 1 fungsi publik
+  `syncFromSavedSettings(context)` -- baca DataStore FRESH DI DALAM
+  critical section (bukan parameter basi), baru schedule/cancel.
+  `rescheduleFromSavedSettings` jadi alias tipis ke fungsi ini (nama
+  lama dipertahankan, dipanggil dari `PromptVaultApp`/
+  `BootCompletedReceiver`, 0 perubahan di kedua file itu).
+- **`MainViewModel.kt`**: `setAutoSortEnabled`/`setIntervalMinutes` --
+  dulu hitung sendiri true/false lalu panggil `schedule()`/`cancel()`
+  langsung dgn parameter lokal, sekarang cuma persist ke
+  `settingsRepository` lalu panggil `WorkScheduler.syncFromSavedSettings`
+  (fungsi itu sendiri yg baca state terbaru).
+- **TIDAK disentuh** (sesuai instruksi audit "dilarang refactor
+  arsitektur"): `AutoSortWorker`/`ManualScanWorker` (tetap terpisah),
+  `FileSorter`, SAF/Shizuku, database, navigation, default interval,
+  `BootCompletedReceiver.goAsync()`.
+- File diubah (2): `worker/WorkScheduler.kt`, `ui/MainViewModel.kt`.
+  `preflight_check.sh` 13/13 lolos. **Regression test: BELUM ditulis**
+  batch ini (grep konfirmasi 0 file test di project sama sekali --
+  nulis test pertama utk worker butuh setup test harness baru, di luar
+  scope 1-task/batch murni logic fix ini; masuk pending queue).
+  Confidence Rating: **80%** (fix mutex+fresh-read adalah pola standar
+  utk race jenis ini & logic sudah ditelusuri manual jalur-per-jalur,
+  tapi belum ada test otomatis ATAU verifikasi device nyata reproduce
+  race asli -- turun dari 90%+ krn itu).
+- **User WAJIB verifikasi**: (1) build CI hijau, (2) reproduksi manual
+  kalau bisa: matikan Auto-Sort tepat setelah buka app / reboot, cek
+  WorkManager/Diagnostics tetap OFF (bukan balik ON sendiri).
+- **⏳ PENDING QUEUE (5 item dari audit, batas 1 task/batch)**:
+  1. P1 #2: RENAME extensionless `README` -> `README_1.` (harusnya
+     `README_1`, tanpa titik trailing) -- unit test masih kunci
+     behavior lama, perlu diperbaiki bareng testnya.
+  2. P2 #3: Import Rule belum validasi invariant sebelum persist
+     (folderName, pattern, minKb/maxKb >=0 & minKb<=maxKb, ID/payload).
+  3. P2 #4: Notifikasi Manual Scan salah wording ("Auto-sort
+     berjalan/selesai" harusnya "Scan berjalan/selesai" generik).
+  4. P2 #5: Test lifecycle Auto-Sort belum lengkap (7 skenario ON/OFF/
+     reboot/widget, lihat file audit asli) -- termasuk regression test
+     utk item #1 (race fix) di atas.
+  5. P3 #6: Diagnostics belum bedakan `autoSortEnabled` vs WorkManager
+     state vs next scheduled run (bisa nampilin seolah sama).
+- versionCode 134->135, versionName 8.22.7->8.22.8.
+
+## v8.22.7 -- Governance: proyek DISCONTINUED sampai bug baru (2026-08-22)
+- User: sudah tidak ada improvement lagi yang bisa dikerjakan Claude --
+  status proyek dibekukan. Section `STATUS PROYEK: DISCONTINUED` baru
+  ditambah PERMANEN di baris paling atas file ini (di atas ATURAN WAJIB
+  SESI), efektif mulai sesi berikutnya.
+- 0 perubahan kode/fungsional -- murni governance/dokumentasi.
+- File diubah (1): `PROJECT_STATE.md`. `preflight_check.sh` 13/13 lolos.
+  Confidence Rating: **100%** (perubahan teks murni, 0 risiko teknis).
+- versionCode 133->134, versionName 8.22.6->8.22.7.
+
+## v8.22.6 -- FIX BUG NYATA (screenshot user): dialog update cuma nampilin link, gak informatif (2026-08-22)
+- **Gejala (screenshot)**: dialog "Pembaruan Aplikasi" in-app cuma nampilin
+  `**Full Changelog**: https://.../compare/v8.22.4...v8.22.5` -- 0 info
+  konkret apa yang berubah, user harus buka link buat tau isinya.
+- **Root cause**: `releaseNotes` di app SUDAH benar dirender dari `body`
+  GitHub Release sejak v8.22.1-an (bukan bug UI) -- masalahnya sumber
+  datanya sendiri kosong. `.github/workflows/build.yml` step "Publish
+  GitHub Release" pakai `generate_release_notes: true`, yang bikin GitHub
+  auto-generate isi dari daftar PR/commit sejak tag terakhir -- repo ini
+  push LANGSUNG ke `main` (bukan alur PR), jadi hasil auto-generate-nya
+  SELALU kosong isi kecuali baris compare-link bawaan itu sendiri.
+- **Fix (1 file, `.github/workflows/build.yml`)**: step baru "Extract
+  release notes from CHANGELOG.md" -- `awk '/^## /{n++} n==1'
+  CHANGELOG.md` ambil section TERATAS (= versi rilis ini, format
+  CHANGELOG.md sudah descending) ke `out/release_notes.md`, fallback
+  pesan generik kalau ekstraksi kosong (format berubah dll -- tidak
+  pernah biarkan body release kosong total). `generate_release_notes:
+  true` DIHAPUS, ganti `body_path: out/release_notes.md` di step Publish.
+- **TIDAK disentuh**: model `releaseNotes`/parsing JSON GitHub API,
+  render dialog `SettingsScreen.kt` (`state.releaseNotes.trim()`,
+  `maxLines=4`, tombol "Lihat rilis lengkap" ke `releaseUrl`) -- semua
+  itu sudah benar, cukup pastikan sumber `body`-nya sekarang berisi teks
+  asli, bukan cuma link. Step "Force-flag Latest" & upload artifact tidak
+  berubah.
+- Diverifikasi lokal: `awk` command di-jalankan manual thd
+  `CHANGELOG.md` project ini -- hasil PERSIS 1 section (judul + isi),
+  berhenti tepat sebelum section berikutnya, tidak overrun.
+- File diubah (1): `.github/workflows/build.yml`. `preflight_check.sh`
+  13/13 lolos. Confidence Rating: **85%** (logic `awk` diverifikasi
+  lokal thd file asli, tapi step CI baru ini belum pernah jalan di
+  runner GitHub sungguhan -- turun dari 95%+ krn itu).
+- **User WAJIB verifikasi**: (1) build CI hijau, (2) buka rilis v8.22.6
+  di GitHub setelah CI selesai -- body Release berisi teks changelog
+  asli (bukan cuma "Full Changelog: link"), (3) buka dialog update
+  in-app dari versi lama -- sekarang nampilin potongan info nyata.
+- versionCode 132->133, versionName 8.22.5->8.22.6.
+
+## v8.22.5 -- Tutup PENDING QUEUE #2: chip preset stringResource (2026-08-22)
+- Eksekusi item #2 pending queue v8.22.1 (chip preset `AddEditRuleScreen.kt`
+  pakai Kotlin string literal, bukan `stringResource` -- regresi kecil dari
+  standar 100% stringResource Fase 1.3). Pending queue v8.15.0/v8.22.1 KINI
+  TUTUP SELURUHNYA (0 item tersisa).
+- **Fix**: `RulePreset.label: String` -> `RulePreset.labelRes: @StringRes
+  Int`, 6 literal (`"Gambar"`, `"PDF"`, `"Video"`, `"Arsip (ZIP/RAR)"`,
+  `"Dokumen Office"`, `"Screenshot"`) dipindah ke 6 string resource baru
+  (`rule_edit_preset_gambar/pdf/video/arsip/dokumen/screenshot`) di
+  `strings.xml`. `label = { Text(preset.label) }` -> `Text(stringResource(
+  preset.labelRes))` di lokasi render chip (`FlowRow` preset).
+- **TIDAK disentuh**: `folder`/`pattern` field `RulePreset` (bukan teks
+  UI-facing yang perlu i18n -- `folder` jadi nama folder tujuan aktual,
+  `pattern` jadi contoh pattern yang diisi ke field, keduanya BUKAN label
+  tampilan lepas), 6 baris data preset lain (jumlah/isi entry) tetap sama.
+- File diubah (2): `ui/screens/AddEditRuleScreen.kt`,
+  `res/values/strings.xml` (+6 string). `preflight_check.sh` 13/13 lolos.
+  Confidence Rating: **95%** (refactor kecil, 1:1 substitusi tipe, tidak
+  ada perubahan logic/wiring lain).
+- **User WAJIB verifikasi**: build CI hijau, layar Tambah/Edit Rule ->
+  6 chip preset tetap tampil label sama persis seperti sebelumnya.
+- versionCode 131->132, versionName 8.22.4->8.22.5.
+
+## v8.22.4 -- FIX BUG NYATA (screenshot user): sudut widget mismatch/ganggu (2026-08-22)
+- **Gejala**: user "sudut-sudut widget nya ganggu banget" (setelah fix
+  resize v8.22.3 dikonfirmasi "mendingan"). Screenshot: rounded-rect
+  dgn stroke border warna keras terlihat jelas tidak menyatu dgn home
+  screen.
+- **Root cause**: `widget_scan_background.xml` gambar shape sendiri
+  (radius 20dp + stroke 1dp pv_primary_accent) DI DALAM area yang di
+  Android 12+ (API 31+) SUDAH di-clip/mask sistem dgn radius miliknya
+  sendiri (beda angka, tergantung launcher) -- 2 rounding independen yang
+  tidak match = sudut ganda kelihatan jelas, DIPERTEGAS oleh stroke warna
+  solid yang bikin selisihnya makin menonjol/"ganggu".
+- **Fix (2 file, bukan 1)**: `drawable/widget_scan_background.xml`
+  (fallback API 26-30, TIDAK ada dimen sistem di API ini) -- stroke
+  DIHAPUS TOTAL, radius 20dp->16dp (konvensi umum). BARU
+  `drawable-v31/widget_scan_background.xml` -- radius PERSIS ikut
+  `@android:dimen/system_app_widget_background_radius` (resmi Android
+  12+), 0 kemungkinan mismatch krn sumber angkanya SAMA dgn yang dipakai
+  launcher meng-clip widget. Kenapa 2 file (bukan 1 + fallback manual):
+  dimen sistem itu TIDAK EXIST di API<31, referensi langsung akan crash
+  `Resources.NotFoundException` di device lama -- qualifier folder
+  `-v31/` adalah cara resmi Android pisahkan resource per-API level.
+- **Insiden minor sendiri, ketangkap preflight**: `--` di komentar XML
+  baru (5 titik, KELAS BUG BERULANG sama persis v8.5.0b/v8.6.0/v8.22.3) --
+  diganti `;`, divalidasi ulang, 0 sisa.
+- **TIDAK disentuh**: `widget_scan_info.xml` (maxResizeWidth/Height
+  v8.22.3 tetap), `widget_scan.xml` layout (gravity/maxLines tetap),
+  `ScanWidgetProvider.kt`/`ScanExecution.kt` (logic v8.22.2 tidak
+  berubah) -- murni ganti drawable background, 0 wiring lain tersentuh.
+- File diubah (1) + 1 baru: `res/drawable/widget_scan_background.xml`,
+  BARU `res/drawable-v31/widget_scan_background.xml`. `preflight_check.sh`
+  13/13 lolos (1 iterasi fix `--` di atas). Confidence Rating: **85%**
+  (fix pakai dimen resmi Android, risiko rendah -- turun dari 90%+ krn
+  belum diverifikasi visual di device API 31+ asli, angka
+  `system_app_widget_background_radius` bisa sedikit beda antar
+  launcher/skin OEM meski sumbernya resmi sistem).
+- **User WAJIB verifikasi**: (1) build CI hijau, (2) hapus+pasang ulang
+  widget (resource `-v31/` baru butuh reinstall app, bukan cuma update
+  in-place), (3) sudut widget sekarang menyatu rapi dgn clip sistem (tidak
+  ada garis/sudut ganda lagi), (4) tidak ada lagi border warna keras di
+  tepi widget.
+- versionCode 130->131, versionName 8.22.3->8.22.4.
+
+## v8.22.3 -- FIX BUG NYATA (screenshot user): widget di-resize jadi kotak kosong raksasa (2026-08-22)
+- **Gejala (screenshot)**: user resize widget besar -> kotak hitam raksasa,
+  icon+"PromptVault"/"0 file • 08:40" numpuk kiri-atas, sisa ruang
+  kanan/bawah kosong total. Konfirmasi FUNGSIONAL v8.22.2 (dynamic summary)
+  jalan benar -- ini murni cacat VISUAL, bukan regresi logic.
+- **Root cause**: `resizeMode="horizontal|vertical"` TANPA batas atas
+  (`maxResizeWidth`/`maxResizeHeight` tidak pernah diset) -- user bebas
+  resize widget sampai ukuran berapa pun, sementara konten RemoteViews
+  (icon 24dp fix + teks 14/12sp fix) TIDAK BISA ikut scale (keterbatasan
+  RemoteViews polos tanpa Glance, sudah didokumentasikan di javadoc
+  ScanWidgetProvider). Gravity root cuma `center_vertical` (bukan penuh
+  2 sumbu) -- kolom teks tetap `weight=1` fillMaxWidth, jadi horizontal
+  tidak pernah benar-benar center.
+- **Fix**: `widget_scan_info.xml` -- `maxResizeWidth="250dp"` +
+  `maxResizeHeight="110dp"` (API 31+, diabaikan aman API 26-30 minSdk
+  project ini) mengunci widget SELALU ukuran "kartu shortcut" ringkas,
+  TIDAK BISA dibesarkan jadi kotak kosong lagi -- fix STRUKTURAL (cegah
+  penyebab), bukan cuma tambal visual. `widget_scan.xml` -- gravity root
+  `center_vertical` -> `center` (2 sumbu), pelengkap utk device API<31
+  yang belum kenal `maxResizeWidth`/`Height`.
+- **Insiden minor sendiri, ketangkap preflight SEBELUM commit**: komentar
+  XML baru sempat pakai `--` 3x (kelas bug BERULANG persis sama dgn
+  v8.5.0b/v8.6.0) -- diganti `;`, divalidasi `xml.dom.minidom.parse` +
+  preflight kategori #10 ulang, 0 sisa.
+- **TIDAK disentuh**: `ScanWidgetProvider.kt`/`ScanExecution.kt` (logic
+  v8.22.2 sudah benar, tidak ada gap fungsional di sini), kolom teks tetap
+  `weight=1`+`maxLines`/`ellipsize` v8.22.1 (BUKAN diubah ke `wrap_content`
+  -- itu akan MEREGRESI proteksi ellipsize di ukuran minWidth 110dp).
+- File diubah (2): `res/xml/widget_scan_info.xml`, `res/layout/widget_scan.xml`.
+  `preflight_check.sh` 13/13 lolos (setelah 1 iterasi fix `--` di atas).
+  Confidence Rating: **85%** (fix resmi API Android + gravity standar,
+  risiko rendah -- turun dari 90%+ murni krn `maxResizeWidth`/`Height`
+  BELUM diverifikasi visual di launcher asli, beberapa launcher OEM
+  historically tidak selalu 100% patuh ke attribute ini).
+- **User WAJIB verifikasi**: (1) build CI hijau, (2) pasang ulang widget
+  (hapus+tambah lagi -- attribute widget info butuh re-add utk kebaca
+  ulang launcher, bukan cuma update app), (3) coba resize sebesar mungkin
+  -> widget TIDAK BISA melebihi ~250dp x 110dp lagi, (4) tampilan di
+  ukuran max itu terlihat rapi/center, bukan kotak kosong.
+- versionCode 129->130, versionName 8.22.2->8.22.3.
+
+## v8.22.2 -- Tutup PENDING QUEUE #1: widget dynamic summary (2026-08-22)
+- Eksekusi item #1 pending queue v8.22.1 (widget 100% stateless, teks
+  tidak pernah berubah walau scan selesai) -- item #2 (chip preset literal
+  vs stringResource) TETAP di pending queue, batas 1 task/batch.
+- **Desain**: `runScanAndReport` (ScanExecution.kt) push ringkasan
+  "N file • HH:mm" ke `SettingsRepository.widgetLastScanSummaryFlow`
+  (key DataStore baru, pola persis `autoSortEnabledFlow`) + langsung ke
+  RemoteViews semua instance widget lewat `ScanWidgetProvider.
+  notifyScanCompleted` (companion, no-op kalau widget belum dipasang) --
+  TIAP scan (termasuk 0 file, beda dari notifikasi sistem yg cuma muncul
+  saat filesMoved>0). `updateWidget` (`onUpdate`, dipanggil OS saat
+  resize/reboot/widget baru) baca ulang dari persistensi via
+  `runBlocking` (aman -- DataStore lokal, dipanggil jarang, bukan tiap
+  detik) supaya ringkasan bertahan lintas restart proses widget.
+- Builder RemoteViews di-refactor jadi 1 fungsi `buildWidgetViews`
+  (companion, private) dipakai ULANG `updateWidget` & `notifyScanCompleted`
+  -- wiring PendingIntent klik TIDAK PERNAH beda antara 2 jalur update.
+- **TIDAK disentuh**: FileSorter/scan logic, notifikasi sistem
+  (`AutoSortNotification`) TETAP jalan seperti biasa (pelengkap, bukan
+  diganti), `widget_scan.xml`/background (v8.22.1) tidak perlu diubah --
+  `widget_action` TextView yang sama, cuma isi teksnya sekarang dinamis.
+- File diubah (3): `data/SettingsRepository.kt` (+key/flow/getter/setter),
+  `worker/ScanExecution.kt` (+push pasca-scan), `widget/ScanWidgetProvider.kt`
+  (refactor builder + companion fn + javadoc dikoreksi, klaim lama
+  "SENGAJA stateless" sudah tidak akurat). `strings.xml` (+1 format string).
+- `preflight_check.sh` 13/13 lolos. Confidence Rating: **85%** (turun dari
+  90% standar -- `runBlocking` di `onUpdate` BELUM diverifikasi device asli
+  soal ANR-safety walau DataStore lokal seharusnya instan, dan alur push
+  RemoteViews lintas-proses widget masih risiko "gagal-diam" yang sama
+  seperti disebut `ROADMAP.md` 3.1, cuma sekarang ada 2 jalur update yang
+  saling menutupi -- bukan risiko baru dari nol).
+- **User WAJIB verifikasi**: (1) build CI hijau, (2) pasang widget baru ->
+  teks "Ketuk untuk Scan Sekarang" (belum pernah scan), (3) tap widget ->
+  tunggu scan selesai -> teks berubah jadi "N file • HH:mm" TANPA perlu
+  buka app, (4) resize widget / restart HP -> ringkasan TETAP tampil
+  (bukan balik ke teks statis lama).
+- versionCode 128->129, versionName 8.22.1->8.22.2.
+
+## v8.22.1 -- Audit Polish: fix widget resize/distorsi (2026-08-21)
+- Instruksi: "Audit polished 100%". Sweep: `FILE_MANIFEST.txt` vs disk 100%
+  akurat (0 file hilang/basi), 0 hardcode `Text()` di screens (Fase 1.3
+  masih tegak), 0 TODO aktif di luar catatan Fase 0 permanen.
+- **Fix (1 file, `widget_scan.xml`)**: laporan resize/distorsi user LAMA
+  (screenshot resize widget) TERNYATA belum benar-benar tertutup -- fix
+  "beta testing" v8.21.2 cuma nambah icon+layout horizontal, TIDAK pernah
+  nambah `maxLines`/`ellipsize`. Layout horizontal itu malah MENGURANGI
+  ruang teks tersisa (icon 28dp+margin makan duluan). Sekarang: `maxLines
+  ="1"`+`ellipsize="end"` di kedua TextView, padding 14dp->10dp.
+- **⏳ PENDING QUEUE (2 item, batas 1 task/batch -- BUKAN diabaikan,
+  ditunda eksplisit)**:
+  1. Widget MASIH 100% stateless -- teks tidak pernah berubah walau scan
+     selesai (laporan user lama poin ke-3, belum tertutup sampai batch
+     ini). Draft solusi (persist ringkasan ke SettingsRepository + push ke
+     RemoteViews dari `runScanAndReport`) sempat dirancang di sesi
+     sebelumnya tapi TIDAK PERNAH masuk ke source-of-truth (kena hard-reset
+     ZIP berkali-kali) -- kalau dikerjakan lagi, mulai dari nol, jangan
+     asumsikan draft lama masih relevan/valid.
+  2. Chip preset `AddEditRuleScreen.kt` (v8.22.0): label pakai Kotlin
+     string literal (`RulePreset("Gambar", ...)`), bukan `stringResource`
+     -- regresi kecil dari standar 100% stringResource Fase 1.3.
+- `preflight_check.sh` 13/13 lolos. Confidence Rating: **90%**.
+  versionCode 127->128, versionName 8.22.0->8.22.1.
+
+## v8.22.0 -- Preset Cepat di tab Tambah Rule, edukasi user awam (2026-08-21)
+- Instruksi eksplisit: preset cepat khusus "Tambah Rule" biar user awam
+  paham mekanisme pattern+folder yang benar.
+- 6 chip preset (Gambar/PDF/Video/Arsip/Dokumen Office/Screenshot), HANYA
+  tampil saat TAMBAH rule baru (`existingRule == null`). Tap isi
+  `folderName`+`pattern` saja -- exclude/filter ukuran TIDAK disentuh.
+- Reuse penuh: `GlobMatcher.matchesAny` CSV multi-pattern (SUDAH ADA sejak
+  awal, nol perubahan di util/), live preview `onPreviewPattern` (SUDAH
+  ADA) otomatis jalan begitu preset ditap -- user langsung lihat bukti
+  file Downloads yang cocok. Chip pakai `FlowRow`+`AssistChip`, pola sama
+  dgn chip kecepatan-scan/konflik di SettingsScreen.kt.
+- "Screenshot" sengaja pakai gaya prefix (`Screenshot_*.png`) bukan cuma
+  ekstensi -- tunjukkan 2 gaya pattern valid ke user awam.
+- File diubah (2): `AddEditRuleScreen.kt`, `strings.xml` (+2). TIDAK
+  disentuh: FileSorter, GlobMatcher, Rule Engine, validator nama folder.
+- `preflight_check.sh` 13/13 lolos. Confidence Rating: **90%**.
+  versionCode 126->127, versionName 8.21.3->8.22.0.
+
+## v8.21.3 -- FIX WAJIB: Auto-Sort OFF ikut blokir widget "Scan Sekarang" (2026-08-21)
+- Instruksi eksplisit user (format terstruktur: bug report + instruksi 1-6 +
+  test wajib + target final). Bug: `ScanWidgetProvider` enqueue
+  `AutoSortWorker` -- worker itu SENGAJA punya gate `autoSortEnabled`
+  (v8.21.1), jadi "Auto-Sort OFF" ikut memblokir tap widget.
+- Fix: PISAHKAN entry point (gate vs tidak), BUKAN sorting engine.
+  - BARU `worker/ScanExecution.kt`: extract-function `runScanAndReport()`
+    -- badan kerja scan+lapor lama `AutoSortWorker.doWork()` dipindah ke
+    sini APA ADANYA (FileSorter/notifikasi/error-handling TIDAK diubah),
+    dipakai ULANG 2 worker -- nol logic sorting terduplikasi.
+  - `AutoSortWorker.kt`: gate `autoSortEnabled` DIPERTAHANKAN persis,
+    badan kerja panggil `runScanAndReport()`.
+  - BARU `worker/ManualScanWorker.kt`: TANPA gate sama sekali, panggil
+    `runScanAndReport()` yang sama.
+  - `widget/ScanWidgetProvider.kt`: enqueue `ManualScanWorker`, bukan
+    `AutoSortWorker`.
+- Target final tercapai: `AUTO: WorkManager -> AutoSortWorker -> gate ->
+  FileSorter` | `MANUAL: Widget -> ManualScanWorker -> FileSorter`.
+- **TIDAK disentuh** (scope eksplisit): FileSorter, SAF, Shizuku, Rule
+  Engine, `WorkScheduler` (periodic tetap jadwalkan `AutoSortWorker`),
+  sorting logic. `DiagnosticsScreen.kt` yg query
+  `getWorkInfosForUniqueWork(AutoSortWorker.WORK_NAME)` juga tidak perlu
+  diubah -- unique work name AutoSortWorker tidak berubah.
+- `preflight_check.sh` 13/13 lolos.
+- **Batas jujur**: 5 test wajib dari instruksi user (Auto-Sort OFF x2,
+  Auto-Sort ON, widget->ManualScanWorker, no duplicate logic) BELUM
+  dijalankan di device asli sesi ini -- logic gate & pemisahan entry point
+  straightforward & sudah diverifikasi lewat pembacaan kode statis
+  (`grep` konfirmasi WorkScheduler/DiagnosticsScreen masih pakai
+  AutoSortWorker apa adanya, ScanWidgetProvider sudah pindah ke
+  ManualScanWorker), tapi eksekusi WorkManager sesungguhnya (apakah
+  ManualScanWorker benar-benar terdaftar & jalan tanpa manifest entry --
+  seharusnya ya, Worker tidak butuh registrasi manifest, tapi tetap perlu
+  dikonfirmasi) **WAJIB dicek user** dgn 5 skenario test di instruksi asli.
+- Confidence Rating: **88%**. versionCode 125->126, versionName
+  8.21.2->8.21.3.
+
+## v8.21.2 -- Fix cacat widget "vibes beta testing" (2026-08-21)
+- **Instruksi langsung user**: "perbaiki dulu widget kamu yang vibes nya beta testing, dan masih cacat!!" -- sebelum lanjut pilih item Fase 3 berikutnya.
+- **3 cacat konkret ditemukan & diperbaiki** (3 file, sesuai batch limit):
+  1. `widget_scan_info.xml` -- `previewImage` cuma app icon generik, widget picker TIDAK menampilkan bentuk widget sebenarnya saat user long-press home screen (kelihatan "belum jadi"). Fix: tambah `previewLayout="@layout/widget_scan"` (API 31+, Android render layout ASLI sbg preview akurat), `previewImage` TETAP jadi fallback wajib device API 26-30.
+  2. `widget_scan_background.xml` -- shape polos TANPA feedback visual sama sekali saat diketuk, satu-satunya interaksi widget ini terasa tidak responsif. Fix: dibungkus `<ripple>` (API 21+, aman di minSdk 26), ripple otomatis terpotong sesuai radius 20dp (bukan ripple persegi lepas dari bentuk kartu).
+  3. `widget_scan.xml` -- root cuma 2 baris teks polos, tidak ada identitas visual, kelihatan generic/placeholder. Fix: dibungkus jadi horizontal (icon `ic_launcher`, aset SUDAH ADA/0 aset baru, + kolom teks), pola umum widget shortcut Android.
+- **Ketemu 3x insiden `--` di komentar XML sendiri saat menulis fix ini** (kelas bug berulang, lihat v8.5.0b) -- SEMUA langsung diperbaiki sebelum package (`--` -> `;`), divalidasi `xml.dom.minidom` + scan regex menyeluruh seluruh `**/*.xml` project (0 pelanggaran) + `preflight_check.sh` 13/13 PASS.
+- File diubah (3): `widget_scan_info.xml`, `widget_scan_background.xml`, `widget_scan.xml`. `ScanWidgetProvider.kt` TIDAK disentuh (logic trigger scan sudah benar, cacat murni visual/UX).
+- **Belum diverifikasi CI hijau / device asli.**
+- versionCode 124->125, versionName 8.21.1->8.21.2.
+
+
+- **Konfirmasi user**: screenshot toggle Auto-Sort OFF di HP asli -- UI + wording ("Auto-sort dinonaktifkan. Scan manual tetap tersedia.") tampil BENAR. Fitur Auto-Sort ON/OFF (entri v8.21.0b di bawah) TERKONFIRMASI bekerja di device asli.
+- **Pending queue v8.15.0 #2** (`OnboardingScreen.kt` -- verifikasi manual `TextField`/`KeyboardOptions`): **N/A, bukan bug**. Grep + `view` manual konfirmasi layar ini 0 `TextField`/`OutlinedTextField` sama sekali -- tidak ada input apa pun yang perlu `KeyboardOptions`/`ImeAction`.
+- **Pending queue v8.15.0 #3, sub-area predictive back gesture**: **sudah OK, tidak perlu fix**. `AndroidManifest.xml` sudah `android:enableOnBackInvokedCallback="true"`, `navigation-compose:2.7.7` (>= 2.7.0, sudah native support predictive back), 0 `BackHandler` custom yang bisa mengganggu animasi sistem.
+- **Pending queue v8.15.0 #3, sub-area kontras disabled-state**: **sudah OK, tidak perlu fix**. 20 titik pemakaian `ButtonDefaults.buttonColors`/`outlinedButtonColors` di project HANYA override `containerColor`/`contentColor` (parameter bernama) -- 0 titik override `disabledContentColor`/`disabledContainerColor` eksplisit, jadi default token Material 3 (alpha-reduced, kontras aman) otomatis dipakai di semua tombol.
+- **Sisa pending queue v8.15.0 #3** (belum diaudit, scope besar/subjektif -- BUKAN untuk batch ini): konsistensi durasi animasi/transisi antar layar, perilaku landscape/tablet layout.
+- File diubah: 0 (murni audit/verifikasi, tidak ada temuan bug baru). `app/build.gradle.kts` (versi saja).
+- versionCode 123->124, versionName 8.21.0->8.21.1 (menandai fitur Auto-Sort ON/OFF terkonfirmasi + audit ini, digabung 1 bump).
+
+## v8.21.0b -- FITUR: Auto-Sort ON/OFF benar-benar fungsional (2026-08-21)
+- **Sumber**: `PromptVault_AutoSort_Toggle_Fix_Instructions.md` (instruksi eksplisit user) -- sebelumnya toggle Auto-Sort TIDAK ADA sama sekali, `WorkScheduler.rescheduleFromSavedSettings()` selalu unconditional schedule().
+- **SettingsRepository**: key baru `autoSortEnabledKey` (boolean, default `true` -- backward compat), API `autoSortEnabledFlow`/`getAutoSortEnabled()`/`setAutoSortEnabled()`. DataStore existing, tidak ada repo/DB baru.
+- **WorkScheduler.rescheduleFromSavedSettings()**: sekarang baca `autoSortEnabled` dulu -- ON -> `schedule()`, OFF -> `cancel()`. Titik pusat ini otomatis benarkan `PromptVaultApp.onCreate()` dan `BootCompletedReceiver` TANPA mengubah kedua file itu sama sekali (0 baris).
+- **MainViewModel**: `autoSortEnabled: StateFlow<Boolean>` baru + `setAutoSortEnabled()` (urutan: persist -> update scheduler). `setIntervalMinutes()` sekarang cuma `WorkScheduler.schedule()` kalau `autoSortEnabled == true` -- ganti interval saat OFF tidak lagi diam-diam menghidupkan scheduler.
+- **AutoSortWorker.doWork()**: defensive gate di baris pertama -- baca `autoSortEnabled`, kalau `false` langsung `Result.success()` tanpa scan (defense-in-depth utk stale/pending worker).
+- **SettingsScreen**: toggle `TactileSwitch` baru di atas kartu Interval Auto-Scan (reuse komponen existing, tidak ada Switch baru). Interval tetap bisa diubah saat OFF (sesuai instruksi).
+- **HomeScreen**: indikator "Auto-scan" sekarang tampil "OFF" (bukan interval) kalau `autoSortEnabled == false`.
+- **Panduan/Onboarding**: wording step 6 diubah jadi kondisional ("jika Auto-Sort aktif...") -- tidak rewrite total.
+- **TIDAK disentuh** (sesuai larangan eksplisit): `FileSorter.scanAndSort()` (0 baris), SAF/Shizuku, `scanMutex`, Rule matching, conflict strategy, Room schema/DAO, Navigation, signing, `PromptVaultApp.kt`/`BootCompletedReceiver.kt` (logic-nya otomatis benar lewat `WorkScheduler`), `ALLOWED_INTERVALS`/`DEFAULT_INTERVAL_MINUTES`.
+- **Test otomatis**: TIDAK ditambahkan -- lifecycle test (ON/OFF x startup/reboot/worker) butuh Robolectric/mockk utk mock `Context`/`WorkManager`/`CoroutineWorker`, dependency ini TIDAK ADA di `build.gradle.kts` (cuma JUnit polos + coroutines-test) dan menambahnya = di luar scope instruksi ("jangan refactor besar-besaran"). Skenario A-G di instruksi divalidasi manual/preflight, BELUM ada automated test coverage -- dicatat sebagai technical debt.
+- **versionCode/versionName TIDAK naik** (tetap 123/8.21.0) -- menunggu konfirmasi CI hijau dulu sebelum bump.
+- **Belum diverifikasi CI hijau.**
+
+## v8.21.0 -- Roadmap Fase 3.1: Widget Home Screen "Scan Sekarang" (2026-08-21)
+- "lanjutkan progress!!" tanpa item spesifik -- Fase 1&2 ROADMAP.md 100%
+  selesai, Fase 3 WAJIB pilih eksplisit (aturan roadmap sendiri). Ditanya
+  via ask_user_input_v0 (4 opsi Fase 3), **user pilih: 3.1 Widget Home
+  Screen**.
+- Widget 1-tap "Scan Sekarang", SENGAJA stateless -- reuse `AutoSortWorker`
+  APA ADANYA lewat `.enqueue()` biasa (bukan `enqueueUniqueWork`, supaya tap
+  widget tidak pernah "ditolak" gara-gara slot unique auto-scan periodik lagi
+  terisi), aman dari race berkat `scanMutex` statis existing di
+  `FileSorter.kt` (TIDAK disentuh). Hasil scan tetap lewat notifikasi sistem
+  yang sudah ada & terbukti jalan (`AutoSortNotification.resultNotification`)
+  -- widget cukup Toast instan konfirmasi tap.
+- File baru (4): `widget/ScanWidgetProvider.kt`, `res/layout/widget_scan.xml`
+  (RemoteViews, bukan Compose), `res/xml/widget_scan_info.xml`
+  (`updatePeriodMillis=0`), `res/drawable/widget_scan_background.xml`. File
+  diubah (3): `strings.xml` (+4), `AndroidManifest.xml` (protected, edit
+  parsial -- 1 `<receiver>`), `build.gradle.kts` (versi). Nol dependency
+  baru (`androidx.glance` dll TIDAK ditambah) -- `AppWidgetProvider`/
+  `RemoteViews` bagian framework Android, sama prinsip `StatisticsScreen.kt`
+  v8.20.0.
+- **Insiden minor + FIX, dicatat supaya tidak terulang**: 5 file XML baru
+  awalnya GAGAL `preflight_check.sh` kategori 10 (well-formedness) --
+  komentar XML pakai "--" (konvensi pemisah kalimat project ini di Kotlin/
+  Markdown), padahal spec XML MELARANG "--" di DALAM isi comment `<!-- -->`
+  di mana saja (bukan cuma ujung). Fix: semua "--" di komentar XML diganti
+  em dash "—". Kotlin/Markdown tidak kena aturan ini. **Sesi berikutnya:
+  kalau nambah file XML baru + komentar gaya project ini, jangan pakai "--"
+  di dalamnya.**
+- `ROADMAP.md` diupdate: Fase 3.1 dicoret ✅ SELESAI.
+- **Batas jujur (LEBIH KETAT dari batch biasa)**: widget adalah surface
+  Android BARU yang sama sekali belum pernah diverifikasi visual/fungsional
+  di sesi manapun -- `preflight_check.sh` cuma cek well-formedness/sintaks,
+  BUKAN bukti widget benar-benar muncul & berfungsi di launcher device asli.
+  **User WAJIB verifikasi**: (1) build CI hijau, (2) widget bisa
+  ditambahkan ke home screen lewat menu "Widgets" launcher, (3) tampilan
+  sesuai (background gelap, teks "PromptVault"/"Ketuk untuk Scan Sekarang"
+  tidak terpotong di ukuran widget minimum), (4) tap widget -> Toast muncul
+  -> notifikasi hasil scan muncul beberapa saat kemudian (WorkManager,
+  bukan instan) -- kalau notifikasi tidak pernah muncul, cek izin
+  POST_NOTIFICATIONS & battery optimization di HP.
+- Confidence Rating: **80%**. versionCode 122->123, versionName
+  8.20.1->8.21.0.
+
+## v8.20.1 -- Fix cacat UI: chart Tren 14 Hari cuma tampil 4 batang (2026-08-21)
+- Laporan user + screenshot: layar Statistik judulnya "Tren 14 hari terakhir"
+  tapi cuma 4 batang terlihat di kanvas kosong -- kelihatan RUSAK ke user
+  beginner (bukan ada). "Dilarang overthinking" -- langsung diagnosa & fix,
+  tanpa tanya balik.
+- Root cause: `TrendBarChart` (StatisticsScreen.kt) gambar `barHeight=0px`
+  utk hari count=0 (drawRoundRect ukuran nol = tidak terlihat sama sekali),
+  padahal `computeStatisticsData()` di MainViewModel.kt SELALU hasilkan 14
+  bucket lengkap (bukan cuma hari yg ada aktivitas) -- data sudah benar,
+  murni bug rendering di Canvas.
+- Fix: hari count=0 tetap digambar sbg stub pendek (3dp) warna redup
+  (`barColor.copy(alpha=0.22f)`), bukan tinggi 0 -- 14 batang SELALU
+  terlihat, beda visual jelas "0 aktivitas" vs "ada aktivitas".
+- 1 file diubah: `StatisticsScreen.kt` (`TrendBarChart` saja, tidak
+  menyentuh data layer/`MainViewModel.kt`/DAO). `preflight_check.sh` lolos.
+- Confidence Rating: 92%. versionCode 121->122, versionName 8.20.0->8.20.1.
+
+## v8.20.0 -- Roadmap Fase 2.3: halaman Statistik penuh (2026-08-21)
+- "Lanjutkan" tanpa area spesifik, setelah Fase 1-2.2 tuntas semua --
+  Fase 2.3 punya prasyarat eksplisit ("kerjakan SETELAH 1.4 terbukti stabil
+  di device asli") yang belum bisa dikonfirmasi Claude (sandbox tanpa
+  device), jadi ditanya dulu via pilihan singkat, bukan diasumsikan.
+  **User pilih eksplisit: lanjut 2.3, anggap 1.4 stabil.**
+- **Screen baru `StatisticsScreen.kt`**: kartu total sepanjang riwayat,
+  grafik tren batang 14 hari, breakdown per-rule (bar proporsional). SEMUA
+  grafik hand-rolled pakai `Canvas` polos -- SENGAJA TANPA library chart
+  baru (nol dependency baru = nol risiko kompatibilitas versi/lisensi yang
+  belum pernah lewat `preflight_check.sh`). Label sumbu-X grafik tren cuma
+  3 titik (awal/tengah/akhir) -- 14 label penuh di lebar layar HP beresiko
+  tumpang tindih, dihindari dari awal bukan ditemukan lewat trial-error.
+- **Sumber data**: `MoveHistoryRepository` (`historyFlow`, pola PERSIS
+  `computeHomeStats()` v8.17.0 & breakdown per-rule `resultNotification`
+  v8.19.0 -- 3 fitur beda sekarang share 1 sumber data yang sama, bukan 3
+  jalur terpisah). `MoveHistoryDao.kt` (Protected) TIDAK disentuh. Caveat
+  cap `MAX_ENTRIES = 200` SAMA seperti `homeStats`, kali ini ditampilkan
+  EKSPLISIT di layar (`statistics_cap_caveat` string, caption di bawah
+  breakdown) -- bukan cuma di komentar kode kayak sebelumnya, krn window
+  waktu di sini jauh lebih panjang/tak terbatas (bukan cuma minggu/bulan
+  ini) shg dampak cap lebih terasa & lebih perlu transparan ke user.
+- **`MainViewModel.kt`**: `StatisticsData` (data class + nested
+  `DayBucket`/`RuleBucket`) + `statisticsData: StateFlow` + fungsi murni
+  `computeStatisticsData()` (pola sama `computeHomeStats()`, testable tanpa
+  Context).
+- **Protected Assets disentuh PARSIAL** (sesuai aturan edit-parsial):
+  `Navigation.kt` (+1 baris `Routes.STATISTICS`), `MainActivity.kt`
+  (+1 composable route + 1 parameter baru ke `HomeScreen`). Tidak ada
+  logika lain di kedua file itu yang diubah.
+- **Preflight iterasi 1x**: kategori 5 (LazyColumn dlm verticalScroll)
+  sempat false-positive -- bukan kode salah, tapi KOMENTAR di
+  `StatisticsScreen.kt` yang menyebut kata "LazyColumn" DAN
+  "verticalScroll" sekaligus (menjelaskan kenapa TIDAK dipakai) ikut
+  ke-grep sbg pola berisiko. Diperbaiki dgn reword komentar TANPA ubah
+  makna. **Pelajaran**: preflight ini regex/grep polos, tidak parse
+  AST -- komentar yang menyebutkan nama pola berbahaya (utk dokumentasi)
+  bisa memicu false-positive di dirinya sendiri, cek isi komentar juga
+  saat preflight merah, jangan asumsi selalu bug kode nyata.
+- File diubah (6) + 1 file baru: `StatisticsScreen.kt` (BARU),
+  `MainViewModel.kt`, `HomeScreen.kt`, `Navigation.kt` (Protected, parsial),
+  `MainActivity.kt` (Protected, parsial), `strings.xml` (8 string baru).
+  `app/build.gradle.kts` (versi). `ROADMAP.md` Fase 2.3 dicoret selesai --
+  **Fase 1 & 2 SEKARANG SEMUA SELESAI**, sisa cuma Fase 3 (butuh item
+  disebut eksplisit user).
+- Preflight: 13/13 kategori PASS (setelah 1 iterasi reword komentar).
+- **BELUM PERNAH lewat `./gradlew` asli / device asli.** User WAJIB
+  verifikasi di HP: menu "Statistik" baru muncul di Home (antara Riwayat &
+  Pengaturan), buka layar, grafik tren tampil masuk akal (batang tinggi
+  proporsional ke jumlah file), breakdown per-rule urut dari yang paling
+  banyak, caption cap 200 entri kebaca jelas.
+- versionCode 120->121, versionName 8.19.0->8.20.0.
+
+## v8.19.0 -- Roadmap Fase 2.2: notifikasi hasil auto-scan per-rule (2026-08-21)
+- Instruksi user: "Lanjutkan progress!!" (tanpa area spesifik, + peringatan
+  "dilarang overthinking") -- dicek `ROADMAP.md` dulu: item berikutnya
+  setelah Fase 2.1 (v8.18.0) adalah 2.2 (notifikasi hasil auto-scan
+  per-rule). Fase 2.3 dilewati dulu (prasyaratnya eksplisit: 1.4 terbukti
+  stabil di device asli, belum ada konfirmasi user). Fase 3 tidak disentuh
+  (butuh sebutan eksplisit).
+- **Desain rendah-risiko** (lebih rendah dari estimasi roadmap "~2-3 file,
+  Risiko: Sedang"): breakdown per-rule DIAMBIL dari `MoveHistoryRepository`
+  SETELAH scan selesai (filter `timestampMillis >= scanStartMillis`,
+  `groupingBy { ruleFolderName }`) -- pola PERSIS `computeHomeStats()`
+  v8.17.0 (sumber data existing yang sudah bersih per-file, bukan pipa
+  baru). Konsekuensi: `FileSorter.kt` (3 loop pemindahan legacy/SAF/
+  Shizuku) & `ScanResult` SAMA SEKALI TIDAK disentuh -- nol risiko regresi
+  di jalur scan inti. `MoveHistoryDao.kt` (Protected: DB Schema/DAO) juga
+  TIDAK disentuh -- `historyFlow.first()` (snapshot sekali) sudah cukup,
+  tidak perlu query baru.
+- **`AutoSortNotification.kt`**: fungsi baru `resultNotification()` --
+  notifikasi TERPISAH (ID beda, `RESULT_NOTIFICATION_ID = 1002`) dari
+  notifikasi ongoing yang sudah ada (`NOTIFICATION_ID = 1001`, otomatis
+  hilang begitu `doWork()` selesai). `BigTextStyle` tampilkan breakdown
+  per-rule diurutkan by count DESC, `contentText` collapsed cuma total.
+  Channel sama (`IMPORTANCE_LOW`, silent) -- konsisten, bukan notifikasi
+  urgent baru.
+- **`AutoSortWorker.kt`**: HANYA notif kalau `result.filesMoved > 0` --
+  sengaja SKIP kalau 0 (auto-scan default tiap 240 menit, notif tiap
+  siklus walau nihil akan jadi notification fatigue). Detail "0
+  dipindahkan" tetap tercatat di Log Aktivitas seperti biasa (tidak
+  berubah). Try-catch terpisah utk pemanggilan notifikasi (termasuk
+  `SecurityException` kalau `POST_NOTIFICATIONS` dicabut runtime) --
+  kegagalan notif TIDAK BOLEH menggagalkan `Result.success()` scan yang
+  sudah sukses.
+- **Caveat jujur**: breakdown per-rule derived dari window waktu
+  (`timestampMillis >= scanStartMillis`), BUKAN dihitung langsung di titik
+  pemindahan -- kalau scan manual (`MainViewModel`) kebetulan jalan di
+  window waktu yang SAMA PERSIS dgn auto-scan, breakdown per-rule bisa
+  sedikit meleset. Praktis mustahil (`scanMutex` sudah cegah 2 scan
+  beriringan sama sekali), dicatat apa adanya bukan disembunyikan. Angka
+  TOTAL di judul notifikasi tetap dari `ScanResult.filesMoved` (sumber
+  kebenaran asli), cuma baris per-rule yang best-effort derived.
+- File diubah (3): `AutoSortNotification.kt`, `AutoSortWorker.kt`,
+  `strings.xml` (3 string baru, prefix `auto_sort_result_notif_*`).
+  `app/build.gradle.kts` (versi). `AndroidManifest.xml` (Protected) TIDAK
+  disentuh -- `POST_NOTIFICATIONS` sudah dideklarasikan sejak fitur
+  foreground service lama.
+- **`ROADMAP.md` diupdate**: Fase 2.2 dicoret ✅ SELESAI.
+- Preflight: 13/13 kategori PASS, 0 iterasi.
+- **BELUM PERNAH lewat `./gradlew` asli / device asli.** User WAJIB
+  verifikasi di HP: setelah auto-scan (atau scan manual -- notifikasi
+  dipanggil dari path yang sama) memindahkan >=1 file, muncul notifikasi
+  baru "Auto-sort selesai" TERPISAH dari notifikasi "sedang berjalan" yang
+  hilang duluan, expand notifikasi lihat breakdown per-folder rule masuk
+  akal, DAN scan 0-file TIDAK memicu notifikasi apapun.
+- versionCode 119->120, versionName 8.18.0->8.19.0.
+
+## v8.18.0 -- Roadmap Fase 2.1: pencarian di Riwayat Aktivitas (2026-08-21)
+- Lanjutan `ROADMAP.md` setelah Fase 1.4 (v8.17.0). **Cross-check ke kode
+  dulu** (bukan asumsi dari estimasi roadmap "~4-6 file, 2 screen"):
+  `RuleListScreen.kt` TERNYATA SUDAH punya search/filter lengkap (query,
+  filter folderName/pattern, empty-state beda utk "belum ada rule" vs
+  "tidak ditemukan" -- v2.24.0 lama). **Cakupan nyata batch ini cuma 1
+  screen**: `ActivityLogScreen.kt`, yang benar-benar 0 search sebelumnya.
+- Fitur: 1 `OutlinedTextField` search (shared 1 field utk 2 tab, filter
+  kolom beda per tab -- `message` di tab Log, `fileName` di tab Undo).
+  Disembunyikan saat mode seleksi-sapuan aktif (top bar sudah ganti fokus
+  ke "Undo Terpilih", search cuma nambah ramai). Empty-state dibedakan:
+  "belum ada aktivitas"/`"tidak ada yang bisa di-undo"` (data kosong) vs
+  "tidak ditemukan" + ikon `SearchOff` (hasil search kosong) -- pola sama
+  persis `RuleListScreen.kt`.
+- **Sweep-select & batch undo TIDAK terpengaruh**: `pendingBatchUndo`
+  tetap pakai `undoableHistory` (param penuh) di-filter by `selectedIds`,
+  BUKAN list ter-filter search -- id tetap valid lintas filter, tidak ada
+  risiko "pilih lalu hilang saat search diubah".
+- File diubah (2): `ActivityLogScreen.kt`, `strings.xml` (3 string baru,
+  prefix `activitylog_search_*`/`activitylog_no_results_*`).
+  `app/build.gradle.kts` (versi -- minor, fitur baru).
+- **`ROADMAP.md` diupdate**: Fase 2.1 dicoret ✅ SELESAI (cakupan nyata
+  lebih kecil dari estimasi awal -- RuleListScreen sudah beres duluan).
+- Preflight: 13/13 kategori PASS, 0 iterasi.
+- **BELUM PERNAH lewat `./gradlew` asli / device asli.** User WAJIB
+  verifikasi di HP: ketik di search box tab Log (filter pesan) & tab Undo
+  (filter nama file), long-press tetap masuk mode seleksi & search
+  hilang, ganti tab search TETAP ada tapi filter beda kolom.
+- versionCode 118->119, versionName 8.17.0->8.18.0.
+
+## v8.17.0 -- Roadmap Fase 1.4: statistik ringkas Home (2026-08-21)
+- Lanjutan `ROADMAP.md` -- item berikutnya setelah Fase 1.3 tutup (v8.16.2).
+  Kartu ringkasan Home (bareng "Rule aktif"/"Auto-scan") dapat 2 baris baru:
+  jumlah file tersortir minggu ini & bulan ini.
+- Sumber data: `MoveHistoryRepository` (record per-file bersih, punya
+  `timestampMillis`), BUKAN `ActivityLogRepository` (pesan bebas, parsing
+  string utk hitung terlalu rapuh). Dihitung REGARDLESS status `undone` --
+  pemindahannya tetap terjadi.
+- **Caveat jujur, bukan disembunyikan**: `MoveHistoryRepository` sudah
+  di-cap `MAX_ENTRIES = 200` (utk fitur Undo, sudah ada lama) -- kalau
+  total pemindahan bulan ini pernah melebihi 200 sebelum akhir bulan,
+  angka "bulan ini" bisa under-count karena entri terlama ke-trim. Ini
+  trade-off yang SUDAH ADA & diterima utk fitur Undo, bukan regresi baru
+  dari fitur ini. Kalau user suatu saat butuh statistik akurat tanpa cap,
+  itu scope terpisah (Roadmap Fase 2.3 "Statistik penuh").
+- Batas minggu/bulan: kalender (Minggu/Senin sesuai locale device s/d
+  sekarang; 1 bulan berjalan s/d sekarang) via `java.util.Calendar` --
+  konsisten dgn pola tanggal existing di app (`SimpleDateFormat`, BUKAN
+  `java.time`, tidak ada preseden lain di codebase ini).
+- File diubah (4): `MainViewModel.kt` (`data class HomeStats` + StateFlow
+  `homeStats` + fungsi murni `computeHomeStats()`), `HomeScreen.kt` (param
+  baru + 2 `ManifestRow`), `MainActivity.kt` (wiring `collectAsStateWithLifecycle`
+  + parameter), `strings.xml` (3 string baru). `app/build.gradle.kts` (versi
+  -- minor bump, fitur baru bukan micro-fix).
+- **`ROADMAP.md` diupdate**: Fase 1.4 dicoret ✅ SELESAI.
+- Preflight: 13/13 kategori PASS, 0 iterasi (langsung bersih).
+- **BELUM PERNAH lewat `./gradlew` asli / device asli.** User WAJIB
+  verifikasi di HP: kartu ringkasan Home tampil 4 baris (Rule aktif,
+  Auto-scan, Tersortir minggu ini, Tersortir bulan ini), angka masuk akal
+  dibanding tab "Log" di Riwayat Aktivitas.
+- versionCode 117->118, versionName 8.16.2->8.17.0.
+
+## v8.16.2 -- Roadmap Fase 1.3 batch 8/N -- PENUTUP: ekstraksi string `MainActivity.kt`/`PermissionGate` (2026-08-21)
+- Instruksi user: "Lanjutkan progress!!" (tanpa area spesifik) -- dicek dulu
+  `ROADMAP.md` (bukan asumsi) sbg antrian resmi: Fase 1.3 (audit hardcode
+  string vs `strings.xml`) status "SEDANG BERJALAN", sisa item terakhir
+  `MainActivity.kt` (dialog izin/error). **Cross-check ke kode aktual dulu**
+  (bukan percaya `ROADMAP.md` mentah -- filenya sendiri bilang "coret kalau
+  ternyata sudah lebih dulu selesai") -- grep 7 screen lain yg tercatat
+  "sisa" di `ROADMAP.md` (SettingsScreen, DiagnosticsScreen, dst) ternyata
+  SEMUA sudah 0 literal `Text("...")` (klaim v8.16.1 "8/9 screen 100%
+  stringResource" terverifikasi akurat, `ROADMAP.md`-nya sendiri yang
+  belum sempat di-update). **`MainActivity.kt` SATU-SATUNYA sisa nyata**:
+  5 string di composable `PermissionGate` (dialog izin runtime) -- persis
+  sesuai catatan `ROADMAP.md`.
+- Fix: 5 string baru `strings.xml` (prefix `permission_gate_*`), wired ke
+  `stringResource(...)` di `PermissionGate`. MURNI ekstraksi, nilai teks
+  identik, nol perubahan perilaku/logic izin.
+- Insiden minor sendiri, ketangkap preflight SEBELUM commit (kelas bug
+  sama persis v8.5.0b/v8.6.0): komentar XML baru pakai `--` ("batch 8/N --
+  PENUTUP" & "TERAKHIR ... -- setelah ini") -- expat parser tolak `--` di
+  dalam `<!-- -->`. Diganti `;`, preflight kategori #10 ulang -> bersih.
+- File diubah (3): `MainActivity.kt`, `strings.xml`, `app/build.gradle.kts`
+  (versi). Preflight: 13/13 kategori PASS (setelah 1x iterasi fix XML).
+- **`ROADMAP.md` diupdate**: Fase 1.3 dicoret jadi ✅ SELESAI v8.16.2 --
+  seluruh app (9 screen + `MainActivity.kt`) sekarang 100% `stringResource`,
+  nol literal UI hardcode tersisa, prasyarat Fase 3.3 (lokalisasi EN)
+  sudah terpenuhi kalau suatu saat diminta eksplisit.
+- **BELUM PERNAH lewat `./gradlew` asli / device asli.** User WAJIB
+  verifikasi: cabut izin "All files access" app ini lalu buka app --
+  layar "Izin Diperlukan" tampil identik (judul, paragraf, 3 tombol),
+  tidak ada teks hilang/berubah.
+- versionCode 116->117, versionName 8.16.1->8.16.2.
+
+## v8.16.1 -- Audit UX 100% batch 7 (area baru: hardcoded string/i18n) (2026-08-21)
+- Area baru: konsistensi `stringResource`/`strings.xml` vs literal
+  hardcode. Grep lintas 9 screen: 8/9 SUDAH 100% `stringResource`
+  (migrasi "Roadmap Fase 1.3" batch sebelumnya, per komentar di
+  `OnboardingScreen.kt`). **1 pengecualian nyata ditemukan**:
+  `SkippedFilesScreen.kt` -- SATU-SATUNYA screen yang TERLEWAT migrasi,
+  6 string (title top bar + intro + 2x title/message empty-state) 100%
+  hardcode literal Indonesia, TIDAK ADA di `strings.xml` sama sekali.
+  Root cause: layar ini dibuat/direvisi (fix UI-09) SEBELUM batch migrasi
+  Fase 1.3 berjalan, dan tidak ikut tersapu waktu itu.
+- Fix: 6 string baru di `strings.xml` (prefix `skipped_files_*`), wired
+  ke `stringResource(...)` di `SkippedFilesScreen.kt`. `info.reason` (teks
+  alasan skip per-file) SENGAJA TIDAK disentuh -- itu string DINAMIS
+  dibangun di `util/FileSorter.kt` (layer terpisah, bukan `ui/screens/*`,
+  di luar cakupan batch ini + beresiko cakupan lebih luas dari 1 file).
+- File diubah (2): `SkippedFilesScreen.kt`, `strings.xml`. `app/build.gradle.kts` (versi).
+- Dampak: sekarang app SIAP di-i18n (tambah `values-en/strings.xml` dst)
+  tanpa lubang -- sebelumnya 1 layar akan selalu Indonesia keras walau
+  locale diganti.
+- **BELUM PERNAH lewat `./gradlew` asli / device asli.** User WAJIB
+  verifikasi: layar "Detail File Dilewati" tampil identik (tidak ada teks
+  hilang/berubah), termasuk 2 varian empty-state (belum pernah scan vs
+  sudah scan tapi kosong).
+- versionCode 115->116, versionName 8.16.0->8.16.1.
+
+## v8.16.0 -- Audit UX 100% batch 6 (area baru: state restoration) (2026-08-21)
+- Instruksi user: "audit UX lebih dalam lagi (area baru)". Area baru:
+  **state restoration** (rotasi layar & process death) -- belum pernah
+  dicek di audit batch 1-5 sebelumnya (fokusnya waktu itu: maxLines,
+  double-tap guard, predictive back, kontras, animasi, orientation lock).
+- **Bug nyata ditemukan**: `AddEditRuleScreen.kt` -- SEMUA field ketikan
+  user (`folderName`, `pattern`, `excludePattern`, `minSizeKbText`,
+  `maxSizeKbText`) pakai `remember` biasa, BUKAN `rememberSaveable`.
+  Compose `remember` polos HANYA bertahan lewat recomposition biasa, HILANG
+  TOTAL saat: (1) rotasi layar (config change hancurkan+bikin ulang
+  Activity kalau tidak di-handle), (2) process death (app di-background
+  lalu proses dibunuh sistem saat RAM rendah, SANGAT umum di Android,
+  bukan edge case langka) -- user yang sudah ngetik pattern rule panjang
+  bisa kehilangan semua ketikan tanpa peringatan.
+  - grep dikonfirmasi 6 screen lain juga pakai `remember` untuk state
+    lokal, tapi SEMUA state-nya transient/derived (loading flag, dialog
+    terbuka/tertutup, hasil query) -- BUKAN ketikan user yang mahal
+    diulang. `AddEditRuleScreen.kt` SATU-SATUNYA form input teks
+    signifikan di app ini (grep `OutlinedTextField` lintas screens
+    dikonfirmasi).
+- Fix: 5 field di atas -> `rememberSaveable`. `pendingCheck`/`pendingRule`/
+  `preview` SENGAJA TETAP `remember` biasa -- objek kompleks (`Rule`/
+  `SaveRuleCheck`/`PatternPreviewResult`) butuh `@Parcelize`/custom Saver
+  utk Bundle-safe (di luar cakupan 1 batch micro), dan isinya
+  derived/transient (bisa dihitung ulang dari field text di atas begitu
+  field itu balik), BUKAN input mentah user yang butuh diselamatkan.
+- File diubah (1): `AddEditRuleScreen.kt` (import `rememberSaveable` + 5
+  deklarasi state). `app/build.gradle.kts` (versi -- **minor bump**,
+  bukan patch, krn ini penambahan cakupan audit BARU/area baru, bukan
+  sekadar lanjutan micro-fix dari batch sebelumnya).
+- **BELUM PERNAH lewat `./gradlew` asli / device asli.** User WAJIB
+  verifikasi di HP: buka "Tambah Rule", isi semua field, rotasi layar
+  (atau developer options > "Don't keep activities" lalu switch app lain
+  & balik) -- SEMUA isian TETAP ada, tidak kosong lagi.
+- Area lanjutan (kalau user mau audit lebih dalam lagi): urutan fokus
+  keyboard/`Modifier.focusRequester`, semantics TalkBack (`heading()`,
+  `mergeDescendants`), konsistensi haptic feedback antar aksi, hardcoded
+  string vs `stringResource` (i18n).
+- versionCode 114->115, versionName 8.15.6->8.16.0.
+
+## v8.15.6 -- Audit UX 100% batch 5: tutup pending queue #3 (2026-08-21)
+- **Kontras disabled-state**: DICEK, tidak ada override manual warna
+  disabled di seluruh kode (`grep "disabled"` 0 hasil relevan) -- app
+  100% pakai default alpha disabled Material3 (~38% konten/12% container)
+  bawaan `ButtonDefaults`/`FilterChipDefaults`. **Kesimpulan: N/A, bukan
+  bug** -- WCAG 1.4.3 sendiri MENGECUALIKAN komponen UI inaktif dari
+  syarat kontras, dan default M3 sudah teruji.
+- **Konsistensi durasi animasi**: DICEK seluruh `tween(...)` di app --
+  SEMUA transisi Crossfade layar konsisten 220ms, transisi masuk
+  NavHost 220ms/keluar 180ms (pola standar Material "keluar lebih cepat
+  dari masuk"), animasi tekan tombol konsisten via 1 konstanta
+  `TactileTokens.PressAnimationMillis=120`. **Kesimpulan: N/A, sudah
+  konsisten**, tidak ada durasi acak/beda sendiri di file manapun.
+- **Landscape/tablet layout**: bug NYATA -- 0 resource qualifier
+  (`-land`, `-sw600dp`, dst), `MainActivity` tanpa
+  `android:screenOrientation`, TIDAK ADA adaptive layout sama sekali.
+  Redesign adaptive penuh (breakpoint, 2-pane, dst) di luar cakupan 1
+  batch micro. **Fix pragmatis diterapkan**: kunci
+  `android:screenOrientation="portrait"` di `MainActivity` -- mencegah
+  layout pecah/tumpang-tindih di landscape yang memang belum pernah
+  didesain untuknya, TANPA memblokir siapa pun (app tetap penuh
+  fungsional di portrait, mode utama HP Android). Adaptive tablet
+  layout tetap dicatat sebagai roadmap terpisah kalau user mau lanjut
+  ke sana (bukan micro-fix, butuh desain ulang beberapa layar).
+- File diubah (1): `AndroidManifest.xml`. `app/build.gradle.kts` (versi).
+- **Pending queue v8.15.0 #3 KINI TUTUP SELURUHNYA** (3/3 item selesai
+  diaudit: 2 N/A terverifikasi, 1 fix pragmatis).
+- **BELUM PERNAH lewat `./gradlew` asli / device asli.** User WAJIB
+  verifikasi: app terkunci portrait (tidak lagi bisa rotate ke
+  landscape), tidak ada regresi fungsi normal di portrait.
+- versionCode 113->114, versionName 8.15.5->8.15.6.
+
+## v8.15.5 -- Audit UX 100% batch 4: aktifkan predictive back gesture (2026-08-21)
+- Lanjutan pending queue #3 v8.15.0 (item: predictive back gesture,
+  Android 13+). **Bug nyata ditemukan**: `targetSdk = 34` (Android 14)
+  TAPI `android:enableOnBackInvokedCallback` TIDAK dideklarasikan di
+  `AndroidManifest.xml` -- default-nya `false`, jadi app diam-diam JATUH
+  ke back-dispatch legacy tanpa animasi preview predictive-back sistem,
+  walau target SDK-nya sudah lama mendukung.
+- Fix: tambah `android:enableOnBackInvokedCallback="true"` di tag
+  `<application>` (1 baris, protected asset edit PARSIAL). Tidak
+  bersinggungan dengan `enterTransition`/`exitTransition` custom Compose
+  Navigation yang sudah ada (itu transisi antar-composable, ini flag
+  animasi preview back sistem level-Activity) -- tidak ada konflik.
+- File diubah (1): `AndroidManifest.xml`. `app/build.gradle.kts` (versi).
+- Pending queue tersisa (2 item dari v8.15.0 #3): kontras warna
+  disabled-state, konsistensi durasi animasi antar layar,
+  landscape/tablet layout -- belum ada bukti konkret bug per item.
+- **BELUM PERNAH lewat `./gradlew` asli / device asli.** User WAJIB
+  verifikasi di HP Android 13+: swipe-back dari tepi layar menampilkan
+  animasi preview (scale-down/slide) sebelum benar-benar keluar/back,
+  bukan langsung potong seperti sebelumnya.
+- versionCode 112->113, versionName 8.15.4->8.15.5.
+
+## v8.15.4 -- Tampilkan potongan release notes di layar Pembaruan (2026-08-21)
+- Instruksi langsung user (screenshot layar Pengaturan > Pembaruan
+  Aplikasi): "jangan cuma compare version doang. Minimal nampilin
+  potongan informasi update apa yang didapat dari commit terbaru".
+- **Root cause**: `UpdateAvailable.releaseNotes` (isi `body` dari GitHub
+  Releases API, `GET /repos/.../releases/latest`) SUDAH ditarik & disimpan
+  di model sejak awal (`UpdateRepository.kt` baris 95), tapi TIDAK PERNAH
+  dirender di `SettingsScreen.kt` -- UI cuma bandingkan `latestVersion` vs
+  `currentVersion`. Bukan bug logika, murni field yang kepotong sebelum
+  sampai UI.
+- Fix: di bawah baris "Versi baru tersedia", tampilkan
+  `state.releaseNotes` (`maxLines = 4, overflow = TextOverflow.Ellipsis` --
+  body rilis GitHub mentah bisa panjang) + tombol "Lihat rilis lengkap"
+  (`LocalUriHandler.openUri(state.releaseUrl)`, buka halaman rilis GitHub
+  di browser).
+- File diubah (2): `SettingsScreen.kt` (render notes + tombol, import
+  `TextButton`/`TextOverflow`/`LocalUriHandler`), `strings.xml` (1 string
+  baru: `settings_update_view_full_notes`). `app/build.gradle.kts` (versi).
+- Preflight manual: `releaseNotes` cuma dirender kalau `isNotBlank()` --
+  rilis tanpa body (jarang, tapi mungkin) tidak menampilkan section
+  kosong/tombol menggantung.
+- **BELUM PERNAH lewat `./gradlew` asli / device asli.** User WAJIB
+  verifikasi: setelah "Cek Pembaruan" dan versi baru tersedia, potongan
+  teks release notes (maks 4 baris, dipotong "..." kalau panjang) muncul
+  di bawah baris versi, tombol "Lihat rilis lengkap" membuka halaman
+  rilis GitHub di browser.
+- versionCode 111->112, versionName 8.15.3->8.15.4.
+
+## v8.15.3 -- Audit UX 100% batch 3: verifikasi OnboardingScreen N/A (2026-08-21)
+- Lanjutan pending queue #2 v8.15.0. `view` manual `OnboardingScreen.kt`
+  (188 baris) SELURUHNYA: layar ini carousel 7 langkah info murni
+  (icon+title+body+progress dots+Next/Back), 0 `TextField`/`OutlinedTextField`
+  di file ini. **Kesimpulan: N/A, bukan bug** -- grep 0 hasil di batch
+  audit awal SUDAH akurat, tidak ada input yang lolos.
+- Tidak ada file kode diubah. `app/build.gradle.kts` (versi, sesuai rule
+  wajib bump tiap sesi).
+- Pending queue tersisa (dari v8.15.0, item #3): kontras disabled-state,
+  konsistensi durasi animasi, predictive back gesture, landscape/tablet --
+  belum ada bukti konkret bug, perlu audit manual lebih dalam per item
+  kalau user mau lanjut.
+- versionCode 110->111, versionName 8.15.2->8.15.3.
+
+## v8.15.2 -- Pin aturan wajib sesi (bump versi + posisi box commit) (2026-08-21)
+- Instruksi langsung user: "Abadikan di repository" -- 2 rule adaptif (bump
+  versi manual wajib tiap sesi; box skrip commit wajib tampil di atas
+  heading "Update Harian:") sebelumnya cuma diakui di chat (hilang kalau
+  sesi baru), sekarang ditulis permanen sebagai section pinned di atas
+  file ini supaya sesi Claude berikutnya (siapapun modelnya) otomatis
+  ikut tanpa user perlu tempel ulang instruksi.
+- File diubah (1): `PROJECT_STATE.md` (tambah section pinned). `app/build.gradle.kts` (versi, sesuai rule #1 baru itu sendiri).
+- Tidak ada perubahan kode/perilaku app.
+- versionCode 109->110, versionName 8.15.1->8.15.2.
+
+## v8.15.1 -- Audit UX 100% batch 2: guard double-tap "Simpan" (2026-08-21)
+- Lanjutan pending queue #1 dari v8.15.0. `AddEditRuleScreen.kt`: tombol
+  "Simpan" sebelumnya `enabled` hanya cek isi field, TIDAK guard terhadap
+  tap cepat 2x saat `onCheckBeforeSave` (suspend) masih in-flight -- bisa
+  trigger 2 proses cek/simpan bertumpuk.
+- Fix: state `isSaving` (pola sama seperti `undoInFlight` di
+  `ActivityLogScreen.kt`) -- `true` sebelum `scope.launch`, `false` setelah
+  `onCheckBeforeSave` selesai; `enabled` tombol ikut cek `!isSaving`.
+- File diubah (1): `AddEditRuleScreen.kt`. `app/build.gradle.kts` (versi).
+- Preflight: N/A (tidak ada script gradlew di sandbox ini, cek manual OK).
+- **BELUM PERNAH lewat `./gradlew` asli / device asli.** User WAJIB
+  verifikasi di HP: tap cepat 2x tombol "Simpan" saat menambah/edit rule
+  TIDAK lagi memicu 2 proses simpan bertumpuk, tombol sempat nonaktif
+  singkat lalu normal lagi.
+- **PENDING QUEUE (masih tersisa dari v8.15.0, belum dikerjakan)**:
+  1. `OnboardingScreen.kt` -- verifikasi manual perlu `TextField`/
+     `KeyboardOptions` ada/tidak (lihat detail di entri v8.15.0 di bawah).
+  2. Cakupan lanjutan: kontras warna disabled-state, konsistensi durasi
+     animasi, predictive back gesture, landscape/tablet layout.
+- versionCode 108->109, versionName 8.15.0->8.15.1.
+
+## v8.15.0 -- Audit UX 100% (batch 1: fix nama file mentah tanpa maxLines) (2026-08-21)
+- **Instruksi langsung user**: "audit UX 100%". Audit dilakukan lintas
+  SEMUA layar (`ui/screens/*.kt`, 9 file) + komponen (`ui/components/*.kt`,
+  10 file) -- cakupan dicek: accessibility `contentDescription`, ukuran
+  touch target, dialog konfirmasi utk aksi destruktif, feedback (snackbar)
+  setelah aksi, cakupan `EmptyState`, `maxLines`/`TextOverflow` utk teks
+  dinamis, `KeyboardOptions`/`ImeAction` di form.
+- **1 BUG NYATA ditemukan & diperbaiki (sesuai batch limit -- max 3 file)**:
+  `entry.fileName`/`info.fileName`/`entry.displayName` (nama file MENTAH
+  dari filesystem, sering tanpa spasi) ditampilkan TANPA `maxLines` di 3
+  layar -- beresiko WORD-BREAK PAKSA di tengah token saat tidak muat 1
+  baris. **BUKTI NYATA, bukan spekulasi**: screenshot referensi v2.20.3 di
+  sesi ini SUDAH menunjukkan gejalanya --
+  `"AudioPlayer-v1.0.34-release-run146.apk"` pecah jadi
+  `"...release-r"` / `"un146.apk"` di baris ke-2, tinggi row jadi tidak
+  konsisten antar entri.
+  - Fix: `maxLines = 1, overflow = TextOverflow.Ellipsis` (konvensi standar
+    list file Android) di 4 titik, 3 file: `ActivityLogScreen.kt` (baris
+    file di tab Undo), `SkippedFilesScreen.kt` (baris "Detail File
+    Dilewati"), `DiagnosticsScreen.kt` (2 titik: daftar kandidat Downloads
+    + baris crash log yang isi `entry.displayName`-nya format
+    `crash_<timestamp>_<UUID>.txt`, UUID = token panjang tanpa titik
+    break alami).
+- **PENDING QUEUE (ditemukan saat audit, BELUM dikerjakan -- batch
+  berikutnya)**:
+  1. **`AddEditRuleScreen.kt`** -- tombol "Simpan" (`enabled =
+     folderName.isNotBlank() && ...` SUDAH ada, itu bagus) TAPI `onClick`
+     men-trigger `scope.launch { onCheckBeforeSave(rule) ... }` TANPA
+     guard against double-tap SAAT coroutine check masih in-flight -- tap
+     cepat 2x sebelum check pertama selesai berpotensi trigger 2 proses
+     cek/simpan bertumpuk. Fix tersedia: state `isSaving` +
+     `enabled = ... && !isSaving`, pola SAMA seperti yang sudah dipakai di
+     `undoInFlight` (`ActivityLogScreen.kt`).
+  2. **`OnboardingScreen.kt`** -- 0 `KeyboardOptions`/`ImeAction` ditemukan
+     lewat grep. BELUM diverifikasi manual apakah layar ini memang tidak
+     punya `TextField` sama sekali (kalau iya, N/A bukan bug) atau ada
+     input yang lolos kena grep pattern beda. Perlu `view` manual sebelum
+     diputuskan ada bug atau tidak.
+  3. Cakupan audit BELUM menyentuh: kontras warna teks disabled-state,
+     konsistensi durasi animasi/transisi antar layar, perilaku predictive
+     back gesture (Android 13+), landscape/tablet layout. Kalau user mau
+     lanjut "audit UX 100%" lebih dalam, area ini titik mulai berikutnya.
+- File diubah (3): `ActivityLogScreen.kt`, `SkippedFilesScreen.kt`,
+  `DiagnosticsScreen.kt` (tambah import `TextOverflow` + `maxLines`/
+  `overflow` di masing2 Text nama file). `app/build.gradle.kts` (versi).
+  `FILE_MANIFEST.txt` TIDAK berubah.
+- Preflight: 13/13 kategori PASS.
+- **BELUM PERNAH lewat `./gradlew` asli / device asli.** User WAJIB
+  verifikasi di HP: nama file panjang di tab "Undo Pemindahan", "Detail
+  File Dilewati", & Diagnostics TIDAK lagi pecah 2 baris (dipotong "..."
+  di 1 baris), tidak ada regresi baca nama file pendek yang sudah muat 1
+  baris.
+- versionCode 107->108, versionName 8.14.0->8.15.0.
+
+## v8.14.0 -- Eksperimen percepatan kompilasi CI, batch 2 (gabung invocation + KSP incremental) (2026-08-21)
+- Lanjutan v8.13.0 (CI CONFIRMED hijau, run #118, 7m15s) -- instruksi
+  langsung user: "Gabung 3 invocation+KSP incremental".
+- **`.github/workflows/build.yml` (protected asset, edit PARSIAL)**: 3
+  invocation `./gradlew` terpisah (`compileDebugKotlin` -> `testDebugUnitTest`
+  +`testReleaseUnitTest` -> `assembleRelease`) DIGABUNG jadi 1 step
+  "Compile, test, and build release APK" dgn 1 invocation berisi ke-4 task
+  sekaligus -- alasan: `configuration-cache` (aktif sejak v8.13.0) di-key
+  per SET task yang diminta, jadi config utk request "compileDebugKotlin
+  saja" TIDAK otomatis kepake ulang utk request "assembleRelease" (set
+  task beda) -- gabung 1 invocation = project CUMA dikonfigurasi SEKALI
+  utuh. Step "Decode keystore" DIPINDAH ke ATAS step gabungan ini (SEBELUMNYA
+  di antara "Run unit tests" & "Build release APK" lama) krn `assembleRelease`
+  butuh file+env signing SEJAK AWAL invocation gabungan (tidak bisa lagi
+  didekode di tengah, karena tengahnya sudah tidak ada step terpisah).
+  Fail-fast TETAP terjaga: tanpa `--continue`, task gagal = build berhenti,
+  task berikutnya tidak jalan -- perilaku setara 3 step lama.
+- Log 3 file lama (`compile-check.log`/`unit-tests.log`/`assemble-release
+  .log`) jadi 1 file `build-all.log` -- step "Upload build log on failure"
+  disesuaikan (path lama akan 404 diam2 krn `if-no-files-found: ignore`
+  kalau tidak diperbaiki; SUDAH diperbaiki batch ini).
+- **`gradle.properties` (parsial)**: +1 baris `ksp.incremental=true` --
+  SUDAH default true sejak KSP 1.0.4+ (versi proyek 1.9.24-1.0.20), baris
+  ini eksplisit murni supaya niatnya tercatat, BUKAN perubahan perilaku.
+  Room compiler (`ksp("androidx.room:room-compiler")`) satu-satunya
+  processor KSP di proyek ini.
+- File diubah (3): `.github/workflows/build.yml` (parsial),
+  `gradle.properties` (parsial), `app/build.gradle.kts` (versi).
+  `FILE_MANIFEST.txt` TIDAK berubah.
+- Preflight: cek hasil di bawah entri ini sebelum ZIP dikirim (kategori #8
+  YAML validity WAJIB tetap hijau setelah restrukturisasi step).
+- **CI CONFIRMED HIJAU oleh user** (2026-08-21, run #120, commit e1a5cab):
+  `Success`, total durasi **6m 23s** (job `build` 6m 20s), 1 artifact --
+  turun dari baseline v8.13.0 (run #118, 7m15s) = **~52 detik lebih
+  cepat**. Tidak ada rollback diperlukan.
+- **BELUM PERNAH lewat `./gradlew` asli / CI asli** -- sandbox Claude TIDAK
+  punya Android SDK/Gradle/jaringan. Kalau ada run berikutnya yang gagal,
+  rollback termudah: revert `.github/workflows/build.yml` ke versi 3-step
+  (v8.13.0) -- `gradle.properties` v8.13.0/v8.14.0 TIDAK perlu ikut
+  di-rollback, sudah terbukti aman terpisah.
+
+## v8.13.0 -- Eksperimen percepatan kompilasi CI (gradle.properties) (2026-08-21)
+- **Instruksi langsung user**: "terapkan percepatan kompilasi (experimental)".
+- CI (`build.yml`) menjalankan 3 invocation `./gradlew` TERPISAH dalam 1 job
+  yang sama (`compileDebugKotlin` -> `testDebugUnitTest`+`testReleaseUnitTest`
+  -> `assembleRelease`) -- target utama: hemat waktu KONFIGURASI ulang
+  project berkali-kali di job yang sama, + build cache lintas run (`gradle/
+  actions/setup-gradle@v3` di CI sudah cache `~/.gradle` antar run workflow
+  secara bawaan, jadi flag lokal ini MEMANFAATKAN cache itu, bukan bikin
+  cache baru).
+- **`gradle.properties` (protected asset, edit PARSIAL) -- 5 baris baru**:
+  `org.gradle.parallel=true`, `org.gradle.caching=true` (stabil, low-risk),
+  `org.gradle.vfs.watch=true` (stabil), + 2 baris **EKSPERIMENTAL sungguhan**
+  `org.gradle.configuration-cache=true` dengan
+  `org.gradle.configuration-cache.problems=warn` (BUKAN default `fail`) --
+  `warn` dipilih SENGAJA karena `signingConfigs` di `app/build.gradle.kts`
+  baca `System.getenv(...)` LANGSUNG di fase konfigurasi (input "untracked"
+  bagi configuration cache, akan selalu ke-flag sbg "problem") -- kalau pakai
+  default `fail`, build PASTI gagal keras gara2 ini padahal secara fungsi
+  tidak masalah. `warn` supaya itu cuma jadi catatan, build tetap lanjut.
+- **`org.gradle.jvmargs`**: `-Xmx2048m` -> `-Xmx3072m` (runner ubuntu-latest
+  GitHub Actions, margin lebih aman utk Compose+Room+KSP+config-cache
+  sekaligus tanpa OOM daemon).
+- **SENGAJA TIDAK diaktifkan**: Kotlin K2 compiler
+  (`kotlin.experimental.tryK2=true`) -- proyek ini Kotlin 1.9.24 + Compose
+  compiler plugin `1.5.14`, dan dukungan K2 utk Compose compiler plugin
+  BELUM stabil sebelum Kotlin 2.0 (K2 baru resmi didukung penuh saat Compose
+  compiler dibundel ke Kotlin 2.0+) -- risiko build GAGAL TOTAL jauh lebih
+  besar drpd potensi speedup, tidak sepadan utk perubahan yang diminta
+  "sampai berhasil". Kalau proyek ini upgrade ke Kotlin 2.0+ di masa depan,
+  K2 layak dipertimbangkan ulang saat itu.
+- **Rollback cepat kalau CI ternyata bermasalah**: cukup hapus 2 baris
+  `org.gradle.configuration-cache*` di `gradle.properties` (3 baris lain --
+  parallel/caching/vfs.watch -- aman/stabil, tidak perlu ikut dihapus).
+- File diubah (2): `gradle.properties` (parsial), `app/build.gradle.kts`
+  (versi saja, TIDAK ada perubahan dependency/plugin/logic).
+  `FILE_MANIFEST.txt` TIDAK berubah.
+- Preflight: cek hasil di bawah entri ini sebelum ZIP dikirim.
+- **CI CONFIRMED HIJAU oleh user** (2026-08-21, run #118, commit 084539a):
+  `Success`, total durasi **7m 15s** (job `build` 7m 12s), 1 artifact. User
+  konfirmasi via screenshot GitHub Actions -- eksperimen berhasil, TIDAK
+  ada rollback diperlukan. (Baseline durasi run SEBELUM eksperimen ini
+  tidak tercatat di sesi manapun -- tidak ada angka pembanding "sebelum"
+  yang valid dikutip; 7m15s dicatat sbg REFERENSI durasi baru ke depan,
+  bukan klaim persentase speedup.)
+- **BELUM PERNAH lewat `./gradlew` asli / CI asli** -- sandbox Claude TIDAK
+  punya Android SDK/Gradle/jaringan (lihat header `scripts/preflight_check.sh`),
+  jadi "sampai berhasil" TIDAK BISA diverifikasi tuntas di sini secara
+  teknis. **User WAJIB pantau run GitHub Actions berikutnya setelah push**
+  -- kalau `assembleRelease` gagal krn config-cache, langsung terapkan
+  rollback 2-baris di atas (JANGAN revert seluruh 5 baris, cuma yang
+  eksperimental).
+
+## v8.12.0 -- Fitur: UI input PAT GitHub (opsional, hindari rate-limit updater) (2026-08-20)
+- **Item pending eksplisit dari user** (dicatat sejak v8.5.0 sbg "titik
+  ekstensi siap pakai") -- dieksekusi sekarang atas instruksi langsung.
+- `UpdateRepository.checkLatestRelease()`/`downloadApk()` SUDAH menerima
+  parameter `githubToken: String? = null` sejak v8.5.0 -- batch ini **0
+  baris `UpdateRepository.kt` diubah**, murni menyambungkan penyimpanan +
+  UI ke parameter yang sudah ada (bukan fitur baru dari nol).
+- **`SettingsRepository.kt`**: key DataStore baru `github_pat_token`
+  (`stringPreferencesKey`, nullable) + `githubTokenFlow`/`getGithubToken()`/
+  `setGithubToken()`/`clearGithubToken()` -- pola diverifikasi IDENTIK
+  `shizukuDestPathKey` (string opsional, `.trim()` sebelum simpan, method
+  `clear` terpisah dari `set`).
+- **`MainViewModel.kt`**: `val githubToken: StateFlow<String?>` via
+  manual `stateIn`-style collect (pola sama persis `shizukuDestPath`,
+  BUKAN `.stateIn()` Flow operator resmi -- proyek ini konsisten pakai
+  pola manual di seluruh file, ikuti konvensi yang ada). `setGithubToken()`/
+  `clearGithubToken()` wrapper `viewModelScope.launch`. `checkForUpdate()`/
+  `downloadUpdate()` diteruskan `githubToken.value` sbg argumen ke-2
+  (sebelumnya default `null` implisit, sekarang eksplisit dari state).
+- **`MainActivity.kt`** (protected asset, edit PARSIAL): 1
+  `collectAsStateWithLifecycle` (`githubToken`) + 3 parameter baru
+  diteruskan ke `SettingsScreen(...)` (`githubToken`,
+  `onGithubTokenChanged`, `onClearGithubToken`) -- TIDAK ada logika
+  permission/lifecycle lain disentuh.
+- **`SettingsScreen.kt`**: `OutlinedTextField` masked
+  (`PasswordVisualTransformation`, toggle show/hide via `trailingIcon`
+  ikon `Icons.Filled.VpnKey`, `KeyboardType.Password`) ditaruh DI DALAM
+  kartu "Pembaruan Aplikasi" yang sudah ada (bawah deskripsi, ATAS blok
+  `when(updateCheckState)`) -- BUKAN kartu terpisah, karena token ini
+  murni parameter internal fitur updater, bukan setting mandiri. Tombol
+  "Simpan" (`action_save`, REUSE, sama seperti `action_edit`/`action_delete`
+  yg sudah dipakai lintas layar sejak v8.3.0) disabled kalau input kosong
+  ATAU sama persis dgn token tersimpan (`tokenInput != githubToken.orEmpty()`).
+  Tombol "Hapus" (`action_delete`, REUSE) HANYA muncul kalau token SUDAH
+  ada tersimpan (`!githubToken.isNullOrBlank()`) -- tidak menawarkan hapus
+  utk state yang memang sudah kosong.
+- **3 string baru** (`settings_update_token_label/placeholder/hint`) --
+  hint eksplisit sebut "Token disimpan di HP kamu saja" (DataStore lokal,
+  BUKAN dikirim kemana pun selain header `Authorization` request ke GitHub
+  API sendiri saat cek/unduh update -- sesuai `UpdateRepository.kt` yang
+  TIDAK disentuh batch ini).
+- File diubah (4): `data/SettingsRepository.kt`, `ui/MainViewModel.kt`,
+  `MainActivity.kt` (parsial), `ui/screens/SettingsScreen.kt`. `res/values/
+  strings.xml` (3 string baru). `app/build.gradle.kts` (versi).
+  `FILE_MANIFEST.txt` TIDAK berubah (0 file baru/dihapus).
+- Preflight: 13/13 kategori PASS.
+- **Belum diverifikasi CI hijau** -- WAJIB dicek run Actions berikutnya
+  setelah push. **User WAJIB verifikasi di HP**: (1) isi token PAT GitHub
+  valid -> Simpan -> tutup app -> buka lagi -> field masih terisi
+  (persistensi DataStore), (2) tombol Hapus muncul setelah ada token
+  tersimpan, hilang lagi setelah dihapus, (3) cek update tetap jalan
+  normal baik dengan maupun tanpa token diisi (fungsi dasar TIDAK boleh
+  regresi utk user yang tidak pernah menyentuh field ini).
+- versionCode 104->105, versionName 8.11.0->8.12.0.
+
+## v8.11.0 -- Roadmap Fase 1.3 batch 7/N: ekstraksi string `ActivityLogScreen.kt` (2026-08-20)
+- Lanjut item roadmap Fase 1.3: 26 string resource baru (`activitylog_*` +
+  1 `action_undo` generik reuse 2x) menggantikan literal Kotlin di
+  `ActivityLogScreen.kt` -- MURNI ekstraksi, nilai teks tidak berubah.
+- **Layar paling kompleks strukturnya sejauh Fase 1.3** -- pola CAMPURAN,
+  BUKAN 1 pola tunggal spt batch sebelumnya: teks di scope composable
+  langsung (topBar/actions lambda TopAppBar, `EmptyState`, `items{}`
+  LazyColumn, `pendingUndo?.let{}`/`pendingBatchUndo?.let{}` yang eksekusi
+  LANGSUNG di body composable -- bukan di dalam lambda parameter lain)
+  pakai `stringResource()` biasa. Teks di dalam `onClick`/`onConfirm`/
+  `scope.launch{}` (lambda non-composable, BUKAN diberi anotasi
+  `@Composable`) pakai `context.getString()` -- `val context =
+  LocalContext.current` ditambah 1x di awal fungsi, pola IDENTIK
+  `SettingsScreen.kt` v8.6.0 (`readWorkStatus` dkk).
+- `action_undo` ("Undo") REUSE di 2 titik BERBEDA: label `TextButton`
+  per-baris entri Undo (klik satuan) DAN `confirmLabel` `VaultActionSheet`
+  konfirmasi undo tunggal -- keduanya teks identik persis, 1 sumber
+  kebenaran, konsisten preseden `action_save`/`action_edit`/`action_delete`
+  (batch 1/N Fase 1.3, v8.3.0). `confirmLabel` "Undo Semua" (batch undo)
+  TIDAK direuse dari `action_undo` -- teks beda (\"Semua\" bukan cuma
+  \"Undo\"), dibuat `activitylog_batch_undo_confirm` terpisah.
+- **1 literal sempat terlewat di audit pertama, ketangkap SEBELUM ZIP
+  dipaket** (bukan lolos ke user): `SegmentedControl(options = listOf(\"Log\",
+  \"Undo Pemindahan\"), ...)` -- 2 label tab, gampang terlewat krn bukan
+  `Text()`/`Icon()` langsung, cuma `String` mentah di parameter `List<String>`.
+  Ditemukan lewat re-grep manual `grep '\"'` menyeluruh ke seluruh file
+  SEBELUM klaim selesai (bukan sesudah) -- ditambah sbg
+  `activitylog_tab_log`/`activitylog_tab_undo`. **Pelajaran utk sesi
+  berikutnya**: kalau ada komponen yang menerima `List<String>`/`String`
+  mentah (bukan wrapper `Text`/`Icon` composable yang jelas terlihat),
+  WAJIB di-grep ulang eksplisit -- pola visual "cari `Text(...)`/`title
+  =`/`message =`" saja tidak cukup menangkap semua kasus.
+- **XML escaping**: kutip literal nama file dinamis `\"%1$s\"` (preseden
+  `pandu_section6_body` v8.8.0), `&` di teks sweep-hint -> `&amp;`.
+  Divalidasi `xml.dom.minidom.parse` (0 pelanggaran) sebelum preflight.
+- Preflight: 13/13 kategori PASS.
+- **Belum diverifikasi CI hijau** -- WAJIB dicek run Actions berikutnya
+  setelah push.
+- **Sisa Fase 1.3**: SkippedFilesScreen, MainActivity (dialog izin/error)
+  -- urutan bebas.
+- versionCode 103->104, versionName 8.10.0->8.11.0.
+
+## v8.10.0 -- Roadmap Fase 1.3 batch 6/N: ekstraksi string `OnboardingScreen.kt` (2026-08-20)
+- Lanjut item roadmap Fase 1.3: 18 string resource baru (`onboarding_*`)
+  menggantikan literal Kotlin di `OnboardingScreen.kt` -- MURNI ekstraksi,
+  nilai teks tidak berubah.
+- **Pola BARU, beda dari 5 batch sebelumnya**: `steps` sebelumnya `private
+  val` TOP-LEVEL (bukan di dalam scope composable manapun) -- `stringResource()`
+  butuh scope composable, TIDAK BISA dipanggil di inisialisasi `val`
+  top-level. Diubah jadi `@Composable private fun onboardingSteps(): List<
+  OnboardingStep>`, dipanggil SEKALI di awal body `OnboardingScreen` (`val
+  steps = onboardingSteps()`) -- list re-build murah (7 item literal), tidak
+  perlu `remember`. Kandidat pola dipakai lagi kalau sisa layar Fase 1.3 py
+  `val`/`data class` list top-level berisi teks (beda dari kasus
+  `DiagnosticsScreen` yang fungsinya non-composable tapi tetap top-level
+  function, bukan `val`).
+- **XML escaping**: `<nama rule>` -> `&lt;nama rule&gt;` (preseden
+  `pandu_section3_body` v8.8.0), `&` -> `&amp;` (2 titik, step3 & step7),
+  kutip literal `"PromptVault"`/`"Riwayat Aktivitas & Undo"`/`"Panduan
+  Penggunaan"` -> `\"..\"` (preseden `pandu_section6_body`, BUKAN `&quot;`,
+  konsisten gaya escaping yang sudah dipakai project). Divalidasi
+  `xml.dom.minidom.parse` (0 pelanggaran) SEBELUM preflight.
+- **0 reuse string** -- semua 14 teks title/body Onboarding beda kalimat
+  persis dari `pandu_*` (PanduanScreen) walau topiknya tumpang tindih,
+  SESUAI keputusan v7.4.0 (Onboarding = wizard ringkas per-langkah,
+  Panduan = referensi satu-halaman lengkap, 2 gaya penulisan BEDA SENGAJA,
+  bukan boleh disatukan jadi 1 sumber).
+- Preflight: 13/13 kategori PASS.
+- **Belum diverifikasi CI hijau** -- WAJIB dicek run Actions berikutnya
+  setelah push.
+- **Sisa Fase 1.3**: ActivityLogScreen, SkippedFilesScreen, MainActivity
+  (dialog izin/error) -- urutan bebas.
+- versionCode 102->103, versionName 8.9.0->8.10.0.
+
+## v8.9.0 -- Roadmap Fase 1.3 batch 5/N: ekstraksi string `HomeScreen.kt` (2026-08-19)
+- Lanjut item roadmap Fase 1.3: 7 string resource baru (`home_*`) +
+  **5 REUSE string yang sudah ada** (bukan duplikat baru) menggantikan
+  literal Kotlin di `HomeScreen.kt` -- MURNI ekstraksi, nilai teks tidak
+  berubah.
+- **Reuse, bukan duplikasi**: `"PromptVault"` -> `R.string.app_name`
+  (sudah ada sejak awal project), `"Kelola Rule"` -> `R.string.rule_list_title`,
+  `"Panduan Penggunaan"` -> `R.string.pandu_title` (v8.8.0),
+  `"Pengaturan"` -> `R.string.settings_title`, `"Diagnostik"` ->
+  `R.string.diag_title` (v8.7.0) -- kelimanya IDENTIK persis dgn title
+  layar tujuan navigasi masing-masing (menu Home = pintu masuk ke layar
+  itu), jadi 1 sumber kebenaran lebih benar drpd string terpisah yang bisa
+  drift kalau title diubah di satu tempat tapi lupa di tempat lain.
+  `"Riwayat Aktivitas & Undo"` TIDAK direuse (beda persis dgn title internal
+  `ActivityLogScreen` yang belum diekstrak/diverifikasi -- dibuat sbg
+  `home_menu_riwayat` baru, aman drpd asumsi sama).
+- **`GroupedList.rows` adalah `List<@Composable () -> Unit>`** (diverifikasi
+  ke `GroupedListRow.kt` SEBELUM menulis kode) -- `stringResource()` valid
+  dipanggil di dalam tiap lambda karena lambda itu sendiri `@Composable`,
+  bukan lambda biasa. Dicek eksplisit supaya tidak salah asumsi sama seperti
+  pelajaran Insiden #8 (composable scope semantics).
+- Sisa 2 literal yang SENGAJA tidak diubah: `value = "$ruleCount"`
+  (interpolasi angka dinamis, bukan literal teks) & `label = "ctaScale"`
+  (tag internal `animateFloatAsState`, bukan teks user-facing).
+- Preflight: 13/13 kategori PASS.
+- **Belum diverifikasi CI hijau** -- WAJIB dicek run Actions berikutnya
+  setelah push.
+- **Sisa Fase 1.3**: OnboardingScreen, ActivityLogScreen, SkippedFilesScreen,
+  MainActivity (dialog izin/error) -- urutan bebas.
+- versionCode 101->102, versionName 8.8.0->8.9.0.
+
+## v8.8.0 -- Roadmap Fase 1.3 batch 4/N: ekstraksi string `PanduanScreen.kt` (2026-08-19)
+- Lanjut item roadmap Fase 1.3: 18 string resource baru (`pandu_*`)
+  menggantikan literal Kotlin di `PanduanScreen.kt` -- MURNI ekstraksi,
+  nilai teks tidak berubah.
+- **Beda karakter dari batch lain** (sesuai catatan v8.3.0: "9 PARAGRAF
+  BESAR, pertimbangkan batch tersendiri") -- semua 100% dalam scope
+  `@Composable` (title layar, 1 intro, 7 title+body section, 1
+  `WarningBanner`, 1 footer), TIDAK ada fungsi non-composable/callback --
+  jadi pola paling sederhana dari seluruh Fase 1.3 sejauh ini, murni
+  `stringResource(R.string.pandu_*)` langsung di parameter.
+- **XML entity escaping**: body section 3 mengandung literal `<nama rule>`
+  -> di-escape `&lt;nama rule&gt;` (bukan sekadar hapus tanda kurung siku,
+  makna placeholder dipertahankan persis). 4 titik `&` (section 3/5/6, 2x
+  di section 6) -> `&amp;`, preseden sudah ada di `settings_shizuku_section_desc`
+  sebelumnya. Divalidasi `xml.dom.minidom.parse` (0 pelanggaran) SEBELUM
+  preflight, bukan sesudah.
+- Preflight: 13/13 kategori PASS.
+- **Belum diverifikasi CI hijau** -- WAJIB dicek run Actions berikutnya
+  setelah push.
+- **Sisa Fase 1.3**: HomeScreen, OnboardingScreen, ActivityLogScreen,
+  SkippedFilesScreen, MainActivity (dialog izin/error) -- urutan bebas.
+- versionCode 100->101, versionName 8.7.0->8.8.0.
+
+## v8.7.0 -- Roadmap Fase 1.3 batch 3/N: ekstraksi string `DiagnosticsScreen.kt` (2026-08-19)
+- Lanjut item roadmap Fase 1.3 (berjalan sejak v8.3.0): 25 string resource
+  baru (`diag_*`) menggantikan literal Kotlin di `DiagnosticsScreen.kt` --
+  MURNI ekstraksi, nilai teks tidak berubah.
+- **Pola berbeda dari `SettingsScreen.kt` (v8.6.0)**: `readWorkStatus()`
+  adalah top-level `private fun` non-composable dipanggil dari dalam
+  `LaunchedEffect` -- BUKAN callback lambda spt di v8.6.0, jadi
+  `context.getString()` TIDAK dipakai. Sebagai gantinya, 3 string
+  (`diag_status_none`/`diag_status_fmt`/`diag_status_error_fmt`) di-resolve
+  lewat `stringResource()` di badan `@Composable` (SEBELUM `LaunchedEffect`,
+  bukan di dalamnya -- `stringResource()` juga butuh scope composable, tidak
+  bisa dipanggil di dalam lambda suspend `LaunchedEffect`), lalu diteruskan
+  sbg parameter fungsi ke `readWorkStatus(context, noneText, statusFmt,
+  errorFmt)`. Pola ini lebih sederhana drpd `context.getString()` utk kasus
+  fungsi top-level yang dipanggil dari composable (bukan dari lambda callback
+  UI langsung) -- kandidat pola dipakai lagi kalau sisa layar Fase 1.3 py
+  fungsi serupa (fungsi pure/helper non-composable yg butuh string).
+- Fmt 3-parameter (`diag_crashlog_item_fmt`, nama file + tanggal + ukuran)
+  & fmt 3-parameter lain (`diag_status_fmt`, state + attempt + waktu cek)
+  divalidasi manual urutan `%1$s`/`%2$s`/`%3$d` cocok urutan argumen
+  `stringResource(id, arg1, arg2, arg3)`.
+- Import `com.elprompter.promptvault.R` ditambah (konsisten pola
+  `SettingsScreen.kt`) supaya referensi `R.string.diag_*` singkat, bukan
+  fully-qualified.
+- Preflight: 13/13 kategori PASS. `strings.xml` divalidasi
+  `xml.dom.minidom.parse` (0 pelanggaran) sebelum preflight -- 0 karakter
+  `--` ditambahkan (pelajaran v8.5.0b/v8.6.0, tidak terulang).
+- **Belum diverifikasi CI hijau** -- WAJIB dicek run Actions berikutnya
+  setelah push.
+- **Sisa Fase 1.3**: PanduanScreen, HomeScreen, OnboardingScreen,
+  ActivityLogScreen, SkippedFilesScreen, MainActivity (dialog izin/error) --
+  urutan bebas, independen satu sama lain.
+- versionCode 99->100, versionName 8.6.0->8.7.0.
+
+## v8.6.0 -- Roadmap Fase 1.3 batch 2/N: ekstraksi string `SettingsScreen.kt` (2026-08-19)
+- **Konfirmasi**: v8.5.0c (fix `this@MainActivity`) sudah CI hijau (run #110,
+  commit `161ca4d`, dikonfirmasi user via screenshot). Ditutup, tidak perlu
+  tindakan lanjutan.
+- Lanjut item roadmap Fase 1.3 (sedang berjalan sejak v8.3.0): 70 string
+  resource baru (`settings_*`) menggantikan literal Kotlin di
+  `SettingsScreen.kt` -- MURNI ekstraksi, nilai teks tidak berubah.
+- Detail teknis lengkap ada di `CHANGELOG.md` v8.6.0 (pola
+  `context.getString()` vs `stringResource()` ditangkap-lebih-awal utk
+  callback non-composable, insiden minor `--` di komentar XML ketangkap
+  preflight sebelum commit).
+- **Belum diverifikasi CI hijau** -- WAJIB dicek run Actions berikutnya
+  setelah push.
+- **Sisa Fase 1.3**: DiagnosticsScreen, PanduanScreen, HomeScreen,
+  OnboardingScreen, ActivityLogScreen, SkippedFilesScreen, MainActivity
+  (dialog izin/error) -- urutan bebas, independen satu sama lain.
+
+## v8.5.0c COMPILE-FIX -- `this@MainActivity` unresolved di `PromptVaultRoot` (2026-08-19)
+- **Gejala**: user upload `build-failure-log-v8_5_0__1_.zip`. Manifest fix (v8.5.0b) TERKONFIRMASI berhasil (`processDebugManifest` lolos), tapi `:app:compileDebugKotlin FAILED` -- `Unresolved reference: @MainActivity` di `MainActivity.kt:416`, titik `onInstallUpdate` kartu updater baru.
+- **Root cause**: `installApk(this@MainActivity, filePath)` dipanggil di dalam `PromptVaultRoot()` -- `@Composable private fun` TOP-LEVEL (baris 181), BUKAN method di dalam `class MainActivity` (baris 90) -- label `this@MainActivity` tidak eksis di scope itu, compiler benar menolaknya.
+- **Fix**: ganti ke `installApk(context, filePath)` -- `installApk()` cuma butuh `Context` biasa (bukan Activity), dan `val context = LocalContext.current` SUDAH ADA di scope `PromptVaultRoot` (baris 189), reuse langsung. 1 baris, nol perubahan logika lain.
+- **versionCode/versionName TIDAK naik** (tetap 98/8.5.0) -- compile-fix, bukan fitur baru.
+- **Belum diverifikasi CI hijau** -- WAJIB dicek run Actions berikutnya. Kalau masih gagal, kirim log baru.
+
+## v8.5.0b COMPILE-FIX -- "--" di komentar XML AndroidManifest.xml (2026-08-19)
+- **Gejala**: user upload `build-failure-log-v8_5_0.zip`. `:app:processDebugMainManifest FAILED` -- `SAXParseException: The string "--" is not permitted within comments`, baris 21 `AndroidManifest.xml` (komentar baru fitur in-app updater v8.5.0, poin INTERNET/REQUEST_INSTALL_PACKAGES).
+- **KELAS BUG BERULANG** (4x sekarang: v2.6.0, v2.24.1, v7.0.0/Insiden non-fatal, sekarang v8.5.0) -- pelajaran permanen "jangan pakai `--` di komentar XML manapun" TIDAK otomatis dicek AI saat menulis komentar baru; `preflight_check.sh` kategori #10 (well-formedness XML) MENANGKAP ini dgn benar tapi HANYA setelah CI compile, karena kategori #10 butuh Gradle utk generate merged manifest -- gap-nya ada di titik PENULISAN komentar, bukan di preflight.
+- **Fix**: ganti `--` jadi `;` di komentar tersebut (baris 17-21), nol perubahan logika/permission. Divalidasi `xml.dom.minidom.parse` (0 pelanggaran) + `preflight_check.sh` kategori #10 penuh (13/13 kategori PASS).
+- **versionCode/versionName TIDAK naik** (tetap 98/8.5.0) -- ini compile-fix, bukan fitur baru, konsisten kebijakan CHANGELOG.
+- **Belum diverifikasi CI hijau** -- WAJIB dicek run Actions berikutnya (run #108 sebelumnya FAILED, ini fix untuk run berikutnya).
+
+## STATUS PROJECT: v8.5.0 -- FITUR BARU: In-app Updater ("Release Downloader Spec") -- 2026-08-19
+- **Sumber**: gap ditemukan lewat audit rule preferensi user (bukan laporan
+  bug/permintaan fitur baru terpisah) -- app SEBELUMNYA sama sekali TIDAK
+  punya cara update selain reinstall manual APK dari GitHub Releases.
+- **Implementasi** (BARU, package `update/`): `UpdateRepository.kt` --
+  `checkLatestRelease()` panggil GitHub API `releases/latest`, parsing versi
+  numerik per-segmen (bukan string compare polos, "8.10.0" > "8.9.0" benar);
+  `downloadApk()` streaming chunk-by-chunk (Okio `BufferedSource.read(Buffer,
+  Long)` -> `BufferedSink.write`) ke `cacheDir/updates/` via file `.part`
+  sementara, timeout connect 15s/read 20s, `followRedirects(true)` (asset
+  binary GitHub SELALU redirect 302 ke CDN). **TIDAK PERNAH** panggil
+  `body.bytes()`/`readBytes()` -- itu akan memuat seluruh APK ke RAM, persis
+  yang dilarang spesifikasi proyek.
+- **UI**: kartu "Pembaruan Aplikasi" di `SettingsScreen.kt` (state dari
+  `MainViewModel.updateCheckState`/`downloadState`, StateFlow biasa, pola
+  sama dgn state lain di file itu) -- cek versi, progress bar, tombol Pasang
+  yang trigger `installApk()` (BARU, top-level fun di `MainActivity.kt`)
+  via `FileProvider` yang SUDAH dideklarasikan di manifest sejak lama tapi
+  baru sekarang ada pemakainya.
+- **Manifest**: tambah permission `INTERNET` + `REQUEST_INSTALL_PACKAGES`.
+- **Dependency baru**: `okhttp:4.12.0`, `okio:3.9.0` (eksplisit, dipakai
+  langsung -- bukan cuma transitif diam-diam).
+- **Repo target hardcode**: `FDzaki-dev/PromptVault` (sesuai README.md,
+  "Repo publik"). Kalau repo pernah dipindah/rename, konstanta `OWNER`/`REPO`
+  di `UpdateRepository.kt` WAJIB ikut diupdate manual -- TIDAK ada mekanisme
+  auto-detect.
+- **Token GitHub PAT**: didukung opsional lewat parameter `githubToken` di
+  kedua fungsi repository, TAPI **belum ada UI input token di Pengaturan**
+  (belum dibutuhkan -- repo publik, rate-limit 60/jam cukup utk cek manual
+  sesekali). Kalau nanti user sering dapat error rate-limit, ini titik
+  ekstensi yang sudah siap, bukan re-desain dari nol.
+- **Housekeeping terpisah, batch sama**: `FILE_MANIFEST.txt` diregenerasi
+  penuh dari isi disk (`find` aktual, bukan ditulis manual) -- memperbaiki
+  desync lama (`data/BackupManager.kt` sempat tidak tercatat, ditemukan
+  lewat audit yang sama). Total file naik dari 93 (dgn 1 desync) jadi 95
+  (95 tercatat SEMUA cocok isi disk, termasuk `FILE_MANIFEST.txt` itu
+  sendiri) -- 2 file baru (`update/UpdateModels.kt`, `update/
+  UpdateRepository.kt`), fix 1 file lama yang sebelumnya tidak tercatat.
+- **Versi**: 8.4.0 (code 97) -> 8.5.0 (code 98).
+
+## FIX CI: GitHub Releases page nempel di versi lama walau build sukses -- 2026-08-18
+- **Gejala user**: Actions run hijau semua (Artifact selalu ada), tapi tab
+  Releases repo nunjuk versi LAMA sebagai "Latest".
+- **Sebab**: `softprops/action-gh-release` UPDATE release yang tag-nya sudah
+  ada (bukan create baru) kalau versionName sempat tidak naik antar push;
+  GitHub urut "Latest" dari `created_at`, jadi update ke release lama tidak
+  otomatis pindahin flag walau APK di dalamnya sudah yang terbaru.
+- **Fix** (`.github/workflows/build.yml`): tambah `make_latest: true` eksplisit
+  di step Publish, PLUS step baru sesudahnya `gh release edit v<versi>
+  --latest` yang paksa ulang flag tiap run sukses, terlepas dari riwayat
+  created_at. Tidak ada perubahan versionName/versionCode (murni CI, no app
+  code change).
+
+## STATUS PROJECT: v8.4.0 -- FITUR BARU: "Selamatkan Uninstall" (deteksi & restore config lama dari folder SAF) -- 2026-08-18
+- **Permintaan eksplisit user**: kalau app tidak sengaja ke-uninstall lalu
+  diinstal ulang, dan user memilih folder tujuan kustom SAF yang SAMA
+  (masih berisi banyak file lama dari instalasi sebelumnya) -- app HARUS
+  (1) mendeteksi root folder yang sudah pernah dibuat sebelumnya & PAKAI
+  ITU SAJA (bukan bikin folder duplikat baru), dan (2) mengembalikan semua
+  konfigurasi yang ikut terhapus saat uninstall (rule, log, riwayat
+  pemindahan, dsb -- Android uninstall menghapus TOTAL DataStore & Room,
+  itu perilaku OS, tidak bisa dihindari dari sisi app).
+- **Bagian (1), anti-duplikat folder root, SUDAH SELESAI sejak v7.5.0/v8.x**
+  lewat `FileSorter.resolveCanonicalRootDirSaf()` (self-healing regex+cache,
+  lihat Keputusan Arsitektur & riwayat panjang v7.1.5-v7.5.0 di bawah) --
+  TIDAK diulang/ditulis ulang di sini (pelajaran permanen Insiden #7: jangan
+  bikin implementasi kedua independen). Batch ini MURNI menambah lapisan
+  BARU di atasnya: cermin/manifest config yang SEBELUMNYA tidak ada sama
+  sekali (root folder anti-duplikat != config yang ikut terselamatkan --
+  2 masalah beda yang user gabung dalam 1 permintaan, keduanya valid & saling
+  melengkapi, bukan tumpang tindih).
+- **Desain lapisan baru**: file JSON tersembunyi
+  `.promptvault_config_backup.json` (BARU `util/VaultConfigBackup.kt`, murni
+  I/O serialisasi + 2 fungsi pure logic `isPayloadWorthOffering`/`countRules`,
+  di-unit-test) ditulis di root vault "PromptVault" SAF yang sama -- berisi
+  rule (string JSON, REUSE `RuleRepository.exportAsJson()`/`importFromJson()`
+  yang SUDAH ADA, BUKAN skema serialisasi baru), setting relevan (interval/
+  conflict strategy/scan concurrency), snapshot log aktivitas & riwayat
+  pemindahan (masing-masing dibatasi 200 entri terbaru, biar file tidak
+  membengkak tanpa batas).
+- **Tulis, opportunistic & best-effort, 2 titik**: `FileSorter.
+  syncConfigBackupToSaf()` dipanggil dari (a) `MainViewModel` reaktif tiap
+  rule berubah (`rules.drop(1).collect{}` -- `drop(1)` melewati emisi awal
+  StateFlow yang BUKAN perubahan nyata dari user, lihat komentar di kode),
+  kalau folder SAF sedang aktif; (b) `scanAndSortToDestination()` sendiri,
+  setelah tiap scan sukses ke tujuan SAF. **Root vault TIDAK PERNAH dibuat
+  lebih awal cuma gara-gara sinkronisasi backup** -- dipakai varian
+  peek-only baru (`peekCanonicalRootDirSaf`, TIDAK PERNAH `createDirectory()`
+  sendiri); root "asli" tetap HANYA dibuat lewat jalur normal yang sudah ada
+  (`resolveCanonicalRootDirSaf`, dipanggil scan). Kegagalan tulis SELALU
+  ditelan diam-diam (try-catch) -- BUKAN gerbang yang boleh menggagalkan
+  scan/simpan rule utama, murni best-effort.
+- **Baca & tawarkan, SEKALI, dipicu picker**: `MainViewModel.setSafTreeUri()`
+  memanggil `detectVaultRestoreOffer()` PERSIS SEKALI segera setelah URI
+  baru tersimpan (BUKAN reaktif berulang tiap kali Pengaturan dibuka).
+  `FileSorter.peekVaultBackup()` menemukan backup non-kosong -> dialog
+  `VaultActionSheet` (REUSE komponen konfirmasi standar app yang sudah ada,
+  BUKAN `AlertDialog` baru) muncul di `SettingsScreen`, menampilkan ringkasan
+  (jumlah rule/log/riwayat + tanggal backup) dengan 2 pilihan eksplisit:
+  "Pulihkan Konfigurasi Lama" / "Mulai Kosong Saja".
+- **Restore**: `FileSorter.applyVaultRestore()` -- rule lewat
+  `RuleRepository.importFromJson()` yang SUDAH ADA (merge by-id, di
+  instalasi baru/0 rule lokal hasilnya otomatis = full restore, BUKAN
+  implementasi restore kedua yang independen); log & riwayat lewat
+  `restoreEntries()` BARU di `ActivityLogRepository`/`MoveHistoryRepository`
+  (insert via `OnConflictStrategy.REPLACE` yang SUDAH ADA di DAO -- dedupe
+  otomatis by-id, aman dipanggil 2x kalau user tidak sengaja konfirmasi
+  ulang). Riwayat pemindahan (`MoveHistoryEntry`, termasuk yang belum
+  di-undo) SENGAJA tetap direstore walau `destUri`/`originalParentUri` SAF
+  berpotensi stale pasca-reinstall -- `FileSorter.undo()` SUDAH punya lapis
+  try-catch/verifikasi matang dari riwayat pengerasan berulang (P0-3
+  v7.1.4, OVERWRITE-delete v7.1.9/v2.19.1, dst), jadi kegagalan undo pada
+  entri lama tetap gagal DENGAN AMAN (hasil eksplisit ke UI, bukan crash) --
+  bukan risiko baru yang butuh penanganan khusus.
+- **Scope SENGAJA terbatas ke mode SAF saja** (bukan Shizuku) -- Shizuku
+  pakai path filesystem yang user ketik manual (bukan picker folder), jadi
+  tidak ada titik alami "pilih folder" untuk memicu deteksi restore ini.
+- File diubah (6) + 2 baru: `util/FileSorter.kt` (6 fungsi baru + 1 hook di
+  `scanAndSortToDestination`), `data/ActivityLogRepository.kt`/
+  `data/MoveHistoryRepository.kt` (`restoreEntries` + mapper),
+  `ui/MainViewModel.kt` (StateFlow tawaran + detect/confirm/dismiss + hook
+  reaktif di `rules`), `ui/screens/SettingsScreen.kt` (3 param baru +
+  dialog `VaultActionSheet`), `MainActivity.kt` (protected asset, edit
+  parsial: 1 `collectAsStateWithLifecycle` + 3 param diteruskan ke
+  `SettingsScreen`), `app/build.gradle.kts` (versi). BARU:
+  `util/VaultConfigBackup.kt`, `app/src/test/.../util/VaultConfigBackupTest.kt`.
+  `scripts/preflight_check.sh` 13/13 lolos bersih.
+- **Belum lewat `./gradlew`/device asli** (konsisten seluruh riwayat
+  project) -- 2 risiko BARU spesifik batch ini yang BELUM ada preseden
+  internal utk dibandingkan: (1) `DocumentFile.createFile()`+
+  `contentResolver.openOutputStream()` menulis file JSON MILIK APP SENDIRI
+  ke SAF -- SAF sebelumnya HANYA dipakai memindahkan file milik USER
+  (moveFileToSafDestination/copyDocumentBytes), belum pernah dipakai app
+  ini untuk menulis manifest/state-nya sendiri; (2) `StateFlow.drop(1).
+  collect{}` reaktif di `MainViewModel` (pola custom, BUKAN `Flow.combine`+
+  `debounce` yang sengaja dihindari krn butuh anotasi eksperimental tanpa
+  preseden di project ini) adalah pola trigger baru yang belum pernah
+  dipakai utk efek samping semacam ini.
+- **User WAJIB verifikasi di HP asli**: (1) build CI hijau, (2) pilih
+  folder SAF BARU (kosong) -> isi 1+ rule -> jalankan scan -> cek file
+  `.promptvault_config_backup.json` muncul di root "PromptVault" (lewat
+  file manager, "tampilkan file tersembunyi"), (3) uninstall app (atau
+  clear app data dari Pengaturan Android, lebih cepat drpd uninstall
+  sungguhan) -> install ulang -> pilih folder SAF yang SAMA -> dialog
+  "Konfigurasi Lama Ditemukan" HARUS muncul dengan angka rule/log/riwayat
+  yang benar -> konfirmasi "Pulihkan" -> rule & log lama HARUS muncul lagi
+  di Kelola Rule/Riwayat Aktivitas, (4) ulangi tapi pilih "Mulai Kosong
+  Saja" -> pastikan TIDAK ada rule/log yang berubah & root folder tetap
+  dipakai apa adanya (BUKAN folder baru "PromptVault (1)" -- ini
+  memverifikasi klaim utama user "root folder yang sama... dipakai saja").
+- Confidence Rating: **80%** (arsitektur REUSE jalur SAF yang sudah matang
+  + DAO conflict-replace yang sudah ada, jadi bukan risiko dari nol -- tapi
+  2 permukaan I/O di poin risiko di atas baru pertama kali dipakai project
+  ini, jadi turun dari 90%+ standar batch reuse-berat sampai lolos
+  verifikasi CI/device pertama).
+- versionCode 96->97, versionName 8.3.0->8.4.0.
+
+## STATUS PROJECT SEBELUMNYA: v8.3.0 -- FIX CI: Stale Run Guard di build.yml (anti-desync "Latest" release) -- 2026-08-18
+- **Bug nyata**: `gh run 3209` (build commit lama v8.2.0) sempat re-run
+  SETELAH v8.3.0 & v8.4.0 sudah publish -- `softprops/action-gh-release`
+  nge-tandain v8.2.0 sebagai "Latest" (default `make_latest`), sidebar repo
+  jadi nunjuk APK usang walau job hijau/sukses & fitur baru sudah compile.
+- **Fix**: step baru "Stale run guard (anti-desync)" ditambah persis setelah
+  Checkout -- `git ls-remote origin refs/heads/main` dibanding `$GITHUB_SHA`.
+  Kalau beda (stale re-run), `exit 1` sebelum compile & sebelum publish.
+- **Immediate action user**: `gh release edit v8.3.0 --latest` (release
+  v8.3.0 sudah ada, cuma flag "Latest"-nya yang ketiban v8.2.0).
+- Tidak ada perubahan kode aplikasi/UI -- versionCode/versionName TETAP
+  96/8.3.0 (murni infra CI). File tersentuh: `.github/workflows/build.yml`
+  (protected asset, edit parsial: 1 step baru ditambah).
+- Release ganjil `v8.4.0` (published ~6 jam sebelum sesi ini, gak match
+  history commit lokal) BELUM diinvestigasi -- kemungkinan sisa eksperimen
+  lain. Jangan dipakai sampai dicek asalnya di batch berikutnya.
+
+## STATUS PROJECT SEBELUMNYA: v8.3.0 -- Roadmap Fase 1.3 (batch 1/N): ekstraksi string cluster "Kelola Rule" -- 2026-08-18
+- Item ketiga `ROADMAP.md`, batch PERTAMA dari beberapa (roadmap sendiri
+  bilang "bertahap per layar" -- ini bukan item yang selesai 1 batch seperti
+  1.1/1.2). Detail lengkap di `CHANGELOG.md` v8.3.0.
+- **Cakupan batch ini**: `AddEditRuleScreen.kt`, `RuleListScreen.kt`,
+  `RuleCard.kt` (cluster "Kelola Rule") + 35 string resource baru di
+  `strings.xml`.
+- **Sisa utk batch lanjutan** (independen, urutan bebas): `SettingsScreen.kt`
+  (~22 literal, TERBESAR), `DiagnosticsScreen.kt` (~15), `PanduanScreen.kt`
+  (~9 PARAGRAF BESAR, bukan literal pendek -- beda karakter dari yang lain,
+  pertimbangkan batch tersendiri), `HomeScreen.kt`, `OnboardingScreen.kt`
+  (termasuk data class `steps` -- cek strukturnya dulu sebelum ekstrak),
+  `ActivityLogScreen.kt`, `SkippedFilesScreen.kt`, `MainActivity.kt`
+  (dialog izin & error).
+- **Catatan teknis WAJIB dibaca sebelum lanjut batch berikutnya**: aturan
+  `stringResource()` vs `Context.getString()` (composable vs lambda
+  belakangan) ada di `CHANGELOG.md` v8.3.0 -- baca itu dulu, jangan
+  re-investigasi dari nol tiap batch. Juga: XML comment TIDAK BOLEH
+  mengandung `--` literal (dobel-hyphen) di mana pun, termasuk lintas baris
+  -- validasi selalu pakai `python3 -c "import xml.dom.minidom as m;
+  m.parse('app/src/main/res/values/strings.xml')"` sebelum preflight check.
+- Roadmap item 1.3 TETAP di `ROADMAP.md` (belum dicoret, masih ada batch
+  lanjutan) -- ditandai "batch 1/N selesai" saja.
+
+## STATUS PROJECT SEBELUMNYA: v8.2.0 -- Roadmap Fase 1.2: audit aksesibilitas TalkBack menyeluruh -- 2026-08-18
+- Item kedua `ROADMAP.md` dikerjakan & **selesai dalam 1 batch** (bukan 4
+  batch per-layar seperti estimasi awal roadmap) -- audit menyeluruh
+  langsung di sesi ini menemukan app SUDAH compliant di hampir semua titik
+  (label ikon, target sentuh), gap nyata cuma 1 komponen. Detail lengkap di
+  `CHANGELOG.md` v8.2.0.
+- **Gap yang ditemukan & diperbaiki**: `SegmentedControl.kt` (tab Log/Undo
+  Pemindahan di `ActivityLogScreen`) -- (1) tidak ada semantics
+  `selected`/`Role.Tab`, (2) target sentuh ~38dp (di bawah standar 48dp).
+  Kedua fix murni aditif (`Modifier.semantics`/`.selectableGroup()`/naikkan
+  padding), TIDAK menyentuh `onClick`/`interactionSource` yang sudah teruji.
+- **Catatan utk sesi depan**: `ROADMAP.md` item 1.2 tadinya diestimasi "4
+  batch per grup layar" -- itu ESTIMASI AWAL yang ternyata terlalu
+  pesimis, bukan proses yang harus diikuti persis. Kalau nemu roadmap item
+  lain yang estimasinya juga overshoot, audit dulu SEBELUM asumsi perlu
+  banyak batch -- kadang app memang sudah lebih rapi dari perkiraan.
+- Roadmap item 1.2 dicoret dari `ROADMAP.md`, lanjut ke 1.3 (audit string
+  hardcode vs `strings.xml`) di sesi berikutnya sesuai urutan fase.
+
+## STATUS PROJECT SEBELUMNYA: v8.1.0 -- Roadmap Fase 1.1: ekstraksi + unit test logika pure FileSorter -- 2026-08-18
+- Item pertama `ROADMAP.md` dikerjakan (low-risk/high-value pertama).
+  Detail lengkap 4 fungsi yang diekstrak & alasan bug-for-bug parity ada di
+  `CHANGELOG.md` v8.1.0.
+- **Batch kecil, risiko rendah**: 1 file produksi diubah (`FileSorter.kt`,
+  murni pindah lokasi fungsi + 1 ekstraksi loop rename), 1 file test baru
+  (`FileSorterPureLogicTest.kt`). TIDAK ada perubahan perilaku produksi
+  yang disengaja -- semua diverifikasi lewat grep referensi + preflight
+  check sebelum ditutup.
+- **Catatan utk sesi depan**: `nextAvailableFileName` masih punya kuirk
+  lama (extensionless file -> trailing dot `"nama_1."`) yang SENGAJA belum
+  diperbaiki (di luar scope batch ini, murni ekstraksi). Kalau user
+  laporkan bug soal ini, root cause & lokasi fix-nya sudah jelas (fungsi
+  ini, top-level di `FileSorter.kt`) -- bukan investigasi baru.
+- Roadmap item 1.1 dicoret dari `ROADMAP.md`, lanjut ke 1.2 (audit
+  aksesibilitas TalkBack) di sesi berikutnya sesuai urutan fase.
+
+## STATUS PROJECT SEBELUMNYA: v8.0.0 -- ROMBAK TOTAL TEMA: Material 3 murni, calm bukan warm, Premium Tactile -- 2026-08-18
+- **Permintaan eksplisit user (sesi ini)**: "Rombak total theme aplikasi
+  jadi default Material 3 murni, pendekatan Premium Tactile experience,
+  base warna calm bukan warm, tetap sesuai standar WCAG." Detail lengkap
+  perubahan file & angka kontras WCAG ada di CHANGELOG.md v8.0.0 -- ringkasan
+  keputusan arsitektur di bawah.
+- **Atomic change**: 19 file tersentuh (batch limit 10 dilampaui dgn
+  justifikasi eksplisit -- color tokens, primitif tactile, dan penghapusan
+  toggle preset saling terikat erat, kompilasi gagal kalau diterapkan
+  parsial).
+- **Keputusan #1 -- Glassmorphism dihapus total**: `GlassPanel.kt` (border
+  kaca+gradient highlight+shadow kustom) DIHAPUS, diganti `TactileSurface.kt`
+  (Surface M3 baku: `tonalElevation`+`shadowElevation`, TANPA border/bevel
+  dekoratif -- itu bukan bahasa visual M3). Ini pengganti langsung, bukan
+  refactor nama saja -- visualnya berubah (tidak ada lagi hairline glass
+  border di semua kartu/kontrol).
+- **Keputusan #2 -- toggle preset ganda `useAltTheme` DIHAPUS TOTAL**
+  (bukan direvisi/direkolor): "default Material 3 murni" berarti SATU
+  ColorScheme baku, bukan 2 preset kustom (Deep Navy+Brass / Charcoal+Copper,
+  v7.1.0) untuk dipilih user. Infra ikut dihapus: `SettingsRepository`
+  (key/flow/getter/setter), `MainViewModel` (StateFlow/setter), seksi "Tema"
+  di `SettingsScreen`, `SideEffect` reaktif status/nav bar di `MainActivity`.
+  **Kalau user MINTA toggle tema balik di sesi depan**: ini PENGHAPUSAN FITUR
+  SENGAJA sesi ini, bukan bug -- tanya dulu preset seperti apa yang diinginkan,
+  jangan asal restore v7.1.0 (paletnya sudah tidak sesuai syarat "calm").
+- **Keputusan #3 -- dark-only TIDAK diubah**: keputusan v3.0.0 dipertahankan
+  murni krn user minta rombak WARNA/TEMA, bukan minta Light mode baru. Kalau
+  App Widget/dsb butuh Light mode kelak, itu scope terpisah, bukan bagian
+  dari "Material 3 murni" yang diminta sesi ini.
+- **Keputusan #4 -- warna semantik (tertiary=warning amber, error=merah)
+  SENGAJA TIDAK ikut hue calm murni**: konvensi universal, porsi kecil/aksen
+  saja, bukan "base warna dominan" yang jadi syarat user. Base/dominan
+  (background, 5-tingkat surfaceContainer, primary CTA) 100% cool/calm (seed
+  biru H222).
+- **WCAG**: semua pasangan teks/ikon dihitung manual (relative luminance
+  formula W3C, script python di sesi ini, sama metode dgn audit 2026-08-16
+  sebelumnya) -- lulus AA (>=4.5:1 teks, >=3:1 batas grafis 1.4.11) di
+  worst-case (surface paling terang). Container fill (~1.8-2:1 vs root
+  background) TIDAK melanggar 1.4.11 -- selalu dipakai sbg bentuk jelas
+  (kotak ikon bulat) di dalam TactileSurface yang sudah py shadow sendiri,
+  bukan blok warna mengambang tanpa bentuk (precedent sama dgn audit
+  GlassHighlight sebelumnya).
+- Preflight check `scripts/preflight_check.sh`: 12/13 kategori PASS otomatis,
+  kategori #7 (review manual fungsi lokal) diperiksa manual, tidak ada
+  temuan baru dari batch ini.
+- versionCode 92→93, versionName 7.5.2→8.0.0.
+
+## STATUS PROJECT SEBELUMNYA: v7.5.2 -- FIX crash pertama produksi (UnsupportedOperationException, SingleDocumentFile.listFiles) -- 2026-08-17
+- Crash pertama sepanjang project, user upload log asli
+  (`crash_20260817_174626_f7fac68a.txt`, Infinix X6855/Android 16). Trigger:
+  edit rule sortir -> tekan Scan di beranda.
+- **Root cause**: `findOrCreateChildDirSaf()` & `resolveCanonicalRootDirSaf()`
+  (keduanya di `FileSorter.kt`) rekonstruksi folder ter-cache pakai
+  `DocumentFile.fromSingleUri()` -> selalu `SingleDocumentFile`, yang
+  `listFiles()`-nya UNCONDITIONALLY throw `UnsupportedOperationException`
+  (hardcoded androidx, apapun URI-nya). Objek itu lalu dipakai lagi sbg
+  `parent` di panggilan `findOrCreateChildDirSaf` berikutnya ->
+  `parent.findFile(name)` -> internal `listFiles()` -> crash. Match PERSIS
+  dgn stack trace user (line 846).
+- **Fix**: ganti `fromSingleUri()` -> `DocumentFile.fromTreeUri()` di 2 titik
+  cache reconstruction. URI cache selalu child dari tree yang sama (ada
+  segmen `/tree/`), jadi `fromTreeUri()` bangun ulang `TreeDocumentFile`
+  yang benar & tetap listable.
+- **Bukan disebabkan overlap "Documents" v7.5.1** -- 2 subsistem storage beda
+  (MediaStore CrashLogger vs SAF FileSorter), tidak saling panggil
+  `listFiles()`. Overlap itu tetap valid & tidak diubah (info non-blocking,
+  sudah cukup). Root cause murni salah pilih API `DocumentFile`, independen
+  dari folder mana yang dipilih user -- **berarti bug laten ini sebenarnya
+  ada di SEMUA versi sejak cache-by-Uri diperkenalkan (v7.1.5), bukan
+  regresi baru v7.5.0/v7.5.1** -- baru kena sekarang krn kombinasi
+  cache "dingin" (app dibuka lagi) + tujuan kustom aktif.
+- File diubah (2): `util/FileSorter.kt`, `app/build.gradle.kts` (versi).
+- **Belum diverifikasi user** (fix baru dikirim sesi ini) -- kalau sesi
+  berikutnya user lapor Scan masih crash dgn stack trace SAMA
+  (`SingleDocumentFile.listFiles`), cek dulu apakah v7.5.2 ini benar
+  ter-install sebelum cari root cause baru. Ada 3 titik `fromSingleUri()`
+  lain di `FileSorter.kt` (jalur `undo()`, line ~1211/1217/1282) yang
+  SENGAJA TIDAK disentuh -- itu untuk resolusi file/leaf tunggal (exists/
+  delete/getParentFile), bukan folder yang di-listFiles()/findFile(), jadi
+  bukan bug yang sama.
+- Confidence Rating: fix **95%** (match persis stack trace, minimal &
+  bertarget) -- belum lewat `./gradlew`/device asli (keterbatasan permanen).
+- **Verifikasi ulang (user tanya eksplisit): apakah fix ini bisa mengembalikan
+  insiden duplikat folder "(N)" lama (v7.1.x-v7.5.0)?** TIDAK. Fix HANYA ganti
+  cara baca-balik `DocumentFile` dari URI cache -- TIDAK menyentuh
+  `createDirectory()` maupun logika duplikat sama sekali. 2 lapis proteksi
+  duplikat lama tetap utuh & tidak disentuh: (1) resolusi folder rule tetap
+  SERIAL sebelum `async{}` fan-out di `resolveSafRuleDestinations` (proteksi
+  UTAMA thd race antar-coroutine, bukan cache), (2) self-healing
+  `resolveCanonicalRootDirSaf` (konvergen kalau provider SAF sendiri sampai
+  bikin >1 folder cocok pola). Faktanya: SEBELUM fix, cache root yang
+  berhasil dibaca (`fromSingleUri`) itu sendiri TIDAK memicu duplikat --
+  crash baru terjadi 1 langkah setelahnya, saat objek itu dipakai sbg
+  `parent` utk `findFile()` folder rule (baris 846) -- artinya crash ini
+  SELALU terjadi SEBELUM kode sempat sampai ke `createDirectory()`. Tidak
+  pernah ada jalur di mana bug lama ini bisa menghasilkan folder ganda; dia
+  cuma bikin app mati lebih dulu. SESUDAH fix, `findFile()` justru jadi
+  BERHASIL (bukan crash) -- kalau folder rule sudah ada, langsung KETEMU &
+  dipakai ulang (bukan `createDirectory()` baru), jadi fix ini MEMPERKUAT
+  anti-duplikat, bukan melemahkannya.
+
+## STATUS PROJECT SEBELUMNYA: v7.5.1 -- Info non-blocking: folder tujuan kustom "Documents" langsung overlap dgn folder crash log -- 2026-08-17
+- User konfirmasi eksplisit: folder tujuan kustom aktifnya persis
+  "Documents" (bukan subfolder) -- match dgn hipotesis dia sendiri bahwa
+  ini overlap dgn `CrashLogger.kt` (`Documents/PromptVault/logs/` via
+  MediaStore, subsistem beda dari SAF).
+- `SettingsScreen.kt`: `isSafRootDocumentsFolder()` baru, tampilkan 1 baris
+  info (bukan warning merah) di kartu Folder Tujuan Kustom kalau kondisi
+  ini terdeteksi. TIDAK mengubah `CrashLogger.kt` (spek baku lintas
+  project, di luar scope) atau `FileSorter.kt` (mekanisme self-heal
+  `resolveCanonicalRootDirSaf` v7.5.0 SUDAH cukup, apapun sumber stale-nya).
+- `preflight_check.sh` 13/13 lolos. Confidence: integritas paket 100%,
+  perubahan UI info-only murni (tidak sentuh logika scan/data).
+- versionCode 90->91, versionName 7.5.0->7.5.1.
+
+## STATUS PROJECT SEBELUMNYA: v7.5.0 -- Auto-buat folder root "PromptVault" di tujuan kustom SAF DIKEMBALIKAN (permintaan langsung user) + lapis anti-duplikat baru -- 2026-08-17
+- Trigger: user tanya apakah duplikasi folder root (riwayat v2.19.2 s/d
+  v7.1.6 di bawah) berkorelasi dgn fitur "Folder Tujuan Kustom" di
+  screenshot Pengaturan -- dikonfirmasi YA (sudah terdokumentasi lengkap,
+  bukan penemuan baru), lalu user minta root cause-nya dibalik lagi:
+  kembalikan auto-buat root, TAPI jangan sampai duplikat "(N)" terulang.
+- **Bukan revert v7.2.0 begitu saja** -- 2 mitigasi lama (v7.1.5 cache-Uri,
+  v7.1.6 retry+instrumentasi) TERBUKTI belum cukup dulu utk root (walau
+  terbukti cukup utk subfolder rule, DIPERTAHANKAN). Ditambah lapis yang
+  BELUM pernah dicoba: `resolveCanonicalRootDirSaf()` di `FileSorter.kt` --
+  kalau listing SAF menemukan >1 folder cocok pola
+  `PromptVault`/`PromptVault (N)`, app TIDAK pilih random: prioritas nama
+  persis tanpa akhiran, fallback paling lama (`lastModified()`), log
+  WARNING ke Activity Log, folder lain TIDAK disentuh/dihapus (bukan aksi
+  destruktif otomatis). Sejak titik itu SEMUA scan konvergen ke 1 folder
+  yang sama (di-cache) -- self-healing, bukan cuma prevention seperti
+  percobaan-percobaan sebelumnya. `findOrCreateChildDirSaf` retry juga
+  diperkuat (200ms -> 200ms+500ms bertahap).
+- 3 file dokumentasi UI (`SettingsScreen.kt`, `PanduanScreen.kt`,
+  `OnboardingScreen.kt`) yang sebelumnya (v7.3.0) eksplisit bilang "root
+  TIDAK PERNAH auto-dibuat" untuk SAF, disesuaikan -- klaim itu sekarang
+  HANYA berlaku utk mode Shizuku (TIDAK disentuh/tidak diminta user kali
+  ini, tetap manual root sesuai desain aslinya).
+- File diubah (4): `util/FileSorter.kt`, `ui/screens/SettingsScreen.kt`,
+  `ui/screens/PanduanScreen.kt`, `ui/screens/OnboardingScreen.kt`,
+  `app/build.gradle.kts` (versi). `preflight_check.sh` 13/13 lolos.
+- **Batas jujur**: mekanisme deteksi+konvergensi BARU, belum diuji skenario
+  provider SAF OEM nyata yang benar-benar bikin duplikat lagi. Desainnya
+  defensif by design (tidak mungkin memperburuk drpd insiden lama -- kalau
+  gagal pun, app konsisten ke 1 folder + warning, bukan menyebar file diam-
+  diam). BELUM lewat `./gradlew`/device asli (keterbatasan permanen
+  lingkungan kerja Claude, dicatat konsisten tiap sesi sejak awal project).
+  **User WAJIB verifikasi**: (1) build CI hijau, (2) folder tujuan kustom
+  BARU (kosong) -> scan -> subfolder "PromptVault" muncul otomatis, (3)
+  scan berkali-kali (manual + auto-sort) ke folder SAMA -> pastikan HANYA
+  1 folder "PromptVault" yang terisi terus, TIDAK ada "(1)"/"(2)" baru
+  muncul -- ini test definitif yang gagal dibuktikan 2 kali di v7.1.x dulu.
+- Confidence Rating: integritas paket/ZIP **100%** (preflight 13/13, semua
+  protected assets utuh) -- perilaku fungsional anti-duplikat di device OEM
+  nyata **~75%** (di luar kendali sandbox, lihat CHANGELOG.md v7.5.0).
+- versionCode 89->90, versionName 7.4.0->7.5.0.
+
+## STATUS PROJECT SEBELUMNYA: v7.4.0 -- Panduan User Baru: onboarding dirombak total + layar Panduan persisten baru -- 2026-08-17
+- User menyoroti gap: setelah perombakan besar v7.3.0 (Shizuku, sweep-
+  select-undo, warning banner), user BARU nyaris tidak punya cara pelajari
+  mekanisme app -- "tangani hingga tuntas". Root cause: `OnboardingScreen`
+  HANYA tampil SEKALI SEUMUR HIDUP (`onboardingDone` DataStore key) DAN
+  isinya basi (4 langkah generik, tidak sebut SAF/Shizuku/konflik/undo sama
+  sekali) -- sekali ditekan "Mulai" atau dilupakan, TIDAK ADA jalan balik
+  di dalam app.
+- **Onboarding REWRITE**: `OnboardingScreen.kt` 4 -> 7 langkah, urut sesuai
+  alur pemakaian nyata (selamat datang -> rule -> izin -> ke mana file
+  disortir + warning root-folder -> strategi konflik -> auto-sort ->
+  undo + pointer ke Panduan). Wizard step-by-step + Crossfade lama TETAP,
+  cuma konten diperluas.
+- **BARU `PanduanScreen.kt`**: versi REFERENSI satu-halaman (bukan wizard)
+  dari materi yang sama + 2 poin troubleshooting cepat, bisa dibuka
+  BERKALI-KALI kapan saja TANPA reset status onboarding -- ini penutup
+  gap utamanya. `WarningBanner` root-folder di-REUSE persis sama dengan
+  SettingsScreen (satu sumber kebenaran).
+- **2 entry point baru** (bukan cuma 1, biar tidak terkubur): grouped menu
+  Home (`HomeScreen.kt`, antara "Kelola Rule" & "Riwayat Aktivitas", tint
+  `colors.tertiary` di-REUSE -- BUKAN aksen ke-5, sistem warna app tetap
+  dibatasi 4 aksen) DAN tombol paling atas di `SettingsScreen.kt` (layar
+  yang paling sering dibuka user saat setup awal).
+- `Navigation.kt`: route baru `Routes.PANDUAN`. `MainActivity.kt` (protected
+  asset, edit parsial): import + `composable(Routes.PANDUAN)` + parameter
+  `onOpenPanduan` diteruskan ke `HomeScreen(...)`/`SettingsScreen(...)` yang
+  SUDAH ADA -- tidak menyentuh logika permission/lifecycle apapun di file
+  itu.
+- File diubah (6) + 1 baru -- lihat CHANGELOG.md v7.4.0 utk daftar lengkap
+  per-file. `preflight_check.sh` 13/13 lolos.
+- **SENGAJA tidak disentuh**: item P0/P1/P2 dari
+  `PromptVault_real_functional_polish_gap_audit.md` (2026-08-16) -- itu bug
+  fungsional FileSorter/undo/worker, di luar scope batch ini (murni gap
+  informasi ke user). Jangan campur ke sesi berikutnya tanpa diskusi
+  eksplisit ke user dulu, biar tiap batch tetap Atomic Change yang jelas.
+- **Batas jujur**: batch ini UI-only + wiring navigasi murni, TIDAK
+  menyentuh FileSorter/DataStore/worker/permission sama sekali -- risiko
+  regresi fungsional nyaris nol dibanding batch v7.3.0. Tapi tetap BELUM
+  lewat `./gradlew`/device asli (keterbatasan lingkungan kerja Claude yang
+  konsisten dicatat tiap sesi). **User WAJIB verifikasi**: (1) build CI
+  hijau, (2) 7 langkah onboarding tampil benar saat install bersih/data
+  app dihapus, (3) "Panduan Penggunaan" di Home & Pengaturan sama-sama
+  membuka layar yang sama dan bisa dibuka berkali-kali, (4) navigasi
+  back dari Panduan kembali ke layar asal (Home atau Pengaturan) dengan
+  benar.
+- Confidence Rating: **90%**.
+- versionCode 88->89, versionName 7.3.0->7.4.0.
+
+## STATUS PROJECT SEBELUMNYA: v7.3.0 -- 3 permintaan eksplisit user: integrasi Shizuku, sweep-select-to-undo, warning eksplisit root tidak auto-dibuat -- 2026-08-17
+- User minta 3 hal SEKALIGUS di 1 sesi (tidak dipecah batch, dikerjakan sbg
+  1 Atomic Change krn saling terkait scope "tujuan kustom" & "UX undo"):
+  (1) "aplikasi Wajib terintegrasi 100% dengan shizuku", (2) fitur
+  sweep-select-to-undo "biar gak ribet buat user", (3) warning sejelas-
+  jelasnya bahwa folder root tujuan kustom TIDAK otomatis dibuat app.
+- **Integrasi Shizuku**: BARU package `shizuku/` (3 file: `IFileOpsService.aidl`
+  kontrak IPC path-absolut, `FileOpsUserService.kt` implementasi Stub yang
+  jalan di PROSES SHIZUKU (UID shell/adb atau root), `ShizukuManager.kt`
+  singleton lifecycle binder/permission). `FileSorter.scanAndSort()` dapat
+  cabang BARU `scanAndSortViaShizuku()` -- dicek PALING AWAL, SALING
+  EKSKLUSIF dgn cabang SAF (toggle `useShizuku` di Settings). Arsitektur
+  ikut pola yang SUDAH jadi pelajaran permanen project ini: sumber scan
+  TETAP SELALU Downloads, Shizuku HANYA tujuan (SAMA seperti SAF, lihat
+  restrukturisasi SAF_FINAL_VERDICT_FIX 2026-08-13 di entri lama). Subfolder
+  RULE di-resolve SEKALI SERIAL sebelum diproses paralel -- PROAKTIF
+  menghindari kelas bug race "folder duplikat" yang PERNAH terjadi nyata
+  di SAF (bukan ditemukan lewat insiden baru kali ini, tapi pelajaran lama
+  DITERAPKAN LEBIH DULU sebelum bug yang sama sempat terjadi di jalur baru).
+  `undo()` dapat cabang baru via prefix palsu `"shizuku://"` di `destUri`
+  (pola identik prefix `content://` SAF -- TIDAK perlu skema Room baru,
+  DB Schema/DAO protected asset TIDAK disentuh sama sekali).
+- **Sweep-select-to-undo**: `ActivityLogScreen.kt` REWRITE PENUH (bukan
+  edit parsial -- terlalu banyak state/gesture baru saling terkait utk
+  di-patch bagian per bagian dgn aman). Tab Undo: tekan-lama 1 baris ->
+  mode seleksi, LALU sapukan jari (drag) ke baris lain utk toggle-pilih
+  banyak sekaligus (`detectDragGestures` + `onGloballyPositioned` rekam
+  posisi tiap baris) -- checkbox & tap biasa tetap ada sbg alternatif.
+  `MainViewModel.undoMultiple()` baru (sekuensial, bukan paralel -- volume
+  seleksi manual biasanya kecil), dikonfirmasi lewat `VaultActionSheet`
+  yang sama dgn undo tunggal sebelum eksekusi.
+- **Warning root tidak auto-dibuat**: komponen `WarningBanner.kt` baru
+  (ikon+`colors.error`, bukan sekadar info pasif) dipasang di KEDUA kartu
+  tujuan kustom Settings -- SAF (perilaku "root tidak auto-dibuat" SUDAH
+  ada sejak v7.2.0 tapi SEBELUMNYA cuma tercatat di dokumentasi teknis,
+  TIDAK pernah ditampilkan ke user di UI -- gap ini yang ditutup sekarang)
+  dan Shizuku (baru, perilaku SAMA PERSIS diterapkan sejak awal: app
+  MENOLAK scan dgn pesan error eksplisit kalau root belum ada, TIDAK PERNAH
+  membuatkannya diam-diam).
+- File diubah (9) + 4 baru -- lihat CHANGELOG.md v7.3.0 utk daftar lengkap
+  per-file. `preflight_check.sh` 13/13 lolos.
+- **Batas jujur, WAJIB dibaca sebelum sesi berikutnya klaim "Shizuku
+  jalan"**: Shizuku (poin 1) & gestur sapuan custom (poin 2) adalah DUA
+  permukaan API yang BELUM PERNAH dipakai project ini SAMA SEKALI sebelum
+  batch ini -- beda dari SAF yang setidaknya sudah py 7+ iterasi
+  pengalaman nyata (lihat Insiden #7). BELUM lewat `./gradlew`/device
+  asli/aplikasi Shizuku sungguhan sama sekali. Kalau CI/build gagal di
+  `shizuku/` atau gestur sapuan "kalah" oleh scroll LazyColumn di device
+  asli, itu BUKAN tanda ditulis ceroboh -- itu risiko yang SUDAH
+  didokumentasikan eksplisit di sini sejak awal, tindak lanjuti dgn fix
+  bertarget (kirim log error), BUKAN menghapus fitur tanpa didiskusikan
+  dulu ke user (pelajaran sama dgn Insiden #7 SAF).
+- Confidence Rating: **70%** (sengaja lebih rendah dari batch biasa --
+  lihat rincian lengkap per-poin di CHANGELOG.md v7.3.0). **User WAJIB
+  verifikasi**: (1) build CI hijau (prioritas #1 -- dependency Shizuku +
+  AIDL codegen = risiko compile paling nyata di batch ini), (2) kartu Mode
+  Shizuku di Pengaturan menampilkan status yang benar sesuai kondisi
+  Shizuku di HP, (3) sapuan jari di tab Undo Pemindahan benar-benar
+  memilih banyak baris tanpa kalah oleh scroll, (4) warning banner tampil
+  jelas & mudah dibaca di kedua kartu tujuan kustom (SAF & Shizuku).
+- versionCode 87->88, versionName 7.2.0->7.3.0.
+
+## STATUS PROJECT SEBELUMNYA: v7.2.0 -- PERUBAHAN ARSITEKTUR: app berhenti bikin folder root "PromptVault" sendiri di folder tujuan kustom (permintaan langsung user) -- 2026-08-17
+- Setelah 2 ronde mitigasi (v7.1.5, v7.1.6) tidak berhasil membuktikan/
+  menyingkirkan tuntas duplikat "PromptVault (N)" -- user minta hilangkan
+  pemicunya langsung: app TIDAK LAGI `createDirectory("PromptVault")`.
+  User bikin & pilih folder root SENDIRI lewat SAF picker; app cuma bikin
+  subfolder RULE (Apps vault, dst) di dalamnya -- jalur yang TERBUKTI bersih
+  di log Aktivitas user (16/08 11:44-17/08 07:16, APK 7.1.6 terverifikasi).
+- `resolveSafRuleDestinations`: `destinationRoot` LANGSUNG dipakai sbg vault
+  root, tanpa lapisan `findOrCreateChildDirSaf(..., "PromptVault", ...)`
+  lagi. Ini menghapus SATU-SATUNYA titik `createDirectory()` untuk folder
+  root di seluruh codebase (bukan cuma menambal lagi).
+- **Breaking behavioral change, WAJIB dibaca user**: user dgn folder tujuan
+  kustom lama (berisi subfolder "PromptVault") -- scan baru nulis LANGSUNG
+  ke root, file lama TIDAK dipindah otomatis. Solusi: arahkan SAF picker ke
+  folder "PromptVault" lama itu sendiri kalau mau lanjutin struktur lama.
+  Jalur lokal (default Downloads, tanpa custom dest) TIDAK berubah.
+- `ActivityLogScreen` tab Undo: label tujuan dibedakan per `destUri`
+  (content:// = SAF -> "folder tujuan kustom/<rule>/", path absolut = lokal
+  -> tetap "PromptVault/<rule>/"). Entri lama tetap akurat (baca dari
+  `destUri` tersimpan).
+- Cache-Uri (v7.1.5) & retry+instrumentasi (v7.1.6) DIPERTAHANKAN utk
+  subfolder rule -- keduanya terbukti bekerja baik, cacheKey disederhanakan
+  jadi nama rule langsung (bukan lagi "PromptVault/<rule>").
+- File diubah (3): `util/FileSorter.kt`, `ui/screens/ActivityLogScreen.kt`,
+  `app/build.gradle.kts` (versi). `preflight_check.sh` 13/13 lolos.
+- Confidence Rating: **80%** (perubahan struktural low-risk krn menghapus
+  kode, bukan menambah logika baru -- tapi tetap belum lewat
+  `./gradlew`/device asli, lihat CHANGELOG.md v7.2.0 utk daftar verifikasi
+  wajib user).
+- versionCode 86->87, versionName 7.1.6->7.2.0.
+
+## STATUS PROJECT SEBELUMNYA: v7.1.6 -- Duplikat "PromptVault (N)" MASIH terjadi setelah v7.1.5, retry+instrumentasi (BELUM klaim fix definitif) -- 2026-08-16
+- User konfirmasi via chat: sudah update APK v7.1.5, sudah rapikan folder
+  lama manual, test ulang -> **duplikat baru muncul LAGI**. Cache-by-Uri
+  v7.1.5 TIDAK CUKUP sendirian.
+- **Ditulis jujur**: root cause pasti BELUM terkonfirmasi 100% tanpa
+  Logcat/device asli (keterbatasan lingkungan kerja Claude yang sudah
+  konsisten dicatat tiap sesi -- lihat entri v7.1.4/v7.1.3 dst). Sesi ini
+  TIDAK klaim "sudah fix", tapi: (1) retry+delay 200ms sebelum create kalau
+  `findFile()` null (mitigasi dugaan staleness), (2) verifikasi nama pasca-
+  `createDirectory()` + log `ERROR` eksplisit ke Activity Log kalau provider
+  ternyata balikin nama beda (mis. "PromptVault (1)") -- BUKTI KONKRET, bukan
+  tebakan, utk sesi berikutnya.
+- **Pertanyaan terbuka BELUM terjawab, PRIORITAS sesi berikutnya**: user
+  pakai "Folder Tujuan Kustom" (SAF) di Pengaturan, atau default Downloads?
+  Kalau default -> `File.mkdirs()` (java.io.File biasa) TIDAK BISA
+  auto-suffix "(N)" secara struktural -> seluruh dugaan jalur SAF di
+  v7.1.4-v7.1.6 SALAH ALAMAT, sumber duplikat ada di tempat lain yang BELUM
+  diperiksa. **JANGAN lanjut tambal jalur SAF lagi sebelum fakta ini
+  dikonfirmasi user.**
+- File diubah (2): `util/FileSorter.kt`, `app/build.gradle.kts` (versi).
+  `preflight_check.sh` 13/13 lolos.
+- Confidence Rating: **50%** (sengaja rendah -- iterasi ke-2 utk bug yang
+  sama, mitigasi+instrumentasi, BUKAN fix definitif; detail lengkap
+  CHANGELOG.md v7.1.6).
+- versionCode 85->86, versionName 7.1.5->7.1.6.
+
+## STATUS PROJECT SEBELUMNYA: v7.1.5 -- FIX duplikat folder "PromptVault"/"(N)" berulang, root cause staleness listing SAF antar-scan (BEDA dari race-fix 2026-08-13) -- 2026-08-16
+- User lapor (screenshot) 7 folder "PromptVault"/"(1)".."(6)" di tujuan
+  kustom, tiap folder isi LENGKAP (9-10 item), tanggal 15-16/08 -- pola BEDA
+  dari bug lama (1 item/duplikat, race antar-coroutine, sudah difix
+  2026-08-13 via serialisasi `resolveSafRuleDestinations`). Fix lama itu
+  TETAP BENAR & DIPERTAHANKAN (menutup race dlm 1 scan) -- celah baru ada di
+  luar cakupannya: staleness listing SAF ANTAR-scan (scan tetap serial via
+  `scanMutex`, TERVERIFIKASI DI KODE, bukan race baru).
+- **Root cause**: `findFile()` (`listFiles()` query) di `findOrCreateChildDirSaf`
+  dipanggil ULANG tiap scan. Sebagian provider/OEM listing children bisa
+  STALE sesaat pasca `createDirectory()` scan sebelumnya (lag FUSE/index) --
+  scan berikutnya "tidak lihat" folder yg sudah ADA secara fisik, bikin baru
+  -> provider deteksi tabrakan nama di level filesystem -> auto-suffix.
+- **Fix**: cache Uri folder (root "PromptVault" + tiap subfolder rule) di
+  `SettingsRepository` (key relatif thd `safTreeUri`, auto-invalidate kalau
+  root ganti), `findOrCreateChildDirSaf` coba resolusi LANGSUNG by-Uri
+  (`fromSingleUri`+`exists()`) dari cache dulu sebelum fallback ke
+  `findFile()`/`createDirectory()` lama. Detail lengkap: CHANGELOG.md v7.1.5.
+- File diubah (3): `util/FileSorter.kt`, `data/SettingsRepository.kt`,
+  `app/build.gradle.kts` (versi). Tidak ada file baru. `preflight_check.sh`
+  13/13 lolos (sempat false-positive kurung tidak seimbang gara² komentar
+  "1)"/"2)" numbering -- diganti "Langkah 1:"/"Langkah 2:" biar heuristik
+  proyek yg literal-count karakter tidak salah baca).
+- **PENTING**: folder duplikat yg SUDAH ADA di device user TIDAK otomatis
+  digabung -- fix ini cuma cegah duplikat baru ke depan. User perlu gabung
+  manual isi tiap "PromptVault (N)" ke folder asli lalu hapus yg kosong.
+- Confidence Rating: **85%** (root cause & fix well-reasoned dari bukti
+  kode+screenshot, tapi staleness provider/OEM tidak bisa disimulasikan
+  tanpa device asli -- lihat CHANGELOG.md utk detail penuh & item verifikasi
+  wajib user).
+- versionCode 84->85, versionName 7.1.4->7.1.5.
+
+## STATUS PROJECT SEBELUMNYA: v7.1.4 -- FIX 3 GAP P0 audit eksternal (folder-name traversal, copy parsial, urutan undo SAF), Phase 1/4 -- 2026-08-16
+- User upload `PromptVault_real_functional_polish_gap_audit.md` (audit statis
+  eksternal baru: 3 P0, 9 P1, 7 P2 -- BEDA dokumen dari `SAF_FINAL_VERDICT_FIX.txt`/
+  `SAF_FINAL_LOGIC_AUDIT.md` lama, jangan tertukar). Instruksi eksplisit user:
+  **"kerjakan secara bertahap ... jangan greedy"** -- dibaca sebagai: JANGAN
+  coba tuntaskan seluruh audit (19 temuan) dalam 1 batch. Dieksekusi: **Phase 1
+  PENUH** dari "Priority Fix Order" audit tsb (3 item P0, "Safety/correctness"),
+  BUKAN sebagian P0 + sebagian P1 dicampur (supaya batch ini tuntas 1 fase utuh,
+  bukan setengah-setengah lintas fase).
+- **P0-1 (folder rule tidak divalidasi -> potensi path traversal)**: file BARU
+  `util/RuleFolderNameValidator.kt` (`validateRuleFolderName`/`isValidRuleFolderName`/
+  `isContainedIn`, top-level pure function, pola sama `mimeTypeForFileName`/
+  `GlobMatcher` -- unit-testable tanpa Context, lihat `RuleFolderNameValidatorTest.kt`
+  baru). Dipasang di 2 lapis WAJIB: `AddEditRuleScreen.kt` (inline `isError`+
+  `supportingText`, Save disabled kalau invalid) DAN `FileSorter.moveFile()`+
+  `resolveSafRuleDestinations()` (gerbang terakhir -- rule LAMA yang sudah
+  tersimpan sebelum fix ini tetap divalidasi ulang tiap scan, bukan cuma dicegah
+  untuk rule baru). Detail lengkap: CHANGELOG.md v7.1.4.
+- **P0-2 (`copyThenDelete()` bisa nyisain file tujuan PARSIAL kalau copy gagal
+  di tengah jalan)**: fix pola temp-file-lalu-rename (tulis ke `<nama>.tmp_<uuid>`
+  dulu, verifikasi, baru rename ke nama final) -- nama final TIDAK PERNAH
+  tersentuh sampai transfer tuntas. `copyThenDelete` sekarang `suspend fun`
+  (dipanggil dari `moveFile`+`undo()`, keduanya sudah suspend context, aman).
+- **P0-3 (urutan `markUndone()` salah di `undoSaf()`/`undoSafDestination()`)**:
+  sebelumnya riwayat ditandai "selesai undo" TANPA SYARAT begitu salinan balik
+  sukses, TIDAK PEDULI hasil `current.delete()` (hapus salinan lama di tujuan).
+  Fix: `markUndone()` HANYA dipanggil kalau delete BENAR-BENAR sukses; gagal ->
+  entri riwayat SENGAJA dibiarkan "belum selesai" + WARNING "Undo SEBAGIAN" di
+  Activity Log, supaya user tahu ada duplikat & bisa coba undo lagi -- bukan
+  silent-mark-done yang menyembunyikan state sebenarnya.
+- **SENGAJA TIDAK dikerjakan sesi ini** (Phase 2-4 audit, BUKAN lupa): P1-1
+  s.d P1-9 (test matrix FileSorter lengkap, retry worker, kategori skip granular,
+  RuleRepository transactional, semantik import, OVERWRITE destruktif tanpa
+  histori, dst.) & semua P2 (min/max validation, diagnostics live-refresh, dst.).
+  Lihat "Priority Fix Order" di `PromptVault_real_functional_polish_gap_audit.md`
+  utk urutan Phase 2-4 kalau user minta lanjut -- JANGAN audit ulang dari nol,
+  daftar lengkap 16 temuan sisa sudah ada di dokumen itu (masih relevan sampai
+  dieksekusi/di-supersede entri PROJECT_STATE yang lebih baru).
+- File diubah (4) + 2 baru: `util/FileSorter.kt`, `ui/screens/AddEditRuleScreen.kt`,
+  `app/build.gradle.kts` (versi), `FILE_MANIFEST.txt`; BARU `util/
+  RuleFolderNameValidator.kt`, `app/src/test/.../RuleFolderNameValidatorTest.kt`.
+  `scripts/preflight_check.sh` 13/13 lolos bersih.
+- Confidence Rating: **90%** (3 fix bertarget, masing-masing risiko rendah
+  secara individual -- validator murni pure-function baru + reuse pola project
+  yang sudah ada, temp-file-rename adalah pola standar well-known, reorder
+  markUndone tidak mengubah struktur fungsi lain; turun dari 95%+ semata krn (1)
+  BELUM PERNAH lewat `./gradlew` asli/device asli sama sekali (konsisten seluruh
+  riwayat project), (2) skenario P0-2/P0-3 (disk penuh, provider SAF menolak
+  delete) SULIT disimulasikan tanpa device/provider asli utk diverifikasi
+  end-to-end, cuma bisa direview manual jalur logikanya). **User WAJIB
+  verifikasi**: (1) isi nama folder rule dengan `/` atau `..` di Tambah/Edit
+  Rule -- field harus tampil error merah, tombol Simpan nonaktif, (2) rule
+  normal (tanpa karakter aneh) tetap tersimpan & scan seperti biasa (nol
+  regresi jalur normal -- PALING PENTING, ini jalur yang dipakai 100% user
+  selama ini), (3) build CI hijau.
+- versionCode 83->84, versionName 7.1.3->7.1.4.
+
+## STATUS PROJECT SEBELUMNYA: v7.1.3 -- FIX GAP FUNGSIONAL NYATA: POST_NOTIFICATIONS tidak pernah diminta runtime -- 2026-08-16
+- User minta audit lebih dalam (edge case DB/permission/migrasi) setelah
+  static audit TODO/FIXME kosong. **Item pertama yang dicoba
+  (`FileSorter.undo()` dispatcher) FALSE POSITIVE** -- ternyata sudah difix
+  di v2.20.1 di level `MainViewModel.undoMove()` (`withContext(Dispatchers.IO)
+  { fileSorter.undo(entry) }`), bukan di dalam `FileSorter.undo()` sendiri.
+  Catatan v2.16.0 yang jadi acuan awal ("kandidat batch terpisah") sudah
+  usang/superseded tapi sempat kebaca tanpa cross-check entri v2.20.1 yang
+  lebih baru -- **langsung direvert begitu ketahuan, sebelum sempat
+  di-package**. Pelajaran: SELALU cek entri PALING BARU yang menyinggung
+  topik yang sama sebelum eksekusi, bukan cuma entri pertama yang ketemu.
+- **Audit Room DB**: `AppDatabase.kt` (version=1 dari awal,
+  `fallbackToDestructiveMigration` terdokumentasi jelas & disengaja --
+  belum pernah ada migrasi asli krn versi belum pernah naik), `MoveHistoryDao`/
+  `ActivityLogDao` (trim FIFO 200/500 baris + debounce v2.4.1 sudah
+  optimal), `Converters.kt` (enum LogLevel<->String dgn `getOrDefault`
+  fallback aman kalau ada rename enum masa depan) -- **semua ditinjau,
+  TIDAK ADA bug ditemukan**.
+- **Audit permission -- GAP NYATA ditemukan & difix**: `POST_NOTIFICATIONS`
+  dideklarasikan `AndroidManifest.xml` sejak Batch §5 (utk notifikasi
+  ongoing `AutoSortWorker`, lihat `AutoSortNotification.kt`) TAPI **tidak
+  pernah diminta runtime** (grep konfirmasi 0 pemanggilan
+  `ActivityResultContracts.RequestPermission()` utk izin ini di seluruh
+  kode). `targetSdk=34` (Android 14) -- jauh di atas ambang API 33 tempat
+  izin ini WAJIB diminta eksplisit, deklarasi manifest saja tidak cukup.
+  **Dampak nyata**: notifikasi "Auto-sort sedang berjalan" -- tujuan UTAMA
+  Batch §5 (kasih user visibility scan background) -- kemungkinan TIDAK
+  PERNAH tampil di Android 13+ manapun, padahal foreground service-nya
+  sendiri tetap jalan diam-diam (bukan crash, tapi kehilangan visibility
+  yang jadi alasan fitur itu dibuat).
+- **Fix**: `MainActivity.kt` (protected asset, parsial) -- launcher baru
+  `notificationPermissionLauncher`, diminta SEKALI (one-shot, flag DataStore
+  `notification_permission_asked`, pola sama dgn `onboarding_done`) tepat
+  setelah user lolos gate storage permission + onboarding. Hasil grant/deny
+  SENGAJA diabaikan -- fitur pelengkap (visibility), BUKAN gate wajib spt
+  storage, user yang menolak tidak dipaksa dialog berulang tiap buka app.
+- **Audit migrasi**: `LegacyDataMigration.kt` sudah diverifikasi cukup aman
+  di v2.20.2 (no-op murni kalau key tidak cocok, guard flag anti-retry-loop)
+  -- tidak ada gap baru ditemukan sesi ini.
+- File diubah (2): `MainActivity.kt` (parsial), `app/build.gradle.kts`
+  (versi). `FILE_MANIFEST.txt` tidak berubah. `preflight_check.sh` 13/13
+  lolos bersih.
+- Confidence Rating: **92%** (turun dari biasanya krn: (1) BELUM PERNAH
+  lewat `./gradlew` asli/device asli spt biasa, (2) API
+  `ActivityResultContracts.RequestPermission()` single-permission BELUM
+  ADA preseden lain di codebase ini -- yang sudah ada cuma
+  `RequestMultiplePermissions()` (2 izin storage legacy) dan
+  `OpenDocumentTree()`, jadi pola single-permission ini baru pertama kali
+  dipakai project ini, ditulis dari API resmi Android tapi belum ada
+  cross-check preseden internal). User WAJIB verifikasi: (1) dialog izin
+  notifikasi muncul SEKALI saat pertama kali masuk app (HANYA di Android
+  13+, tidak akan muncul di HP Android 12 ke bawah -- itu benar/sesuai
+  desain, bukan bug), (2) setelah accept, notifikasi "Auto-sort sedang
+  berjalan" benar-benar tampil saat auto-scan jalan di background, (3)
+  kalau ditolak, app tetap 100% berfungsi normal (cuma notifikasi itu yang
+  tidak tampil).
+- versionCode 82->83, versionName 7.1.2->7.1.3.
+
+## STATUS PROJECT SEBELUMNYA: v7.1.2 -- Polish UI lanjutan: highlight GlassPanel diagonal->vertikal + fix Row Undo tanpa CenterVertically -- 2026-08-16
+- User tegaskan lagi (v7.1.1 belum cukup): "Toggle/saklar, icon menu, dan
+  undo button. Semuanya masih asimetris" -- diaudit ULANG dari nol (bukan
+  percaya fix RuleCard v7.1.1 sudah menutup semua), fokus ke 3 elemen
+  eksplisit yang disebut.
+- **Audit matematis RuleCard/TactileSwitch/GroupedListRow (layout murni)**:
+  dihitung ulang semua offset/inset/touch-target satu-satu -- TIDAK ketemu
+  bug POSISI/UKURAN (touch target 5 kontrol RuleCard sudah sama 48dp,
+  inset thumb switch 3dp presisi sama tiap sisi, kotak ikon GroupedListRow
+  30dp+icon 16dp center, indent divider 58dp match posisi teks). Layout
+  angka-nya SUDAH simetris sejak v7.1.1 -- tapi user tetap lihat "berat
+  sebelah" di 2 elemen ini (toggle & icon menu), jadi akar masalahnya
+  BUKAN di angka layout.
+- **Akar sebenarnya ditemukan di `GlassPanel.kt`** (primitif BERSAMA yang
+  dipakai thumb TactileSwitch, kotak ikon GroupedListRow, pil
+  SegmentedControl, VaultCard, dst.): overlay "highlight" pakai
+  `Brush.linearGradient(colors=[GlassHighlight, Color.Transparent])` TANPA
+  `start`/`end` eksplisit -- default Compose menarik gradient DIAGONAL
+  pojok kiri-atas ke pojok kanan-bawah. Di elemen BESAR (VaultCard) efek
+  ini nyaris tak kentara, tapi di elemen KECIL bulat/pill (thumb 20dp,
+  kotak ikon 30dp) satu pojok jelas terang & pojok seberang gelap polos --
+  scan visual manusia langsung baca ini sebagai "tidak simetris" walau
+  bounding-box/posisinya presisi center. **Fix**: `Brush.verticalGradient`
+  (atas->bawah) -- simetris kiri-kanan, kesan "cahaya dari atas" tetap ada
+  (bahasa visual glassmorphism tidak berubah), cuma arahnya diluruskan.
+  1 titik ubah di 1 file (`GlassPanel.kt`), otomatis berlaku ke SEMUA
+  pemakai primitif ini (toggle & icon menu SEKALIGUS, tanpa sentuh
+  masing-masing file) -- termasuk kenapa 2 keluhan user yang kelihatannya
+  tidak berhubungan (toggle + icon menu) ternyata 1 akar yang sama.
+- **Undo button** (`ActivityLogScreen.kt`, tab "Undo Pemindahan"): BUG
+  LAYOUT NYATA ditemukan (beda kelas dari 2 di atas) -- `Row` pembungkus
+  Column-teks (3 baris: nama file/tujuan/waktu) + `TextButton("Undo")`
+  TIDAK punya `verticalAlignment` (default `Alignment.Top`), BEDA dari
+  `Row` tab "Log" di atasnya yang sudah benar pakai `CenterVertically`.
+  Karena Column kiri jauh lebih tinggi (3 baris) dari tombol (1 baris),
+  tombol nempel RATA ATAS, nyisa ruang kosong di bawahnya -- match persis
+  laporan user. Fix: tambah `verticalAlignment = Alignment.CenterVertically`,
+  pola sama dgn Row tab Log.
+- File diubah (3, non-Atomic): `GlassPanel.kt` (1 brush), `ActivityLogScreen.kt`
+  (1 Row), `app/build.gradle.kts` (versi). `FILE_MANIFEST.txt` tidak berubah.
+  `preflight_check.sh` 13/13 lolos bersih.
+- Confidence Rating: **95%** (2 fix independen berisiko rendah -- 1 ganti
+  arah Brush tanpa logika baru, 1 tambah parameter alignment standar Compose
+  yang sudah ada polanya persis di file yang sama; turun dari 97%+ semata
+  krn tetap BELUM PERNAH lewat `./gradlew` asli/device asli, sandbox tanpa
+  Android SDK, DAN karena root-cause GlassPanel diinferensi dari membaca
+  perilaku default `Brush.linearGradient` -- bukan dari screenshot baru user
+  sesi ini). **User WAJIB verifikasi visual**: (1) thumb switch & kotak ikon
+  menu Home sekarang terang merata dari ATAS (bukan lagi nyala di 1 pojok
+  doang), (2) tombol "Undo" di tab "Riwayat Aktivitas" -> "Undo Pemindahan"
+  sekarang center vertikal sejajar tengah teks di sampingnya, bukan nempel
+  atas. Kalau MASIH terasa asimetris setelah ini, kirim screenshot -- akar
+  penyebabnya kemungkinan bukan lagi di 3 elemen yang sama, butuh titik
+  visual baru untuk diaudit.
+- versionCode 81->82, versionName 7.1.1->7.1.2.
+
+## STATUS PROJECT SEBELUMNYA: v7.1.1 -- Polish UI: fix kontras border WCAG 1.4.11 + rapikan baris kontrol asimetris RuleCard -- 2026-08-16
+- User kirim 4 screenshot build v7.1.0 NYATA (bukan cuma baca kode) + minta
+  fokus 2 hal eksplisit: (1) WCAG utk "layout terdistorsi", (2) khusus polish
+  UI/rapikan asimetri -- ditegaskan "no less no more", jadi TIDAK melebar ke
+  redesign/ganti hue.
+- Audit WCAG numerik (bukan tebakan) ke SEMUA token x tingkat permukaan:
+  `GlassBorder`/`HairlineGlass` GAGAL 1.4.11 (1.49-1.55:1, alpha 0.14f) ->
+  naik 0.38f (3.00-3.80:1, lulus). `TextMuted` GAGAL 4.5:1 teks normal
+  (3.45-3.81:1 di alpha 0.42f, token dead-code tapi tetap diperbaiki
+  preventif) -> naik 0.56f (4.81:1 worst-case). `BrassAccent` DICEK TERPISAH
+  -- 7.44:1 LULUS AAA, bukan pelanggaran; saturasi rendahnya (47% vs
+  Amber/Slate/Rust 77-100%) BUKAN bug WCAG, dan hex-nya dipatok eksplisit
+  user sesi sebelumnya -- **ditanyakan ke user via pilihan sebelum
+  disentuh**, dijawab fokus ke asimetri layout, jadi hex Brass TIDAK diubah
+  sesi ini (keputusan didokumentasikan, bukan diam-diam dilewati).
+- Asimetri layout NYATA yang ditemukan (dari screenshot "Kelola Rule"):
+  `RuleCard.kt` baris kontrol aksi pakai `Spacer(weight(1f))` di tengah,
+  numpuk 2 tombol reorder di kiri vs 3 kontrol lain di kanan, nyisa celah
+  kosong lebar di tengah -- diganti `Arrangement.SpaceEvenly`, 5 kontrol
+  merata di lebar penuh.
+- File diubah (3, non-Atomic): `Color.kt` (2 token alpha), `RuleCard.kt`
+  (1 Arrangement), `app/build.gradle.kts` (versi). `FILE_MANIFEST.txt` tidak
+  berubah. `preflight_check.sh` 13/13 lolos bersih.
+- Confidence Rating: **96%** (fix WCAG murni numerik terverifikasi formula
+  relative luminance W3C + 1 fix layout Arrangement straightforward, tidak
+  ada logika baru berisiko; turun dari potensi 97%+ semata krn tetap BELUM
+  PERNAH lewat `./gradlew` asli/device asli, sandbox tanpa Android SDK).
+  User WAJIB verifikasi visual: (1) border kartu/chip kelihatan jelas tapi
+  tidak mengganggu di kedua preset tema, (2) baris kontrol RuleCard di
+  "Kelola Rule" sekarang seimbang kiri-kanan, bukan berat sebelah.
+- versionCode 80->81, versionName 7.1.0->7.1.1.
+
+## STATUS PROJECT SEBELUMNYA: v7.1.0 -- FITUR BARU: toggle tema (Deep Navy+Brass <-> Charcoal+Copper) di Pengaturan -- 2026-08-15
+- User upload state repo terkini (`PromptVault-main.zip`, ternyata sudah
+  v7.0.1 -- lompat dari v7.0.0). **Penting utk sesi berikutnya**: draft
+  Neumorphism `drawBehind`+`Paint.setShadowLayer` yang sempat digarap sesi
+  SEBELUM ini TIDAK PERNAH di-deliver/push ke user -- sesi lain sudah ambil
+  arah berbeda (balik Glassmorphism total, `GlassPanel.kt`) & sudah
+  di-push+CI-hotfix duluan. Draft itu SEPENUHNYA gugur, jangan dilanjutkan
+  atau dicari lagi -- state ground-truth SELALU upload/PROJECT_STATE.md
+  terbaru, bukan riwayat chat sesi manapun.
+- Diminta lanjut sbg "toggle saklar tema custom" -- ambigu, DIKLARIFIKASI
+  via pertanyaan pilihan (bukan ditebak): user pilih **switch ON/OFF simpel
+  antara 2 preset TETAP**, BUKAN color picker bebas atau banyak preset.
+- **Preset ke-2 "Charcoal + Copper" -- BARU dirancang sesi ini** (`#12100E`
+  root, H=30 hangat, sengaja beda ARAH hue dari Navy H=225 spy 2 preset
+  kerasa beda bukan cuma gelap/terang yg sama; `#C97B4A` aksen). BUKAN
+  rekonstruksi Platinum/Ruby v6.0.0 -- itu sudah dihapus total v7.0.0, hex
+  persisnya tidak tercatat presisi di mana pun (CHANGELOG/PROJECT_STATE)
+  utk direkonstruksi dgn aman, jadi TIDAK dicoba "dikembalikan". WCAG
+  dihitung manual sama rigor-nya dgn preset default: teks di atas Charcoal
+  ~19:1 (AAA), teks gelap di atas Copper 5,80:1 (AA) -- lulus.
+- **Implementasi BENAR-BENAR reaktif, BUKAN switch UI kosong** -- pelajaran
+  wajib dihormati dari Insiden `ThemeMode` v2.16.0 (dihapus total krn
+  togglenya TIDAK PERNAH benar-benar mengubah apa pun, `PromptVaultTheme`
+  hardcode 1 skema, parameter diabaikan). Diverifikasi manual: `Theme.kt`
+  `PromptVaultTheme(useAltTheme: Boolean)` SEKARANG memilih 1 dari 2
+  `ColorScheme` (`VaultDarkColorsDefault`/`VaultDarkColorsAlt`, struktur
+  peran M3 identik, cuma token beda) tiap recomposition -- bukan parameter
+  mati.
+- **Status/nav bar sistem ikut reaktif** (celah yg TIDAK ada di era
+  `ThemeMode` lama krn togglenya memang tidak pernah berfungsi sama sekali):
+  `resolveBackgroundColor()` baru (Theme.kt, 1 sumber kebenaran) dipanggil
+  dari `SideEffect` BARU di `MainActivity.setContent` -- tiap `useAltTheme`
+  berubah (baik krn DataStore baru selesai dimuat ATAU user toggle live),
+  `enableEdgeToEdge` dipanggil ULANG dgn warna yg benar. Tanpa ini, chrome
+  sistem bisa nyangkut di preset lama walau konten Compose sudah pindah.
+- File diubah (6, non-Atomic -- fitur baru murni tambahan, tidak ada 1
+  sistem visual lama yg "dipecah"): `SettingsRepository.kt` (DataStore
+  boolean, pola identik `intervalMinutesFlow`), `MainViewModel.kt`
+  (`StateFlow`+setter, pola identik `scanConcurrency`), `Color.kt` (token
+  Charcoal/Copper baru, 5 tingkat elevasi dihitung HSL manual sama seperti
+  Navy), `Theme.kt` (2 ColorScheme + `PromptVaultTheme` reaktif +
+  `resolveBackgroundColor`), `SettingsScreen.kt` (section "Tema" baru,
+  `TactileSwitch`), `MainActivity.kt` (PARSIAL: collect state + SideEffect
+  + teruskan param, protected asset lain TIDAK disentuh). `FILE_MANIFEST.txt`
+  TIDAK berubah (0 file baru/dihapus).
+- `scripts/preflight_check.sh` dijalankan ulang, **13/13 kategori lolos
+  bersih** (termasuk #13, kategori hotfix v7.0.1 utk KDoc `*/` prematur --
+  KDoc panjang batch ini otomatis tervalidasi tidak mengulang bug yg sama
+  yg baru saja menyebabkan CI gagal total di v7.0.1).
+- Confidence Rating: **93%** (bukan 95%+ murni krn 2 hal: (1) **BELUM
+  PERNAH lewat `./gradlew` asli/device asli** sama sekali -- sandbox tanpa
+  Android SDK/jaringan Gradle, TERLEBIH lagi baru saja ada insiden CI gagal
+  total v7.0.1 dari sesi lain yg JUGA "lolos preflight lama" sebelum
+  ketahuan gagal compile sungguhan, jadi kewaspadaan ekstra wajar; (2) toggle
+  reaktif lintas Activity+Compose (`SideEffect`+`enableEdgeToEdge` dipanggil
+  ulang) adalah pola yg BELUM PERNAH dipakai project ini sebelumnya --
+  logikanya masuk akal & sudah direview manual baris-per-baris, tapi TIDAK
+  ada preseden lain di codebase ini utk dibandingkan). User WAJIB
+  verifikasi: (1) toggle benar-benar mengganti SELURUH tampilan app, bukan
+  cuma 1 layar, (2) status/nav bar ikut berubah warna, (3) tidak ada teks
+  tak terbaca di preset manapun, (4) restart app dgn toggle ON -- preset
+  harus tetap Charcoal+Copper sejak splash/frame pertama (persistensi
+  DataStore).
+- versionCode 79->80, versionName 7.0.1->7.1.0.
+
+## STATUS PROJECT SEBELUMNYA: v7.0.1 -- HOTFIX build CI gagal total: KDoc tertutup prematur di TactileTokens.kt -- 2026-08-15
+- User upload log CI gagal (`build-failure-log-v7_0_0.zip`): `kspDebugKotlin
+  FAILED`, ratusan error `Expecting a top level declaration` mulai
+  `TactileTokens.kt:10:27`. Semua error lain di log = 1 CASCADE dari 1 root
+  cause tunggal (dikonfirmasi: `awk`/`sort -u` atas seluruh log CI cuma
+  menunjuk 1 file, `ui/theme/TactileTokens.kt`).
+- **Root cause**: KDoc header yang DITULIS SESI INI (v7.0.0, lihat entri di
+  bawah) berisi `(Neu*/Glass*)` -- substring `*/` DI TENGAH kalimat KDoc
+  menutup block comment `/** ... */` PREMATUR (Kotlin, spt C/Java, comment
+  block tutup di kemunculan PERTAMA `*/`, titik, bukan yang dimaksud
+  penulis). Sisa isi KDoc (baris 10 s.d. `*/` yang SEBENARNYA di baris 20)
+  ke-parse compiler sbg KODE KOTLIN SUNGGUHAN -> parser Kotlin bingung total
+  di situ, berantai jadi ratusan error "Expecting a top level declaration"
+  di seluruh sisa file (bukan ratusan bug terpisah, 1 typo tunggal).
+- **Kenapa lolos preflight sesi sebelumnya**: kategori #1 (keseimbangan
+  kurung `{}()`) TIDAK mendeteksi ini krn jumlah kurung tetap seimbang --
+  comment-nesting Kotlin (`/** ... */`) adalah lapisan terpisah dari
+  brace-nesting kode, tidak dicek sama sekali oleh heuristik lama.
+  `bash -n`/lint statis lain di sandbox JUGA tidak mendeteksi (bukan syntax
+  BASH, ini syntax KOTLIN -- perlu compiler Kotlin asli/heuristik khusus).
+- **Fix**: `(Neu*/Glass*)` -> `(Neu*, Glass*)` di `TactileTokens.kt`, 1
+  baris, makna tidak berubah (cuma pemisah "atau" jadi koma, hindari
+  karakter `*/` nyasar).
+- **Fix preventif (bukan cuma tambal titik ini)**: `scripts/preflight_check.sh`
+  kategori #12 lama (baseColor gradient check, SUDAH OBSOLETE sejak
+  parameter `baseColor` dihapus total di v7.0.0 -- kategori itu jadi
+  omong-kosong tanpa guna sejak commit sebelumnya, TIDAK ketahuan krn
+  kebetulan tetap "lolos" trivial 0 gradient) dipensiunkan resmi jadi no-op
+  permanen (didokumentasikan kenapa, bukan dihapus diam-diam). Kategori #13
+  BARU: `grep -rnP '\*/\S' "$KT_DIR"` -- deteksi SEMUA kemunculan `*/` yang
+  diikuti LANGSUNG karakter bukan-spasi di baris yang sama (comment penutup
+  ASLI selalu diikuti akhir baris atau spasi, bukan lanjut teks/kode).
+  Dijalankan ulang di seluruh `$KT_DIR`, 0 kemunculan lain ditemukan (bug
+  ini SATU-SATUNYA insiden, bukan pola berulang) -- kelas bug ini sekarang
+  KEPANTAU OTOMATIS ke depan.
+- **Pelajaran utk sesi Claude berikutnya**: KDoc/comment BUKAN "teks bebas
+  bahaya" -- karakter `*/` di TENGAH kalimat penjelasan (notasi
+  "A*/B*" gaya wildcard, pecahan, atau simbol pembagi apapun yang kebetulan
+  diikuti garis miring) bisa menutup block comment secara tidak sengaja.
+  Preflight sekarang menjaring ini otomatis (kategori #13) -- TETAP hati-hati
+  saat menulis KDoc panjang berisi banyak notasi teknis.
+- File diubah (3): `ui/theme/TactileTokens.kt` (fix 1 baris),
+  `scripts/preflight_check.sh` (kategori #12 dipensiunkan + #13 baru),
+  `app/build.gradle.kts` (versi). **Preflight 13/13 kategori lolos bersih
+  setelah fix** (termasuk kategori #13 baru yg langsung diuji thd bug
+  aslinya -- dikonfirmasi 0 sisa). Confidence Rating: **97%** (fix titik
+  tunggal, sudah divalidasi ulang lewat kategori khusus baru, risiko sisa
+  hanya krn TETAP belum lewat `./gradlew` asli -- sandbox tanpa Android
+  SDK/jaringan Gradle).
+
+## STATUS PROJECT SEBELUMNYA: v7.0.0 -- Neumorphism DIHAPUS TOTAL, kembali ke Glassmorphism Deep Navy + Brass -- 2026-08-15
+- User: gaya visual Neumorphism ("shadow ganda offset-Box" milik `Neumorphic.kt`,
+  riwayat Insiden #3/#8/#9/#10 di bawah) dinilai **"ultra buggy"** -- minta
+  hapus total & kembali ke Glassmorphism secara eksplisit, dgn 2 hex dipatok:
+  `#0B132B` (Deep Navy Blue, 60-70% latar dominan) & `#B5A642` (Brass,
+  10-30% aksen tombol utama). Instruksi tegas: **"dilarang keras untuk ngide
+  sendiri"** -- TIDAK ADA hue baru ditambahkan di luar 2 hex ini.
+- **Keputusan interpretasi (supaya transparan utk sesi berikutnya)**:
+  instruksi user membatasi 2 hal SAJA -- warna latar dominan & warna aksen
+  tombol UTAMA. Token semantik non-tombol-utama yang SUDAH ADA SEBELUM
+  instruksi ini (`AmberGlow`/warning-auto-scan, `RustGlow`/error,
+  `SlateGlow`/menu Pengaturan) SENGAJA TIDAK disentuh hex-nya -- ini bukan
+  "ngide sendiri" krn bukan hue BARU, cuma token lama yang dipertahankan
+  krn di luar cakupan 2 constraint eksplisit user. Kalau user MAKSUDNYA
+  ingin ketiga token itu juga diseragamkan ke Navy/Brass murni, tinggal
+  bilang -- keputusan ini reversibel & 1 file (`Color.kt`) saja.
+- **Root cause arsitektur yang dihapus (kenapa Neumorphism "ultra buggy")**:
+  `Neumorphic.kt` lama butuh (1) `baseColor` yang harus PERSIS menyamar dgn
+  latar sesungguhnya di belakang tiap komponen (root cause Insiden #9 & #10
+  di bawah -- gagal total di atas gradient, `baseColor` statis tidak pernah
+  akurat di semua posisi scroll) dan (2) `modifier` pemanggil (`weight()`
+  dst.) HARUS dipasang di `Box` pembungkus TERPISAH dari `Surface` konten
+  (root cause Insiden #8 -- `weight()` nyasar, segment/kartu kolaps). Kedua
+  sumber bug itu MELEKAT PADA DESAIN teknik shadow-ganda-offset-Box itu
+  sendiri, bukan bug implementasi yang bisa ditambal titik-per-titik --
+  sudah terbukti 3 kali (#8, #9, #10) tambal ulang tetap memunculkan kelas
+  bug baru dari akar yang sama.
+- **Fix arsitektur (bukan tambal)**: `Neumorphic.kt` **DIHAPUS**, diganti
+  `GlassPanel.kt` -- primitif tunggal baru, `Modifier.shadow` standar Compose
+  1 lapis (bukan dual-shadow-caster) + border hairline + overlay highlight
+  diagonal tipis. `modifier` pemanggil sekarang dipasang LANGSUNG di
+  `Surface` (satu-satunya root composable primitif ini, TIDAK ADA Box
+  pembungkus tambahan) -- kelas bug Insiden #8 TIDAK MUNGKIN terulang lagi
+  krn strukturnya sendiri sudah tidak punya 2 lapis composable terpisah.
+  Parameter `baseColor` **DIHAPUS TOTAL** dari `VaultCard`/`GlassPanel` (0
+  call site pernah override-nya, dikonfirmasi grep sebelum audit hapus) --
+  kelas bug Insiden #9/#10 TIDAK MUNGKIN terulang krn parameternya sendiri
+  sudah tidak ada untuk disalahgunakan.
+- **Palet (`Color.kt` v7.0.0)**: `AmoledBackground` (nama token TIDAK
+  diubah, supaya `MainActivity.kt` -- protected asset -- TIDAK PERLU
+  disentuh sama sekali) nilainya jadi Deep Navy `#0B132B` solid.
+  `GlassSurface`/`GlassSurfaceElevated`/`GlassSurfaceSheet`/
+  `GlassSurfacePressed` -- tint/shade progresif dari hue Navy yang SAMA
+  (bukan hue baru, murni variasi terang-gelap utk hierarki elevasi tanpa
+  blur asli -- `Modifier.blur` RenderEffect cuma nyata di API 31+, project
+  minSdk 26). `BrassAccent` (`#B5A642`) jadi SATU-SATUNYA aksen interaktif
+  utama -- `RubyGlow`/`PlatinumAccent`/`PlatinumTint` (blend gradient CTA
+  v6.0.0) **DIHAPUS TOTAL**, `primary` DAN `secondary` di `Theme.kt`
+  sekarang SAMA-SAMA `BrassAccent` (CTA tidak lagi blend 2 aksen).
+- **CTA "Scan Sekarang"**: gradient blend Ruby->Platinum (v6.0.0) DIHAPUS,
+  sekarang 1 warna solid Brass, sesuai instruksi eksplisit "aksen tombol
+  utama" TUNGGAL (bukan blend/campuran 2 warna seperti sebelumnya).
+- **File diubah (13, Atomic Change -- 1 sistem visual kohesif, tidak bisa
+  dipecah antar-batch tanpa membuat build gagal di tengah)**: `Neumorphic.kt`
+  (DIHAPUS), `GlassPanel.kt` (BARU), `Color.kt`, `Theme.kt`,
+  `TactileTokens.kt`, `VaultCard.kt`, `GroupedListRow.kt`, `TactileSwitch.kt`,
+  `SegmentedControl.kt`, `EmptyState.kt`, `VaultActionSheet.kt`,
+  `HomeScreen.kt`, `res/values/colors.xml`. `FILE_MANIFEST.txt` disesuaikan
+  (Neumorphic.kt keluar, GlassPanel.kt masuk, urutan alfabetis, diverifikasi
+  cocok 1:1 dgn tree via diff).
+- `scripts/preflight_check.sh` dijalankan ulang, 12/12 kategori lolos
+  (termasuk #10 well-formedness XML -- sempat gagal 1x krn `--` ganda tidak
+  sah di komentar XML `colors.xml`, sudah diperbaiki). **BELUM PERNAH lewat
+  `./gradlew` asli / device asli** (sandbox tanpa Android SDK/jaringan Gradle)
+  -- hanya lolos preflight statis + review manual menyeluruh tiap file.
+  Minta user konfirmasi build APK CI sukses & tampilan Glassmorphism Navy+
+  Brass di HP sesuai sebelum dianggap selesai total.
+- Confidence Rating: **92%** (bukan 95%+ murni krn keterbatasan verifikasi
+  di atas -- bukan krn ada bagian yang diragukan secara desain).
+- versionCode/versionName: lihat `app/build.gradle.kts` utk nilai final
+  (protected asset, dinaikkan mengikuti pola versi sebelumnya).
+
+## STATUS PROJECT SEBELUMNYA: v2.24.4 -- FIX AKAR Insiden #9 (v2.24.3 TERBUKTI TIDAK CUKUP, Insiden #10): hapus wash gradient HomeScreen -- 2026-08-15
+- User kirim 3 screenshot device asli v2.24.3 (App Info konfirmasi versi
+  terpasang) + laporan tegas: fix v2.24.3 GAGAL -- "ekor shadow gak jelas"
+  masih nongol & sekarang malah kentara HIJAU, minta "Neumorphism real
+  dengan accent Platinum+Ruby nge-blend", bukan tambal lagi.
+- **Root cause v2.24.3 salah konsep (bukan cuma kurang presisi)**:
+  `baseColor` = compositeOver 1 titik gradient statis, padahal gradient
+  DIAM di Box terluar sementara `VaultCard`/CTA ada di `Column` yang
+  verticalScroll DI ATASNYA -- posisi relatif berubah tiap scroll, TIDAK
+  ADA baseColor statis yang akurat di semua posisi. Titik yang dipilih
+  (dekat y=0) menyerap porsi besar `colors.surfaceVariant`
+  (`GlassSurfaceElevated` 0xFF0D2622, HIJAU tua) -- shadow-caster jadi
+  makin kentara beda warna, bukan makin menyatu.
+- **Fix akar**: wash gradient `HomeScreen` (fitur lama UI-10, pra-
+  Neumorphism v5.0.0, tujuan asli murni anti-"monoton") DIHAPUS TOTAL --
+  latar sekarang `colors.background` solid, SAMA PERSIS 12 layar lain di
+  app ini yang tidak pernah kena bug kelas ini. `VaultCard`/CTA Scan balik
+  ke `baseColor` DEFAULT (tidak perlu compositeOver lagi). Kelas bug ini
+  sekarang TIDAK BISA terulang di layar ini, bukan cuma diredam.
+- Param `VaultCard.baseColor` (ditambah v2.24.3) TETAP disimpan (tidak
+  di-revert) -- tidak salah, cuma tidak dipakai HomeScreen lagi saat ini.
+- File diubah (2): `ui/screens/HomeScreen.kt` (hapus gradient + baseColor
+  plumbing + import compositeOver), `app/build.gradle.kts` (versi).
+  `scripts/preflight_check.sh` TIDAK diubah -- kategori #12 (v2.24.3) tetap
+  relevan sbg jaring pengaman, lolos trivial (0 layar gradient tersisa).
+  Lolos bersih 12/12. **BELUM PERNAH lewat `./gradlew` asli / device asli.**
+  User WAJIB verifikasi ULANG di HP: bersih dari potongan persegi mengintip
+  di SEMUA posisi scroll (bukan cuma posisi awal seperti v2.24.3 kemarin).
+- versionCode 76->77, versionName 2.24.3->2.24.4.
+
+## STATUS PROJECT SEBELUMNYA: v2.24.3 -- FIX BUG NYATA (screenshot user, Insiden #9): "kartu hantu" mengintip di HomeScreen -- 2026-08-15
+- User kirim 2 screenshot HP asli v2.24.2 + instruksi eksplisit "lupakan
+  progres sebelum-sebelumnya, fokus perbaiki kerusakan asimetris & cacat
+  ulah sesi lain" -- diaudit LANGSUNG dari gejala visual kedua screenshot
+  itu (bukan melanjutkan technical debt list sesi lalu, bukan tebakan).
+- **Bug**: kartu statistik "Rule aktif/Auto-scan" & tombol "Scan Sekarang"
+  di `HomeScreen` sama-sama menampakkan potongan persegi "hantu" mengintip
+  di sisi kanan(-bawah) -- ASIMETRIS (cuma satu sisi, bukan shadow tipis
+  merata). Root cause: keduanya lewat `NeumorphicSurface` (`Neumorphic.kt`)
+  yang butuh `baseColor` = warna LATAR SESUNGGUHNYA supaya badan
+  shadow-caster-nya (persegi solid digeser `shadowOffset` ke kanan-bawah)
+  menyatu tak terlihat -- keduanya diam-diam pakai default
+  `AmoledBackground`, padahal `HomeScreen` (SATU-SATUNYA layar di app ini
+  berlatar gradient, `Brush.verticalGradient` surfaceVariant 55%alpha ->
+  background, sejak fix UI-10 lama) TIDAK solid AmoledBackground di area
+  itu. TIDAK terjadi di 12 pemanggil `VaultCard` lain (semua layar
+  berlatar solid, tidak kena kelas bug ini -- diverifikasi via preflight
+  kategori #12 baru).
+- **Fix**: `VaultCard` sekarang terima param `baseColor` opsional (default
+  TETAP `AmoledBackground`, 0 perubahan 12 call site lain). `HomeScreen`
+  hitung warna latar efektif di titik gradient teratas
+  (`colors.surfaceVariant.copy(alpha=0.55f).compositeOver(colors.background)`
+  -- pakai `Color.compositeOver()` bawaan Compose) lalu dioper ke kedua
+  pemanggil itu. Tidak sempurna 100% di semua posisi scroll (gradient diam,
+  konten scroll di atasnya) tapi hilangkan artefak di posisi normal (kondisi
+  screenshot user).
+- **Preflight kategori #12 (baru)**: tiap file layar dgn `Brush.*Gradient`
+  di latar, cek ADA baseColor dipasang di file yg sama -- heuristik per-file,
+  supaya kelas bug ini kepantau otomatis ke depan.
+- **Ditinjau & DIBIARKAN (bukan bug)**: screenshot 1 (Kelola Rule) -- FAB
+  "+" menumpuk ikon hapus kartu rule #3/6 = perilaku FAB mengambang standar
+  Android SAAT BELUM di-scroll penuh (kartu TERAKHIR sudah dpt
+  `contentPadding(bottom=88dp)` sejak v2.24.0 #UI-20). Tidak ada kode
+  diubah utk gejala ini -- bukan regresi, beda kelas dari Insiden #9.
+- File diubah (4): `ui/components/VaultCard.kt`, `ui/screens/HomeScreen.kt`,
+  `scripts/preflight_check.sh` (kategori #12), `app/build.gradle.kts`
+  (versi). `scripts/preflight_check.sh` lolos bersih 12/12. **BELUM PERNAH
+  lewat `./gradlew` asli / device asli.** User WAJIB verifikasi di HP:
+  kartu stat & tombol Scan Sekarang tidak lagi ada potongan persegi
+  mengintip di kanan/bawah.
+- versionCode 75->76, versionName 2.24.2->2.24.3.
+
+## STATUS PROJECT SEBELUMNYA: v2.24.2 -- FIX BUG NYATA (screenshot user): tab "Undo Pemindahan" hilang + "Log" melebar + kotak kosong raksasa di Riwayat Aktivitas -- 2026-08-15
+- User kirim 2 screenshot HP asli v2.24.1 dibanding referensi struktur lama
+  (3 screenshot v2.20.3): segmented control "Riwayat Aktivitas" cuma
+  menampilkan pil "Log" melebar selebar layar, tab "Undo Pemindahan"
+  lenyap total, + kotak hijau gelap kosong raksasa di bawahnya.
+- **Root cause (`ui/components/Neumorphic.kt`)**: `NeumorphicSurface`
+  memasang `modifier` parameter pemanggil (termasuk `RowScope.weight(1f)`
+  dari `SegmentedControl.kt` utk segment terpilih) ke `Surface` KONTEN
+  beberapa lapis `Box` DI DALAM, bukan ke `Box` TERLUAR yang benar-benar
+  jadi anak langsung `Row` pemanggil. `weight()` adalah `ParentDataModifier`
+  yang HANYA terbaca Row dari modifier chain anak LANGSUNG-nya -- nyasar ke
+  lapisan dalam = `Row` menganggap segment itu TIDAK punya weight sama
+  sekali, lebar internalnya (`Text(fillMaxWidth())`) malah mengambil
+  SELURUH lebar Row, menyisakan nol ruang utk sibling. **Dicatat sebagai
+  Insiden #8** (lihat riwayat insiden kronologis di bawah untuk detail
+  lengkap + kelas bug ini).
+- **Fix**: `modifier` sekarang dipasang di `Box` terluar (root komposabel,
+  sesuai konvensi Compose resmi). `Surface` konten SENGAJA TETAP bukan
+  `matchParentSize()` (beda dari shadow-caster) supaya `Box` tetap
+  wrap-content tinggi mengikuti `Surface` kalau `modifier` cuma mengunci
+  lebar (kasus umum: `fillMaxWidth()`/`weight()` tanpa tinggi eksplisit) --
+  0 perubahan visual utk 6 pemanggil `NeumorphicSurface` lain yang sudah
+  diverifikasi manual satu-satu (`VaultCard`, `GroupedListRow`,
+  `TactileSwitch` x2, `EmptyState`, `VaultActionSheet`, CTA `HomeScreen`).
+- **Verifikasi cakupan bug**: `grep -rn "\.weight("` seluruh `ui/` --
+  HANYA 1 titik yang mengoper `weight()` sbg `modifier` param ke
+  `NeumorphicSurface` (titik bug ini). Semua `weight()` lain dipasang
+  LANGSUNG ke elemen native Row/Column/Spacer, tidak lewat wrapper --
+  tidak kena kelas bug yang sama, tidak perlu diubah.
+- File diubah (2): `ui/components/Neumorphic.kt` (fix inti + javadoc),
+  `app/build.gradle.kts` (versi). `scripts/preflight_check.sh` lolos
+  bersih 11/11.
+- **Investigasi awal SEBELUM bug ini ditemukan** (dicatat supaya sesi
+  depan tidak audit ulang dari nol): user awalnya kirim 3 screenshot
+  v2.20.3 + klaim umum "layout deformasi akibat merge" TANPA screenshot
+  kondisi v2.24.1 saat ini. Audit statis `RuleListScreen`/`ActivityLogScreen`/
+  `RuleCard`/`SegmentedControl` terhadap referensi v2.20.3 TIDAK menemukan
+  elemen hilang/struktur kacau (RuleCard 2-baris = fix P1 terdokumentasi
+  v2.22.0 #UI-03, FAB `contentPadding=88dp` = fix terdokumentasi v2.24.0
+  #UI-20, keduanya BUKAN regresi baru) -- diminta klarifikasi ke user via
+  `ask_user_input_v0` alih-alih menebak/mengubah kode blind. User lalu
+  kirim screenshot KONDISI NYATA v2.24.1 (bukan cuma klaim), barulah bug
+  Insiden #8 di atas ketemu lewat pembacaan kode `Neumorphic.kt` yang
+  ditunjuk balik dari gejala visual di screenshot itu. **Pelajaran
+  proses**: saat klaim "deformasi/regresi" datang tanpa bukti visual
+  kondisi SAAT INI, minta screenshot/gejala konkret dulu sebelum menebak
+  filenya -- audit statis terhadap referensi lama saja tidak cukup untuk
+  menangkap bug runtime-only class ini (`weight()` salah lapis TIDAK
+  terlihat sebagai kesalahan dari membaca kode 1 file saja tanpa tahu
+  ParentDataModifier semantics -- ketemu justru krn dicari SPESIFIK
+  menjelaskan gejala visual "1 pil melebar + 1 hilang + kotak kosong").
+- **BELUM PERNAH lewat `./gradlew` asli / device asli.** User WAJIB
+  verifikasi di HP: tab "Log"/"Undo Pemindahan" tampil berdampingan
+  (bukan 1 melebar penuh), tidak ada kotak kosong, kedua tab bisa di-tap.
+
+## STATUS PROJECT SEBELUMNYA: v2.24.1 -- COMPILE-FIX "--" di colors.xml + rapikan urutan dokumentasi -- 2026-08-15
+- User upload `build-failure-log-v2_24_0.zip`: `:app:mergeDebugResources
+  FAILED` -- `colors.xml:11` punya `--` di badan komentar `<!-- -->`,
+  dilarang keras spec XML 1.0. **Kelas bug identik dengan Insiden `v2.6.0`**
+  (2026-08-05, lihat Insiden log di bawah) -- pelajaran lama ("jangan pakai
+  `--` di komentar XML manapun") terulang di file `.xml` LAIN yang belum
+  pernah kena kasus ini. Fix: ganti `--` jadi koma, nol perubahan logika.
+- Validasi ulang SEMUA `res/**/*.xml` + `AndroidManifest.xml` via
+  `xml.dom.minidom.parse` (kategori #10 `preflight_check.sh`) -- 0 masalah
+  lain, `preflight_check.sh` lolos bersih 11/11.
+- **Permintaan eksplisit user: rapikan urutan SEMUA dokumentasi, info
+  terbaru wajib selalu di atas.** Ditemukan 2 file tidak strictly
+  newest-first: `CHANGELOG.md` (klaster `v2.9.x`-`v2.11.x` ke-append di
+  bawah `v2.1.x` yang lebih lama, akibat urutan insert historis, bukan
+  urutan versi) dan `PROJECT_STATE.md` (entri Insiden `v2.24.0` nyangkut di
+  baris PALING BAWAH file, alih-alih jadi status teratas). Kedua file
+  diurutkan ulang murni berdasar versi/tanggal descending -- **0 baris
+  konten dihapus atau ditulis ulang isinya, murni reposisi** (diverifikasi
+  line-count sebelum/sesudah identik). Entri Insiden `v2.24.0` yang
+  sebelumnya nyasar sekarang jadi entri STATUS PROJECT resmi (bukan cuma
+  Insiden log) karena memang itu status rilis terkini.
+- `README.md`: judul versi basi ("v2.1.4") disamakan ke `versionName`
+  aktual.
+- File diubah (3, semuanya di luar Batch Limit karena murni fix+reorg
+  dokumentasi, bukan fitur baru): `colors.xml`, `app/build.gradle.kts`,
+  `README.md`. Reorder tanpa ubah isi: `CHANGELOG.md`, `PROJECT_STATE.md`
+  (file ini sendiri).
+- **Belum diverifikasi CI hijau** -- WAJIB dicek run Actions berikutnya
+  sebelum dianggap final, meski risiko regresi rendah (fix syntax XML murni,
+  well-formedness sudah divalidasi lokal).
+
+## STATUS PROJECT SEBELUMNYA: v2.24.0 -- Fix FAB nutup aksi kartu + re-palette Platinum+Ruby -- 2026-08-15
+- User kirim screenshot nyata: FAB "+" di "Kelola Rule" nutup ikon Hapus
+  kartu terakhir. Root cause: `LazyColumn` tanpa `contentPadding` bawah --
+  FAB M3 by design melayang di atas konten, bukan bug Scaffold. Fix: 88dp
+  bottom padding. **Pelajaran**: kalau nambah FAB ke Scaffold baru, SELALU
+  cek scrollable content di dalamnya punya bottom padding/spacing yang
+  cukup -- ini kelas bug yang gampang lolos audit kode statis (kelihatan
+  benar di kode, cuma kelihatan salah di screenshot render nyata).
+- Re-palette penuh Teal -> Platinum+Ruby (lihat javadoc `Color.kt` &
+  CHANGELOG utk detail hex/rasional). Ketemu bonus: `StampGlow` lama vs
+  `RustGlow` HAMPIR IDENTIK hex-nya (2 makna beda, warna nyaris sama) --
+  otomatis tertutup krn Ruby baru digeser jauh ke hue crimson.
+- **Belum diverifikasi**: build CI + tampilan visual asli di device (sandbox
+  Termux tidak bisa compile/preview Compose). User perlu install & cek
+  kontras teks CTA + kesan "blend" Platinum-Ruby sebelum dianggap matang.
+
+## STATUS PROJECT SEBELUMNYA: v2.23.0 -- Fix 9 temuan P2 audit statis UI v2.21.1 (batch 2/2, PENUTUP audit) -- 2026-08-15
+- **User minta "lanjut P2"** -- eksekusi 9 temuan P2 yang di v2.22.0 sengaja
+  ditunda (rekomendasi eksplisit audit "sebaiknya masuk batch berikutnya").
+- **Audit ulang dulu, bukan asumsi 9 item mentah**: dicek satu-satu ke kode
+  AKTUAL (bukan percaya daftar audit txt begitu saja) -- ternyata **2 dari 9
+  item SUDAH TERTUTUP** di batch P1 v2.22.0 sebelumnya sbg "sekalian, tidak
+  menambah file" (lihat CHANGELOG.md v2.22.0): #UI-14 (uppercase folderName,
+  `RuleCard.kt`) & #UI-16 (whitespace alignment `ManifestRow`, `HomeScreen.kt`)
+  -- DAN #UI-15 (touch target crash log) ternyata sudah digabung eksekusinya
+  dgn #UI-08 di `DiagnosticsScreen.kt` batch yang sama. **6 item TERSISA
+  benar-benar dieksekusi** di batch ini: #UI-11, #UI-12, #UI-13, #UI-17
+  (diaudit ulang, TIDAK ada gap nyata -- ditutup TANPA ubah kode, lihat
+  bawah), #UI-18, #UI-19.
+- **#UI-11 (`SettingsScreen.kt`, `friendlySafFolderLabel`)**: sebelumnya
+  ambil bagian setelah ':' TERAKHIR di SELURUH string -- root/provider
+  (mis. "primary" vs kartu SD) hilang, 2 folder beda storage tapi path akhir
+  sama akan tampil identik. Fix: ambil segmen setelah "/tree/" dulu (root:path
+  satu kesatuan), tampilkan KEDUANYA `path (root)`.
+- **#UI-12 (`SettingsScreen.kt`, export JSON)**: tombol "Salin JSON" + Snackbar
+  konfirmasi ditambah (field read-only TETAP ada sbg preview) -- pola identik
+  tombol "Salin Log" `ActivityLogScreen.kt` (Insiden #6, `ClipboardManager`+
+  `AnnotatedString`).
+- **#UI-13 (`RuleRepository.kt`+`MainViewModel.kt`+`SettingsScreen.kt`, status
+  import)**: `RuleRepository.importFromJson()` return type `Int` ->
+  `ImportOutcome(parseSuccess: Boolean, importedCount: Int)` -- sebelumnya "0"
+  ambigu (parse gagal vs JSON valid tapi array kosong). `MainViewModel.
+  importRulesJson()` callback `(Int)->Unit` -> `(Boolean, Int)->Unit`, murni
+  pass-through. `SettingsScreen` dapat sealed `ImportResultUiState`
+  (Success/Warning/Error, warna primary/tertiary/error berbeda). **`MainActivity.
+  kt` (Protected Asset) TIDAK PERLU disentuh sama sekali** -- lambda
+  `{ text, cb -> viewModel.importRulesJson(text, cb) }` type-infer otomatis
+  dari kedua sisi yang sudah cocok, diverifikasi manual sebelum diklaim (bukan
+  asumsi).
+- **#UI-17 (accessibility `contentDescription=null`, HomeScreen/
+  GroupedListRow/ManifestRow)**: diaudit manual sesuai catatan audit sendiri
+  ("Prioritas P2 hanya bila TalkBack tidak dapat konteks cukup") -- SEMUA
+  icon ber-`contentDescription=null` di 3 lokasi itu decoratif & langsung
+  bersebelahan dgn `Text` yang membawa makna sama (ManifestRow icon+label,
+  ikon `ErrorOutline` di tombol "Lihat file dilewati", icon `GroupedListRow`
+  dlm `Row` yg sama dgn label, chevron affordance redundan dgn state
+  clickable). **TIDAK ADA gap nyata ditemukan -- TIDAK ada kode diubah untuk
+  item ini**, ditutup sbg "diverifikasi, bukan diasumsikan aman".
+- **#UI-18 (`SegmentedControl.kt`)**: `selectedIndex` sekarang di-`coerceIn`
+  ke range valid (`effectiveIndex`) sebelum dibandingkan -- sebelumnya index
+  di luar range = tidak ada segment terpilih sama sekali (bukan crash,
+  hardening murni, belum ada laporan bug aktif).
+- **#UI-19 (`SegmentedControl.kt`)**: ditemukan gap NYATA (bukan cuma beda
+  gaya) saat audit ulang -- segment TIDAK terpilih sebelumnya nol feedback
+  tekan sama sekali (`indication=null`, tanpa scale), beda dgn segment
+  terpilih yg otomatis dapat ripple bawaan `NeumorphicSurface(onClick=...)`.
+  Fix: `pressScale()` (sudah ada di `PressScale.kt`, reuse bukan bikin baru)
+  diterapkan ke segment tidak-terpilih -- pola scale dipilih (bukan ripple)
+  supaya konsisten dgn keluarga kontrol neumorphic lain (CTA Home,
+  TactileSwitch). **Keputusan eksplisit: 2 keluarga feedback (ripple utk row
+  list flat spt GroupedListRow/Diagnostics, scale utk kontrol neumorphic spt
+  CTA/Switch/SegmentedControl) DIPERTAHANKAN sbg desain sengaja, BUKAN
+  dianggap "inkonsistensi" yg harus diseragamkan jadi 1 pola tunggal** --
+  audit sendiri menyebut ini "design system issue" tapi setelah ditelusuri
+  akarnya cuma SegmentedControl unselected yg benar2 kosong, bukan seluruh
+  app perlu diseragamkan ulang. Kalau user MINTA eksplisit 1 pola feedback
+  tunggal utk seluruh app, itu instruksi terpisah -- jangan diasumsikan dari
+  audit ini saja.
+- File diubah (5): `data/RuleRepository.kt`, `ui/MainViewModel.kt`,
+  `ui/screens/SettingsScreen.kt`, `ui/components/SegmentedControl.kt`,
+  `app/build.gradle.kts` (versi). `scripts/preflight_check.sh` lolos bersih
+  11/11 (langsung, tanpa iterasi fix kali ini). Sempat ketangkap SENDIRI
+  sebelum ZIP dipaket: parameter type `onImportRequested` di signature fungsi
+  `SettingsScreen` sempat lupa diupdate (`(Int)->Unit` bukan `(Boolean,
+  Int)->Unit`) saat body call sudah diubah -- ketahuan via `grep` cross-check
+  semua caller/callee `importFromJson`/`importRulesJson`/`onImportRequested`
+  sebelum preflight, bukan lolos ke user. Juga 1 unused import (`IconButton`,
+  tidak jadi dipakai krn "Salin JSON" akhirnya pakai `OutlinedButton`+`Icon`
+  bukan `IconButton` polos) dibersihkan sebelum paket.
+- **BELUM PERNAH lewat `./gradlew` asli.** User WAJIB verifikasi visual di HP
+  asli: label folder SAF custom (kalau pakai kartu SD/lebih dari 1 storage,
+  cek root ikut tampil), tombol "Salin JSON" + Snackbar, import JSON rusak/
+  kosong/valid (3 warna beda), segment tidak-terpilih di tab Log/Undo terasa
+  mengecil dikit saat ditekan (bukan cuma diam).
+- **STATUS AUDIT UI v2.21.1: SEMUA 19 temuan (10 P1 + 9 P2) SEKARANG
+  TERTUTUP** (v2.22.0 + v2.23.0 ini) -- baik yang benar2 diubah kodenya
+  maupun yang diverifikasi TIDAK ada gap nyata (#UI-17). Sesi berikutnya
+  TIDAK PERLU audit ulang dari nol berdasar file audit txt yang sama; kalau
+  user laporkan gejala baru atau minta audit sektor lain, itu batch baru.
+
+## STATUS PROJECT SEBELUMNYA: v2.22.0 -- Fix 10 temuan P1 audit statis UI v2.21.1 (batch 1/2) -- 2026-08-15
+- **User upload** `PromptVault_v2_21_1_UI_Audit.txt` (audit statis eksternal,
+  scope UI/UX + Compose logic + accessibility + responsiveness, 10 P1 + 9 P2,
+  0 P0) + minta "debugging UI secara bertahap" -- dibaca sebagai: eksekusi
+  SEMUA P1 dulu dalam 1 batch (7 file unik, di dalam Batch Limit 10 file),
+  P2 (polish/hardening) DISENGAJAKAN ditunda ke batch berikutnya sesuai
+  rekomendasi eksplisit audit ("sebaiknya masuk batch berikutnya").
+- **7 file P1 diubah** + `MainActivity.kt` (Protected Asset, edit parsial --
+  1 titik teruskan parameter baru) + `app/build.gradle.kts` (versi). Detail
+  teknis lengkap tiap 10 temuan: lihat CHANGELOG.md v2.22.0.
+- **1 bug NYATA ditemukan & diperbaiki SENDIRI sebelum ZIP dikirim** (bukan
+  lolos ke user): draf awal batch ini menambahkan
+  `import androidx.compose.foundation.layout.weight` di 3 file (`RuleCard.kt`,
+  `DiagnosticsScreen.kt`, `OnboardingScreen.kt`) -- `preflight_check.sh`
+  kategori #2 menangkapnya. Root cause: `weight()` adalah member extension
+  `RowScope`/`ColumnScope` (otomatis tersedia tanpa import di dalam lambda
+  `Row{}`/`Column{}`), BUKAN top-level function seperti `size()`/`padding()`
+  -- PERSIS kelas kesalahan yang sama dgn insiden `animateItemPlacement`
+  v2.3.7 lama (member scope vs top-level, lihat riwayat insiden di bawah).
+  Import salah dihapus, `preflight_check.sh` lolos bersih 11/11 setelah itu.
+  **Pelajaran ditambahkan eksplisit**: kalau menulis `Modifier.weight(...)`
+  (atau method scope lain: `align`, `matchParentSize`, `animateItemPlacement`)
+  di dalam lambda scope yang sesuai, JANGAN tambah import top-level untuk
+  method itu -- cek dulu apakah itu member scope (biasanya iya utk API
+  layout Compose semacam ini) sebelum menambah import.
+- `scripts/preflight_check.sh` lolos bersih 11/11 (setelah 1 iterasi fix di
+  atas). **BELUM PERNAH lewat `./gradlew` asli.** User WAJIB verifikasi
+  visual di HP asli: Home & Onboarding scroll normal (terutama di font
+  scale besar), RuleCard 2-baris tidak pecah/terlalu tinggi di device
+  sempit, TactileSwitch tetap terasa sama posisi/ukuran visualnya tapi area
+  ketuk lebih nyaman, GroupedListRow & baris crash log Diagnostik sekarang
+  ada ripple saat ditekan, SkippedFilesScreen menampilkan pesan beda kalau
+  belum pernah scan vs sudah scan 0 skipped.
+- versionCode 70->71, versionName 2.21.1->2.22.0.
+- **Sisa 9 temuan P2** (copy JSON export, status import lebih eksplisit,
+  friendlySafFolderLabel, dll) BELUM dieksekusi -- kandidat batch berikutnya,
+  lihat daftar lengkap di `PromptVault_v2_21_1_UI_Audit.txt` bagian P2 atau
+  CHANGELOG.md v2.22.0.
+
+## STATUS PROJECT SEBELUMNYA: v2.21.1 -- Merge 3-way cabang v2.21.0 (Neumorphism) + v2.20.3 (fix teknis), TANPA regresi -- 2026-08-14
+- **User minta merge paket ZIP `v2_21_0` -> `v2_20_3` tanpa regresi.** Root
+  cause: 2 paket = 2 cabang independen yang sama-sama lanjut dari v2.20.1
+  (versionCode 67) lalu divergen -- `v2_21_0` (code 68) lompat ke redesign
+  Neumorphism TANPA lewat v2.20.2/v2.20.3; `v2_20_3` (code 69) punya fix
+  teknis (`SCAN_CONCURRENCY` configurable, migrasi legacy DataStore, fix
+  import `decodeFromString`) TAPI TIDAK punya redesign Neumorphism.
+- **Cara deteksi**: `diff -rq` penuh kedua paket + grep silang token/simbol
+  (`LegacyDataMigration`, `scanConcurrency`, `ElevationCard` dkk) sebelum
+  memutuskan strategi merge -- BUKAN asumsi "yang lebih baru menang".
+- **Strategi**: base = `v2_20_3` (fix teknis terbaru dipertahankan penuh).
+  10 file redesign Neumorphism murni (tidak overlap dgn fix teknis manapun,
+  diverifikasi via diff) di-copy utuh dari `v2_21_0`: `ui/components/
+  {VaultCard,GroupedListRow,TactileSwitch,VaultActionSheet,EmptyState,
+  SegmentedControl}.kt`, `ui/components/Neumorphic.kt` (file baru),
+  `ui/screens/HomeScreen.kt`, `ui/theme/{Color,TactileTokens}.kt`. 9 file
+  yang overlap (berubah di KEDUA cabang) TETAP pakai versi `v2_20_3` krn versi
+  `v2_21_0`-nya justru pre-2.20.2 (lebih lama) -- mengambilnya = regresi:
+  `PromptVaultApp.kt`, `data/{RuleRepository,SettingsRepository,
+  LegacyDataMigration}.kt`, `ui/MainViewModel.kt`, `MainActivity.kt`,
+  `util/FileSorter.kt`, `ui/screens/SettingsScreen.kt`,
+  `scripts/preflight_check.sh`, `app/build.gradle.kts`.
+- **Token lama dihapus di batch Neumorphism** (`TactileTokens.Elevation
+  {Card,Cta,CtaPressed,Icon,Thumb}` -> `Neu*`) -- dicek dgn grep bahwa TIDAK
+  ADA file lain di luar 10 file Neumorphism yang masih memakai nama token
+  lama sebelum merge dieksekusi (nol dangling reference).
+- `scripts/preflight_check.sh` dijalankan ulang setelah merge: **11/11
+  lolos bersih** (termasuk kategori #11 decodeFromString yang berasal dari
+  cabang `v2_20_3`).
+- versionCode 69->70, versionName 2.20.3->2.21.1. **BELUM PERNAH lewat
+  `./gradlew` asli** -- WAJIB verifikasi CI + smoke test manual (visual
+  Neumorphism di semua komponen redesign + migrasi legacy DataStore +
+  setting scan concurrency) sebelum rilis produksi. Risiko regresi: RENDAH
+  (merge file-level, bukan merge baris-per-baris/line merge -- tiap file
+  utuh dari 1 sumber, tidak ada campur logic 2 sumber dalam 1 file), tapi
+  BELUM divalidasi compile asli.
+
+## STATUS SEBELUMNYA: v2.20.3 -- FIX bug compile laten: RuleRepository.kt decodeFromString tanpa import -- 2026-08-14
+- **User minta "lanjutkan penyempurnaan secara bertahap"** (bukan item spesifik
+  disebut namanya). Diinterpretasi sbg: eksekusi item pending yang SUDAH
+  tercatat eksplisit di sesi v2.20.2 sbg "Observasi TIDAK dieksekusi, di luar
+  scope 2 item ini" -- itu satu-satunya technical debt/bug konkret yang sudah
+  teridentifikasi & menunggu, jadi ini pembacaan paling wajar dari instruksi
+  "lanjutkan" tanpa menebak-nebak fitur baru yang tidak diminta.
+- **Bug**: `RuleRepository.kt` (`rulesFlow` & `importFromJson`) manggil
+  `json.decodeFromString<List<Rule>>(...)` tapi import cuma `encodeToString`
+  & `Json` -- fungsi generic reified `decodeFromString<T>()` butuh
+  `import kotlinx.serialization.decodeFromString` eksplisit terpisah per
+  file, TIDAK otomatis ikut dari `import ...json.Json`. Berpotensi
+  `Unresolved reference` compiler asli, belum ketahuan krn project ini
+  belum pernah lewat `./gradlew` asli.
+- **Fix**: tambah 1 baris import. Nol perubahan logika.
+- **Preflight diperkuat (kategori #11, baru)**: grep semua pemakaian
+  `.decodeFromString<` di seluruh `app/src/main/java`, pastikan tiap file
+  yang makai itu juga punya import pasangannya -- supaya KELAS bug ini (bukan
+  cuma titik ini) tertangkap otomatis di masa depan, konsisten pola project
+  (tiap insiden nambah kategori preflight, lihat riwayat kategori #8/#9/#10).
+- File diubah (3): `data/RuleRepository.kt` (1 baris),
+  `scripts/preflight_check.sh` (kategori #11 baru), `app/build.gradle.kts`
+  (versi). `scripts/preflight_check.sh` lolos bersih 11/11 (kategori baru
+  ikut lolos juga). **BELUM PERNAH lewat `./gradlew` asli.** Risiko regresi:
+  SANGAT RENDAH -- murni tambah 1 baris import, tidak ada logika/behavior
+  yang berubah sama sekali. User TIDAK perlu verifikasi manual khusus di HP
+  (tidak ada perubahan UI/behavior), tapi tetap kandidat pertama yang lolos
+  kalau CI akhirnya jalan (`./gradlew` asli pertama kali di project ini).
+- versionCode 68->69, versionName 2.20.2->2.20.3.
+
+## STATUS PROJECT SEBELUMNYA: v2.20.2 -- Eksekusi 2 technical debt tercatat: SCAN_CONCURRENCY configurable + migrasi best-effort DataStore lama -- 2026-08-13
+- **User minta lanjutkan 2 item pending spesifik** (sudah teridentifikasi
+  sesi sebelumnya sbg technical debt #3 & #4 di bawah): migrasi DataStore
+  lama -> Room, dan `SCAN_CONCURRENCY` configurable. Instruksi eksplisit
+  "kerjakan tanpa regresi".
+- **`SCAN_CONCURRENCY`**: konstanta hardcode `FileSorter.SCAN_CONCURRENCY`
+  DIHAPUS, sekarang `settingsRepository.getScanConcurrency()` (default TETAP
+  6). UI baru "Kecepatan Scan (Lanjutan)" di SettingsScreen, pola FilterChip
+  identik interval auto-scan. Rentang `[2,4,6,8,12]` dipilih berdasar alasan
+  teknis (bukan profiling nyata, tetap belum ada) -- nol regresi utk user
+  yang tidak buka setting ini.
+- **Migrasi legacy DataStore->Room** (`LegacyDataMigration.kt`, baru,
+  dipanggil sekali dari `PromptVaultApp.onCreate()`, fire-and-forget IO):
+  **PENTING untuk sesi berikutnya** -- key literal DataStore era pre-v2.2.0
+  (`"activity_log_json"`, `"move_history_json"`) adalah INFERENSI dari
+  konvensi penamaan project (pola `{noun}_json`, dicontohkan `RuleRepository`
+  `"rules_json"`), BUKAN dikonfirmasi dari source asli (sudah terhapus total
+  sejak v2.2.0, snapshot ini tanpa git history). Didesain aman-walau-salah:
+  key tidak ketemu = no-op murni, BUKAN korup/crash. Guard flag DataStore
+  (`legacy_datastore_migration_done`) + try-catch total + `finally` selalu
+  set flag `true` (anti retry-loop). Kalau user melaporkan tab Log/Undo
+  TETAP kosong padahal yakin pernah pakai versi sangat lama (>v2.2.0), itu
+  sinyal key-nya perlu dikoreksi -- HANYA bisa dipastikan lewat sampel data
+  nyata dari user tsb (mis. minta backup/export lama kalau masih ada),
+  jangan ditebak ulang tanpa data lagi.
+- **Observasi (TIDAK dieksekusi, di luar scope 2 item ini)**: `RuleRepository.kt`
+  memanggil `json.decodeFromString<List<Rule>>(...)` tapi TIDAK mengimpor
+  `kotlinx.serialization.decodeFromString` (cuma impor `encodeToString` &
+  `Json`) -- fungsi generic reified itu biasanya perlu impor eksplisit utk
+  resolve, berpotensi compile error laten yang belum ketahuan karena project
+  ini belum pernah lewat `./gradlew` asli. Trigger valid: build CI gagal di
+  titik ini, atau user eksplisit minta dicek/diperbaiki.
+- File diubah (8): `SettingsRepository.kt`, `FileSorter.kt`,
+  `SettingsScreen.kt`, `MainViewModel.kt`, `MainActivity.kt`,
+  `PromptVaultApp.kt`, `LegacyDataMigration.kt` (baru), `app/build.gradle.kts`.
+  `scripts/preflight_check.sh` lolos bersih. **BELUM PERNAH lewat
+  `./gradlew` asli**. User WAJIB verifikasi: kartu Kecepatan Scan tersimpan
+  & scan tetap normal di semua pilihan; tab Log/Undo setelah update (cek
+  apakah data lama muncul lagi atau tetap kosong, laporkan balik hasilnya).
+
+## STATUS PROJECT SEBELUMNYA: v2.20.1 -- FIX TECHNICAL DEBT: undo() jalan di Main thread, bukan IO -- 2026-08-13
+- **Konteks**: user minta lanjutkan item "pending tercatat" (bukan testing).
+  Audit `PROJECT_STATE.md` menemukan 2 kandidat: (a) `FileSorter.undo()`
+  kemungkinan jalan di dispatcher Main (dicatat sejak v2.17.0), (b) tombol
+  "Simpan" tanpa snackbar konfirmasi (dicatat sejak v2.4.3/audit awal).
+- **Item (b) TERNYATA SUDAH TERTUTUP** -- diverifikasi lewat baca kode
+  aktual (bukan percaya catatan lama begitu saja, sesuai pelajaran Insiden
+  #6): `RuleSaveFeedback` StateFlow + `LaunchedEffect` di `RuleListScreen.kt`
+  SUDAH ada & jalan (ditutup di v2.16.0, komentar `MainActivity.kt` baris
+  ~294 juga sudah bilang ini). Entri lama baris ~707 PROJECT_STATE.md soal
+  gap ini sudah usang/superseded, TIDAK dieksekusi ulang di batch ini.
+- **Item (a) DIEKSEKUSI**: `MainViewModel.undoMove()` sekarang
+  `withContext(Dispatchers.IO) { fileSorter.undo(entry) }` -- pola identik
+  dgn `checkSafAccessLost()` yang sudah ada di file yang sama. Caller
+  (`MainActivity.kt` -> `ActivityLogScreen` -> `rememberCoroutineScope()`)
+  default `Dispatchers.Main`, jadi tanpa fix ini SEMUA I/O undo (baca/tulis
+  file lokal ATAU `DocumentFile`/`ContentResolver` utk jalur SAF) jalan di
+  main thread -- berisiko ANR kalau file besar/provider SAF lambat.
+- **Kenapa fix di ViewModel, bukan di `FileSorter.undo()`/`undoSaf()`/
+  `undoSafDestination()` langsung**: 1 titik pembungkus di caller cukup
+  (identik pola `checkSafAccessLost`), tidak perlu ubah 3 fungsi sekaligus
+  di `FileSorter.kt` (Batch Limit: 1 modul, minim invasif). `FileSorter.kt`
+  TIDAK disentuh sama sekali di batch ini.
+- File diubah (2): `ui/MainViewModel.kt` (1 fungsi), `app/build.gradle.kts`
+  (versi). `scripts/preflight_check.sh` lolos bersih. **BELUM PERNAH lewat
+  `./gradlew` asli**. User WAJIB verifikasi di HP asli: undo dari
+  ActivityLogScreen (baik jalur lokal maupun folder kustom SAF kalau
+  dipakai) tetap sukses & UI tidak freeze/lag saat undo file besar.
+- versionCode 66->67, versionName 2.20.0->2.20.1.
+
+## STATUS PROJECT SEBELUMNYA: v2.20.0 -- REBRAND PALET "Midnight Blue"->"Transformative Teal" + sistem depth/3D ultra immersive -- 2026-08-13
+- **Permintaan user**: ganti palet warna lama -> "Transformative Teal
+  (Biru-Hijau Gelap)" + tambah efek depth/3D ultra immersive.
+- **Atomic Change (9 file)**: `Color.kt` (repalette total, rename
+  `MidnightBlue*`->`Teal*`), `Theme.kt` (wiring colorScheme), `TactileTokens.kt`
+  (token elevasi baru: ElevationCard/Cta/CtaPressed/Icon/Thumb), `VaultCard.kt`,
+  `HomeScreen.kt` (CTA), `GroupedListRow.kt` (icon box), `TactileSwitch.kt`
+  (thumb ON), `colors.xml` (retint splash/launcher-bg + rename accent token),
+  `app/build.gradle.kts` (versi). `ic_launcher_foreground.xml` SENGAJA
+  tidak disentuh (asumsi: "palet lama" = skema UI Compose, bukan artwork
+  ikon launcher yang sudah krem sejak v2.14.0 dan itu keputusan terpisah).
+- **PELAJARAN PALING PENTING buat sesi berikutnya**: elevasi/shadow NYATA
+  di komponen ber-gradient WAJIB pakai pola "solid-base lalu overlay brush
+  terpisah" (Surface/`.background()` solid dulu utk shadow, gradient/tint
+  ditumpuk sbg Box terpisah di atas) -- JANGAN PERNAH `Modifier.shadow(...)
+  .background(brush)` langsung dirantai ke node yang sama. Itu PERSIS
+  penyebab regresi nyata v2.14.0 (CTA Home jadi kotak pucat/glitch di
+  banyak GPU/skin), yang waktu itu di-fix dengan MELEPAS shadow total
+  (v2.14.1). Sekarang shadow dihidupkan lagi tapi dengan pola aman ini di
+  4 tempat sekaligus (VaultCard, CTA, icon GroupedListRow, thumb switch).
+  Kalau nanti ada laporan "kotak pucat/putih aneh muncul pas [X]", cek
+  DULU apakah [X] melanggar pola ini sebelum menduga penyebab lain.
+- **GroupedListRow icon shadow**: keputusan v3.0.1 ("no permanent glow per
+  icon") DIGANTI sebagian -- sekarang icon box boleh punya shadow NETRAL
+  kecil (bukan `spotColor` berwarna) krn user minta depth eksplisit; bab 18
+  (glow BERWARNA dilarang) masih dihormati krn shadow ini netral/abu-abu,
+  bukan cahaya menyala berwarna.
+- File diubah (9, di luar batas normal 10/modul TAPI ini 1 modul visual
+  atomik, precedent sama v2.14.0). `scripts/preflight_check.sh` lolos
+  bersih. **BELUM PERNAH lewat `./gradlew` asli / device asli**. User WAJIB
+  verifikasi visual di HP asli: CTA "Scan Sekarang" idle & ditekan (paling
+  berisiko historis), VaultCard & GroupedListRow saat scroll (tidak boleh
+  flicker/pucat), kontras teks di atas TealAccent baru.
+
+## STATUS PROJECT SEBELUMNYA: v2.19.3 -- FIX BUG NYATA (laporan user): file/apk bernama diawali "PromptVault" tidak terdeteksi scan -- 2026-08-13
+- **User laporkan**: file/apk bernama persis "PromptVault" (atau apa pun yang
+  DIAWALI teks itu, mis. "PromptVault.apk") ditaruh di Downloads, tidak
+  pernah terdeteksi sebagai kandidat scan walau rule/pattern cocok.
+- **Root cause (ditemukan lewat baca `listCandidateFiles()` di FileSorter.kt)**:
+  pengecualian folder output app sendiri pakai `f.absolutePath.startsWith(
+  vaultRootDir.absolutePath)` -- STRING-PREFIX match, bukan path-containment.
+  `vaultRootDir.absolutePath` = ".../Downloads/PromptVault" TANPA separator
+  akhir, jadi path SIBLING file seperti ".../Downloads/PromptVault.apk" juga
+  `startsWith(...)` true (nama file "PromptVault.apk" diawali teks
+  "PromptVault") walau file itu BUKAN isi folder "PromptVault", cuma
+  kebetulan nama depannya sama -- ikut ter-exclude tanpa alasan valid. Bug
+  kelas sama ditemukan juga di `cleanupGhostMediaStoreEntries()` (query SQL
+  `LIKE '<path>%'`, prefix-match identik).
+- **Fix**: tambah `File.separator` di akhir prefix pembanding di KEDUA
+  tempat, supaya hanya path yang benar-benar path-DI-DALAM folder
+  "PromptVault/" yang cocok, bukan sekadar string yang diawali sama.
+- **Pelajaran dicatat**: `String.startsWith(otherPath)` untuk cek
+  "apakah path A ada di dalam folder B" SELALU rawan false-positive kalau
+  tidak diberi separator akhir eksplisit -- nama file/folder sibling yang
+  kebetulan jadi prefix nama folder lain akan ikut ke-match. Cek pola serupa
+  (`startsWith` dipakai buat containment path) kalau ada laporan gejala
+  "file X tidak terdeteksi" lagi di masa depan.
+- File diubah (1 modul): `util/FileSorter.kt` (2 titik fix + doc),
+  `app/build.gradle.kts` (versi). `scripts/preflight_check.sh` lolos bersih.
+  **BELUM PERNAH lewat `./gradlew` asli**. User DIMINTA konfirmasi di HP
+  asli: taruh file/apk bernama diawali "PromptVault" di Downloads, scan,
+  pastikan sekarang terdeteksi & terpindah normal sesuai rule.
+
+## STATUS PROJECT SEBELUMNYA: v2.19.2 -- FIX BUG NYATA (laporan user + screenshot): folder "PromptVault" terduplikat (1)/(2)/(3) di tujuan SAF -- 2026-08-13
+- User laporkan screenshot file manager: 4 folder di folder tujuan kustom --
+  "PromptVault", "PromptVault (1)", "PromptVault (2)", "PromptVault (3)",
+  MASING-MASING isi "1 item", tanggal sama. Folder kustom yang dipilih malah
+  "ditimpa" (secara efektif: hasil sortir tersebar ke banyak folder
+  duplikat alih-alih satu folder "PromptVault" konsisten).
+- **Root cause (ditemukan lewat baca ulang [FileSorter.moveFileToSafDestination]
+  + [findOrCreateChildDirSaf] setelah audit v2.19.1 SEBELUMNYA MELEWATKAN ini)**:
+  `findOrCreateChildDirSaf(destinationRoot, "PromptVault")` dipanggil TERPISAH
+  PER-FILE, DI DALAM tiap coroutine paralel (`scanAndSortToDestination` proses
+  file kandidat lewat `async` + `Semaphore(SCAN_CONCURRENCY=6)`, arsitektur
+  sejak v2.4.0 -- lihat Keputusan Arsitektur #6). `DocumentFile.
+  createDirectory()` TIDAK atomik/idempoten seperti `File.mkdirs()` -- kalau
+  2+ coroutine memanggil `parent.findFile("PromptVault")` SEBELUM salah satu
+  sempat selesai `createDirectory()`, KEDUANYA melihat "belum ada" lalu
+  KEDUANYA createDirectory() -> provider TIDAK menolak, malah auto-suffix
+  nama biar unik -> hasil PERSIS gejala di screenshot: N folder terpisah,
+  masing-masing cuma kebagian file dari coroutine yang menciptakannya
+  duluan. Classic TOCTOU race -- `scanMutex` yang sudah ada di [scanAndSort]
+  TIDAK mencegah ini (mutex itu cuma menyerialkan ANTAR scan, bukan antar
+  file DALAM satu scan yang sengaja diparalelkan).
+- **Kenapa lolos audit v2.19.1 sebelumnya**: audit sesi itu baca kode
+  `moveFileToSafDestination` baris-per-baris tapi fokus ke *korektnes logika
+  per-file* (conflict strategy, verifikasi nama pasca-create, dst) -- TIDAK
+  mempertimbangkan bahwa fungsi ini dipanggil PARALEL dari `async{}` di
+  caller-nya. Pelajaran: audit SAF ke depan WAJIB eksplisit cek "apakah
+  fungsi ini bisa dipanggil concurrent, dan kalau ya, adakah shared-state
+  I/O (termasuk pembuatan folder/file baru) yang TOCTOU-race?" -- bukan cuma
+  benar secara sekuensial/single-thread.
+- **Fix STRUKTURAL (bukan tambal Mutex di titik race)**: folder tujuan SAF
+  (root "PromptVault" + subfolder tiap rule aktif) sekarang di-resolve SEKALI,
+  SERIAL, di fungsi baru `resolveSafRuleDestinations()` -- dipanggil SEBELUM
+  `async{}` mana pun dimulai di `scanAndSortToDestination`. Hasil (`Map<nama
+  folder rule, DocumentFile?>`) dibagikan ke semua coroutine paralel sebagai
+  data BACA-SAJA. `moveFileToSafDestination()` tidak lagi menerima
+  `destinationRoot` mentah dan resolve sendiri -- sekarang menerima `destDir`
+  yang SUDAH jadi. `processCandidate()` dapat parameter baru
+  `safRuleDestinations`, skip file dengan pesan jelas kalau resolusi folder
+  untuk rule terkait gagal (dicek sekali di awal, bukan berulang per file).
+- **Efek pada folder duplikat yang SUDAH terlanjur ada** (dari sebelum fix
+  ini): TIDAK dibereskan otomatis oleh app -- app tidak (dan sengaja tidak)
+  menghapus/menggabung folder yang sudah ada di penyimpanan user tanpa izin
+  eksplisit. User perlu gabung manual isi folder "PromptVault (1)/(2)/(3)"
+  ke "PromptVault" lewat file manager kalau mau rapi, ATAU biarkan (scan
+  berikutnya otomatis konsisten pakai SATU folder "PromptVault" saja berkat
+  fix ini, tidak menciptakan folder baru lagi).
+- File diubah (2): `util/FileSorter.kt` (fix + fungsi baru
+  `resolveSafRuleDestinations`), `app/build.gradle.kts` (versi).
+  `scripts/preflight_check.sh` lolos bersih. **BELUM PERNAH lewat `./gradlew`
+  asli** -- konsisten seluruh riwayat SAF (Insiden #7 syarat (a) masih belum
+  terpenuhi di sandbox ini). User DIMINTA konfirmasi di HP asli: scan lagi ke
+  folder kustom yang SAMA, pastikan HANYA "PromptVault" (tanpa akhiran angka)
+  yang bertambah isi, tidak ada folder "(4)" baru muncul.
+
+## STATUS PROJECT SEBELUMNYA: v2.19.1 -- DEBUG+POLISH SAF: OVERWRITE tidak lagi asumsi delete() SAF berhasil -- 2026-08-13
+- User minta "debugging+polish feature SAF" (audit umum, bukan laporan gejala
+  spesifik). Audit manual baris-per-baris SELURUH kode SAF (FileSorter.kt penuh
+  + SettingsRepository/MainViewModel/MainActivity/SettingsScreen bagian SAF)
+  dilakukan -- BUKAN cuma grep dead-code seperti sesi v2.19.0. Hasil: arsitektur
+  v2.19.0 (folder kustom = tujuan, bukan sumber scan) TERVERIFIKASI konsisten
+  di semua titik wiring (dispatcher `undo()`, `SafDestinationResolution` 3-state,
+  `checkSafAccessLost` reaktif, `@OptIn(ExperimentalLayoutApi::class)` untuk
+  `FlowRow` di `SettingsScreen` SUDAH benar sejak awal -- bukan bug baru).
+  **1 bug nyata ditemukan** (bukan cuma kosmetik):
+- **Bug**: `moveFileToSafDestination()` -- `ConflictStrategy.OVERWRITE` manggil
+  `existingAtTarget.delete()` TANPA verifikasi hasil, lalu `createFile()`
+  lanjut dengan nama yang sama seolah delete pasti sukses. Provider SAF
+  (beda dari `java.io.File` biasa) TERKENAL tidak reliable di riwayat project
+  ini (lihat Insiden #4/#6/#7) -- kalau `delete()` diam-diam gagal, provider
+  sering auto-suffix nama file baru ("target (1).ext") alih-alih menimpa:
+  user pikir sudah "Overwrite", padahal file lama MASIH ADA + file baru
+  bernama beda dari yang diminta rule.
+- **Fix**: cek hasil `delete()` eksplisit -- gagal -> log ERROR + `MoveOutcome.
+  FAILED` (bukan lanjut diam-diam dengan asumsi sukses). Konsisten dengan pola
+  "jangan percaya boolean provider begitu saja" yang sudah jadi PELAJARAN
+  PERMANEN project ini sejak Insiden #6.
+- **SENGAJA TIDAK disentuh**: `moveFile()` (jalur lokal java.io.File) punya
+  gap yang SAMA PERSIS (`destFile.delete()` juga tidak diverifikasi) -- TIDAK
+  difix di batch ini karena scope eksplisit user adalah "feature SAF", dan
+  risiko delete() gagal jauh lebih rendah di filesystem lokal milik app
+  sendiri drpd provider SAF pihak ketiga/OEM. Dicatat sebagai kandidat batch
+  terpisah kalau user minta audit jalur lokal juga.
+- 2 file diubah: `util/FileSorter.kt` (fix), `app/build.gradle.kts` (versi).
+  `scripts/preflight_check.sh` lolos bersih. **BELUM PERNAH lewat `./gradlew`
+  asli** (konsisten dengan seluruh riwayat SAF -- Insiden #7 syarat (a) masih
+  belum terpenuhi di sandbox ini).
+
+## STATUS PROJECT SEBELUMNYA: v2.19.0 -- SAF DIRESTRUKTURISASI: TUJUAN, BUKAN SUMBER SCAN -- 2026-08-13
+- User upload `SAF_FINAL_VERDICT_FIX.txt` (spec/verdict eksternal): ROOT CAUSE
+  seluruh siklus SAF v2.17.0-v2.18.1 adalah **salah menafsirkan requirement**,
+  bukan sekadar bug API. SAF yang benar = mekanisme akses ke folder TUJUAN
+  kustom yang dipilih user, BUKAN sumber scan alternatif. Instruksi user:
+  "folder scan file untuk dipindahkan tetap hardcode 'download'" -- menegaskan
+  sumber scan harus SELALU Downloads, sesuai spec.
+- **Restrukturisasi (bukan tambal)**: `scanAndSort()` sekarang SATU sumber
+  scan ([listCandidateFiles], Downloads, tidak berubah dari awal project) +
+  cabang TUJUAN tunggal (Downloads/PromptVault/ lokal ATAU folder kustom SAF/
+  PromptVault/ lewat DocumentFile). Dihapus total: `scanAndSortSafLocked()`,
+  `listCandidateFilesSaf()`, `processCandidateSaf()`, `isLikelyStillWritingSaf()`
+  -- semua sisa arsitektur "SAF sebagai scanner" yang salah. `SafRootResolution`
+  -> `SafDestinationResolution`, `resolveSafRoot()` -> `resolveSafDestinationRoot()`
+  (rename, bukan cuma kosmetik -- linimasa insiden ini AKAR masalahnya adalah
+  penamaan/konsep yang ambigu). `moveFileSaf()` -> `moveFileToSafDestination()`
+  (sumber jadi `File` lokal, bukan lagi `DocumentFile`).
+- **Efek samping positif**: `previewPatternMatches()` (sumber bug v2.18.1)
+  disederhanakan total -- tidak ada lagi cabang SAF sama sekali, karena sumber
+  scan sekarang SELALU satu-satunya (Downloads). Kelas bug "preview vs scan
+  lihat folder beda" jadi STRUKTURAL tidak mungkin terulang, bukan cuma
+  ditambal ulang.
+- **Kompatibilitas mundur riwayat undo**: entri `MoveHistoryEntry` LAMA (dibuat
+  sebelum restrukturisasi ini, format sumber+tujuan sama-sama `content://`)
+  TETAP bisa di-undo lewat `undoSaf()` (logika lama, tidak diubah). Entri BARU
+  (tujuan `content://`, sumber path lokal) lewat `undoSafDestination()` baru.
+  Dispatcher `undo()` membedakan lewat `originalParentUri`, bukan skema DB baru.
+- UI `SettingsScreen.kt` ("Folder Kustom" -> "Folder Tujuan Kustom") & doc
+  comment `SettingsRepository`/`MainViewModel` diperbaiki -- sebelumnya
+  eksplisit menyebut "pindai folder pilihanmu sendiri" (bahasa SUMBER),
+  sekarang "file tetap dipindai dari Downloads, folder ini cuma tujuan".
+  `MainActivity.kt` (picker wiring) TIDAK disentuh -- murni pilih-URI, tidak
+  peduli peran sumber/tujuan.
+- File diubah (5): `util/FileSorter.kt` (restrukturisasi inti),
+  `ui/screens/SettingsScreen.kt`, `data/SettingsRepository.kt` (doc),
+  `ui/MainViewModel.kt` (doc), `app/build.gradle.kts` (versi).
+- `scripts/preflight_check.sh` lolos bersih (2 iterasi -- iterasi 1 masih
+  menyisakan import `CancellationException` tak terpakai setelah
+  `processCandidateSaf` dihapus, dibersihkan di iterasi 2). **BELUM PERNAH
+  lewat `./gradlew` asli** -- CI run berikutnya WAJIB dicek, konsisten dengan
+  seluruh riwayat SAF sebelumnya (Insiden #7 syarat (c): blind tapi disiplin).
+- **Pelajaran proses dicatat**: ini SIKLUS KEDUA "misinterpretasi requirement"
+  untuk SAF di project ini (yang pertama: Insiden #7 lama, arsitektur "Zip
+  Sorter" independen). Kalau SAF diminta lagi di masa depan dan sesi itu ragu
+  soal peran (sumber vs tujuan vs lainnya), TANYA eksplisit ke user SEBELUM
+  nulis kode -- jangan asumsikan dari nama fitur ("SAF") saja.
+
+## STATUS PROJECT SEBELUMNYA: v2.18.1 -- FIX BUG NYATA: PREVIEW vs SCAN LIHAT FOLDER BEDA -- 2026-08-13
+- User klarifikasi laporan v2.18.0: preview di layar Tambah/Edit Rule MUNCUL
+  cocok, tapi scan asli tetap bilang "tidak ada file cocok". Digali lewat
+  tanya-jawab (bukan tebak) -- ternyata bug terpisah, BUKAN soal ekstensi.
+- Root cause: `previewPatternMatches()` hardcode selalu cek `downloadsDir`,
+  buta total terhadap folder kustom SAF yang sudah dikonfigurasi -- padahal
+  `scanAndSort()` sungguhan SUDAH benar mengarah ke folder kustom. Preview
+  & scan cek folder BERBEDA. Detail lengkap: CHANGELOG.md v2.18.1.
+- Fix: preview reuse `resolveSafRoot()` yang sama persis dengan scan asli
+  (satu logika sumber, bukan 2 cabang independen -- pelajaran sama dengan
+  syarat (c) Insiden #7). Signature `suspend` menjalar ke
+  `MainViewModel.previewPattern` & param `onPreviewPattern` di
+  `AddEditRuleScreen`.
+- `scripts/preflight_check.sh` lolos bersih. **BELUM PERNAH lewat
+  `./gradlew` asli** -- CI run berikutnya WAJIB dicek.
+- **Pelajaran proses dicatat**: 3 laporan user berturut-turut ("tidak ada
+  file cocok" -> "campuran ekstensi" -> "preview cocok tapi scan tidak")
+  ternyata 2 bug BERBEDA (ekstensi v2.18.0 + preview/scan-mismatch v2.18.1)
+  yang KEBETULAN bergejala mirip di awal. Pelajaran: jangan berhenti gali
+  setelah fix pertama kalau user masih lapor gejala serupa -- tanya detail
+  konkret ("preview vs scan beda?") sebelum asumsi "sudah kelar".
+
+## STATUS PROJECT SEBELUMNYA: v2.18.0 -- DUKUNG SEMUA EKSTENSI FILE -- 2026-08-13
+- User laporan bug pakai (bukan audit): pilih folder custom, isi "campuran"
+  ekstensi, rule sudah aktif, tapi selalu "tidak ada file cocok". Root cause
+  DITEMUKAN via tanya-jawab terarah (bukan tebak langsung): app dari awal
+  project HARDCODE hanya scan `.zip`/`.txt` -- keputusan arsitektur inti,
+  BUKAN bug, tapi tidak sesuai ekspektasi user pakai app ini buat "pindahkan
+  file project" (general-purpose).
+- Dikonfirmasi eksplisit ke user SEBELUM eksekusi (bukan asumsi diam-diam,
+  karena ini scope-shift besar, nyentuh 8+ file termasuk data model) --
+  user pilih "dukung SEMUA ekstensi", bukan whitelist tertentu.
+- Detail teknis lengkap: CHANGELOG.md v2.18.0. Ringkasan: filter ekstensi di
+  `listCandidateFiles`/`listCandidateFilesSaf` dihapus total, Rule/GlobMatcher
+  jadi satu-satunya penentu match; `mimeTypeForFileName` diperluas ~15 tipe
+  (fallback octet-stream tetap ada utk sisanya); string UI "ZIP/TXT"
+  digenerickan di 5 layar. Scan TETAP non-rekursif (sengaja, di luar scope
+  batch ini -- dicatat, bukan lupa).
+- `scripts/preflight_check.sh` lolos bersih. **BELUM PERNAH lewat
+  `./gradlew` asli** -- CI run berikutnya WAJIB dicek.
+
+## STATUS PROJECT SEBELUMNYA: v2.17.1 -- FIX 2 BUG P0 FATAL SAF (AUDIT EKSTERNAL) -- 2026-08-13
+- User upload `SAF_FINAL_LOGIC_AUDIT.md` (audit eksternal SAF v2.17.0 dari
+  sesi/tool lain) via chat lain di conversation yang sama: 2 P0 fatal, 6 P1,
+  3 P2. User pilih scope "Fix P0 saja, atomic change" -- BUKAN P1/P2 (masih
+  pending, lihat CHANGELOG.md v2.17.1 untuk daftar lengkap sisa temuan).
+- **Catatan penting proses**: batch ini dikerjakan di atas ZIP `__2_`
+  (v2.17.0, sesi SAF terpisah), BUKAN base v2.16.1 yang sedang dikerjakan
+  paralel di chat yang sama untuk task "Redesign Neumorphism" (v4.0.0,
+  belum selesai -- lihat catatan di bawah, JANGAN tertukar/di-merge
+  serampangan, dua base itu SENGAJA divergen sampai user putuskan urutan
+  gabung). File log CI (`logs_85697644000.zip`) yang ikut ter-upload di
+  waktu yang sama TERNYATA bukan repo ini (`Video-resizer`/
+  `com.example.videoresizer`) -- diabaikan total, tidak dipakai debug.
+- P0 #1 (validasi permission saat startup) & P0 #2 (silent fallback ke
+  Downloads saat SAF rusak) -- detail teknis lengkap di CHANGELOG.md v2.17.1.
+  `scripts/preflight_check.sh` lolos bersih. **BELUM PERNAH lewat
+  `./gradlew` asli** -- CI run pertama WAJIB dicek sebelum dianggap selesai.
+
+## STATUS PROJECT SEBELUMNYA: v2.17.0 -- SAF DITULIS ULANG (Folder Kustom) -- 2026-08-12
+- User minta fitur SAF ditambahkan lagi ("penuh dedikasi bukan asal jadi").
+  Prosedur di **Insiden #7** (bawah) DIIKUTI PERSIS sebelum kode ditulis:
+  seluruh riwayat SAF dibaca dulu, lalu dikonfirmasi eksplisit ke user karena
+  sandbox sesi ini TIDAK punya akses Gradle/emulator/device asli (syarat "a"
+  gugur). User pilih lanjut ("gagal bukan pilihan") -> dieksekusi di bawah
+  **syarat (c)**: blind, tapi disiplin -- reuse persis arsitektur legacy dari
+  catatan penghapusan v2.13.0, BUKAN modul independen baru ("Zip Sorter"
+  SENGAJA tidak diulang, itu sumber masalah "pelajaran tidak menyebar"
+  di Insiden #7). Detail teknis lengkap & daftar file: lihat CHANGELOG.md
+  v2.17.0. Ringkasan status:
+  - Semua bug Insiden #4/#6/#7 (v2.8.0 CI-fail, Bug #1, Bug #2, boolean-gate
+    false-negative) diaudit satu-satu, fix/mitigasi diterapkan dari desain
+    awal (bukan ditambal belakangan) -- lihat catatan "UPDATE" di Insiden #7.
+  - **BELUM PERNAH lewat `./gradlew` asli.** `scripts/preflight_check.sh`
+    lolos bersih (setelah 1 iterasi fix: paren tak seimbang di komentar
+    dokumentasi), plus review manual tipe/nullability/signature baris-per-
+    baris. TAPI ini BUKAN pengganti compiler asli -- CI run PERTAMA setelah
+    push ini WAJIB dicek hasilnya sebelum dianggap selesai. Kalau CI gagal,
+    itu BUKAN berarti prosedur syarat (c) gagal -- itu justru skenario yang
+    sudah diperingatkan sejak awal (lihat Insiden #7), lanjutkan dengan fix
+    normal, bukan alasan mundur/hapus fitur lagi tanpa diskusi ke user dulu.
+  - Temuan sampingan dicatat, TIDAK dieksekusi (di luar scope batch ini):
+    `FileSorter.undo()` (kedua jalur) kemungkinan jalan di dispatcher
+    pemanggil (Main), bukan `Dispatchers.IO` sendiri -- karakteristik lama,
+    bukan regresi baru. Kandidat batch terpisah kalau mau dibenerin.
+
+## STATUS PROJECT SEBELUMNYA: v2.16.0 -- TECHNICAL DEBT AUDIT & ATOMIC CLOSURE -- 2026-08-09
+- User minta daftar SEMUA technical debt kode/fitur murni (bukan testing)
+  yang belum kesampaian sejak awal project, dieksekusi jadi 1 batch atomic.
+- **Metodologi audit**: baca ulang PROJECT_STATE.md penuh (semua entri
+  insiden + section "Roadmap backend") + `grep -rn "TODO\|FIXME\|BELUM\|
+  known limitation"` di seluruh `app/src/main/java` + cross-check kode
+  aktual (bukan cuma percaya komentar, sesuai pelajaran Insiden #6: "kalau
+  komentar bilang X, verifikasi X beneran terjadi").
+- **Technical debt yang ditemukan & keputusan per item:**
+  1. **[DIEKSEKUSI]** Opsi tema "Terang"/"Ikuti Sistem" di Pengaturan --
+     dead code sejak v2.14.0 (`Theme.kt` hardcode gelap, `darkTheme` param
+     diabaikan). Dihapus total ke akar (`ThemeMode` enum, flow, UI picker,
+     seluruh wiring) -- BUKAN diimplementasi ulang jadi beneran terang,
+     karena itu kontradiksi langsung spesifikasi desain tema yang sudah
+     ditetapkan ("dark mode adalah satu-satunya mode").
+  2. **[DIEKSEKUSI]** Tombol "Simpan" rule tanpa konfirmasi sukses eksplisit
+     -- gap yang SUDAH ditemukan & DICATAT sejak audit v2.4.3 (2026-08-03),
+     sengaja dibiarkan waktu itu. Ditambahkan `RuleSaveFeedback` one-shot
+     StateFlow (pola sama persis dengan `ScanFeedback` v2.4.4), dikonsumsi
+     di `RuleListScreen` (bukan di form sendiri, karena form di-dispose
+     duluan sebelum Snackbar sempat tampil).
+  3. **[DIEKSEKUSI di v2.20.2, 2026-08-13]** Data lama di DataStore
+     (ActivityLog/MoveHistory) dari sebelum migrasi Room v2.2.0 -- sebelumnya
+     "disepakati tidak urgent" (lihat "Keputusan arsitektur utama" #1) dan
+     TIDAK dieksekusi di batch v2.16.0 ini karena alasan (a)/(b) di bawah
+     masih berlaku saat itu. Dieksekusi ulang di v2.20.2 atas instruksi
+     eksplisit user "kerjakan tanpa regresi" -- BUKAN karena alasan (b) sudah
+     terselesaikan (key literal DataStore lama TETAP tidak terverifikasi,
+     tidak ada git history di snapshot ini), tapi karena didesain aman-walau-
+     tebakan-salah (no-op murni kalau key tidak cocok, bukan migrasi
+     destruktif). Lihat `LegacyDataMigration.kt` + CHANGELOG v2.20.2 untuk
+     detail lengkap & peringatan soal ketidakpastian nama key.
+     ~~(a) app belum pernah rilis publik luas...~~
+     ~~(b) skema DataStore key lama kemungkinan sudah berubah bentuk...~~
+     ~~Kalau user based di masa depan benar melaporkan data hilang...~~
+  4. **[DIEKSEKUSI di v2.20.2, 2026-08-13]** `SCAN_CONCURRENCY = 6`
+     (FileSorter, v2.4.0) sekarang configurable dari kartu "Kecepatan Scan
+     (Lanjutan)" di Pengaturan (`SettingsRepository.ALLOWED_SCAN_CONCURRENCY`
+     = `[2,4,6,8,12]`, default TETAP 6). Dieksekusi atas instruksi eksplisit
+     user, BUKAN karena data profiling nyata akhirnya tersedia (memang belum
+     ada, tidak diklaim ada) -- yang berubah cuma "tidak configurable" jadi
+     "configurable", jadi kalau nanti trigger asli (user laporkan scan
+     lambat) benar terjadi, user bisa coba sendiri tanpa nunggu rilis baru.
+     ~~TIDAK diubah sekarang karena tidak ada data profiling...~~
+  5. **[DICATAT, TIDAK DIEKSEKUSI, TERHAMBAT STRUKTURAL]** §6 roadmap
+     backend (CI/CD dependency-lock lanjutan, `./gradlew --write-locks`) --
+     STATUS TIDAK BERUBAH dari catatan lama: sandbox Claude di sesi ini pun
+     masih tanpa akses Gradle/Android SDK/network. Menulis lockfile "buta"
+     berisiko mematikan build CI total (sama kelas risiko dengan kenapa SAF
+     akhirnya dihapus, Insiden #7) -- BUKAN dieksekusi blind.
+  - **Item YANG SUDAH TERTUTUP, bukan debt lagi** (diverifikasi ulang di
+    audit ini, dicatat supaya sesi depan tidak audit ulang dari nol): SAF/
+    Scoped Storage & Zip Sorter (v2.13.0, dihapus total, grep konfirmasi 0
+    sisa kode `documentfile`/`zipsorter`), §2 MediaStore ghost cleanup
+    (v2.5.0, selesai), §5 Coroutine lifecycle & Foreground Service (v2.6.0,
+    selesai), 3 pelanggaran spesifikasi tema (v2.15.0, ditutup sesi
+    sebelumnya).
+- File diubah (6), murni lapisan UI/state -- nol perubahan logika
+  scan/move/undo/DB: `data/SettingsRepository.kt`, `ui/theme/Theme.kt`,
+  `ui/screens/SettingsScreen.kt`, `ui/MainViewModel.kt`, `MainActivity.kt`
+  (Protected Asset, edit parsial), `ui/screens/RuleListScreen.kt`.
+- versionCode 55->56, versionName 2.15.0->2.16.0.
+- **Belum ada konfirmasi CI/device dari user untuk versi ini.**
+
+## STATUS PROJECT SEBELUMNYA: v2.15.0 -- AUDIT KEPATUHAN 100% ke spesifikasi tema (gap closure) -- 2026-08-09
+- User eksplisit minta tema di-override ULANG, "100% disesuaikan dengan
+  instruksi Markdown, jangan menyisakan celah setitik pun" -- bukan laporan
+  bug baru, tapi audit ulang v2.14.0/2.14.1 vs dokumen spesifikasi
+  file-per-file, komponen-per-komponen.
+- **3 pelanggaran nyata ditemukan** (bukan cuma selisih nilai token):
+  1. `GroupedListRow.kt` -- 4 ikon menu Home SEMUANYA pakai
+     `Modifier.shadow()` berwarna tint sebagai glow permanen sejak v2.14.0
+     (bahkan sebelum itu, ini bukan bagian dari perubahan tema kemarin,
+     cuma baru ketahuan sekarang karena audit eksplisit diminta) -- persis
+     masuk daftar "Forbidden" bab 18 spesifikasi ("Every icon"). Fix: kotak
+     ikon jadi glass datar (fill tint alpha rendah + border rambut), TANPA
+     shadow warna.
+  2. `RuleCard.kt` -- toggle enable/disable rule masih `Switch` Material3
+     bawaan, bukan kontrol tactile sesuai bab 12. Fix: komponen baru
+     `TactileSwitch.kt` (track recessed/OFF vs terangkat-tint-glow lokal/ON,
+     posisi thumb sebagai penanda kedua di luar warna -- bab 21).
+  3. `VaultActionSheet.kt` -- sheet konfirmasi (hapus rule, undo, dst) flat
+     tanpa tepi glass sama sekali (gap bab 7/8). Fix: highlight rambut 1dp
+     di top + `shadowElevation=0` (bukan border penuh, sesuai arah cahaya
+     bab 9 -- highlight itu "reflected light", bukan outline kotak).
+- **2 presisi token** di `Color.kt`: `MidnightBlueGradientAlpha` disamakan
+  PERSIS ke 0.06f (spesifikasi bab 6 `MidnightBlueAmbientAlpha`), sebelumnya
+  0.08f (bukan pelanggaran keras -- dokumen bilang nilai boleh disetel --
+  tapi user minta nol celah, jadi disamakan persis). Tambah `TextMuted`
+  (0xFF737E8C) yang disebut eksplisit di bab 16 tapi belum ada di kode.
+- **SENGAJA TIDAK diubah**: opsi "Terang"/"Ikuti Sistem" di
+  `SettingsScreen.kt` (`ThemeMode`) yang sudah tidak fungsional sejak
+  v2.14.0 -- ini keputusan fitur/navigasi/state (`SettingsRepository`,
+  wiring `MainActivity`), BUKAN bagian dari dokumen spesifikasi VISUAL yang
+  jadi acuan audit batch ini. Tetap berlaku known-limitation, silakan minta
+  eksplisit "hapus opsi tema terang di Pengaturan" kalau mau dibersihkan --
+  itu batch terpisah di luar lapisan tema murni.
+- File diubah (5) + 1 baru, murni lapisan visual/komponen, nol logika bisnis
+  disentuh: `ui/theme/Color.kt`, `ui/components/GroupedListRow.kt`,
+  `ui/components/RuleCard.kt`, `ui/components/VaultActionSheet.kt`,
+  `app/build.gradle.kts` (versi), BARU `ui/components/TactileSwitch.kt`.
+- versionCode 54->55, versionName 2.14.1->2.15.0.
+- **Belum ada konfirmasi CI/device dari user untuk versi ini.**
+
+## STATUS PROJECT SEBELUMNYA: v2.14.1 -- FIX REGRESI: CTA "Scan Sekarang" pucat/glitch akibat shadow tactilePress -- 2026-08-08
+- User laporkan screenshot: tombol CTA gradient stamp->amber punya kotak pucat
+  aneh di tengahnya (bukan shadow halus). Root cause: v2.14.0 mengganti
+  `.pressScale()` polos di CTA jadi `.tactilePress()` yang menambah
+  `Modifier.shadow(elevation=4.dp)` bahkan di state idle (bukan cuma saat
+  ditekan). Di banyak device/skin Android, `Modifier.shadow` di atas
+  Brush.horizontalGradient custom sering fallback render jadi kotak
+  translusen pucat, bukan shadow bertitik gelap yang mulus -- terutama kalau
+  compositing layer-nya tidak match warna background gradient.
+- **Fix**: CTA kembali pakai `.pressScale()` polos (skala saja, tanpa
+  shadow layer tambahan) -- ini juga lebih sesuai bab 7 spesifikasi tema
+  ("Avoid: glossy glass-button appearance; excessive bevel").
+  `tactilePress()` di `PressScale.kt` TETAP ada (tidak dihapus) untuk
+  kontrol lain di masa depan, tapi TIDAK dipakai lagi di CTA Home.
+- 1 file (`ui/screens/HomeScreen.kt`), murni revert 1 modifier + import.
+- versionCode 53->54, versionName 2.14.0->2.14.1.
+
+## STATUS PROJECT SEBELUMNYA: v2.14.0 -- Ganti total tema visual ke "AMOLED Glassmorphism Hybrid + Midnight Blue Gradient" -- 2026-08-08
+- User upload spesifikasi desain (.md) & minta tema default project ditimpa
+  sampai bersih, 100% sesuai isi dokumen itu. Palet lama "Manifest Arsip"
+  (kraft/pine terang + obsidian gelap terpisah, dua skema) DIHAPUS TOTAL,
+  diganti SATU skema: AMOLED near-black + frosted glass (dominan) + tint
+  Midnight Blue ambient alpha-rendah (restrained, bukan warna dominan).
+- **Dark mode sekarang WAJIB & satu-satunya** -- `PromptVaultTheme` tidak lagi
+  punya `lightColorScheme`; parameter `darkTheme` diabaikan (dipertahankan di
+  signature supaya `MainActivity` tidak perlu diubah strukturnya).
+  KNOWN LIMITATION: opsi "Terang"/"Ikuti Sistem" di menu Pengaturan
+  (`SettingsScreen.kt`, `ThemeMode`) masih ada di UI tapi SEKARANG TIDAK
+  BERFUNGSI lagi (tampilan selalu AMOLED gelap). Sengaja TIDAK dibersihkan
+  di batch ini untuk menjaga batch tetap ketat di lapisan tema; hapus UI
+  picker itu di batch berikutnya kalau user minta "beres-beres" lanjutan.
+- File diubah/ditambah (9, murni lapisan tema + 1 titik tactile-press CTA):
+  `ui/theme/Color.kt` (rewrite total token AMOLED/glass/Midnight Blue),
+  `ui/theme/Theme.kt` (rewrite, satu darkColorScheme, forced),
+  `ui/theme/TactileTokens.kt` (BARU -- konstanta elevasi/skala tactile
+  terpusat sesuai bab 12 spesifikasi), `ui/components/VaultCard.kt`
+  (gradient glass + tint Midnight Blue + border rambut, ganti gradient
+  kraft lama), `ui/components/PressScale.kt` (tambah `tactilePress()`:
+  skala + elevasi turun ke 0 saat ditekan, sesuai bab 6), `ui/screens/
+  HomeScreen.kt` (CTA "Scan Sekarang" pakai `tactilePress` bukan
+  `pressScale` polos), `app/src/main/res/values/colors.xml` +
+  `themes.xml` (splash & parent theme non-light), `mipmap-anydpi-v26/
+  ic_launcher(.xml/_round.xml)` (background ikon ganti dari pv_pine ke
+  AMOLED), `MainActivity.kt` (partial: splash/status-bar scrim gelap
+  permanen, bukan lagi `SystemBarStyle.auto`).
+- Semua komponen lain (`GroupedListRow`, `RuleCard`, `SegmentedControl`,
+  `VaultActionSheet`, `VaultTopBar`, `EmptyState`, `SortedStamp`, seluruh
+  layar) TIDAK diubah -- semuanya sudah 100% theme-aware lewat
+  `MaterialTheme.colorScheme`/`VaultTheme.extraColors`, jadi otomatis
+  mewarisi palet baru tanpa perlu disentuh. Nol risiko regresi logika.
+- versionCode 52->53, versionName 2.13.0->2.14.0.
+- **Belum ada konfirmasi CI/device dari user untuk versi ini.**
+
+## STATUS PROJECT SEBELUMNYA: v2.13.0 -- SAF DIHAPUS TOTAL ke akar atas permintaan eksplisit user -- 2026-08-08
+- User eksplisit minta hapus SEMUA fitur terkait SAF sampai bersih ke akar,
+  dan HANYA diterapkan kembali kalau Claude sudah tahu letak kesalahan
+  logika fatal yang menyebabkan riwayat panjang bug SAF (insiden #4, #6,
+  plus 2 gagal-build CI v2.6.0-terkait-manifest tidak relevan, tapi v2.8.0
+  gagal build LANGSUNG karena kode SAF). Lihat "Insiden #7" di bawah untuk
+  analisis root-cause lengkap dan kenapa jawabannya SEKARANG adalah TIDAK
+  diterapkan kembali (bukan "belum sempat").
+- Dihapus total: §1 roadmap backend (SAF/Scoped Storage, semua fase v2.7.0-
+  v2.10.0) DAN modul "Zip Sorter" (v2.12.0, SAF-based juga). `FileSorter`
+  kembali single-path java.io.File/Downloads murni, persis seperti sebelum
+  v2.7.0. Detail file-per-file di CHANGELOG v2.13.0.
+- Rule engine utama, Room DB (log/history), worker auto-sort, crash logger,
+  UNDO -- semuanya TIDAK disentuh, nol risiko regresi dari batch ini.
+- versionCode 51->52, versionName 2.12.0->2.13.0.
+- **Belum ada konfirmasi CI/device dari user untuk versi ini** -- tapi ini
+  operasi SUBTRAKSI kode (bukan fitur baru), risiko jauh lebih rendah
+  daripada batch-batch SAF sebelumnya.
+- Status "SELESAI/STABLE" (declared 2026-08-04, lihat bawah) TETAP BERLAKU
+  untuk seluruh rule engine utama.
+
+## STATUS PROJECT SEBELUMNYA: v2.12.0 COMPILE-FIX terkirim (v2.12.1 label, versi tetap 2.12.0) -- 2026-08-07
+- Fix `zipSorterViewModel` Unresolved reference (NavHost ada di fungsi
+  top-level `PromptVaultRoot`, bukan di class Activity langsung -- lihat
+  CHANGELOG v2.12.1). 1 file (`MainActivity.kt`), murni compile-fix.
+- **Belum ada konfirmasi CI hijau dari user untuk fix ini.**
+- Status "SELESAI/STABLE" (declared 2026-08-04, lihat bawah) TETAP BERLAKU
+  untuk seluruh rule engine utama -- TIDAK dibatalkan/di-audit ulang.
+- User eksplisit upload dokumen boilerplate & minta modul baru "Zip Sorter"
+  (kategori file otomatis + auto-extract ZIP) diintegrasikan, package
+  disesuaikan ke `com.elprompter.promptvault`, plus contoh ViewModel+Screen
+  SAF `ACTION_OPEN_DOCUMENT_TREE`. Ini exception valid dari aturan permanen
+  #3 di bawah (fitur baru spesifik diminta user, bukan audit proaktif).
+- Diimplementasi sebagai package **terisolasi total** `zipsorter/` --
+  TIDAK menyentuh `util/FileSorter.kt` (rule engine lama) sama sekali.
+  Detail lengkap + bug di dokumen sumber yang diperbaiki: lihat CHANGELOG
+  v2.12.0.
+- **BELUM diverifikasi runtime** (build CI + device asli) -- sesi
+  berikutnya JANGAN anggap modul ini matang sampai user konfirmasi.
+- versionCode 50->51, versionName 2.11.1->2.12.0.
+
+## STATUS PROJECT SEBELUMNYA: SELESAI / STABLE (declared 2026-08-04)
+- **v2.4.2 dinyatakan resmi sebagai STABLE RELEASE.** User (pemilik project)
+  eksplisit bilang capek dan minta project ini benar-benar dinyatakan
+  "selesai" tanpa audit tak berujung. Kriteria "Definition of Done" di bawah
+  ini SEMUA terpenuhi per 2026-08-04:
+  - Audit kode menyeluruh seluruh modul: SELESAI TOTAL (lihat entri
+    2026-08-01 "PENUTUP audit" di bawah).
+  - Semua bug yang pernah ditemukan sepanjang riwayat project: fixed &
+    dikonfirmasi (race condition v2.3.3, dialog rule v2.3.4, worker
+    lifecycle v2.3.5, izin storage v2.3.7, packaging ZIP Claude 2026-08-04,
+    CI GitHub Release v2.4.2).
+  - Performa (scan paralel v2.4.0, trim berkala v2.4.1): confirmed cepat di
+    device asli user.
+  - CI/CD: compile-check, unit test, build APK, publish ke GitHub Release
+    -- **CONFIRMED user APK sudah muncul di sidebar Releases** setelah
+    v2.4.2 (konfirmasi diterima 2026-08-04, closing item yang sebelumnya
+    "BELUM ada konfirmasi").
+  - 4 item roadmap backend (SAF, MediaStore ghost cleanup, Foreground
+    Service, CI lock lanjutan) TETAP DIJEDA -- statusnya sudah final
+    "ditunda dengan trigger eksplisit" (lihat bagian Roadmap backend di
+    bawah), BUKAN dihitung sebagai pekerjaan belum selesai.
+- **ATURAN PERMANEN untuk sesi Claude berikutnya (jangan dilanggar):**
+  1. JANGAN menawarkan audit/polish/"mau lanjut apa lagi?" secara proaktif.
+     Project ini stabil -- diam kecuali user yang mulai duluan.
+  2. 4 item roadmap backend yang dijeda TETAP dijeda selamanya, kecuali
+     salah satu trigger eksplisit di bagian "Roadmap backend" benar-benar
+     terjadi (bukan dibahas ulang saat idle/nganggur).
+  3. Eksekusi HANYA kalau user secara eksplisit minta fitur baru spesifik
+     atau melaporkan bug/gejala nyata (termasuk lewat crash log
+     Documents/PromptVault/logs/).
+  4. Kalau ragu apakah sesuatu "perlu dibenahi", DEFAULT-nya adalah TIDAK --
+     tanya user dulu, jangan asumsikan perlu audit ulang.
+
+## Insiden #6 -- listCandidateFilesSaf gagal detect file (MIME false-negative), SAMA KELAS BUG dgn insiden #4 (2026-08-06)
+- **Koreksi**: kesimpulan insiden #4 (folder kosong = bukan bug) SALAH.
+  User klarifikasi: folder ADA banyak file, tidak ke-scan sama sekali.
+  1 file yang berhasil (18:53:46) itu KEBETULAN lolos, bukan bukti fitur
+  sehat -- 82 file "dilewati" scan itu, sisanya yg ratusan scan berikutnya
+  malah 0 kandidat sama sekali.
+- **Root cause**: `listCandidateFilesSaf()` syaratkan `doc.isFile == true`.
+  `DocumentFile.isFile()` query MIME type ke provider -- kalau MIME kosong/
+  salah (umum, tergantung cara file itu nyampe: SD card/sync app/dll),
+  `isFile()` FALSE NEGATIF walau file valid & bisa dibaca. Persis kelas bug
+  yang sama dengan `resolveSafRoot` exists()/canRead() (insiden #4 versi
+  lama). Karena MIME per-file beda-beda tergantung asal filenya, hasilnya
+  "acak" -- sebagian file lolos, sebagian tidak, cocok dgn gejala user.
+- **Fix**: ganti syarat `doc.isFile` -> `!doc.isDirectory`. `isDirectory()`
+  cek `MIME_TYPE_DIR` yang jauh lebih konsisten diisi provider drpd MIME
+  type detail file individual -- dipakai sbg negative check yg reliable,
+  bukan positive check yg rawan.
+- **PELAJARAN PERMANEN**: SEMUA method boolean `DocumentFile` (`isFile`,
+  `canRead`, `canWrite`, `exists`) TIDAK BOLEH dipercaya sbg gerbang
+  keputusan tanpa probe akses nyata (`listFiles()`, baca konten, dst) --
+  ini kelas bug berulang di batch SAF, cek ulang SEMUA pemakaian method2
+  ini di file ini kalau ada laporan gejala serupa lagi.
+- **Sekalian dibenerin (masih atomic, 1 modul FileSorter.kt SAF)**: 2 gerbang
+  boolean serupa di `undoSaf()` -- `current.exists()` & `originalRoot.canWrite()`
+  -- dibuang dgn pola sama (null/isDirectory check + biarkan operasi nyata
+  createFile/copy yg gagal natural, ketangkap try-catch existing).
+- **BELUM dikonfirmasi user** -- tunggu hasil scan + Salin Log berikutnya.
+
+
+- **Konteks**: user butuh cara cepat ekstrak log ERROR (dari fix
+  resolveSafRoot sebelumnya) tanpa ADB/Logcat, sementara pesan "Tidak ada
+  file cocok yang ditemukan" identik dipakai baik saat SAF gagal->fallback
+  MAUPUN SAF sukses tapi folder emang kosong -- tidak bisa dibedakan dari
+  layar Home.
+- **Fix**: `ActivityLogScreen` tab "Log" dapat `IconButton` (ContentCopy) di
+  top bar -- nyalin SEMUA entri log (bukan cuma yg terlihat di layar) ke
+  clipboard via `ClipboardManager`, format `[yyyy-MM-dd HH:mm:ss] LEVEL:
+  pesan`, urutan sama seperti tampilan (terbaru dulu). Hanya muncul di tab
+  Log, snackbar konfirmasi "Log disalin ke clipboard".
+- versionCode 43->44, versionName 2.8.1->2.8.2 (fitur user-visible baru,
+  konsisten dgn kebijakan bump-utk-traceability dari insiden #5).
+- **Belum terjawab**: apakah SAF sebenarnya gagal atau folder custom
+  memang kosong saat scan -- tunggu user kirim hasil Salin Log.
+
+
+- **Laporan user**: build CI ijo (fix resolveSafRoot), tapi halaman GitHub
+  Release masih kelihatan APK/versi sebelumnya.
+- **Root cause**: tag release = `v${versionName}`. 2 hotfix beruntun
+  (coroutineScope + resolveSafRoot) SENGAJA tidak naikkan versionName
+  (dianggap syntax/logic fix murni) -> tag tetap `v2.8.0` sama dgn build
+  sebelumnya -> `action-gh-release` UPDATE release yang sama (by design),
+  jadi tampilan (judul/tag/nomor versi) di halaman Release TIDAK BERUBAH
+  sama sekali walau asset APK di baliknya mestinya ketimpa. Tidak ada cara
+  visual buat user verifikasi APK baru benar ke-publish -- kelihatan macam
+  stuck/gagal padahal desainnya memang begitu.
+- **Koreksi kebijakan**: hotfix yang mengubah PERILAKU RUNTIME nyata (bukan
+  cuma syntax, spt resolveSafRoot) WAJIB bump versi biar dapat tag/entri
+  Release baru & bisa diverifikasi. Hotfix syntax-only (spt
+  return@coroutineScope) boleh tanpa bump SELAMA belum pernah publish sukses
+  sebelumnya di versi itu.
+- **Fix**: versionCode 42->43, versionName 2.8.0->2.8.1.
+
+
+- **Laporan user (runtime, HP asli)**: pilih folder kustom via picker, taruh
+  file ZIP/TXT di dalamnya, scan -> "Tidak ada file cocok yang ditemukan."
+  Tidak ada error apapun ditampilkan. Ini verifikasi runtime PERTAMA untuk
+  §1 Fase 2, dan GAGAL.
+- **Root cause**: `resolveSafRoot()` pakai `doc.exists() && doc.canRead()`
+  sebagai gerbang sebelum mempercayai tree URI. Keduanya method
+  `DocumentFile` yang TERKENAL false-negative di banyak `DocumentProvider`
+  (kartu SD, beberapa file manager OEM) karena bergantung pada
+  `COLUMN_FLAGS` yang provider sering tidak isi lengkap -- padahal folder
+  sebenarnya bisa diakses. Begitu gerbang gagal, `resolveSafRoot()` diam-diam
+  `return null` (BY DESIGN, supaya SAF gagal tidak pernah crash user) ->
+  `scanAndSortLocked()` fallback total ke Downloads/java.io.File -> scan
+  "sukses" tapi baca folder yang salah, TANPA jejak error ke user.
+- **Fix**: buang gerbang `exists()`/`canRead()`. Validasi cukup
+  `doc.isDirectory`, lalu `doc.listFiles()` dipanggil sebagai PROBE akses
+  nyata di dalam try-catch yang sudah ada -- kalau memang tidak bisa dibaca,
+  provider akan melempar Exception asli, bukan heuristik yang salah. Tambah
+  `activityLogRepository.add(LogLevel.ERROR, ...)` di kedua jalur gagal (tree
+  invalid / listFiles() exception) supaya kegagalan SAF SEKARANG TERLIHAT di
+  Riwayat Aktivitas -- sebelumnya 100% silent.
+- **KOREKSI 2026-08-06 (lihat Insiden #6)**: kesimpulan CONFIRMED di atas
+  SALAH -- user klarifikasi folder TIDAK kosong, ratusan file gagal
+  ke-detect krn bug baru `listCandidateFilesSaf` (`doc.isFile` false-negatif,
+  fixed v2.8.3). §1 balik ke status BELUM confirmed runtime sepenuhnya.
+
+
+- **Build v2.8.0 CONFIRMED GREEN di CI (2026-08-06)** setelah ronde 2 fix
+  di bawah. Compile-only confirmation -- runtime di device ASLI masih
+  BELUM diverifikasi untuk §1 Fase 2 SAF (batch paling berisiko).
+- **Build v2.8.0 FAILED di CI**: `FileSorter.kt` baris 357 & 364, dalam
+  `scanAndSortSafLocked()` (batch SAF Fase 2, 2026-08-05) -- `return` polos
+  dipakai di dalam blok `coroutineScope { ... }`. Parameter `block` di
+  `kotlinx.coroutines.coroutineScope` adalah `crossinline`, jadi non-local
+  `return` DILARANG compiler ("'return' is not allowed here"). Baris 394 di
+  fungsi yang sama sudah benar pakai `return@coroutineScope` -- 2 baris awal
+  (early-return saat rules kosong / candidateFiles kosong) kelewatan saat
+  batch itu ditulis.
+- **Fix**: ganti `return ScanResult(...)` -> `return@coroutineScope
+  ScanResult(...)` di kedua baris. Tidak ada perubahan logika/behavior,
+  murni syntax fix. versionCode/versionName TETAP 42/2.8.0 (belum pernah
+  publish sukses).
+
+
+---
+
+## [ARSIP] Versi/batch terakhir yang selesai (section lama, stop di v2.8.0/2026-08-05 -- usang, lihat 'Status Terkini' di PROJECT_STATE.md)
+
+- **versionCode 42 / versionName 2.8.0 -- §1 roadmap backend Fase 2/2 SELESAI
+  (FileSorter pakai DocumentFile), 2026-08-05:** §1 SEKARANG FUNGSIONAL
+  PENUH. `scanAndSortLocked()` cek `resolveSafRoot()` di awal -- ada URI SAF
+  valid -> delegasi total ke `scanAndSortSafLocked()` (jalur DocumentFile
+  baru, terpisah total dari jalur legacy); tidak ada/tidak valid -> fallback
+  ke Downloads/java.io.File PERSIS seperti sebelumnya. `undo()` jadi
+  dispatcher berdasarkan `destUri.startsWith("content://")`.
+  `MoveHistoryEntity` (Protected: DB Schema/DAO) TIDAK diubah -- sudah
+  bertipe String generik dari awal. Keterbatasan sengaja: preview
+  pattern/diagnostik tetap baca Downloads walau SAF aktif (fungsi
+  non-suspend); Dual Stability Guard SAF cuma 2/3 sinyal (tanpa file-lock
+  check); §2 ghost-cleanup tidak jalan di jalur SAF; move/undo pakai
+  copy-lalu-hapus bukan `DocumentsContract.moveDocument`. Detail lengkap +
+  checklist verifikasi WAJIB di CHANGELOG v2.8.0. **INI BATCH PALING
+  BERISIKO SEJAUH INI (menyentuh fungsi inti scan/move/undo) DAN SAMA
+  SEKALI BELUM ADA KONFIRMASI RUNTIME** -- preflight statis lolos 10/10
+  tapi itu bukan jaminan kompilasi/behavior benar. WAJIB jalankan checklist
+  5 poin di CHANGELOG v2.8.0 sebelum dianggap stabil, terutama poin 1
+  (mode Downloads/non-SAF tidak boleh regresi).
+- **versionCode 41 / versionName 2.7.0 -- §1 roadmap backend Fase 1/2
+  (SAF folder picker, HYBRID, dormant), 2026-08-05:** Sesuai keputusan user
+  (hybrid, bukan full-replace): infrastruktur SAF picker + penyimpanan URI
+  ditambah (`SettingsRepository`, `MainViewModel`, `MainActivity`,
+  `SettingsScreen`), TAPI `FileSorter.kt` BELUM disentuh sama sekali --
+  scan/move/undo tetap 100% java.io.File untuk semua user, URI SAF baru
+  tersimpan belum dipakai. Fase 2 (FileSorter baca URI & pakai DocumentFile,
+  dengan fallback) sengaja DIPISAH ke batch berikutnya supaya risiko kecil
+  per langkah. Detail lengkap di CHANGELOG v2.7.0. **BELUM ada konfirmasi
+  runtime -- WAJIB dikonfirmasi (picker muncul, URI persist lintas restart
+  app, tombol hapus jalan) SEBELUM lanjut ke Fase 2.** Urutan roadmap
+  sekarang: §2 selesai -> §5 selesai -> §1 Fase 1 selesai -> **§1 Fase 2
+  (berikutnya)**, lalu masuk prioritas audit eksternal (unit/UI test,
+  optimasi search/indexing, dst).
+- **versionCode 40 / versionName 2.6.0 -- §5 roadmap backend selesai
+  (Coroutine lifecycle & Foreground Service), 2026-08-05:**
+  **[COMPILE-FIX 2026-08-05]** CI gagal `processDebugMainManifest`:
+  `AndroidManifest.xml` punya `--` di dalam 2 komentar (XML melarang keras
+  substring itu di badan `<!-- -->`, beda dari komentar Kotlin `//`). Fix:
+  ganti `--` jadi koma di kedua komentar, tidak ada perubahan logika. Detail
+  di CHANGELOG v2.6.0. `AutoSortWorker` sekarang `setForeground()` (notifikasi ongoing low-priority) sebelum scan
+  mulai, supaya OS tidak gampang menjeda/membunuh worker saat scan panjang
+  di background. Audit coroutine lifecycle: TIDAK ada bug, `withContext(IO)`
+  + `async`/`awaitAll()` yang sudah ada dari v2.4.0 sudah cooperative
+  cancellation otomatis lewat structured concurrency. File baru
+  `AutoSortNotification.kt` + edit `AutoSortWorker.kt`, `PromptVaultApp.kt`,
+  `AndroidManifest.xml` (parsial), `strings.xml`. Detail lengkap di
+  CHANGELOG v2.6.0.
+- **versionCode 39 / versionName 2.5.0 -- COMPILE-FIX 2026-08-04:** user
+  upload log CI build gagal (`compileDebugKotlin` FAILED,
+  `FileSorter.kt:272:39`: "Suspend function 'add' should be called only
+  from a coroutine or another suspend function"). Root cause: fungsi
+  `cleanupGhostMediaStoreEntries()` (bagian §2 roadmap backend MediaStore
+  ghost cleanup di v2.5.0) lupa diberi keyword `suspend`, padahal manggil
+  `activityLogRepository.add()` yang suspend. Fix: tambah `suspend` di
+  deklarasi fungsi itu -- pemanggil (`scanAndSortLocked`, sudah suspend
+  context) tidak perlu diubah. 1 baris, 1 file. Static re-scan seluruh
+  pemanggilan suspend lain di `FileSorter.kt` (undo, moveFile,
+  processCandidate, scanAndSortLocked) -- semua sudah konsisten, tidak ada
+  mismatch lain. **Belum ada konfirmasi build hijau dari CI/device asli --
+  tunggu run berikutnya.**
+- **versionCode 38 / versionName 2.4.4** -- user laporkan GEJALA NYATA:
+  Snackbar hasil scan (fitur baru v2.4.3) muncul berulang tiap habis buka
+  "Lihat detail file yang dilewati" lalu balik ke Home. Root cause: event
+  one-shot ditampilkan via `LaunchedEffect` di composable `HomeScreen`, tapi
+  Navigation Compose men-dispose+membuat-ulang `HomeScreen` tiap pindah
+  layar -- instance baru tidak tahu event sudah pernah tampil, jadi
+  Snackbar re-trigger. Fix: state "sudah dikonsumsi" dipindah ke
+  `MainViewModel.consumeScanFeedback()` (survive dispose composable), + fix
+  efek samping warna Snackbar (`activeIsError` local snapshot). Detail
+  teknis lengkap di CHANGELOG v2.4.4. **Belum dikonfirmasi user di HP asli.**
+- **versionCode 37 / versionName 2.4.3** -- user MINTA sendiri (bukan audit
+  proaktif Claude, sesuai aturan permanen #3 di atas) audit tuntas sektor
+  "feedback interaksi": apa yang user harapkan terjadi tiap kali dia
+  berinteraksi dengan app. Audit statis nyisir 8 screen + MainViewModel,
+  grep pola Snackbar/Toast/haptic. Hasil audit lengkap:
+  - **Sudah OK (tidak disentuh):** RuleListScreen (Snackbar "Rule dihapus"),
+    ActivityLogScreen (Snackbar "dikembalikan ke Downloads"), haptic
+    LongPress di VaultActionSheet (semua konfirmasi destruktif) & RuleCard
+    (drag/reorder), SettingsScreen (FilterChip highlight utk tema/interval/
+    conflict strategy sudah cukup sebagai feedback pilihan, import rule
+    sudah ada teks hasil persisten di layar).
+  - **GAP ditemukan & difix:** tombol "Scan Sekarang" di HomeScreen -- aksi
+    PALING SERING dipakai di seluruh app -- sebelumnya cuma update teks
+    pasif `lastScanSummary`. Kalau hasil scan kali ini teksnya identik
+    dengan sebelumnya (skenario umum: "Tidak ada file cocok" berulang),
+    user nol sinyal bahwa tombol barusan benar-benar merespons.
+  - **GAP dicatat, SENGAJA belum difix (di luar scope batch ini):** tombol
+    "Simpan" di AddEditRuleScreen tidak punya konfirmasi sukses eksplisit
+    (Snackbar/toast) -- saat ini feedback-nya cuma implisit lewat navigasi
+    balik ke list. Cukup untuk sekarang karena rule baru langsung kelihatan
+    di list, tapi kalau user suatu saat komplain "kayak gak kesave", ini
+    kandidat fix pertama yang harus dicek. Jangan diasumsikan sudah beres.
+  - **Fix teknis:** `MainViewModel.scanFeedback` (StateFlow baru, terpisah
+    dari `lastScanSummary`, dibedakan `eventId`=timestamp biar tetap
+    trigger walau teks sama) + `HomeScreen` dapat `SnackbarHost` & haptic
+    (`TextHandleMove` normal / `LongPress` utk folder tak terbaca, warna
+    Snackbar ganti `colors.error` saat error) + wiring 1 param baru di
+    `MainActivity.kt`. 4 file, dalam Batch Lock. Detail lengkap di
+    CHANGELOG v2.4.3.
+  - **Belum diverifikasi runtime** (sandbox tanpa Gradle) -- preflight
+    LOLOS semua kategori, tapi tunggu konfirmasi kamu di HP asli.
+- **versionCode 36 / versionName 2.4.2** -- rilis terakhir yang dikirim ke
+  user. Fix: `.github/workflows/build.yml` SEBELUMNYA cuma pakai
+  `actions/upload-artifact@v4` (Actions Artifact biasa), TIDAK PERNAH
+  benar-benar publish ke GitHub Release -- melanggar aturan proyek sendiri
+  ("GitHub Release Rule"). Fix: tambah `permissions:
+  contents: write` + step `softprops/action-gh-release@v2` (tag otomatis
+  `v<versionName>`, APK ter-attach, update release yang sama kalau tag sudah
+  ada). Preflight ditambah kategori #9 supaya gap ini tidak lolos lagi.
+  HANYA `.github/workflows/build.yml` + `scripts/preflight_check.sh` yang
+  diubah. Lihat CHANGELOG v2.4.2 untuk detail teknis lengkap.
+  **CONFIRMED 2026-08-04: user cek, APK sudah muncul di sidebar Releases.**
+- **versionCode 35 / versionName 2.4.1** -- rilis sebelumnya. Trim berkala
+  tiap 20 insert di ActivityLogRepository & MoveHistoryRepository (bukan
+  tiap insert) -- kurangi write-contention SQLite saat scan paralel. Lihat
+  CHANGELOG v2.4.1.
+- **versionCode 33 / versionName 2.3.9** -- rilis sebelumnya. Padding luar
+  layar distandarkan ke 16dp di seluruh app + Onboarding dapat animasi
+  Crossfade antar step. Lihat CHANGELOG v2.3.9.
+- **2026-08-02, finishing batch (izin legacy + UI polish):** user konfirmasi
+  fix Home v2.3.1 sudah normal, lalu minta lanjut ke tahap "finishing":
+  audit menyeluruh + robustness + polish UI. Audit/robustness sudah matang
+  dari batch sebelumnya (lihat entri di bawah); satu-satunya item robustness
+  yang masih tersisa (celah izin Android 8-10) SEKARANG DIPERBAIKI atas
+  keputusan eksplisit user -- lihat CHANGELOG v2.3.7 untuk detail teknis.
+  Sekaligus batch UI polish pertama: empty state (ikon + layout konsisten)
+  di 4 layar (Kelola Rule, Riwayat Aktivitas, Undo Pemindahan, File
+  Dilewati) lewat komponen baru `EmptyState`, animasi `Crossfade` untuk
+  transisi kosong<->berisi, `animateItemPlacement()` di semua LazyColumn
+  list, dan transisi fade+slide antar layar di `NavHost` (sebelumnya potong
+  instan tanpa animasi sama sekali).
+- **2026-08-01, PENUTUP audit "pematangan fitur":** `data/db/` (Room DAO,
+  Entity, Converters, AppDatabase, kedua Repository) dan `ui/theme/`
+  (Color, Shapes, Theme, Type) sudah diperiksa -- termasuk verifikasi
+  eksplisit bahwa toggle Terang/Gelap/Ikuti Sistem di Settings benar-benar
+  tersambung ke Compose theme (`MainActivity` menghitung `effectiveDark`
+  dari `themeMode` + `isSystemInDarkTheme()` dengan benar). **Tidak ada bug
+  ditemukan di kedua modul ini.**
+  **AUDIT SELESAI TOTAL** -- seluruh source code app sudah diperiksa
+  modul per modul: file-move core, semua layar UI + komponen, worker
+  lifecycle, database, theme. Total 3 bug nyata ditemukan & diperbaiki
+  sepanjang batch ini (v2.3.3, v2.3.4, v2.3.5) -- lihat CHANGELOG.md untuk
+  detail masing-masing. Sesi berikutnya TIDAK PERLU mengulang audit ini
+  dari nol; kalau mau lanjut lagi, fokus ke perubahan/fitur yang terjadi
+  SETELAH v2.3.6, bukan re-scan modul yang sudah tercatat bersih di sini.
+- **2026-08-01, audit worker lifecycle:** ditemukan & diperbaiki 2 bug:
+  (1) `AutoSortWorker.doWork()` menelan exception diam-diam + retry tanpa
+  batas bahkan untuk error permanen (izin dicabut) -> sekarang selalu log
+  ke Activity Log + `Result.failure()` khusus untuk `SecurityException`.
+  (2) `BootCompletedReceiver` berisiko proses dimatikan Android sebelum
+  reschedule WorkManager selesai (tidak pakai `goAsync()`) -> auto-sort
+  bisa gagal aktif lagi setelah reboot. Sudah diperbaiki, lihat CHANGELOG
+  v2.3.5 untuk detail lengkap. Dengan ini, audit "pematangan fitur &
+  bersihkan kecacatan logika" mencakup: file-move core (`FileSorter`,
+  race condition v2.3.3), semua layar UI + komponen (v2.3.4), dan worker
+  lifecycle (v2.3.5). Belum diaudit mendalam: `data/db/` (Room
+  DAO/Converters/migrations) dan `ui/theme/`.
+- **2026-08-01, lanjutan sesi audit:** setelah v2.3.3 (fix race condition),
+  user minta lanjut audit modul lain (UI screens, worker lifecycle). Semua
+  layar (`AddEditRuleScreen`, `RuleListScreen`, `ActivityLogScreen`,
+  `SettingsScreen`, `DiagnosticsScreen`, `SkippedFilesScreen`,
+  `OnboardingScreen`) dan semua komponen di `ui/components/` diperiksa.
+  Ditemukan & diperbaiki 1 bug: dialog "Timpa rule tersebut?" pada
+  DuplicatePattern tidak benar-benar menghapus rule lama (lihat CHANGELOG
+  v2.3.4 untuk detail). Tidak ada bug lain ditemukan di modul-modul ini.
+  Worker lifecycle (`AutoSortWorker`, `WorkScheduler`, `BootCompletedReceiver`)
+  sudah diperiksa sebelumnya di sesi race-condition, tetap aman.
+- **2026-08-01, sesi audit "pematangan fitur":** user secara eksplisit minta
+  STOP menambah batch/fitur baru, fokus audit & bersihkan kecacatan logika di
+  fitur yang sudah ada. Hasil audit menyeluruh kode inti menemukan 2 hal:
+  1. **[SUDAH DIPERBAIKI, v2.3.3]** Race condition: scan manual vs
+     `AutoSortWorker` bisa jalan bersamaan (tidak ada koordinasi antar
+     instance `FileSorter`), berisiko file Downloads yang sama dipindah dua
+     proses sekaligus -> proses kedua tercatat error padahal file aman.
+     Fix: `Mutex` bersama di companion object `FileSorter`, lihat entri
+     CHANGELOG v2.3.3 untuk detail lengkap.
+  2. **[DITUNDA atas keputusan user, LALU DIPERBAIKI di v2.3.7]** Celah izin
+     penyimpanan di Android 8-10 (API 26-29): `hasManageStoragePermission()`
+     di `MainActivity.kt` hardcode `true` untuk semua device di bawah
+     Android 11, padahal `minSdk = 26`. Di rentang API 26-29 app TIDAK
+     PERNAH benar-benar meminta izin runtime `READ/WRITE_EXTERNAL_STORAGE`
+     -- layar "Izin Diperlukan" langsung dilewati, operasi pindah file akan
+     gagal diam-diam di device lawas. Device utama user (Infinix Android
+     15/16) tidak kena, makanya awalnya ditunda. Saat masuk tahap
+     "finishing" (2026-08-02), user minta sekalian dibenerin -- fix di
+     v2.3.7: `hasManageStoragePermission()` sekarang benar-benar cek
+     `ContextCompat.checkSelfPermission()` untuk API 26-29, ditambah alur
+     `ActivityResultContracts.RequestMultiplePermissions()` untuk minta
+     izin runtime langsung (bukan cuma lempar ke halaman Setelan umum), plus
+     fallback tombol buka Pengaturan Aplikasi kalau izin ditolak permanen.
+     Lihat CHANGELOG v2.3.7 untuk detail lengkap.
+- Roadmap backend (spec "PROMPTVAULT - BACKEND & CI/CD EXECUTABLE SPECIFICATION")
+  dipecah jadi batch. Status per bagian:
+  - §3 Room DB Migration -- **SELESAI** (Batch 1, v2.2.0)
+  - §4 File Writing Stability & Temp-File Filter -- **SELESAI** (Batch 2, v2.2.1)
+  - §2 MediaStore rescan/ghost file cleanup -- **SELESAI** (v2.5.0, 2026-08-04).
+    User eksplisit minta tuntaskan semua item dijeda; spec asli tidak ada
+    teksnya di repo, didesain ulang dari standar Android + konteks app
+    (`MediaScannerConnection.scanFile()` tiap move/undo + query cleanup
+    ghost entry sekali per scan). BELUM diverifikasi runtime -- lihat
+    CHANGELOG v2.5.0 untuk detail & yang perlu dikonfirmasi user.
+  - §1 SAF/Scoped Storage abstraction -- **DITULIS ULANG (v2.17.0,
+    2026-08-12)**, folder kustom opsional aktif lagi. Riwayat: "kode selesai,
+    runtime belum stabil" di v2.7.0-v2.8.3 (dual-path DocumentFile/java.io.File)
+    -> diperluas jadi modul "Zip Sorter" terpisah di v2.12.0 (SAF juga) ->
+    riwayat bug berulang di kelas yang sama (boolean DocumentFile gate
+    false-negatif, izin persisted bocor, mime type tidak reliable, 1x gagal
+    build CI) -> **DITUTUP, DIHAPUS TOTAL (v2.13.0, 2026-08-08)** atas
+    permintaan eksplisit user, dengan syarat reapply spesifik (Insiden #7) ->
+    **DITULIS ULANG lagi (v2.17.0)** di bawah syarat (c) Insiden #7 (blind,
+    disiplin, TANPA Zip Sorter). BELUM diverifikasi runtime/CI asli -- baca
+    Insiden #7 LENGKAP (termasuk UPDATE 2026-08-12) SEBELUM menulis perubahan
+    BESAR lain ke kode SAF di project ini.
+  - §5 Coroutine lifecycle & Foreground Service -- **SELESAI** (v2.6.0,
+    2026-08-05). Audit lifecycle: tidak ada bug (structured concurrency
+    sudah cukup). Fix nyata: `AutoSortWorker` promosi ke foreground service
+    lewat `setForeground()`. Lihat CHANGELOG v2.6.0. BELUM diverifikasi
+    runtime.
+  - §6 CI/CD preflight+dependency lock lanjutan -- **BELUM, TERHAMBAT
+    STRUKTURAL** (2026-08-04: Gradle dependency locking butuh `./gradlew
+    --write-locks` yang JALAN, sandbox Claude tidak punya Android SDK/Gradle/
+    akses network -- lockfile yang di-generate tanpa itu isinya spekulatif
+    dan BISA MEMATIKAN BUILD CI TOTAL kalau salah. TIDAK dikerjakan blind;
+    butuh sesi dengan akses Gradle asli, atau instruksi lebih spesifik dari
+    user soal ruang lingkupnya.)
+  - **Keputusan 2026-08-04 (menggantikan keputusan 2026-08-01 di bawah):**
+    user eksplisit minta tuntaskan §1/§2/§5/§6 SEKARANG (bukan tunggu
+    trigger). Dieksekusi BERTAHAP satu atomic batch per sesi/pesan (bukan
+    sekaligus -- 4 item beda area arsitektur, digabung sekaligus melanggar
+    Batch Lock "maks 1 modul per batch" versi user sendiri). Urutan
+    dieksekusi: §2 (selesai) -> §5 (selesai) -> §1 (berikutnya). §6 diskip
+    sampai ada akses Gradle nyata atau instruksi scope lebih spesifik.
+  - **Keputusan 2026-08-05**: audit eksternal masuk (skor 9.2/10, fokus
+    testing/performa/backup-recovery). User putuskan: tuntaskan §5 lalu §1
+    dulu (roadmap lama), BARU habis itu masuk ke prioritas dari audit
+    eksternal tsb.
+  - ~~Keputusan 2026-08-01 (SUDAH DIGANTI di atas): jangan lanjutkan tanpa
+    trigger gejala nyata.~~
+- Redesign visual besar (v2.3.0) sudah dikirim & di-fix regresinya (v2.3.1).
+  Arah desain "4-color accent system" ini sekarang JADI STANDAR -- jangan
+  balik ke skema lama (hijau dominan di semua ikon) di update berikutnya.
+

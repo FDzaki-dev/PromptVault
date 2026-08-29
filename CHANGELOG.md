@@ -3,6 +3,31 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## [UI][GLASSMORPHISM] colorScheme & aksen ke-4 -- MENUTUP 4/4 sumbu Glass (2026-08-29)
+
+Menyusul typography+shape di bawah: GLASSMORPHISM sekarang dapat
+`colorScheme` sendiri (`GlassIce`/`GlassFrost`/`GlassPrism`, semua hue
+dingin, kontras dihitung lulus AAA) + aksen ke-4 "Glacier" untuk ikon menu
+Pengaturan. Dengan ini SEMUA 4 sumbu identitas visual Glassmorphism
+(typography, shape, warna, aksen ke-4) sudah lengkap kondisional per
+`themeStyle`, terpisah total dari MATERIAL3 -- pola sama seperti
+Neumorphism/Blade Runner yang sudah menutup 4/4-nya duluan.
+
+File diubah (3): `ui/theme/Color.kt` (+14 val warna baru), `ui/theme/Theme.kt`
+(parsial, `colorScheme`/`extraColors` GLASSMORPHISM jadi cabang sendiri),
+`ui/theme/GlassTokens.kt` (parsial, javadoc saja).
+
+## [DOCS] Arsipkan riwayat batch usang + sinkronisasi README.md & CHANGELOG.md (2026-08-29)
+
+Housekeeping dokumentasi, 0 kode disentuh. `PROJECT_STATE.md` dipangkas
+dari riwayat batch versi manual pra-governance (`v8.35.6` s/d `Insiden #6`)
+ke file baru `PROJECT_STATE_ARCHIVE.md` (0 histori hilang, cuma dipindah).
+`README.md` disinkronkan (buang nomor versi hardcode yang usang, tambah
+ringkasan status 4 gaya tema). Entri CHANGELOG ini sendiri + entri
+colorScheme/aksen ke-4 di atas ditambahkan sekaligus karena sebelumnya
+sempat ketinggalan tidak tercatat di sini (lihat detail lengkap di
+`PROJECT_STATE.md`).
+
 ## [UI][GLASSMORPHISM] Shape "frosted-glass corner" -- pisah dari MATERIAL3 (2026-08-29)
 
 Menyusul typography di bawah: GLASSMORPHISM sekarang dapat shape sendiri,

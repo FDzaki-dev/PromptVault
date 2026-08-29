@@ -1,9 +1,25 @@
-# PromptVault v7.5.2
+# PromptVault
 
 App Android offline untuk merapikan otomatis file (ekstensi apa saja) di folder
 Downloads ke folder tujuan, berdasarkan rule pattern yang kamu buat sendiri.
 
 Repo publik: https://github.com/FDzaki-dev/PromptVault
+
+> **Versi**: `versionName` APK 100% otomatis dari nomor run GitHub Actions
+> (`1.0.<run_number>`), BUKAN nomor semantik manual -- cek tab **Rilis**
+> repo GitHub untuk versi terpasang terbaru. (README ini sengaja tidak
+> hardcode nomor versi statis, karena pasti stale lagi tiap build CI baru.)
+
+## Fitur utama
+- Auto-sort file Downloads (atau folder kustom via SAF) berdasarkan rule
+  pattern buatan sendiri, manual atau otomatis (WorkManager).
+- **4 gaya tampilan** (pilih di tab "Tampilan", layar Home):
+  Material3 (baseline default), Cupertino (iOS-look), Neumorphism
+  "Blade Runner 2049" (Teal & Amber + Neon Magenta), dan Glassmorphism
+  (kaca beku, dingin). Masing-masing punya identitas visual sendiri
+  (warna/shape/typography/aksen) -- detail lengkap tiap sumbu ada di
+  `PROJECT_STATE.md`.
+- Undo pemindahan, Riwayat Aktivitas, Diagnostik, Crash Logger.
 
 ## Untuk user baru (bukan developer)
 
@@ -21,7 +37,8 @@ Claude yang melanjutkan pengembangan, bukan untuk end-user.
 ## Dokumentasi
 
 - `CHANGELOG.md` -- riwayat lengkap tiap versi & alasan perubahan (baca dulu buat tahu state terkini)
-- `PROJECT_STATE.md` -- **WAJIB dibaca Claude di sesi manapun sebelum lanjut kerja**: batch/versi terakhir, keputusan arsitektur, dan riwayat insiden kronologis (termasuk bug yang sudah di-fix, untuk konteks jangka panjang)
+- `PROJECT_STATE.md` -- **WAJIB dibaca Claude di sesi manapun sebelum lanjut kerja**: batch/versi terkini, status terkini, keputusan arsitektur, dan riwayat insiden kronologis (termasuk bug yang sudah di-fix, untuk konteks jangka panjang)
+- `PROJECT_STATE_ARCHIVE.md` -- riwayat batch/versi LAMA (era pra-governance auto-versioning, sebelum 2026-08-27) yang sudah diarsipkan dari `PROJECT_STATE.md` supaya file itu tetap ringkas; baca hanya kalau butuh detail teknis batch lama
 - `FILE_MANIFEST.txt` -- daftar file yang di-track, dipakai buat percepat diff di sesi berikutnya
 - `MAINTENANCE.md` -- **wajib dibaca Claude di sesi manapun sebelum lanjut kerja**: cara onboarding cepat, audit wajib sebelum ship, gotcha CI
 - `TROUBLESHOOTING.md` -- panduan kalau build gagal atau app tidak berperilaku benar
