@@ -266,3 +266,81 @@ val NeoOnAmberContainer = Color(0xFFF2DFC9)
  */
 val NeoMagenta = Color(0xFFEAA9C9)                     // aksen ke-4 "slate" -- neon magenta/pink BR2049
 val NeoMagentaContainer = Color(0xFF64304A)
+
+/**
+ * (2026-08-29, lanjutan sesi Glass) Warna khusus gaya GLASSMORPHISM --
+ * MENUTUP 2 sumbu terakhir yg tadinya sengaja ditunda (colorScheme +
+ * aksen ke-4), lihat progres bertahap sebelumnya (typography, shape) di
+ * `Type.kt`/`Shapes.kt`/`PROJECT_STATE.md`. DIPAKAI KHUSUS oleh
+ * `GlassColors`/`GlassExtra` (`Theme.kt`, kondisional per `themeStyle`,
+ * pola IDENTIK `CupertinoColors`/`NeumorphismColors` di atas) --
+ * [PromptVaultColors] (sekarang cuma dipakai MATERIAL3 via `else`) 0
+ * disentuh/0 berubah.
+ *
+ * **SUPERSEDE syarat #1 `GlassTokens.kt` v8.23.0** ("base color/hue TIDAK
+ * disentuh") -- ini sumbu KE-3 dari syarat itu yg dibalik (setelah
+ * typography & shape radius di batch2 sebelumnya), dicatat lengkap di
+ * `GlassTokens.kt`. **Syarat #2 ("base color wajib calm, gak boleh
+ * warm") TETAP DIHORMATI PENUH, BUKAN diabaikan** -- SELURUH palet di
+ * bawah (termasuk aksen ke-4) SENGAJA 100% hue dingin (biru/cyan/violet/
+ * mint, H175-H265), 0 hue hangat (kuning/oranye/merah) sama sekali --
+ * beda dari Cupertino/Neumorphism di atas yg pakai tertiary hangat
+ * (Orange/Amber) krn 2 gaya itu TIDAK terikat syarat "calm" tertulis;
+ * Glassmorphism terikat, jadi konsisten dijaga dingin semua.
+ *
+ * Cakupan SENGAJA dibatasi 4 slot AKSEN (primary/secondary/tertiary +
+ * aksen ke-4 "Pengaturan") -- neutral/background/surface/error/outline
+ * SENGAJA 100% REUSE token lama (0 token baru), pola identik
+ * [CupertinoColors]/[NeumorphismColors]: identitas warna cukup dibawa
+ * lewat slot aksen, background terpisah tidak diminta.
+ *
+ * Hue (4 titik BERBEDA di setengah lingkaran dingin roda warna, supaya
+ * tiap slot tetap kebaca terpisah scr visual, pola sama alasan
+ * [NeoMagenta]/[CupertinoIndigo] di atas beda hue dari trio primary/
+ * secondary/tertiary masing2): primary = ICE BLUE H199 (biru-cyan
+ * terang, kesan "es"/permukaan kaca beku -- selaras `GlassShapes`
+ * "frosted-glass corner"), secondary = FROST AQUA H172 (cyan lebih
+ * hijau/teduh dari primary, sama pola jarak hue tipis spt
+ * [NeoTeal]/[NeoTealDeep] di atas), tertiary = PALE PRISM VIOLET H255
+ * (violet dingin lembut -- kesan pantulan prisma tipis yg sering
+ * muncul di kaca beku/es, TETAP dingin, BUKAN warna hangat kontras spt
+ * tertiary gaya lain), aksen ke-4 "slate" = GLACIER MINT H155 (hijau-
+ * mint dingin, titik hue terjauh dari 3 slot di atas -- kesan "gletser"
+ * selaras tema es/kaca, sekaligus beda total dari [CupertinoIndigo]
+ * H243/[NeoMagenta] H330/[SettingsAccent] H255 lama, jadi tetap kebaca
+ * sbg aksen terpisah lintas SEMUA 4 gaya).
+ *
+ * Kontras (dihitung lewat skrip Python formula luminance relatif WCAG,
+ * metodologi identik seluruh file ini): worst-case vs
+ * [SurfaceContainerHighest] -- Ice 8.49:1, Frost 8.79:1, Prism 7.06:1,
+ * Glacier(aksen4) 7.57:1 (SEMUA lulus AA teks >=4.5:1 dgn margin besar,
+ * bahkan AAA >=7:1 di semua titik). On* vs base fill masing2: OnIce
+ * 8.90:1, OnFrost 9.23:1, OnPrism 8.04:1 (semua AAA). OnXContainer vs
+ * XContainer: 8.53-9.22:1 (AAA). Aksen ke-4 (`GlassGlacier`) HANYA base+
+ * container, TANPA on-variant -- pola identik [CupertinoIndigo]/
+ * [NeoMagenta] di atas ([VaultExtraColors] cuma 2 field `slate`/
+ * `slateContainer`, 0 field "onSlate" yg butuh dikonsumsi).
+ *
+ * Audit titik pemakaian: sama seperti [CupertinoBlue]/[NeoTeal] dkk di
+ * atas -- grep `Color(0x...)` di luar package `ui/theme` = 0 hasil,
+ * SELURUH app 100% konsumsi warna lewat `MaterialTheme.colorScheme.*`/
+ * `VaultTheme.extraColors` -- aman full-swap kondisional tanpa sentuh
+ * call site manapun.
+ */
+val GlassIce = Color(0xFFA8D8EA)                       // primary -- ice blue, kesan kaca beku
+val GlassOnIce = Color(0xFF14313D)
+val GlassIceContainer = Color(0xFF24424D)
+val GlassOnIceContainer = Color(0xFFDFF1F7)
+
+val GlassFrost = Color(0xFF8FE3D9)                     // secondary -- frost aqua, cyan lebih hijau/teduh
+val GlassOnFrost = Color(0xFF0F332E)
+val GlassFrostContainer = Color(0xFF244A44)
+val GlassOnFrostContainer = Color(0xFFD8F5EF)
+
+val GlassPrism = Color(0xFFC3B8EA)                     // tertiary -- pale prism violet, dingin (BUKAN hangat)
+val GlassOnPrism = Color(0xFF2A2340)
+val GlassPrismContainer = Color(0xFF3E3660)
+val GlassOnPrismContainer = Color(0xFFEDE8FA)
+
+val GlassGlacier = Color(0xFF9AD1B8)                   // aksen ke-4 "slate" -- glacier mint, dingin
+val GlassGlacierContainer = Color(0xFF2C4A3E)

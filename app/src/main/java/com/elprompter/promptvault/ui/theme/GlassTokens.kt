@@ -66,6 +66,24 @@ import androidx.compose.ui.unit.dp
  * press-scale) MASIH utuh berlaku -- HANYA typography & shape radius yg
  * sudah disupersede sejauh ini, base color ([Color.kt] hue H222) & warna
  * dasar TETAP tidak disentuh.
+ *
+ * **(2026-08-29, sesi lanjutan lagi) SUPERSEDE LANJUTAN syarat #1,
+ * MENUTUP SEMUA -- sumbu "base color/hue"**: instruksi user sesi ini,
+ * "colorScheme & aksen ke-4", membalik bagian TERAKHIR dari syarat #1
+ * ("warna dasar/hue JUGA tidak disentuh"). Dengan ini syarat #1 SUDAH
+ * disupersede PENUH di 3/3 sumbu yg pernah dilarang (typography, shape,
+ * warna) -- HANYA layout/spacing/interaksi/press-scale yg masih murni
+ * tidak tersentuh sejak v8.23.0. Lihat `GlassColors`/`GlassExtra`
+ * (`Theme.kt`) & javadoc hue lengkap di `Color.kt` (`GlassIce`/
+ * `GlassFrost`/`GlassPrism`/`GlassGlacier`) utk isi lengkapnya.
+ *
+ * **Syarat #2 ("base color wajib calm, gak boleh warm") TIDAK
+ * disupersede -- TETAP berlaku penuh & DIHORMATI, bukan diabaikan cuma
+ * krn syarat #1 dibalik.** Palet warna baru di atas SENGAJA 100% hue
+ * dingin (biru/cyan/violet/mint), 0 hue hangat sama sekali -- lihat
+ * penjelasan lengkap kenapa di javadoc `Color.kt`. Syarat #3 (100% WCAG)
+ * jg TETAP berlaku & sudah diverifikasi (lihat rasio kontras di javadoc
+ * `Color.kt`), metodologi identik paragraf syarat #3 di atas.
  */
 object GlassTokens {
     /** Fill permukaan "terangkat" (VaultCard, dialog, sheet, CTA, kotak ikon/chip -- semua level non-recessed pakai token yang sama, `TactileSurface` tidak punya parameter tingkat ukuran terpisah). */

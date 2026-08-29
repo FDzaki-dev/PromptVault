@@ -26,6 +26,50 @@
 > -- berlaku PERMANEN mulai sesi ini utk SEMUA sesi berikutnya, sesi mana
 > pun DILARANG mencabut/melonggarkan tanpa instruksi eksplisit baru user.
 
+## [UI][GLASSMORPHISM] colorScheme & aksen ke-4 -- MENUTUP 4/4 sumbu Glass (2026-08-29, lanjutan sesi Glass)
+- **Trigger**: "Lanjut kerjakan 2 sumbu Glass yang nyisa (colorScheme &
+  aksen ke-4)." Sumbu terakhir dari 4 (typography & shape sudah lebih
+  dulu selesai di batch2 sebelumnya).
+- **Hard Reset**: sesi ini mulai dari ZIP baru user (`PromptVault-main.zip`,
+  bukan lanjutan container lama) -- diverifikasi dulu isinya IDENTIK
+  hasil batch shape sebelumnya (`GlassShapes`/2-4 progres) sebelum edit,
+  0 riwayat hilang.
+- **Konflik dgn catatan lama, pola SAMA PERSIS 2 sumbu sebelumnya**:
+  javadoc `GlassTokens.kt` v8.23.0 syarat #1 jg melarang sentuh
+  "warna dasar/hue" -- disupersede (3/3, MENUTUP semua bagian syarat #1
+  yg pernah dilarang). **Syarat #2 ("calm, gak boleh warm") SENGAJA TIDAK
+  ikut disupersede** -- palet baru 100% hue dingin, 0 warna hangat.
+- **Color.kt** (+14 val): `GlassIce`/`GlassFrost`/`GlassPrism` (primary/
+  secondary/tertiary, trio+container+on, H199/H172/H255 -- semua dingin)
+  + `GlassGlacier`/`GlassGlacierContainer` (aksen ke-4 "slate", H155
+  glacier mint -- pola 2-field spt `CupertinoIndigo`/`NeoMagenta`, tanpa
+  on-variant). Kontras dihitung lewat skrip Python (formula luminance
+  WCAG) -- worst-case vs `SurfaceContainerHighest`: 7.06-8.79:1, semua
+  On*/OnXContainer 8.04-9.23:1. SEMUA lulus AAA (>=7:1), margin besar.
+- **Theme.kt** (parsial): `GlassColors` (colorScheme baru) + `GlassExtra`
+  (aksen ke-4), pola identik `CupertinoColors`/`NeumorphismColors` di
+  atasnya. `colorScheme`/`extraColors` di `PromptVaultTheme` jadi 4-cabang
+  penuh (GLASSMORPHISM dipisah dari `else`) -- **MATERIAL3 sekarang
+  SATU-SATUNYA gaya yg masih pakai `PromptVaultColors`/`VaultExtra` via
+  `else`, 4/4 gaya lain (Cupertino/Neumorphism/Glass) semua sudah py
+  identitas warna sendiri.**
+- **MENUTUP 4/4**: dengan batch ini SEMUA 4 sumbu identitas visual Glass
+  (tipografi, shape, warna, aksen ke-4) sudah lengkap kondisional per
+  `themeStyle` -- pola sama spt Neumorphism/Blade Runner sebelumnya sudah
+  menutup 4/4-nya duluan.
+- File diubah (3, PAS batas Micro-Batch): `ui/theme/Color.kt` (+14 val),
+  `ui/theme/Theme.kt` (parsial), `ui/theme/GlassTokens.kt` (parsial, +1
+  paragraf supersede, 0 logic diubah).
+- **Batas jujur**: sama spt semua batch restyling sebelumnya, BELUM lewat
+  `./gradlew`/device asli -- verifikasi sebatas kurung seimbang (manual +
+  perlu re-run `scripts/preflight_check.sh` di Termux) + kontras
+  dihitung terpisah via skrip Python (bukan dari Compose runtime
+  sungguhan). Hasil visual "kesan kaca beku dingin" tetap perlu
+  diverifikasi user di HP.
+- **Pending Queue**: kosong -- 4/4 sumbu Glass tuntas, tidak ada sumbu
+  identitas visual tersisa utk gaya manapun (Cupertino 3/3, Neumorphism
+  4/4, Glass 4/4; Material3 sengaja tetap baseline/tidak restyling).
+
 ## [UI][GLASSMORPHISM] Shape "frosted-glass corner" -- pisah dari MATERIAL3, lanjutan lengkapi Glass 2/4 (2026-08-29, sesi baru lanjutan)
 - **Trigger**: user ditanya "Glassmorphism lanjut dilengkapi juga?" (3
   opsi tombol), user pilih **"Ya, shape dulu (frosted-glass corner)"**.

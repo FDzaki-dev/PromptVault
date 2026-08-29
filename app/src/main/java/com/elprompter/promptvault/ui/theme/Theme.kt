@@ -149,6 +149,51 @@ private val NeumorphismColors: ColorScheme = darkColorScheme(
 )
 
 /**
+ * (2026-08-29, lanjutan sesi Glass) Skema warna khusus gaya GLASSMORPHISM
+ * -- MENUTUP sumbu ke-3 dari 4 sumbu identitas visual Glass (typography &
+ * shape sudah lebih dulu selesai, lihat javadoc lengkap di
+ * [PromptVaultTheme] & `Color.kt`). Pola IDENTIK [CupertinoColors]/
+ * [NeumorphismColors] di atas -- neutral/background/surface/error/outline
+ * SENGAJA 100% REUSE dari [PromptVaultColors] (0 token baru), cuma 3 slot
+ * AKSEN (primary/secondary/tertiary) yang diganti.
+ */
+private val GlassColors: ColorScheme = darkColorScheme(
+    primary = GlassIce,
+    onPrimary = GlassOnIce,
+    primaryContainer = GlassIceContainer,
+    onPrimaryContainer = GlassOnIceContainer,
+    secondary = GlassFrost,
+    onSecondary = GlassOnFrost,
+    secondaryContainer = GlassFrostContainer,
+    onSecondaryContainer = GlassOnFrostContainer,
+    tertiary = GlassPrism,
+    onTertiary = GlassOnPrism,
+    tertiaryContainer = GlassPrismContainer,
+    onTertiaryContainer = GlassOnPrismContainer,
+    background = AppBackground,
+    onBackground = TextPrimary,
+    surface = SurfaceDefault,
+    onSurface = TextPrimary,
+    surfaceVariant = SurfaceContainerHigh,
+    onSurfaceVariant = TextSecondary,
+    surfaceContainer = SurfaceContainer,
+    surfaceContainerHigh = SurfaceContainerHigh,
+    surfaceContainerHighest = SurfaceContainerHighest,
+    surfaceContainerLow = SurfaceContainerLow,
+    surfaceContainerLowest = SurfaceContainerLowest,
+    inverseSurface = TextPrimary,
+    inverseOnSurface = AppBackground,
+    inversePrimary = GlassIce,
+    error = ErrorRed,
+    onError = OnErrorRed,
+    errorContainer = ErrorContainer,
+    onErrorContainer = OnErrorContainer,
+    outline = Outline,
+    outlineVariant = OutlineVariant,
+    scrim = Color.Black
+)
+
+/**
  * Aksen ke-4 di luar peran M3 baku, khusus menu "Pengaturan" (pola
  * "sistem 4-aksen" dipertahankan, lihat Color.kt). Nama field `slate`/
  * `slateContainer` SENGAJA TIDAK di-rename (walau sumber warnanya sekarang
@@ -167,6 +212,12 @@ private val NeumorphismColors: ColorScheme = darkColorScheme(
  * atas. Javadoc lama [PromptVaultTheme] yg bilang aksen ke-4 "TETAP TIDAK
  * berubah utk NEUMORPHISM" SEKARANG usang -- diperbarui di sana, bukan
  * dihapus.
+ *
+ * (2026-08-29, lanjutan sesi Glass) `GlassExtra` -- varian keempat,
+ * `slate` diganti [GlassGlacier] (glacier mint, dingin -- lihat javadoc
+ * lengkap hue di `Color.kt`) khusus gaya Glassmorphism, pola identik 3
+ * varian di atas. MENUTUP sumbu ke-4 (TERAKHIR) dari 4 sumbu identitas
+ * visual Glass.
  */
 data class VaultExtraColors(
     val slate: Color,
@@ -176,6 +227,7 @@ data class VaultExtraColors(
 private val VaultExtra = VaultExtraColors(slate = SettingsAccent, slateContainer = SettingsAccentContainer)
 private val CupertinoExtra = VaultExtraColors(slate = CupertinoIndigo, slateContainer = CupertinoIndigoContainer)
 private val NeumorphismExtra = VaultExtraColors(slate = NeoMagenta, slateContainer = NeoMagentaContainer)
+private val GlassExtra = VaultExtraColors(slate = GlassGlacier, slateContainer = GlassGlacierContainer)
 
 val LocalVaultExtraColors = staticCompositionLocalOf { VaultExtra }
 
@@ -275,12 +327,27 @@ object VaultTheme {
  * via `else`. `colorScheme`/`extraColors` GLASSMORPHISM MASIH belum
  * berubah -- scope sesi ini baru shape, warna/aksen-4 nyusul kalau
  * diminta lanjut.
+ *
+ * (2026-08-29, sesi lanjutan lagi) SUSUL LAGI, MENUTUP 4/4: `colorScheme`
+ * & `extraColors` SEKARANG *juga* bercabang 4-arah, pola PERSIS
+ * `typography`/`shapes` di atas -- GLASSMORPHISM dapat [GlassColors]
+ * (slot primary/secondary/tertiary: Ice Blue/Frost Aqua/Pale Prism
+ * Violet, SEMUA dingin -- syarat "calm, gak boleh warm" `GlassTokens.kt`
+ * v8.23.0 TETAP dihormati penuh) & `GlassExtra` (aksen ke-4 "Pengaturan"
+ * -> [GlassGlacier], glacier mint). Paragraf tepat di atas ("colorScheme/
+ * extraColors GLASSMORPHISM MASIH belum berubah") SEKARANG usang --
+ * diperbarui di sini. MATERIAL3 tetap satu2nya pemakai [PromptVaultColors]/
+ * `VaultExtra` via `else`. Dengan ini SEMUA 4 sumbu identitas visual Glass
+ * (warna, shape, tipografi, aksen ke-4) sudah lengkap kondisional per
+ * `themeStyle`, menutup permintaan bertahap Glassmorphism sepanjang sesi
+ * ini -- lihat javadoc lengkap hue & kontras di `Color.kt`.
  */
 @Composable
 fun PromptVaultTheme(themeStyle: ThemeStyleOption = ThemeStyleOption.GLASSMORPHISM, content: @Composable () -> Unit) {
     val colorScheme = when (themeStyle) {
         ThemeStyleOption.CUPERTINO -> CupertinoColors
         ThemeStyleOption.NEUMORPHISM -> NeumorphismColors
+        ThemeStyleOption.GLASSMORPHISM -> GlassColors
         else -> PromptVaultColors
     }
     val typography = when (themeStyle) {
@@ -298,6 +365,7 @@ fun PromptVaultTheme(themeStyle: ThemeStyleOption = ThemeStyleOption.GLASSMORPHI
     val extraColors = when (themeStyle) {
         ThemeStyleOption.CUPERTINO -> CupertinoExtra
         ThemeStyleOption.NEUMORPHISM -> NeumorphismExtra
+        ThemeStyleOption.GLASSMORPHISM -> GlassExtra
         else -> VaultExtra
     }
     CompositionLocalProvider(
