@@ -6,13 +6,15 @@
 > urutan pengerjaan yang disarankan, BUKAN urutan prioritas rasa/opini --
 > murni rasio nilai:risiko dari tertinggi ke terendah.
 >
-> Status saat ini: **v8.20.0**, dark-only, Material 3 murni. Baseline app
-> sudah solid -- fitur inti (auto-sort, rule pattern, undo, conflict
-> strategy, export/import rule JSON, notifikasi hasil auto-scan per-rule,
-> statistik penuh, Shizuku integration, crash logger) semua sudah 100%
-> fungsional & terdokumentasi di `PROJECT_STATE.md`/`CHANGELOG.md`. **Fase 1
-> & 2 SEMUA SELESAI** -- sisa roadmap tinggal Fase 3 (butuh item disebut
-> eksplisit oleh user, JANGAN dikerjakan default).
+> Status saat ini: **⚠️ DISCONTINUED (2026-08-29)** -- dark-only, Material 3
+> murni (+3 gaya alternatif). Baseline app sudah solid -- fitur inti
+> (auto-sort, rule pattern, undo, conflict strategy, export/import rule
+> JSON, notifikasi hasil auto-scan per-rule, statistik penuh, Shizuku
+> integration, crash logger) semua sudah 100% fungsional & terdokumentasi
+> di `PROJECT_STATE.md`/`CHANGELOG.md`. **Fase 1 & 2 SEMUA SELESAI** --
+> pengembangan aktif dihentikan atas keputusan user, TAPI **Fase 3 tetap
+> "welcome"**: butuh item disebut eksplisit oleh user, JANGAN dikerjakan
+> default (aturan ini SAMA seperti sebelum discontinued, tidak berubah).
 
 ---
 

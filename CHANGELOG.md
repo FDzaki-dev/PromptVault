@@ -3,6 +3,15 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## [STATUS] Project dilabeli DISCONTINUED, Fase 3 tetap welcome (2026-08-29)
+
+Atas instruksi user: badge status "DISCONTINUED" ditambah di `README.md` +
+`PROJECT_STATE.md` + `ROADMAP.md`. Bukan proyek mati/diarsipkan -- app 100%
+fungsional, Fase 1 & 2 sudah selesai semua sejak sebelumnya. Fase 3 di
+`ROADMAP.md` TETAP terbuka sama seperti sebelumnya (dari awal memang sudah
+butuh disebut eksplisit by name, status ini tidak mengubah itu). 0 kode
+disentuh.
+
 ## [REBRAND] Nama tampilan PromptVault -> Sortify (2026-08-29)
 
 Instruksi eksplisit user: nama app dinilai kurang "simpel, memorable, dan

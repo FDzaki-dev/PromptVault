@@ -1,5 +1,13 @@
 # Sortify
 
+> ⚠️ **STATUS: DISCONTINUED (2026-08-29)** -- pengembangan aktif dihentikan
+> atas keputusan user. Fitur inti (Fase 1 & 2 di `ROADMAP.md`) 100% selesai
+> & stabil, jadi ini bukan "app rusak ditinggal", cuma tidak ada pengerjaan
+> baru berjalan tanpa diminta. **Fase 3 di `ROADMAP.md` TETAP terbuka** --
+> kapan pun user eksplisit minta salah satu item Fase 3 dikerjakan, sesi
+> Claude manapun WAJIB lanjutkan seperti biasa (bukan proyek mati/arsip
+> permanen, cuma pause).
+
 > **Rebranding 2026-08-27**: app ini sebelumnya bernama **PromptVault**.
 > Nama tampilan (launcher, notifikasi, teks dalam app) sudah pindah ke
 > **Sortify**. Nama repo GitHub, `applicationId`, nama folder default di

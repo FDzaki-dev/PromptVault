@@ -3,6 +3,13 @@
 > pun. Jangan hapus riwayat insiden di bawah walau sudah lama/sudah fix --
 > ini log kronologis permanen, bukan changelog fitur (itu ada di CHANGELOG.md).
 
+> ⚠️ **STATUS: DISCONTINUED (2026-08-29)**, atas keputusan eksplisit user --
+> Fase 1 & 2 `ROADMAP.md` 100% selesai, JANGAN mulai kerjaan baru di sesi
+> manapun tanpa user secara eksplisit minta. **Kekecualian: Fase 3 di
+> `ROADMAP.md` TETAP dianggap "welcome"** -- kalau user sebut salah satu
+> item Fase 3 by name, itu instruksi eksplisit yang sah, lanjutkan seperti
+> proyek aktif biasa (bukan proyek diarsipkan/mati permanen, cuma paused).
+
 ## 📌 ATURAN WAJIB SESI (PINNED -- jangan pernah turun/terkubur log baru)
 1. **DILARANG bump versi manual dalam bentuk apa pun.** `versionCode` &
    `versionName` di `app/build.gradle.kts` WAJIB 100% otomatis, diturunkan
@@ -25,6 +32,33 @@
 > apa yang dikerjakannya. Tepat berada sebelum: '[SCRIPT: DAILY UPDATE]'!!"
 > -- berlaku PERMANEN mulai sesi ini utk SEMUA sesi berikutnya, sesi mana
 > pun DILARANG mencabut/melonggarkan tanpa instruksi eksplisit baru user.
+
+## [STATUS] Project dilabeli DISCONTINUED, Fase 3 tetap welcome (2026-08-29)
+- **Instruksi user, verbatim**: "labeli project dengan discontinued, tapi
+  fase 3 tetap welcome jika mau dieksekusi sewaktu-waktu" -- dijawab
+  setelah ditawari 4 pilihan Fase 3 (`ask_user_input_v0`), user pilih
+  TIDAK satupun, minta status label sebagai gantinya.
+- **Interpretasi**: ini status marker/dokumentasi, BUKAN "hapus/arsipkan
+  project" -- app tetap 100% fungsional & sudah stabil (Fase 1 & 2
+  selesai semua). Bedanya cuma: sesi Claude ke depan JANGAN mulai kerjaan
+  baru tanpa diminta eksplisit, KECUALI Fase 3 (`ROADMAP.md`) yang memang
+  dari awal sudah butuh sebut-nama-eksplisit -- jadi status ini secara
+  praktik TIDAK mengubah perilaku sesi terhadap Fase 3 sama sekali, cuma
+  menegaskan ulang + menambah label visibilitas di README/PROJECT_STATE.
+- **Fix (docs-only, task mikro, Fast-Track -- tanpa audit kode)**: badge
+  status ditambah di 3 tempat yang saling sinkron: (1) `README.md` --
+  blockquote baru paling atas, sebelum catatan rebranding, (2)
+  `PROJECT_STATE.md` (file ini) -- ditambah ke notice wajib-baca paling
+  atas supaya sesi manapun langsung lihat sebelum kerja apapun, (3)
+  `ROADMAP.md` -- baris status diganti dari nomor versi lama (`v8.20.0`,
+  sudah usang sejak governance auto-versioning) jadi label discontinued +
+  penegasan Fase 3 tetap sama seperti sebelumnya.
+- **TIDAK diubah**: `ROADMAP.md` isi tabel Fase 1/2/3 itu sendiri (0 item
+  dicoret/ditambah), `CHANGELOG.md` sinkron sbg entri terpisah di bawah.
+  0 kode disentuh sama sekali batch ini.
+- File diubah (3 docs, VIP-adjacent, di luar limit): `README.md`,
+  `PROJECT_STATE.md`, `ROADMAP.md`. `CHANGELOG.md` disinkron entri
+  terpisah (VIP).
 
 ## [REBRAND] Nama tampilan PromptVault -> Sortify (2026-08-29)
 - **Instruksi user, verbatim**: "Saya mau rebranding nama project jadi
