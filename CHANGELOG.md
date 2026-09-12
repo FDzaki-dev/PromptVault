@@ -3,6 +3,16 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## [UI] Tab "Beranda"/"Tampilan" (segmented control) sekarang ikut shape tiap gaya (2026-09-12)
+
+Sudut track & pil aktif tab Home (sebelumnya sudut bulat statis, sama di
+ke-4 gaya) sekarang ikut identitas bentuk gaya yang aktif -- diagonal notch
+di Material 3, sudut lebih membulat di Cupertino/Glassmorphism, sudut
+dipotong tegas di Neumorphism. Ukuran radius tidak berubah, cuma bentuknya
+yang sekarang theme-aware.
+
+File diubah (2): `ui/components/SegmentedControl.kt`, `ui/theme/Shapes.kt`.
+
 ## [UI][MATERIAL3] Rombak total gaya "Material 3 Murni" -- gemstone, editorial, diagonal-notch (2026-09-12)
 
 Atas permintaan user: warna aksen, typography, dan shape gaya "Material 3

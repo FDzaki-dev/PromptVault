@@ -54,6 +54,17 @@ val PromptVaultShapes = Shapes(
  * (bukan lewat `MaterialTheme.shapes.*`) di seluruh app TIDAK ikut berubah
  * batch ini -- di luar cakupan 1 perubahan tunggal di sini, perlu disentuh
  * manual kalau diminta lanjut lebih jauh.
+ *
+ * **[Update 2026-09-12, lanjutan "matangkan" rombak MATERIAL3]** 2 dari
+ * ~11 titik itu (track+pil aktif `SegmentedControl.kt`, tab "Beranda"/
+ * "Tampilan" Home -- PALING prominent/selalu terlihat di 4 gaya) SUDAH
+ * ditutup -- lihat javadoc lengkap di `SegmentedControl.kt`. Sisa ~9 titik
+ * lain (switch/pil `RoundedCornerShape(50)`, badge/stamp kecil, icon-box
+ * bulat empty-state/onboarding, progress dot) SENGAJA TETAP literal --
+ * elemen "bulat penuh/badge kecil" itu secara semantik memang harus tetap
+ * simetris di SEMUA gaya (switch/pil asimetris = tampak rusak scr fungsi,
+ * bukan cuma beda gaya), beda kasus dari `SegmentedControl` yang murni
+ * kontainer persegi besar.
  */
 val CupertinoShapes = Shapes(
     extraSmall = RoundedCornerShape(8.dp),
@@ -117,8 +128,9 @@ val NeumorphismShapes = Shapes(
  * `MaterialTheme.shapes.*` (termasuk default `TactileSurface.shape`), 0
  * call site lain perlu disentuh. Caveat yg sama jg berlaku: ~11 titik
  * `RoundedCornerShape(Xdp)` literal langsung (lihat javadoc
- * [CupertinoShapes]) TETAP tidak ikut berubah gaya apapun, di luar
- * cakupan batch ini.
+ * [CupertinoShapes] utk daftar & status TERKINI -- 2 dari ~11 sudah
+ * ditutup 2026-09-12, `SegmentedControl.kt`) TETAP tidak ikut berubah gaya
+ * apapun utk SISA titik yang belum disentuh, di luar cakupan batch ini.
  */
 val GlassShapes = Shapes(
     extraSmall = RoundedCornerShape(10.dp),

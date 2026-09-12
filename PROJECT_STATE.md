@@ -33,6 +33,60 @@
 > -- berlaku PERMANEN mulai sesi ini utk SEMUA sesi berikutnya, sesi mana
 > pun DILARANG mencabut/melonggarkan tanpa instruksi eksplisit baru user.
 
+## [UI][MATERIAL3] Koreksi asumsi screenshot + tutup 1 titik shape literal (SegmentedControl) (2026-09-12, sesi lanjutan)
+- **Koreksi eksplisit dari user**: sesi audit SEBELUMNYA (entri di bawah, poin
+  6) salah menyimpulkan screenshot user "BUKAN Material3, itu Glassmorphism
+  default" -- alasannya CACAT: `ThemeStyleOption.GLASSMORPHISM` cuma default
+  utk fresh-install/fallback `SettingsRepository` kalau DataStore kosong,
+  BUKAN bukti gaya AKTUAL yang sedang dipakai user (persisted state runtime
+  TIDAK bisa diverifikasi dari isi ZIP source, cuma dari device asli). User
+  tegas: screenshot itu MATERIAL3. Diverifikasi ulang: warna pil aktif
+  `SegmentedControl` di screenshot (mint/sage hijau) match `Primary` gemstone
+  Emerald Jade (`0xFF8BD0AD`, `Color.kt`) jauh lebih dekat drpd
+  `GlassIce`/`GlassFrost` (biru/cyan Glassmorphism) -- klaim user konsisten
+  scr visual. Kesimpulan lama DICABUT.
+- **Kenapa judul "Sortify" di screenshot itu tidak kelihatan serif** (walau
+  M3 aktif) -- **dikoreksi user, dugaan lama DICABUT**: BUKAN soal APK lama/
+  belum di-build ulang. Device HP user MEMAKSA seluruh aplikasi terinstall
+  pakai font default sistem (override font-family per-app level OS, umum di
+  banyak custom ROM Android) -- `FontFamily.Serif` yang dideklarasikan
+  `Type.kt` ikut ketimpa juga. Kode `Type.kt` TETAP benar, 0 perlu diubah --
+  keterbatasan murni di level OS/device user, di luar kendali kode app
+  manapun. **Catatan permanen utk sesi depan**: screenshot dari device user
+  ini TIDAK VALID dipakai utk verifikasi visual font-family (Serif vs Sans)
+  -- hasilnya akan selalu sama scr tampilan font terlepas dari isi kode.
+  Verifikasi typography HARUS baca `Type.kt` langsung, JANGAN simpulkan dari
+  screenshot device ini.
+- **Temuan konkret (bukan sekadar audit ulang)**: `SegmentedControl.kt` (tab
+  "Beranda"/"Tampilan" di Home -- elemen PALING prominent, persis yang
+  tampil di screenshot) ternyata salah satu dari "~11 titik
+  `RoundedCornerShape(Xdp)` literal" yang SUDAH didokumentasikan sejak batch
+  Cupertino (javadoc `Shapes.kt`) sebagai belum ikut tema style apa pun --
+  shape track+pil-nya IDENTIK scr visual di ke-4 gaya, 0 ikut diagonal-notch
+  MATERIAL3 ataupun 3 gaya lain. Ini genuinely bagian "belum matang" dari
+  rombak shape sesi sebelumnya -- persis yang dimaksud user "lanjutkan
+  sampai tahap akhir".
+- **Fix**: `SegmentedControl.kt` -- shape track `RoundedCornerShape(12.dp)`
+  -> `MaterialTheme.shapes.medium`, pil aktif `RoundedCornerShape(10.dp)`
+  -> `MaterialTheme.shapes.small`. Radius IDENTIK utk MATERIAL3 (12dp/~8dp,
+  "parity footprint" thd skala M3 baku lama), TAPI sekarang genuinely ikut
+  shape masing2 SEMUA 4 gaya (diagonal notch M3, membulat besar Cupertino/
+  Glass, `CutCornerShape` Neumorphism) -- bukan cuma warna+tipografi yang
+  berubah per gaya lagi, shape kontrol paling menonjol di Home ikut juga.
+  `Shapes.kt` javadoc `CupertinoShapes`/`GlassShapes` diupdate in-place
+  (caveat "~11 titik" -> "~9 titik", 2 titik ditutup, alasan sisanya TETAP
+  literal dijelaskan: switch/pil `RoundedCornerShape(50)`/badge/icon-box
+  bulat/progress dot SEMUA elemen yang harus tetap simetris scr semantik di
+  SEMUA gaya, asimetris di situ = tampak rusak fungsional bukan variasi
+  gaya).
+- File diubah (2, dalam limit 3): `ui/components/SegmentedControl.kt`,
+  `ui/theme/Shapes.kt`.
+- **Status**: `preflight_check.sh` re-run, 100% lolos (kategori 7 = daftar
+  identik yang sudah diverifikasi aman di `MAINTENANCE.md`, 0 entri baru).
+  Sama seperti batch sebelumnya, fix shape INI JUGA baru bisa dikonfirmasi
+  visual setelah user push+build CI+install APK baru -- belum ada konfirmasi
+  device nyata.
+
 ## [UI][MATERIAL3] Rombak total aksen+typography+shape -- gemstone/editorial/diagonal-notch (2026-09-12)
 - **Instruksi user, verbatim intent**: rombak TOTAL typography+shape gaya
   "Material 3 Murni" jadi "kece badai" & underrated/gak pasaran, aksen
@@ -76,6 +130,58 @@
   `ui/theme/Shapes.kt`. `Theme.kt` TIDAK perlu disentuh -- val
   `PromptVaultColors`/`PromptVaultTypography`/`PromptVaultShapes` nama
   tetap sama, cuma isi token yang beda.
+
+- **Update audit lanjutan (batch v20260912b, sesi baru "matangkan progress")**:
+  instruksi user cuma minta lanjut/matangkan batch INI (bukan fitur baru) --
+  konsisten status DISCONTINUED (`JANGAN mulai kerjaan baru` di atas), jadi
+  scope sesi ini murni audit statis manual, 0 kode diketik ulang.
+  1. `preflight_check.sh` di-run ulang dari nol thd ZIP user -- tetap 100%
+     lolos semua 14 kategori, 0 temuan baru.
+  2. Grep `fontFamily` seluruh `ui/` di luar `ui/theme/` -- HANYA 2 hasil
+     (`RuleCard.kt` override `bodyMedium`/`bodySmall` ke `Monospace`, dari
+     batch lama), 0 override di role `display*/headline*/titleLarge` yg
+     baru diserifkan batch ini -- aman, 0 override diam-diam menetralkan
+     perubahan Serif.
+  3. Grep referensi langsung `PromptVaultShapes`/`PromptVaultTypography`/
+     `PromptVaultColors` di luar `ui/theme/*.kt` -- 0 hasil, mengkonfirmasi
+     ulang klaim javadoc "100% konsumsi lewat `MaterialTheme.*`, aman
+     full-swap" masih benar setelah batch ini.
+  4. Grep `MaterialTheme.shapes.*` -- SEMUA 7 call site adalah
+     kartu/banner/row/dialog/toggle (`VaultCard`, `WarningBanner`,
+     `GroupedListRow`, `ThemeStyleToggle`, `TactileSurface`,
+     `VaultAlertDialog`, `HomeScreen` kotak Cupertino), 0 elemen yang
+     butuh bentuk simetris sempurna (avatar bulat, dst.) -- shape
+     "diagonal notch" asimetris aman dipasang global, 0 elemen visual yg
+     bakal "pecah" bentuknya.
+  5. Cek 3 call site role serif (`HomeScreen.kt` judul app -- `headlineMedium`,
+     `StatisticsScreen.kt` angka total -- `headlineMedium`,
+     `OnboardingScreen.kt` judul step -- `headlineSmall`) -- KETIGANYA di
+     dalam `Column` biasa, 0 `maxLines`/lebar tetap yg berisiko clipping
+     akibat weight naik 1 tingkat + serif.
+  6. Screenshot user (terlampir sesi ini) menunjukkan aksen mint/hijau +
+     font sans membulat, BUKAN gemstone/serif -- **dikonfirmasi BUKAN bug**:
+     `LocalThemeStyle` default & `PromptVaultTheme(themeStyle = ...)`
+     default parameter (`Theme.kt`) = `ThemeStyleOption.GLASSMORPHISM`,
+     BUKAN Material3 -- style aktif di screenshot benar-benar tidak
+     tersentuh batch aksen/tipografi/shape M3 sesi ini (`GlassTypography`
+     100% `Sans` di semua role, `GlassColors` beda total palet dari
+     gemstone). Konsisten, 0 tindakan diperlukan.
+  7. **Bonus temuan (anti-stale, di luar scope UI tapi krusial utk sesi
+     depan)**: `MAINTENANCE.md` bagian "Versi & commit" ternyata SUDAH
+     USANG sejak governance auto-versioning 2026-08-27 -- masih instruksikan
+     `grep -oP 'versionName = "\K[^"]+'` thd `build.gradle.kts`, padahal
+     baris itu sekarang template (`"1.0.$GITHUB_RUN_NUMBER"`), bukan literal
+     -- grep itu SUDAH TIDAK MENGHASILKAN APA-APA sejak 2026-08-27. Dikoreksi
+     langsung di `MAINTENANCE.md` sesi ini (docs-only, VIP, di luar limit 3
+     file kode).
+  - **Hasil**: 0 regresi ditemukan, 0 file kode diubah batch ini (audit murni
+    -- sesuai larangan "solusi asal jadi"/hallucinated fix, TIDAK mengarang
+    perbaikan kalau memang 0 masalah kode ketemu). Status naik dari "belum
+    diverifikasi sama sekali" jadi "audit statis manual menyeluruh selesai,
+    0 temuan" -- yang MASIH tidak bisa ditutup dari sandbox (keterbatasan
+    permanen, lihat `MAINTENANCE.md`): kompilasi Gradle asli & render visual
+    di device nyata. Menunggu konfirmasi user setelah CI hijau + cek tampilan
+    HP utk menutup total item ini.
 
 ## [STATUS] Project dilabeli DISCONTINUED, Fase 3 tetap welcome (2026-08-29)
 - **Instruksi user, verbatim**: "labeli project dengan discontinued, tapi

@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.selectableGroup
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -45,6 +44,22 @@ import com.elprompter.promptvault.ui.theme.TactileTokens
  * 2. Padding vertikal tiap segmen 9dp -> 14dp (tinggi total ~38dp -> 48dp,
  *    titleSmall lineHeight 20dp + 14+14 = 48dp) -- di bawah standar target
  *    sentuh minimum Android (48dp) sebelumnya.
+ *
+ * (2026-09-12, lanjutan "matangkan" rombak MATERIAL3 gemstone/diagonal-notch)
+ * Track & pil aktif SEBELUMNYA `RoundedCornerShape(12.dp)`/`(10.dp)` literal
+ * TETAP (0 ikut berubah opsi gaya apapun) -- salah satu dari "~11 titik
+ * literal" yang sengaja ditunda, dicatat eksplisit di javadoc
+ * `CupertinoShapes`/`GlassShapes` (`Shapes.kt`). Component ini PALING
+ * kentara/prominent (segmented control tab "Beranda"/"Tampilan" di Home,
+ * selalu terlihat di 4 gaya) -- diprioritaskan ditutup duluan saat diminta
+ * lanjut. Diganti `MaterialTheme.shapes.medium` (track)/`.small` (pil aktif)
+ * -- radius PERSIS sama utk MATERIAL3 di skala M3 baku lama (12dp/~8dp,
+ * "parity footprint" thd tampilan sebelum rombak shape), TAPI sekarang
+ * genuinely ikut identitas shape MASING-MASING dari ke-4 gaya (diagonal
+ * notch/Cupertino membulat besar/CutCorner Neumorphism/RoundedCorner besar
+ * Glass) -- bukan cuma warna+tipografi yang berubah per gaya, sekarang shape
+ * track/pil paling menonjol di Home ikut juga. 0 breaking, `MaterialTheme`
+ * sudah di-import & dipakai (`colors`) di file ini sebelumnya.
  */
 @Composable
 fun SegmentedControl(options: List<String>, selectedIndex: Int, onSelect: (Int) -> Unit) {
@@ -60,7 +75,7 @@ fun SegmentedControl(options: List<String>, selectedIndex: Int, onSelect: (Int) 
     val effectiveIndex = if (options.isEmpty()) -1 else selectedIndex.coerceIn(0, options.lastIndex)
     TactileSurface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = MaterialTheme.shapes.medium,
         color = colors.surfaceVariant,
         recessed = true
     ) {
@@ -73,7 +88,7 @@ fun SegmentedControl(options: List<String>, selectedIndex: Int, onSelect: (Int) 
                         modifier = Modifier
                             .weight(1f)
                             .semantics { role = Role.Tab; this.selected = true },
-                        shape = RoundedCornerShape(10.dp),
+                        shape = MaterialTheme.shapes.small,
                         color = colors.primary,
                         elevation = TactileTokens.TactileElevationControl,
                         onClick = { onSelect(index) },

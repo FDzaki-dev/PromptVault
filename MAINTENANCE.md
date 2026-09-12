@@ -55,10 +55,25 @@ perlu baca histori penambahan satu-satu.
 
 ## Versi & commit
 
-`versionName`/`versionCode` di `app/build.gradle.kts` adalah SATU-SATUNYA
-sumber kebenaran untuk versi. Nama ZIP yang dikirim ke user dan nama artifact
-APK di CI SELALU diekstrak otomatis dari situ (`grep -oP 'versionName = "\K[^"]+'`),
-tidak pernah diketik manual, tidak pernah ditempeli commit hash acak.
+**[Update 2026-09-12, anti-stale -- paragraf lama di bawah SUDAH USANG sejak
+governance 2026-08-27, dikoreksi di sini]** Versi 100% OTOMATIS (LOCKED, lihat
+rule pinned #1 `PROJECT_STATE.md`): `versionName`/`versionCode` di
+`app/build.gradle.kts` diturunkan dari `GITHUB_RUN_NUMBER`
+(`versionName = "1.0.$GITHUB_RUN_NUMBER"`), BUKAN literal string statis --
+grep langsung ke file itu TIDAK lagi menghasilkan apa-apa berguna. CI
+(`build.yml`, step "Read app version") menghitung `VERSION="1.0.$GITHUB_RUN_NUMBER"`
+sendiri (formula duplikat, bukan grep dari `build.gradle.kts`), dipakai
+konsisten ke nama file APK, nama Actions artifact, git tag, & judul GitHub
+Release.
+
+**Konsekuensi utk sesi Claude**: versionName REAL cuma diketahui SETELAH
+push+CI jalan (tergantung jumlah run Actions di GitHub, sandbox Claude tanpa
+akses jaringan tidak bisa memprediksinya) -- sesi TIDAK BISA menulis
+versionName asli di ZIP yang dikirim ke user. Konvensi pengganti: nama ZIP &
+label "batch" di ringkasan chat pakai tanggal sesi + akhiran huruf urutan
+kalau >1 batch di hari yang sama (mis. `Sortify_v20260912.zip` lalu
+`Sortify_v20260912b.zip`), BUKAN semantic version apa pun -- versionName asli
+baru pasti setelah user konfirmasi build CI hijau.
 
 Lihat `CHANGELOG.md` untuk riwayat lengkap tiap versi -- entri paling atas
 selalu versi terkini.
