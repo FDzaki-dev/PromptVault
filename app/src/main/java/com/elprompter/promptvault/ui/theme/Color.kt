@@ -32,6 +32,24 @@ import androidx.compose.ui.graphics.Color
  * primary CTA) 100% cool/calm.
  */
 
+/**
+ * (2026-09-12, permintaan eksplisit user "rombak aksen M3 Murni jadi kece
+ * & underrated, tetap calm") SUPERSEDE syarat #1 di atas -- "peran BAKU M3
+ * bukan token kustom ber-merek" TIDAK LAGI berlaku KHUSUS 4 slot AKSEN
+ * (primary/secondary/tertiary/SettingsAccent): diganti set "gemstone"
+ * Emerald/Amethyst/Topaz/Sapphire (lihat javadoc tiap grup di bawah) --
+ * hue 100% BEDA dari biru generik lama & dari 3 gaya lain (Cupertino/
+ * Neumorphism/Glass semua ber-cluster di H150-260, Jade H150/Amethyst H288
+ * segar & 0 tabrakan). Syarat #2 (cool/calm) & #3 (WCAG, metodologi
+ * IDENTIK, dihitung ulang manual per grup) TETAP DIHORMATI PENUH -- hanya
+ * literal "bukan token ber-merek" yg dibalik. Neutral/surface/error/outline
+ * 0 disentuh (masih M3 baku) -- scope cuma 4 aksen, pola sama sesi
+ * Cupertino/Neumorphism/Glass. Typography ([PromptVaultTypography], lihat
+ * `Type.kt`) & shape ([PromptVaultShapes], lihat `Shapes.kt`) MENYUSUL
+ * dirombak sesi yg sama, sama-sama exclusive milik MATERIAL3 (0 dipakai
+ * gaya lain, aman full-swap).
+ */
+
 // ---- Neutral: root + 5-tingkat surfaceContainer (M3 baku), hue ditarik
 // dari primary (H222) supaya "surface tint" kohesif & calm, saturasi
 // SANGAT rendah (16%) -- bukan abu netral polos, bukan juga berwarna. ----
@@ -55,33 +73,35 @@ val TextSecondary = Color(0xFFC1C5CD)
 val Outline = Color(0xFF767F93)
 val OutlineVariant = Color(0xFF3D4351)            // divider dekoratif, bukan batas fungsional -- tidak wajib 3:1
 
-// ---- Primary: BIRU calm (H222), CTA & kontrol interaktif utama. Pola dark-
-// scheme M3 baku: `primary` tone TERANG (dipakai lgs sbg teks/ikon di atas
-// surface gelap), `onPrimary` tone GELAP (teks di atas primary saat jadi
-// fill tombol). Kontras: primary vs SurfaceContainerHighest 5.89:1 (teks,
-// lulus AA). onPrimary vs primary 7.43:1 (lulus AAA). ----
-val Primary = Color(0xFF98AEE1)
-val OnPrimary = Color(0xFF171F30)
-val PrimaryContainer = Color(0xFF313E5E)
-val OnPrimaryContainer = Color(0xFFDFE6F6)        // vs PrimaryContainer: 8.47:1
+// ---- Primary: EMERALD JADE (H150), ganti biru M3 default -- hue hijau
+// dingin yg 0 dipakai gaya lain (Cupertino/Neumorphism/Glass semua di
+// cluster cyan-biru H150-260 tapi arah biru, jade lebih ke hijau = segar/
+// underrated, tetap calm). Kontras: primary vs SurfaceContainerHighest
+// 7.28:1 (AA). onPrimary vs primary 8.04:1 (AAA). ----
+val Primary = Color(0xFF8BD0AD)
+val OnPrimary = Color(0xFF192E24)
+val PrimaryContainer = Color(0xFF2F5040)
+val OnPrimaryContainer = Color(0xFFE6F4ED)        // vs PrimaryContainer: 7.91:1
 
-// ---- Secondary: biru-sian teredam (H200), SENGAJA beda hue dari primary
-// (pemisahan peran M3 murni -- v7.x lama reuse primary=secondary, bukan
-// pola M3 baku). Kontras: secondary vs SurfaceContainerHighest 6.69:1.
-// onSecondary vs secondary 7.33:1. ----
-val Secondary = Color(0xFFA8BDC7)
-val OnSecondary = Color(0xFF212C31)
-val SecondaryContainer = Color(0xFF38464D)
-val OnSecondaryContainer = Color(0xFFE0E7EB)      // vs SecondaryContainer: 7.81:1
+// ---- Secondary: AMETHYST PLUM (H288), violet dingin -- jarak 138° dari
+// primary Jade(H150) spy 2 slot tetap kebaca terpisah jauh. Pasangan
+// "emerald+amethyst" = jewel-tone underrated, 0 tabrakan hue sama gaya lain
+// di app. Kontras: secondary vs SurfaceContainerHighest 6.17:1. onSecondary
+// vs secondary 7.72:1. ----
+val Secondary = Color(0xFFC9A7D2)
+val OnSecondary = Color(0xFF291B2C)
+val SecondaryContainer = Color(0xFF4E3654)
+val OnSecondaryContainer = Color(0xFFF1E7F3)      // vs SecondaryContainer: 8.82:1
 
-// ---- Tertiary: amber (H42) -- SATU-SATUNYA hue non-cool di app, dipakai
-// KHUSUS semantik warning (porsi kecil, bukan base warna), lihat javadoc
-// atas. Kontras: tertiary vs SurfaceContainerHighest 7.30:1. onTertiary vs
-// tertiary 8.03:1. ----
-val Tertiary = Color(0xFFDABF81)
-val OnTertiary = Color(0xFF322915)
-val TertiaryContainer = Color(0xFF534628)
-val OnTertiaryContainer = Color(0xFFF4EBD7)       // vs TertiaryContainer: 7.79:1
+// ---- Tertiary: TOPAZ GOLD (H48) -- tetap satu2nya hue warm (exception
+// semantik warning, sama alasan javadoc atas), digeser dari amber H42
+// generik supaya beda dari amber Cupertino(H37)/Neumorphism(H32) & tetap 1
+// keluarga "gemstone" dgn Emerald/Amethyst. Kontras: tertiary vs
+// SurfaceContainerHighest 7.80:1. onTertiary vs tertiary 7.97:1. ----
+val Tertiary = Color(0xFFDAC881)
+val OnTertiary = Color(0xFF362F17)
+val TertiaryContainer = Color(0xFF594E22)
+val OnTertiaryContainer = Color(0xFFF6F2E5)       // vs TertiaryContainer: 7.39:1
 
 // ---- Error: merah (H8) standar M3. Kontras: error vs
 // SurfaceContainerHighest 5.65:1. onError vs error 6.68:1. ----
@@ -90,12 +110,12 @@ val OnErrorRed = Color(0xFF391D18)
 val ErrorContainer = Color(0xFF59322C)
 val OnErrorContainer = Color(0xFFF5DAD6)          // vs ErrorContainer: 8.28:1
 
-// ---- Aksen ke-4 di luar peran M3 baku (khusus menu "Pengaturan", pola
-// "sistem 4-aksen" dipertahankan dari versi sebelumnya) -- indigo calm
-// (H258), TETAP cool/tidak warm. Kontras vs SurfaceContainerHighest: 5.59:1.
-// ----
-val SettingsAccent = Color(0xFFB2A1D9)
-val SettingsAccentContainer = Color(0xFF332B46)
+// ---- Aksen ke-4 "Pengaturan": SAPPHIRE PETROL (H205) -- cool blue-cyan,
+// beda hue dari Jade(150)/Amethyst(288)/Topaz(48) di atas, menutup set "4
+// batu permata" (Emerald/Amethyst/Topaz/Sapphire). Kontras vs
+// SurfaceContainerHighest: 6.26:1. ----
+val SettingsAccent = Color(0xFF8EB9D7)
+val SettingsAccentContainer = Color(0xFF2E4656)
 
 /**
  * Catatan audit 1.4.11 (container fill vs root background, BUKAN vs

@@ -3,6 +3,18 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## [UI][MATERIAL3] Rombak total gaya "Material 3 Murni" -- gemstone, editorial, diagonal-notch (2026-09-12)
+
+Atas permintaan user: warna aksen, typography, dan shape gaya "Material 3
+Murni" dirombak total supaya lebih khas & tidak generik, tetap tenang/calm.
+Warna aksen sekarang palet "gemstone" (Emerald/Amethyst/Topaz/Sapphire).
+Judul & label besar pakai typeface serif bergaya editorial. Sudut kartu &
+kontrol sekarang asimetris ("diagonal notch") -- signature baru yang beda
+dari 3 gaya lain (Cupertino, Neumorphism, Glassmorphism). 3 gaya lain 0
+berubah.
+
+File diubah (3): `ui/theme/Color.kt`, `ui/theme/Type.kt`, `ui/theme/Shapes.kt`.
+
 ## [STATUS] Project dilabeli DISCONTINUED, Fase 3 tetap welcome (2026-08-29)
 
 Atas instruksi user: badge status "DISCONTINUED" ditambah di `README.md` +

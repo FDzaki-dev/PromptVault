@@ -33,6 +33,50 @@
 > -- berlaku PERMANEN mulai sesi ini utk SEMUA sesi berikutnya, sesi mana
 > pun DILARANG mencabut/melonggarkan tanpa instruksi eksplisit baru user.
 
+## [UI][MATERIAL3] Rombak total aksen+typography+shape -- gemstone/editorial/diagonal-notch (2026-09-12)
+- **Instruksi user, verbatim intent**: rombak TOTAL typography+shape gaya
+  "Material 3 Murni" jadi "kece badai" & underrated/gak pasaran, aksen
+  warna diganti total tapi tetap ranah "calm".
+- **Warna (`Color.kt`)**: 4 slot AKSEN (Primary/Secondary/Tertiary/
+  SettingsAccent) -- dikonfirmasi exclusive milik MATERIAL3 via grep
+  `Theme.kt` (0 dipakai 3 gaya lain) & grep `Color(0x` di luar `ui/theme`
+  (0 hasil, aman full-swap) -- diganti set "gemstone": Emerald Jade H150 /
+  Amethyst Plum H288 / Topaz Gold H48 (tetap exception warna warning,
+  hue digeser dari amber generik) / Sapphire Petrol H205 (aksen ke-4).
+  Neutral/surface/error/outline 0 disentuh (masih M3 baku, `ErrorRed`
+  masih SHARED dgn Neumorphism -- sengaja tidak ikut diganti). Kontras
+  WCAG dihitung ulang manual (skrip Python formula luminance W3C,
+  metodologi identik audit lama): base vs `SurfaceContainerHighest`
+  6.17-7.80:1, on* vs base/container 7.39-8.82:1 -- semua lulus AA,
+  mayoritas AAA.
+- **Typography (`Type.kt`)**: role display/headline/titleLarge ->
+  `FontFamily.Serif` (generic system, 0 font pihak ketiga baru) + weight
+  naik 1 tingkat (Normal->Medium/SemiBold) + tracking negatif tipis
+  (-0.5..-0.1sp) -- kesan "editorial premium". Role titleMedium/
+  titleSmall/label/body TETAP `Sans` 100% identik (keterbacaan konten
+  fungsional). Ukuran/lineHeight semua role 100% identik versi lama --
+  "parity footprint", 0 resiko layout/wrap.
+- **Shape (`Shapes.kt`)**: diganti "diagonal notch" -- `RoundedCornerShape`
+  per-sudut TIDAK SIMETRIS (topStart/bottomEnd besar, topEnd/bottomStart
+  kecil), rasio besar:kecil ditipiskan di tingkat besar (extraLarge
+  ~1.5x, extraSmall ~3x) supaya sheet/dialog besar tetap "calm". Genuinely
+  beda dari 3 gaya lain (Cupertino/Glass = `RoundedCornerShape` simetris,
+  Neumorphism = `CutCornerShape` simetris).
+- **Insiden preflight (ketangkap sebelum kirim)**: draft awal KDoc
+  `Type.kt` sempat tulis `label*/body*` -- literal `*/` di tengah kalimat
+  nutup block comment PREMATUR (lolos check #13 `preflight_check.sh`
+  setelah diperbaiki jadi `label-dan-body`). Pelajaran: HINDARI pola
+  `kata*/kata` apa pun di dalam KDoc manapun ke depannya.
+- **Status**: `preflight_check.sh` 100% lolos (kurung seimbang, 0 warna
+  literal bocor keluar `Theme.kt`, 0 KDoc premature-close, 0 tag versi
+  bracket). BELUM diverifikasi build CI/tampilan HP nyata (sandbox tanpa
+  Gradle) -- minta user konfirmasi build sukses & tampilan sesuai setelah
+  CI hijau.
+- File diubah (3, sesuai limit): `ui/theme/Color.kt`, `ui/theme/Type.kt`,
+  `ui/theme/Shapes.kt`. `Theme.kt` TIDAK perlu disentuh -- val
+  `PromptVaultColors`/`PromptVaultTypography`/`PromptVaultShapes` nama
+  tetap sama, cuma isi token yang beda.
+
 ## [STATUS] Project dilabeli DISCONTINUED, Fase 3 tetap welcome (2026-08-29)
 - **Instruksi user, verbatim**: "labeli project dengan discontinued, tapi
   fase 3 tetap welcome jika mau dieksekusi sewaktu-waktu" -- dijawab

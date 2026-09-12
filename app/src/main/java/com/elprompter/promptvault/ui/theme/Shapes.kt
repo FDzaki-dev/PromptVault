@@ -6,18 +6,29 @@ import androidx.compose.material3.Shapes
 import androidx.compose.ui.unit.dp
 
 /**
- * v8.0.0 — Skala BAKU Material 3 (spec resmi M3 Shape scale), menggantikan
- * skala kustom v-sebelumnya (8/12/16/20/28dp, "kesan lembut ala iOS")
- * yang eksplisit BUKAN M3 murni. Nilai di bawah PERSIS skala default M3
- * (extraSmall=4, small=8, medium=12, large=16, extraLarge=28) -- syarat
- * "default Material 3 murni".
+ * v8.0.0 — Skala BAKU Material 3 (extraSmall=4, small=8, medium=12,
+ * large=16, extraLarge=28), simetris di ke-4 sudut.
+ *
+ * (2026-09-12, SUPERSEDE, permintaan eksplisit user "rombak shape M3 Murni
+ * jadi kece & underrated") Diganti "diagonal notch" -- `RoundedCornerShape`
+ * per-sudut TIDAK SAMA (topStart/bottomEnd besar, topEnd/bottomStart kecil,
+ * pola diagonal), signature yg 0 dipakai gaya lain (Cupertino/Glass =
+ * `RoundedCornerShape` SIMETRIS, Neumorphism = `CutCornerShape` simetris --
+ * asimetris genuinely underrated utk app Android, jarang dipakai app
+ * arus-utama). Rasio besar:kecil SENGAJA ditipiskan di tingkat besar
+ * (extraLarge 34:22 ~1.5x, bukan ~3x spt extraSmall 6:2) supaya sheet/dialog
+ * besar tetap kebaca "calm" (tidak terlalu tajam/pecah scr visual), sudut
+ * kecil (card/chip) yg paling kentara efek "notch"-nya. Rata-rata per
+ * tingkat (~4/8/12/16/28) tetap sejalan skala M3 lama (footprint mirip, 0
+ * lompatan ukuran drastis), urutan naik extraSmall->extraLarge tetap
+ * dijaga di KEDUA sudut (besar: 6/11/16/22/34, kecil: 2/5/8/10/22).
  */
 val PromptVaultShapes = Shapes(
-    extraSmall = RoundedCornerShape(4.dp),
-    small = RoundedCornerShape(8.dp),
-    medium = RoundedCornerShape(12.dp),
-    large = RoundedCornerShape(16.dp),
-    extraLarge = RoundedCornerShape(28.dp)
+    extraSmall = RoundedCornerShape(topStart = 6.dp, topEnd = 2.dp, bottomEnd = 6.dp, bottomStart = 2.dp),
+    small = RoundedCornerShape(topStart = 11.dp, topEnd = 5.dp, bottomEnd = 11.dp, bottomStart = 5.dp),
+    medium = RoundedCornerShape(topStart = 16.dp, topEnd = 8.dp, bottomEnd = 16.dp, bottomStart = 8.dp),
+    large = RoundedCornerShape(topStart = 22.dp, topEnd = 10.dp, bottomEnd = 22.dp, bottomStart = 10.dp),
+    extraLarge = RoundedCornerShape(topStart = 34.dp, topEnd = 22.dp, bottomEnd = 34.dp, bottomStart = 22.dp)
 )
 
 /**
