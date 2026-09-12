@@ -209,7 +209,16 @@ fun TactileSurface(
         // ditimpa). Menutup kesenjangan MATERIAL3 satu2nya dari 4 gaya yg
         // 0 treatment dekoratif sendiri di primitif ini -- lihat javadoc
         // lengkap `Material3Tokens.kt`.
-        val material3Border = border ?: BorderStroke(Material3Tokens.GlintWidth, Material3Tokens.glintBorderBrush())
+        //
+        // [Update, polish lanjutan] `recessed=true` (track SegmentedControl/
+        // switch OFF/grabber pill) DIKECUALIKAN dari glint default -- prinsip
+        // SAMA PERSIS cabang GLASS di bawah (sheen dilewati saat recessed,
+        // "cekung tidak boleh berkilau spt mengambang"). TANPA pengecualian
+        // ini, slot tenggelam (mis. track SegmentedControl, SELALU
+        // recessed=true) tampil berkilau sama persis kartu mengambang --
+        // kontradiktif scr semantik dgn tujuan `recessed` itu sendiri.
+        val material3Border = if (recessed) border else
+            border ?: BorderStroke(Material3Tokens.GlintWidth, Material3Tokens.glintBorderBrush())
         if (onClick != null) {
             Surface(
                 onClick = onClick,

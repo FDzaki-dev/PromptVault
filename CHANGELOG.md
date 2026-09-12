@@ -3,6 +3,15 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## [UI][MATERIAL3] Perbaikan kecil: slot "tenggelam" tidak lagi ikut berkilau (2026-09-12)
+
+Track tab "Beranda"/"Tampilan" (dan slot tenggelam lain sejenis) sempat ikut
+tampil berkilau seperti kartu mengambang setelah pembaruan sebelumnya --
+sekarang dikecualikan, slot tenggelam tetap terlihat rata/tenggelam
+sepenuhnya, kilau hanya muncul di kartu/kontrol yang memang mengambang.
+
+File diubah (2): `ui/theme/Material3Tokens.kt`, `ui/components/TactileSurface.kt`.
+
 ## [UI][MATERIAL3] Kartu & kontrol kini punya sentuhan visual sendiri -- "facet glint" (2026-09-12)
 
 Gaya "Material 3 Murni" sebelumnya cuma polos di sisi permukaan kartu/kontrol

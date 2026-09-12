@@ -56,6 +56,17 @@ import androidx.compose.ui.unit.dp
  * HANYA kalau caller tidak kirim apa pun). 0 call site lain perlu disentuh
  * -- otomatis menjalar ke SEMUA kartu/row/dialog yg lewat primitif ini saat
  * gaya MATERIAL3 aktif.
+ *
+ * **[Update 2026-09-12, polish lanjutan]** Glint DILEWATI saat
+ * `recessed=true` (track `SegmentedControl`/switch OFF/grabber pill) --
+ * prinsip SAMA PERSIS `GlassTokens` (javadoc `TactileSurface.kt`: "DILEWATI
+ * saat recessed=true, cekung tidak boleh 'berkilau' seperti mengambang,
+ * insting standar: raised vs sunken beda treatment cahaya"). Batch awal
+ * (facet glint pertama kali dipasang) TIDAK sengaja terapkan pengecualian
+ * ini -- ditemukan & ditutup saat "poles detail lain" krn track
+ * `SegmentedControl` (SELALU `recessed=true`) jadi tampil "berkilau" sama
+ * persis kartu mengambang, kontradiktif scr semantik dgn kesan "slot
+ * tenggelam" yang justru jadi tujuan `recessed` itu sendiri.
  */
 object Material3Tokens {
     /** Lebar border facet glint -- 1dp, konsisten dgn `GlassTokens.BorderWidthDefault`. */

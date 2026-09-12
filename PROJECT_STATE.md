@@ -33,6 +33,37 @@
 > -- berlaku PERMANEN mulai sesi ini utk SEMUA sesi berikutnya, sesi mana
 > pun DILARANG mencabut/melonggarkan tanpa instruksi eksplisit baru user.
 
+## [UI][MATERIAL3] Polish: glint dilewati saat recessed (2026-09-12, sesi lanjutan ke-3)
+- **Instruksi user**: eksplisit pilih "tetap poles detail lain meski belum
+  ada bukti celah" (dari 3 opsi yang ditanyakan) -- scope sesi ini BUKAN
+  audit parity-gap lagi spt batch sebelumnya, tapi review konsistensi
+  internal terhadap fitur yang BARU ditambahkan sendiri (facet glint).
+- **Temuan**: facet glint (`Material3Tokens`, batch sebelumnya) dipasang
+  TANPA pengecualian `recessed` -- akibatnya track `SegmentedControl.kt`
+  (SELALU `recessed=true`, dimaksudkan tampil sbg "slot tenggelam") ikut
+  tampil berkilau SAMA PERSIS kartu mengambang, kontradiktif scr semantik.
+  Prinsip "raised vs sunken beda treatment cahaya" SUDAH ADA & established
+  di cabang GLASS (`TactileSurface.kt`, sheen dilewati saat recessed) --
+  batch glint sebelumnya lupa terapkan prinsip yang SAMA, murni human-error
+  konsistensi, bukan kasus baru yang perlu ditemukan dari nol.
+- **Fix**: `TactileSurface.kt` cabang MATERIAL3 -- `material3Border` sekarang
+  `if (recessed) border else border ?: BorderStroke(...)` (skip default
+  glint total saat recessed, border eksplisit caller kalau ada TETAP
+  dihormati di KEDUA kondisi). `Material3Tokens.kt` javadoc diupdate
+  in-place mendokumentasikan pengecualian ini & alasan referensi silang ke
+  precedent Glass.
+- File diubah (2, dalam limit 3): `ui/theme/Material3Tokens.kt`,
+  `ui/components/TactileSurface.kt`.
+- **Status**: `preflight_check.sh` 100% lolos. Sama spt semua batch UI sesi
+  ini -- belum ada konfirmasi build CI/tampilan device nyata.
+- **Dipertimbangkan tapi TIDAK dilakukan (alasan ditulis eksplisit, biar
+  tidak ditanyakan ulang sesi depan)**: warna glint disamakan otomatis ke
+  `accentColor` tiap caller (mis. merah utk `EmptyState` error) -- DITOLAK,
+  krn 3 gaya lain (hairline Cupertino/sheen Glass/border Neumorphism) SEMUA
+  pakai 1 warna brand-level TETAP terlepas dari konten, bukan warna
+  content-adaptive -- ikut pola yang sama supaya konsisten, bukan
+  inkonsistensi yang perlu diperbaiki.
+
 ## [UI][MATERIAL3] Perluas jangkauan ke TactileSurface -- "facet glint" border (2026-09-12, sesi lanjutan ke-2)
 - **Instruksi user**: "perluas jangkauan theme ini ke daerah yang belum
   terjamah" -- diinterpretasi deterministik lewat audit silang `TactileSurface.kt`
