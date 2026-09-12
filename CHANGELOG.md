@@ -3,6 +3,17 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## [UI][MATERIAL3] Kartu & kontrol kini punya sentuhan visual sendiri -- "facet glint" (2026-09-12)
+
+Gaya "Material 3 Murni" sebelumnya cuma polos di sisi permukaan kartu/kontrol
+(beda dari 3 gaya lain yang masing-masing sudah punya sentuhan visual khas).
+Sekarang tepi kartu & kontrol punya garis tipis hijau gemstone lembut yang
+paling terang di satu sudut lalu meluruh -- kesan kilau satu sisi batu
+potong, selaras arah sudut diagonal yang sudah ada. Tidak mengubah ukuran
+atau layout apa pun.
+
+File diubah (2): `ui/theme/Material3Tokens.kt` (baru), `ui/components/TactileSurface.kt`.
+
 ## [UI] Tab "Beranda"/"Tampilan" (segmented control) sekarang ikut shape tiap gaya (2026-09-12)
 
 Sudut track & pil aktif tab Home (sebelumnya sudut bulat statis, sama di

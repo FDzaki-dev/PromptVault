@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import com.elprompter.promptvault.data.ThemeStyleOption
 import com.elprompter.promptvault.ui.theme.CupertinoTokens
 import com.elprompter.promptvault.ui.theme.GlassTokens
+import com.elprompter.promptvault.ui.theme.Material3Tokens
 import com.elprompter.promptvault.ui.theme.NeumorphTokens
 import com.elprompter.promptvault.ui.theme.TactileTokens
 import com.elprompter.promptvault.ui.theme.VaultTheme
@@ -54,7 +55,11 @@ import com.elprompter.promptvault.ui.theme.VaultTheme
  * Teknik shadow-ganda custom (drawBehind/nativeCanvas, v8.23.2-v8.25.4)
  * DIHAPUS TOTAL setelah terbukti bikin seluruh UI washed-out di device
  * nyata. Sekarang: `Surface` M3 baku + `BorderStroke` solid lebih tebal --
- * pembeda dari Material3 Murni cuma border, bukan shadow/gradient custom.
+ * pembeda dari Material3 Murni SAAT ITU (v8.26.0) cuma border, bukan
+ * shadow/gradient custom. ([2026-09-12] M3 sekarang JUGA punya border
+ * sendiri -- facet glint gemstone, lihat cabang MATERIAL3 & `Material3Tokens.kt`
+ * -- pembeda dgn Neumorphism sekarang di motif border-nya: solid tebal
+ * netral vs gradient tipis warna Primary, bukan lagi "ada border/tidak".)
  *
  * @param recessed permukaan "tenggelam" (track switch/segmented control
  *   OFF, grabber pill sheet) -- tonal & shadow elevation SAMA-SAMA
@@ -193,9 +198,18 @@ fun TactileSurface(
     if (style == ThemeStyleOption.MATERIAL3) {
         // [v8.23.4] Gaya ke-3: "Material 3 Murni" -- PERSIS perilaku
         // `TactileSurface` v8.0.0 SEBELUM Glassmorphism dihidupkan lagi
-        // (v8.23.1): `Surface` M3 baku, `color`/`border` caller APA ADANYA
-        // (0 alpha, 0 override border, 0 sheen). Kedalaman murni dari
-        // tonal+shadow elevation M3 resmi.
+        // (v8.23.1): `Surface` M3 baku, `color` caller APA ADANYA (0 alpha).
+        // Kedalaman murni dari tonal+shadow elevation M3 resmi.
+        //
+        // [2026-09-12, "perluas jangkauan" rombak MATERIAL3] `border` TIDAK
+        // lagi caller apa adanya total -- diisi default "facet glint"
+        // ([Material3Tokens]) KALAU caller tidak kirim border sendiri, pola
+        // IDENTIK cabang CUPERTINO/GLASS di bawah (border eksplisit caller,
+        // mis. state error fungsional, TETAP dihormati apa adanya, tidak
+        // ditimpa). Menutup kesenjangan MATERIAL3 satu2nya dari 4 gaya yg
+        // 0 treatment dekoratif sendiri di primitif ini -- lihat javadoc
+        // lengkap `Material3Tokens.kt`.
+        val material3Border = border ?: BorderStroke(Material3Tokens.GlintWidth, Material3Tokens.glintBorderBrush())
         if (onClick != null) {
             Surface(
                 onClick = onClick,
@@ -203,7 +217,7 @@ fun TactileSurface(
                 modifier = modifier,
                 shape = shape,
                 color = color,
-                border = border,
+                border = material3Border,
                 tonalElevation = effectiveElevation,
                 shadowElevation = effectiveElevation,
                 interactionSource = interactionSource,
@@ -214,7 +228,7 @@ fun TactileSurface(
                 modifier = modifier,
                 shape = shape,
                 color = color,
-                border = border,
+                border = material3Border,
                 tonalElevation = effectiveElevation,
                 shadowElevation = effectiveElevation,
                 content = content
@@ -225,16 +239,20 @@ fun TactileSurface(
 
     if (style == ThemeStyleOption.CUPERTINO) {
         // [v8.31.1, rename v8.31.4] Kerangka warna PERSIS SAMA dgn cabang
-        // MATERIAL3 di atas (`color`/`border` caller apa adanya) -- 2 beda
-        // dari MATERIAL3: (1) `border` caller yang `null` diisi hairline
+        // MATERIAL3 di atas (`color` caller apa adanya) -- 2 beda dari
+        // MATERIAL3: (1) `border` caller yang `null` diisi hairline
         // Cupertino (`CupertinoTokens`), signature list/card iOS yang
-        // mengandalkan garis tipis, bukan shadow; (2) [v8.31.4, "restyling
-        // ke Cupertino murni"] elevasi DIPAKSA 0dp SELALU (bukan
-        // `effectiveElevation` spt MATERIAL3) -- grouped list iOS asli FLAT
-        // TOTAL, tidak pernah pakai shadow apa pun, warna latar yang jadi
-        // penanda "kartu" vs "background", bukan bayangan. Kalau caller
-        // SUDAH kirim border sendiri (mis. state error fungsional), itu
-        // dihormati apa adanya -- tidak ditimpa.
+        // mengandalkan garis tipis SOLID keliling penuh -- beda MOTIF dari
+        // facet glint gemstone M3 ([2026-09-12] M3 di atas jg sudah isi
+        // default border sendiri, `Material3Tokens.kt`, tapi gradient tipis
+        // 1 sisi, bukan hairline solid keliling; lihat javadoc lengkap di
+        // situ); (2) [v8.31.4, "restyling ke Cupertino murni"] elevasi
+        // DIPAKSA 0dp SELALU (bukan `effectiveElevation` spt MATERIAL3) --
+        // grouped list iOS asli FLAT TOTAL, tidak pernah pakai shadow apa
+        // pun, warna latar yang jadi penanda "kartu" vs "background", bukan
+        // bayangan. Kalau caller SUDAH kirim border sendiri (mis. state
+        // error fungsional), itu dihormati apa adanya -- tidak ditimpa
+        // (pola sama persis di cabang MATERIAL3).
         val cupertinoBorder = border ?: BorderStroke(CupertinoTokens.HairlineWidth, CupertinoTokens.hairlineColor())
         if (onClick != null) {
             Surface(

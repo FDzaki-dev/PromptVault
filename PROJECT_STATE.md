@@ -33,7 +33,47 @@
 > -- berlaku PERMANEN mulai sesi ini utk SEMUA sesi berikutnya, sesi mana
 > pun DILARANG mencabut/melonggarkan tanpa instruksi eksplisit baru user.
 
-## [UI][MATERIAL3] Koreksi asumsi screenshot + tutup 1 titik shape literal (SegmentedControl) (2026-09-12, sesi lanjutan)
+## [UI][MATERIAL3] Perluas jangkauan ke TactileSurface -- "facet glint" border (2026-09-12, sesi lanjutan ke-2)
+- **Instruksi user**: "perluas jangkauan theme ini ke daerah yang belum
+  terjamah" -- diinterpretasi deterministik lewat audit silang `TactileSurface.kt`
+  (primitif SATU-SATUNYA di balik SEMUA kartu/row/dialog/tombol app) thd
+  ke-4 cabang gaya: Glass = translucency+sheen (`GlassTokens`), Neumorphism
+  = dual gradient+shadow+border (`NeumorphTokens`), Cupertino = hairline+flat
+  (`CupertinoTokens`) -- **MATERIAL3 SATU2NYA yg 0 treatment dekoratif
+  sendiri** ("Surface M3 baku, 0 alpha, 0 border override, 0 sheen"),
+  warisan filosofi lama "Murni" dari SEBELUM Color/Type/Shapes-nya sendiri
+  direstyle gemstone. Ini "daerah belum terjamah" paling konkret &
+  terverifikasi dari kode -- bukan tebakan.
+- **Fix**: file baru `ui/theme/Material3Tokens.kt` -- motif "facet glint":
+  border tipis 1dp warna `Primary` (gemstone Emerald Jade) alpha 0.35,
+  terang di sudut topStart meluruh ke transparan menuju bottomEnd (arah
+  default `Brush.linearGradient`, SEARAH sisi besar diagonal notch
+  `PromptVaultShapes` -- bentuk & cahaya kebaca 1 kesatuan). Alpha
+  direndahkan SEJAK AWAL (bukan warna mentah) -- reuse pelajaran histori
+  Neumorphism sendiri (border jenuh awal -> user minta turun ke netral,
+  v8.28.4) supaya tetap "calm/underrated" dari awal, 0 nunggu revisi.
+  Dipasang di `TactileSurface.kt` cabang MATERIAL3 via
+  `border ?: BorderStroke(...)` -- pola IDENTIK cabang Cupertino/Glass
+  (border eksplisit caller, mis. state error, TETAP dihormati, tidak
+  ditimpa). 0 call site lain disentuh -- otomatis menjalar ke semua
+  kartu/row/dialog saat MATERIAL3 aktif.
+- **Efek samping doc**: 2 komentar `TactileSurface.kt` yang jadi stale
+  (klaim lama "MATERIAL3 border caller apa adanya") dikoreksi in-place --
+  bagian javadoc Neumorphism (perbandingan historis v8.26.0) & cabang
+  Cupertino (perbandingan kerangka warna).
+- File diubah (2, dalam limit 3): `ui/theme/Material3Tokens.kt` (baru),
+  `ui/components/TactileSurface.kt`.
+- **Status**: `preflight_check.sh` 100% lolos (kategori 7 = daftar aman +
+  1 fungsi baru `glintBorderBrush()`, pola identik `borderColor()`/
+  `highlightBrush()`/`fillHighlightBrush()` sibling-nya, 0 masalah). Sama
+  spt semua batch UI sesi ini -- belum ada konfirmasi build CI/tampilan
+  device nyata.
+- **Belum terjamah lainnya (kalau diminta lanjut lagi)**: sisa ~9 titik
+  `RoundedCornerShape(Xdp)` literal (lihat `Shapes.kt`) SENGAJA tetap --
+  alasan semantik sudah dijelaskan di batch sebelumnya, BUKAN kandidat
+  lanjutan yg sama jenisnya dgn temuan sesi ini.
+
+## [UI] Koreksi asumsi screenshot + tutup 1 titik shape literal (SegmentedControl) (2026-09-12, sesi lanjutan)
 - **Koreksi eksplisit dari user**: sesi audit SEBELUMNYA (entri di bawah, poin
   6) salah menyimpulkan screenshot user "BUKAN Material3, itu Glassmorphism
   default" -- alasannya CACAT: `ThemeStyleOption.GLASSMORPHISM` cuma default
