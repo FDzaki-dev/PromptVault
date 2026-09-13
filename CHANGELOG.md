@@ -3,6 +3,14 @@
 Semua versi dan alasan perubahannya, biar sesi Claude berikutnya (atau kamu)
 punya konteks penuh tanpa perlu scroll chat lama.
 
+## [UI][MATERIAL3] Kilau di tepi kartu dibuat lebih kelihatan (2026-09-12)
+
+Kilau hijau lembut di tepi kartu/kontrol sebelumnya terlalu tipis, hampir
+tidak terlihat di layar HP. Sekarang dinaikkan intensitasnya supaya lebih
+jelas kelihatan tanpa jadi mencolok.
+
+File diubah (1): `ui/theme/Material3Tokens.kt`.
+
 ## [UI][MATERIAL3] Perbaikan kecil: slot "tenggelam" tidak lagi ikut berkilau (2026-09-12)
 
 Track tab "Beranda"/"Tampilan" (dan slot tenggelam lain sejenis) sempat ikut

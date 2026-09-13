@@ -33,6 +33,21 @@
 > -- berlaku PERMANEN mulai sesi ini utk SEMUA sesi berikutnya, sesi mana
 > pun DILARANG mencabut/melonggarkan tanpa instruksi eksplisit baru user.
 
+## [UI][MATERIAL3] Tuning: GlintAlpha 0.35 -> 0.6 (2026-09-12, konfirmasi device nyata)
+- **Konfirmasi user (device asli, build sudah ter-install)**: shape diagonal
+  notch + skip-recessed SEMUA sudah benar & bagus. SATU catatan: glint
+  hijaunya "tipis banget hampir nyaru" -- kurang kelihatan.
+- **Fix**: `Material3Tokens.GlintAlpha` 0.35 -> 0.6. 1 sumber konstanta,
+  otomatis konsisten ke SEMUA titik pakai (kartu/row/dialog/CTA/pil
+  segmented control) -- 0 file lain perlu disentuh.
+- File diubah (1, dalam limit 3): `ui/theme/Material3Tokens.kt`.
+- **Status**: INI batch PERTAMA sesi ini yg based on konfirmasi VISUAL device
+  nyata (bukan cuma preflight sandbox) -- shape/skip-recessed/warna semua
+  sudah confirmed OK, tinggal alpha yg perlu 1x tuning lagi (wajar, pola
+  sama persis histori tuning warna Neumorphism). Minta user cek lagi
+  setelah build ini utk pastikan 0.6 pas (tidak kebalik jadi kelewat
+  mencolok).
+
 ## [UI][MATERIAL3] Polish: glint dilewati saat recessed (2026-09-12, sesi lanjutan ke-3)
 - **Instruksi user**: eksplisit pilih "tetap poles detail lain meski belum
   ada bukti celah" (dari 3 opsi yang ditanyakan) -- scope sesi ini BUKAN

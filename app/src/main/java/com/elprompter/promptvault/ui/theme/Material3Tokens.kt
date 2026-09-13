@@ -67,14 +67,28 @@ import androidx.compose.ui.unit.dp
  * `SegmentedControl` (SELALU `recessed=true`) jadi tampil "berkilau" sama
  * persis kartu mengambang, kontradiktif scr semantik dgn kesan "slot
  * tenggelam" yang justru jadi tujuan `recessed` itu sendiri.
+ *
+ * **[Update 2026-09-12, konfirmasi device nyata]** User install build &
+ * lapor langsung: `GlintAlpha` awal (0.35) TERLALU redup, "hampir nyaru"
+ * (nyaris tidak kelihatan) di device asli -- dinaikkan ke 0.6. Preferensi
+ * realita device SELALU menang drpd estimasi visual dari sandbox (0 cara
+ * render SVG/preview asli tanpa Gradle) -- pola sama persis histori tuning
+ * `NeumorphTokens` (border/tint diganti beberapa kali brdsrkan screenshot
+ * device nyata, bukan dihitung sekali lalu dianggap final). TETAP alpha
+ * (bukan [Primary] mentah 100%) supaya masih "calm" sesuai syarat dasar
+ * palet -- 0.6 lompatan jelas dari 0.35 tanpa langsung ke ekstrem 1.0,
+ * konsisten diterapkan ke SEMUA titik pakai (kartu/row/dialog/CTA/pil
+ * segmented control) krn 1 sumber (`GlintColor`), 0 titik lain perlu
+ * disentuh manual.
  */
 object Material3Tokens {
     /** Lebar border facet glint -- 1dp, konsisten dgn `GlassTokens.BorderWidthDefault`. */
     val GlintWidth: Dp = 1.dp
 
-    /** Alpha [Primary] di titik paling terang (sudut topStart) -- lihat
-     * javadoc di atas kenapa direduksi (bukan warna mentah). */
-    const val GlintAlpha = 0.35f
+    /** Alpha [Primary] di titik paling terang (sudut topStart) -- 0.6 sejak
+     * konfirmasi device nyata (0.35 semula "hampir nyaru", lihat javadoc
+     * atas). */
+    const val GlintAlpha = 0.6f
 
     /** Warna dasar glint -- reuse [Primary] apa adanya (0 hue baru), pola
      * identik semua token dekoratif gaya lain ([GlassTokens]/[NeumorphTokens]
